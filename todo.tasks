@@ -11,17 +11,6 @@ Features:
     ☐ Conditioning under certain kernels preserves the kernel.
     ☐ LinearTransform kernel type
 
-    Dispatch:
-        ☐ Parametric methods.
-        ☐ Improved type resolution algorithm.
-        ☐ In the case of ambiguity, show the method that would break the ambiguity.
-        ☐ Improved formatting of error messages.
-        ☐ Union and intersection type.
-
-Backends:
-    ☐ PyTorch
-    ☐ AutoGrad
-
 Examples:
     ☐ Make all compatible with all the backends.
     ☐ Variational inference
@@ -32,7 +21,7 @@ Examples:
     ☐ Posterior decomposition
 
 Documentation:
-    ☐ Set up Sphinx.
+    ✓ Set up Sphinx. @done (18-03-29 17:10)
     ☐ Improve docstrings.
     ☐ Write examples.
     ☐ Write documentation.
@@ -41,8 +30,8 @@ Documentation:
  Other:
     ☐ Verify works on GPU with TensorFlow.
     ☐ Write tests. @started
-    ☐ Rename repo.
-    ☐ Package.
+    ✓ Rename repo. @done (18-03-29 17:10)
+    ✓ Package. @done (18-03-29 17:10)
 
 ＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿
 Archive:
