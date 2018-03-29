@@ -5,8 +5,7 @@ from __future__ import absolute_import, print_function, division
 import matplotlib.pyplot as plt
 import numpy as np
 
-from stheno import GP, RQ, Matern12, Matern32, Matern52, EQ
-from lab import B
+from stheno import B, GP, RQ, Matern12, Matern32, Matern52, EQ
 
 # Add some regularisation.
 B.default_reg_diag = 1e-6

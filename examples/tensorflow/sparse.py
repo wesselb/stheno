@@ -7,9 +7,9 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.contrib.opt import ScipyOptimizerInterface as SOI
 
-from stheno.tf import GP, EQ, SPD, np as be, PosteriorKernel, Normal, Noise
+from stheno.tf import B, GP, EQ, SPD, PosteriorKernel, Normal, Noise
 
-np.default_reg_diag = 1e-8
+B.default_reg_diag = 1e-8
 
 # Start a TensorFlow session.
 s = tf.Session()

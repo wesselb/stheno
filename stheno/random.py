@@ -3,8 +3,9 @@
 from __future__ import absolute_import, division, print_function
 
 from lab import B
-from stheno import SPD, ZeroMean, PosteriorMean, PosteriorKernel
 from plum import Dispatcher, Self, Referentiable
+
+from stheno import SPD, ZeroMean, PosteriorMean, PosteriorKernel
 
 __all__ = ['Normal', 'GP']
 

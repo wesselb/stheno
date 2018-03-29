@@ -6,10 +6,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.contrib.opt import ScipyOptimizerInterface as SOI
 
-from stheno import GP, EQ, Noise
-from lab import B
-
-B.backend_to_tf()
+from stheno.tf import GP, EQ, Noise
 
 # Start a TensorFlow session.
 s = tf.Session()
