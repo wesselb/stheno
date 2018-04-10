@@ -80,7 +80,7 @@ class Kernel(Referentiable):
         def feat_map(x):
             scale = 2 * B.pi / B.cast(period, x.dtype)
             return B.concatenate((B.sin(x * scale),
-                                   B.cos(x * scale)), axis=0)
+                                  B.cos(x * scale)), axis=1)
 
         return Kernel(lambda x, y: self.f(feat_map(x), feat_map(y)))
 

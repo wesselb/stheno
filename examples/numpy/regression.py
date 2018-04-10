@@ -8,7 +8,7 @@ import numpy as np
 from stheno import GP, RQ
 
 # Define the grid for which we are going to generate function values.
-x_truth = np.array([np.linspace(0, 1, 500)])
+x_truth = np.linspace(0, 1, 500)[:, None]
 
 # Define a GP that will generate the function values.
 gp = GP(kernel=RQ(1e-1).stretch(2).periodic(.3))
@@ -17,9 +17,9 @@ gp = GP(kernel=RQ(1e-1).stretch(2).periodic(.3))
 y_truth = gp(x_truth).sample()
 
 # Now throw away approximately 80% of the generated function values.
-n = np.shape(x_truth)[1]
+n = np.shape(x_truth)[0]
 inds = np.random.choice(n, int(np.round(.2 * n)), replace=False)
-x, y = x_truth[:, inds], y_truth[inds, :]
+x, y = x_truth[inds, :], y_truth[inds, :]
 
 # Add some noise.
 noise = .1

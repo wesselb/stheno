@@ -12,7 +12,7 @@ from stheno.tf import GP, EQ, Noise
 s = tf.Session()
 
 # Define the grid for which we are going to generate function values.
-x = np.array([np.linspace(0, 1, 100)])
+x = np.linspace(0, 1, 100)[:, None]
 
 # Define a GP that will generate the function values.
 true_scale = .05
