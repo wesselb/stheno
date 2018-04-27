@@ -55,14 +55,14 @@ class Normal(RandomVector, Referentiable):
             x (design matrix): Values to compute the log-pdf of.
         """
         if B.rank(x) != 2:
-            raise ValueError('IBut must have rank 2.')
+            raise ValueError('Input must have rank 2.')
         if B.shape(x)[0] != self.dim:
             raise RuntimeError('Dimensionality of data points does not match '
                                'that of the distribution.')
         n = B.shape(x)[1]  # Number of data points
         return -(self.var.log_det() +
                  n * self.dim * B.cast(B.log_2_pi, dtype=self.dtype) +
-                 self.var.mah_dist2(x - self.mean)) / 2
+                 B.diag(self.var.mah_dist2(x - self.mean))) / 2
 
     def kl(self, other):
         """Compute the KL divergence with respect to another normal
