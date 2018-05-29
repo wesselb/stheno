@@ -41,10 +41,7 @@ class SPD(object):
         """
         diff = a if b is None else a - b
         iL_diff = B.trisolve(self.cholesky(), diff)
-        if B.shape(diff)[1] == 1:
-            return B.sum(iL_diff ** 2)
-        else:
-            return B.dot(iL_diff, iL_diff, tr_a=True)
+        return B.sum(iL_diff ** 2)
 
     def ratio(self, denom):
         """Compute the ratio with respect to another positive-definite matrix.

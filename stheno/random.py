@@ -60,9 +60,14 @@ class Normal(RandomVector, Referentiable):
             raise RuntimeError('Dimensionality of data points does not match '
                                'that of the distribution.')
         n = B.shape(x)[1]  # Number of data points
-        return -(self.var.log_det() +
+        return -(n * self.var.log_det() +
                  n * self.dim * B.cast(B.log_2_pi, dtype=self.dtype) +
-                 B.diag(self.var.mah_dist2(x - self.mean))) / 2
+                 self.var.mah_dist2(x - self.mean)) / 2
+
+    def entropy(self):
+        """Compute the entropy."""
+        return (self.var.log_det() +
+                self.dim * B.cast(B.log_2_pi + 1., dtype=self.dtype)) / 2
 
     def kl(self, other):
         """Compute the KL divergence with respect to another normal
@@ -89,7 +94,7 @@ class Normal(RandomVector, Referentiable):
             raise RuntimeError('W2 distance can only be computed between '
                                'distributions of the same dimensionality.')
         root = SPD(B.dot(B.dot(self.var.root(), other.var.mat),
-                          self.var.root())).root()
+                         self.var.root())).root()
         var_part = B.trace(self.var.mat) + B.trace(other.var.mat) - \
                    2 * B.trace(root)
         mean_part = B.sum((self.mean - other.mean) ** 2)
