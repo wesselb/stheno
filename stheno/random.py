@@ -5,7 +5,7 @@ from __future__ import absolute_import, division, print_function
 from lab import B
 from plum import Dispatcher, Self, Referentiable
 
-from stheno import SPD, ZeroMean, PosteriorMean, PosteriorKernel
+from stheno import Dense, ZeroMean, PosteriorMean, PosteriorKernel, SPD
 
 __all__ = ['Normal', 'GP']
 
@@ -29,7 +29,7 @@ class Normal(RandomVector, Referentiable):
     """Normal random variable.
 
     Args:
-        var (matrix or instance of :class:`.pdmat.PDMat`): Variance of the
+        var (matrix or instance of :class:`.spd.SPD`): Variance of the
             distribution.
         mean (column vector, optional): Mean of the distribution, defaults to
             zero.
@@ -38,11 +38,18 @@ class Normal(RandomVector, Referentiable):
     dispatch = Dispatcher(in_class=Self)
 
     def __init__(self, var, mean=None):
-        self.dim = B.shape(var)[-1]
-        # TODO: proper zeros here
-        self.mean = 0 if mean is None else mean
-        self.var = var if isinstance(var, SPD) else SPD(var)
-        self.dtype = self.var.mat.dtype
+        self.spd = var if isinstance(var, SPD) else Dense(var)
+        self.dtype = self.var.dtype
+        self.dim = B.shape(self.var)[0]
+        if mean is None:
+            self.mean = B.zeros([self.spd.shape[0], 1], dtype=self.dtype)
+        else:
+            self.mean = mean
+
+    @property
+    def var(self):
+        """Variance"""
+        return self.spd.mat
 
     def m2(self):
         """Second moment of the distribution"""
@@ -56,19 +63,18 @@ class Normal(RandomVector, Referentiable):
         """
         if B.rank(x) != 2:
             raise ValueError('Input must have rank 2.')
-        if B.shape(x)[0] != self.dim:
-            raise RuntimeError('Dimensionality of data points does not match '
-                               'that of the distribution.')
-        n = B.shape(x)[1]  # Number of data points
-        return -(n * self.var.log_det() +
-                 n * self.dim * B.cast(B.log_2_pi, dtype=self.dtype) +
-                 self.var.mah_dist2(x - self.mean)) / 2
+        return -(self.spd.log_det() +
+                 B.cast(self.dim, dtype=self.dtype) *
+                 B.cast(B.log_2_pi, dtype=self.dtype) +
+                 self.spd.mah_dist2(x - self.mean, sum=False)) / 2
 
     def entropy(self):
         """Compute the entropy."""
-        return (self.var.log_det() +
-                self.dim * B.cast(B.log_2_pi + 1., dtype=self.dtype)) / 2
+        return (self.spd.log_det() +
+                B.cast(self.dim, dtype=self.dtype) *
+                B.cast(B.log_2_pi + 1, dtype=self.dtype)) / 2
 
+    @dispatch(Self)
     def kl(self, other):
         """Compute the KL divergence with respect to another normal
         distribution.
@@ -76,13 +82,11 @@ class Normal(RandomVector, Referentiable):
         Args:
             other (instance of :class:`.random.Normal`): Other normal.
         """
-        if self.dim != other.dim:
-            raise RuntimeError('KL divergence can only be computed between '
-                               'distributions of the same dimensionality.')
-        return (self.var.ratio(other.var) +
-                other.var.mah_dist2(other.mean - self.mean) - self.dim +
-                other.var.log_det() - self.var.log_det()) / 2
+        return (self.spd.ratio(other.spd) +
+                other.spd.mah_dist2(other.mean, self.mean) - self.dim +
+                other.spd.log_det() - self.spd.log_det()) / 2
 
+    @dispatch(Self)
     def w2(self, other):
         """Compute the 2-Wasserstein distance with respect to another normal
         distribution.
@@ -90,32 +94,28 @@ class Normal(RandomVector, Referentiable):
         Args:
             other (instance of :class:`.random.Normal`): Other normal.
         """
-        if self.dim != other.dim:
-            raise RuntimeError('W2 distance can only be computed between '
-                               'distributions of the same dimensionality.')
-        root = SPD(B.dot(B.dot(self.var.root(), other.var.mat),
-                         self.var.root())).root()
-        var_part = B.trace(self.var.mat) + B.trace(other.var.mat) - \
-                   2 * B.trace(root)
+        root = Dense(B.dot(B.dot(self.spd.root(), other.var),
+                           self.spd.root())).root()
+        var_part = B.trace(self.var) + B.trace(other.var) - 2 * B.trace(root)
         mean_part = B.sum((self.mean - other.mean) ** 2)
         # The sum of `mean_part` and `var_par` should be positive, but this
         # may not be the case due to numerical errors.
         return B.abs(mean_part + var_part) ** .5
 
     def sample(self, num=1, noise=None):
-        """Sample form the distribution.
+        """Sample from the distribution.
 
         Args:
             num (int): Number of samples.
             noise (positive float, optional): Variance of noise to add to the
                 samples.
         """
-        if noise is None or noise == 0:
-            L = self.var.cholesky()
-        else:
-            L = B.cholesky(B.reg(self.var.mat, diag=noise))
-        e = B.randn((self.dim, num), dtype=L.dtype)
-        return B.dot(L, e) + self.mean
+        L = self.spd.cholesky()
+        e = B.randn((self.dim, num), dtype=self.dtype)
+        out = B.dot(L, e) + self.mean
+        if noise is not None and noise > 0:
+            out += noise ** .5 * B.randn((self.dim, num), dtype=self.dtype)
+        return out
 
     @dispatch(Random)
     def __add__(self, other):
@@ -128,7 +128,8 @@ class Normal(RandomVector, Referentiable):
 
     @dispatch(Self)
     def __add__(self, other):
-        return Normal(self.var.mat + other.var.mat, self.mean + other.mean)
+        # TODO: implement + for SPD
+        return Normal(self.var + other.var, self.mean + other.mean)
 
     @dispatch(Random)
     def __mul__(self, other):
@@ -141,14 +142,20 @@ class Normal(RandomVector, Referentiable):
                                   ''.format(type(other).__name__))
 
     @dispatch(object)
-    def __rmul__(self, other):
-        return Normal(B.dot(B.dot(other, self.var.mat), other, tr_b=True),
-                      B.dot(other, self.mean))
+    def __mul__(self, other):
+        if B.is_scalar(other):
+            return Normal(self.var * other ** 2, self.mean * other)
+        else:
+            return Normal(B.dot(B.dot(other, self.var), other, tr_b=True),
+                          B.dot(self.mean, other))
 
     @dispatch(object)
-    def __mul__(self, other):
-        return Normal(B.dot(B.dot(other, self.var.mat, tr_a=True), other),
-                      B.dot(other, self.mean, tr_a=True))
+    def __rmul__(self, other):
+        if B.is_scalar(other):
+            return Normal(self.var * other ** 2, self.mean * other)
+        else:
+            return Normal(B.dot(B.dot(other, self.var), other, tr_b=True),
+                          B.dot(other, self.mean))
 
 
 class GP(RandomProcess, Referentiable):
@@ -194,7 +201,7 @@ class GP(RandomProcess, Referentiable):
         Returns:
             Instance of :class:`.random.GP`.
         """
-        K = SPD(B.reg(self.kernel(x), diag=noise, clip=False))
+        K = Dense(B.reg(self.kernel(x), diag=noise, clip=False))
         return GP(PosteriorKernel(self, x, K), PosteriorMean(self, x, K, y))
 
     def predict(self, x):
@@ -230,4 +237,4 @@ class GP(RandomProcess, Referentiable):
 
     @dispatch(object)
     def __mul__(self, other):
-        return Normal(UnimplementedOperation, other * self.mean)
+        raise NotImplementedError
