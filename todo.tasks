@@ -1,17 +1,7 @@
-Current TODO:
-    ✓ Arithmetic for means. @done (18-05-30 19:34)
-    ✓ Arithmetic for GPs. @done (18-05-30 20:13)
-    ✓ Fix examples. @done (18-05-30 20:27)
-    ✓ Extended input space GP regression. @started @done (18-05-31 12:02)
-        ✓ Simple posterior decomposition. @started @done (18-05-31 15:41)
-    ☐ TF variables handling.
-
 Features:
-    ☐ Extended input space.
+    ☐ TF variables handling.
     ☐ Multi-output functionality:
         ☐ LMK -> IMK
-        ☐ Regression
-        ☐ Posterior decomposition (additive)
     ☐ Conditioning with Normals.
     ☐ Conditioning under certain kernels preserves the kernel.
 
@@ -20,26 +10,32 @@ Optimisations:
     ☐ Caching of computation in kernels.
 
 Examples:
-    ☐ Make all compatible with all the backends.
     ☐ Variational inference
     ☐ Input warping
     ☐ Small Bayes opt example
     ☐ ESS
     ☐ LMM/ICM
-    ☐ Posterior decomposition
 
 Documentation:
     ☐ Improve docstrings.
     ☐ Write examples.
-    ☐ Write documentation.
+    ☐ Write documentation. @started
         ☐ Define terminology in the docstrings: design matrix, shape, etc.
 
- Other:
-    ☐ Verify works on GPU with TensorFlow.
-    ☐ Write tests. @started
 
 ＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿
 Archive:
+ ✓ Write tests. @started @done (18-05-31 16:14) @project(Documentation / Other)
+ ✓ Regression @done (18-05-31 16:13) @project(Features)
+ ✓ Posterior decomposition @done (18-05-31 16:13) @project(Examples)
+ ✓ Posterior decomposition (additive) @done (18-05-31 16:13) @project(Features)
+ ✓ Make all compatible with all the backends. @done (18-05-31 16:13) @project(Examples)
+ ✓ Extended input space. @done (18-05-31 16:13) @project(Features)
+ ✓ Simple posterior decomposition. @started @done (18-05-31 15:41) @project(Current TODO)
+ ✓ Extended input space GP regression. @started @done (18-05-31 12:02) @project(Current TODO)
+ ✓ Fix examples. @done (18-05-30 20:27) @project(Current TODO)
+ ✓ Arithmetic for GPs. @done (18-05-30 20:13) @project(Current TODO)
+ ✓ Arithmetic for means. @done (18-05-30 19:34) @project(Current TODO)
  ✓ Disable caching in Plum? @done (18-05-30 18:16) @project(Current TODO)
  ✓ Implement sum and product as Kernels @high @done (18-05-30 18:15) @project(Current TODO / Fix kernels)
  ✓ Set up Sphinx. @done (18-03-29 17:10) @project(Documentation)
