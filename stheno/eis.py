@@ -5,7 +5,7 @@ from __future__ import absolute_import, division, print_function
 from plum import Dispatcher, Self, Referentiable, type_parameter
 
 from stheno import Kernel, Input, Observed, Component, ConstantKernel, \
-    ZeroKernel
+    ZeroKernel, Latent
 
 __all__ = ['NoisyKernel', 'ComponentKernel', 'AdditiveComponentKernel']
 
@@ -32,23 +32,40 @@ class ComponentKernel(Kernel, Referentiable):
 class AdditiveComponentKernel(ComponentKernel, Referentiable):
     """Kernel consisting of additive, independent components.
 
-    Uses :class:`.input.Component` and :class:`Observed`.
+    Uses :class:`.input.Component`, :class:`Observed`, and :class:`Latent`.
 
     Args:
         ks (dict of class:`.kernel.Kernel`s): Kernels of the components.
+        latent (list of class:`.input.Input`s, optional): List of input types
+            that make up the latent process.
     """
 
-    def __init__(self, ks):
+    def __init__(self, ks, latent=None):
+        latent = [] if latent is None else latent
+
         class KernelMatrix(object):
             def __getitem__(self, indices):
                 i1, i2 = indices
-                if i1 == i2 and i1 != Observed:
-                    return ks[i1]
-                elif i1 == i2 and i1 == Observed:
-                    return sum(ks.values(), ZeroKernel())
-                elif i1 == Observed:
-                    return ks[i2]
-                elif i2 == Observed:
+
+                # Handle latent.
+                if i1 == Latent or i2 == Latent:
+                    if i1 == i2 or i1 == Observed or i2 == Observed:
+                        return sum([ks[i] for i in latent], ZeroKernel())
+                    else:
+                        if i1 == Latent:
+                            return ks[i2] if i2 in latent else ZeroKernel()
+                        else:
+                            return ks[i1] if i1 in latent else ZeroKernel()
+
+                # Handle observed, assuming there is no latent.
+                if i1 == Observed or i2 == Observed:
+                    if i1 == i2:
+                        return sum(ks.values(), ZeroKernel())
+                    else:
+                        return ks[i1] if i2 == Observed else ks[i2]
+
+                # Standard implementation.
+                if i1 == i2:
                     return ks[i1]
                 else:
                     return ZeroKernel()
