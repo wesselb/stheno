@@ -208,7 +208,7 @@ class UniformDiagonal(Diagonal, Referentiable):
     """Uniformly diagonal symmetric positive-definite matrix.
 
     Args:
-        diag_scal (vector): Scale of the diagonal of the matrix.
+        diag_scal (scalar): Scale of the diagonal of the matrix.
         n (int): Size of the the diagonal.
     """
     dispatch = Dispatcher(in_class=Self)
