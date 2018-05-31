@@ -2,11 +2,58 @@
 
 from __future__ import absolute_import, division, print_function
 
-from plum import Dispatcher, Self, Referentiable
+from plum import Dispatcher, Self, Referentiable, type_parameter
 
-from stheno import Kernel, Input, Observed
+from stheno import Kernel, Input, Observed, Component, ConstantKernel, \
+    ZeroKernel
 
-__all__ = ['NoisyKernel']
+__all__ = ['NoisyKernel', 'ComponentKernel', 'AdditiveComponentKernel']
+
+
+class ComponentKernel(Kernel, Referentiable):
+    """Kernel consisting of multiple components.
+
+    Uses :class:`.input.Component`.
+
+    Args:
+        ks (matrix of class:`.kernel.Kernel`s): Kernel between the various
+            components, indexed by type parameter.
+    """
+    dispatch = Dispatcher(in_class=Self)
+
+    def __init__(self, ks):
+        self.ks = ks
+
+    @dispatch(Component, Component)
+    def __call__(self, x, y):
+        return self.ks[type(x), type(y)](x.get(), y.get())
+
+
+class AdditiveComponentKernel(ComponentKernel, Referentiable):
+    """Kernel consisting of additive, independent components.
+
+    Uses :class:`.input.Component` and :class:`Observed`.
+
+    Args:
+        ks (dict of class:`.kernel.Kernel`s): Kernels of the components.
+    """
+
+    def __init__(self, ks):
+        class KernelMatrix(object):
+            def __getitem__(self, indices):
+                i1, i2 = indices
+                if i1 == i2 and i1 != Observed:
+                    return ks[i1]
+                elif i1 == i2 and i1 == Observed:
+                    return sum(ks.values(), ZeroKernel())
+                elif i1 == Observed:
+                    return ks[i2]
+                elif i2 == Observed:
+                    return ks[i1]
+                else:
+                    return ZeroKernel()
+
+        ComponentKernel.__init__(self, KernelMatrix())
 
 
 class NoisyKernel(Kernel, Referentiable):

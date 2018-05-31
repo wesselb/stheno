@@ -7,7 +7,14 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.contrib.opt import ScipyOptimizerInterface as SOI
 
-from stheno.tf import GP, EQ, Kronecker, NoisyKernel, Observed, Latent
+from stheno.tf import GP, EQ, Kronecker, Observed, Latent, \
+    AdditiveComponentKernel, Component
+
+
+# Define the model kernel structure.
+def NoisyKernel(k1, k2):
+    return AdditiveComponentKernel({Latent: k1, Component('noise'): k2})
+
 
 # Start a TensorFlow session.
 s = tf.Session()
@@ -24,12 +31,11 @@ p_true = GP(NoisyKernel(EQ().stretch(true_scale), true_noise * Kronecker()))
 y_true = s.run(p_true(Latent(x_true)).sample())
 
 # Generate observations.
-p_true_conditioned = p_true.condition(Latent(x_true), y_true)
-y_obs = s.run(p_true_conditioned(Observed(x_true)).sample())
+y_obs = y_true + s.run(p_true(Component('noise')(x_true)).sample())
 
-# Now throw away approximately 90% of the generated function values.
+# Now throw away approximately 80% of the generated function values.
 n = np.shape(x_true)[0]
-inds = np.random.choice(n, int(np.round(.1 * n)), replace=False)
+inds = np.random.choice(n, int(np.round(.2 * n)), replace=False)
 x, y = x_true[inds, :], y_obs[inds, :]
 
 # Create a positive TensorFlow variable for the length scale of a GP that we

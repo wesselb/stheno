@@ -5,7 +5,8 @@ from __future__ import absolute_import, division, print_function
 from lab import B
 from plum import Dispatcher, Self, Referentiable
 
-from stheno import Dense, PosteriorMean, PosteriorKernel, SPD, ConstantMean
+from stheno import Dense, PosteriorMean, PosteriorKernel, SPD, ConstantMean, \
+    ZeroMean
 
 __all__ = ['Normal', 'GP']
 
@@ -41,10 +42,7 @@ class Normal(RandomVector, Referentiable):
         self.spd = var if isinstance(var, SPD) else Dense(var)
         self.dtype = self.var.dtype
         self.dim = B.shape(self.var)[0]
-        if mean is None:
-            self.mean = B.zeros([self.spd.shape[0], 1], dtype=self.dtype)
-        else:
-            self.mean = mean
+        self.mean = ZeroMean() if mean is None else mean
 
     @property
     def var(self):

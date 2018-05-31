@@ -8,7 +8,7 @@ from stheno import Input
 import numpy as np
 
 __all__ = ['Mean', 'SumMean', 'ProductMean', 'ScaledMean', 'ConstantMean',
-           'PosteriorMean', 'FunctionMean']
+           'PosteriorMean', 'FunctionMean', 'ZeroMean']
 
 
 class Mean(Referentiable):
@@ -127,6 +127,20 @@ class ConstantMean(Mean, Referentiable):
     @dispatch(B.Numeric)
     def __call__(self, x):
         return B.ones((B.shape(x)[0], 1), dtype=x.dtype)
+
+
+class ZeroMean(Mean, Referentiable):
+    """Constant mean of `0`."""
+
+    dispatch = Dispatcher(in_class=Self)
+
+    @dispatch(Number)
+    def __call__(self, x):
+        return B.array([[1.]])
+
+    @dispatch(B.Numeric)
+    def __call__(self, x):
+        return B.zeros((B.shape(x)[0], 1), dtype=x.dtype)
 
 
 class FunctionMean(Mean, Referentiable):

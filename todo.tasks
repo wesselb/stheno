@@ -1,15 +1,23 @@
+Current TODO:
+    ✓ Arithmetic for means. @done (18-05-30 19:34)
+    ✓ Arithmetic for GPs. @done (18-05-30 20:13)
+    ✓ Fix examples. @done (18-05-30 20:27)
+    ✓ Extended input space GP regression. @started @done (18-05-31 12:02)
+        ☐ Simple posterior decomposition.
+    ☐ TF variables handling.
+
 Features:
+    ☐ Extended input space.
     ☐ Multi-output functionality:
         ☐ LMK -> IMK
         ☐ Regression
         ☐ Posterior decomposition (additive)
-    ☐ Arithmetic with GPs and Normals. @started
-    ☐ Proper scaling of the length scale. @high @started
-    ☐ Functional arithmetic for adding mean functions and kernel functions. @critical @started
     ☐ Conditioning with Normals.
-    ☐ Implement sum and product as Kernels @high
     ☐ Conditioning under certain kernels preserves the kernel.
-    ☐ LinearTransform kernel type
+
+Optimisations:
+    ☐ Implement * and + for SPDs, and use these in the arithmetic of Normals.
+    ☐ Caching of computation in kernels.
 
 Examples:
     ☐ Make all compatible with all the backends.
@@ -21,7 +29,6 @@ Examples:
     ☐ Posterior decomposition
 
 Documentation:
-    ✓ Set up Sphinx. @done (18-03-29 17:10)
     ☐ Improve docstrings.
     ☐ Write examples.
     ☐ Write documentation.
@@ -30,11 +37,14 @@ Documentation:
  Other:
     ☐ Verify works on GPU with TensorFlow.
     ☐ Write tests. @started
-    ✓ Rename repo. @done (18-03-29 17:10)
-    ✓ Package. @done (18-03-29 17:10)
 
 ＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿
 Archive:
+ ✓ Disable caching in Plum? @done (18-05-30 18:16) @project(Current TODO)
+ ✓ Implement sum and product as Kernels @high @done (18-05-30 18:15) @project(Current TODO / Fix kernels)
+ ✓ Set up Sphinx. @done (18-03-29 17:10) @project(Documentation)
+ ✓ Rename repo. @done (18-03-29 17:10) @project(Documentation / Other)
+ ✓ Package. @done (18-03-29 17:10) @project(Documentation / Other)
  ✓ Name? gptools is already taken. @done (17-07-31 12:48) @project(Documentation / Other)
  ✓ Remove noise option from GP. @done (17-06-29 22:13) @project(Features)
  ✓ Optimise import statements for cleanness: `from core import np` to import the proxy. @done (17-06-29 14:58) @project(Features)

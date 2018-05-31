@@ -2,7 +2,9 @@
 
 from __future__ import absolute_import, division, print_function
 
-__all__ = ['Input', 'Observed', 'Latent']
+from plum import parametric
+
+__all__ = ['Input', 'Observed', 'Latent', 'Component']
 
 
 class Input(object):
@@ -11,6 +13,7 @@ class Input(object):
     Args:
         x (tensor): Input to type.
     """
+
     def __init__(self, x):
         self._x = x
 
@@ -19,9 +22,12 @@ class Input(object):
         return self._x
 
 
-class Observed(Input):
-    """Observed points."""
+@parametric
+class Component(Input):
+    """A particular component.
+
+    This is a parametric type."""
 
 
-class Latent(Input):
-    """Latent points."""
+Observed = Component('observed')  #: Observed points
+Latent = Component('latent')  #: Latent points

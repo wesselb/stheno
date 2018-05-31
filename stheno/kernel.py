@@ -9,7 +9,7 @@ from stheno import Input
 __all__ = ['Kernel', 'ProductKernel', 'SumKernel', 'ConstantKernel',
            'ScaledKernel', 'StretchedKernel', 'PeriodicKernel',
            'EQ', 'RQ', 'Matern12', 'Exp', 'Matern32', 'Matern52',
-           'Kronecker', 'Linear', 'PosteriorKernel']
+           'Kronecker', 'Linear', 'PosteriorKernel', 'ZeroKernel']
 
 
 class Kernel(Referentiable):
@@ -31,7 +31,7 @@ class Kernel(Referentiable):
         Returns:
             Kernel matrix.
         """
-        raise NotImplementedError()
+        raise NotImplementedError('Could not resolve kernel arguments.')
 
     @dispatch(Input, Input)
     def __call__(self, x, y):
@@ -198,7 +198,21 @@ class ConstantKernel(Kernel, Referentiable):
 
     @dispatch(B.Numeric, B.Numeric)
     def __call__(self, x, y):
-        return B.ones((B.shape(x)[0], B.shape(y)[0]))
+        return B.ones((B.shape(x)[0], B.shape(y)[0]), dtype=x.dtype)
+
+
+class ZeroKernel(Kernel, Referentiable):
+    """Constant kernel of `0`."""
+
+    dispatch = Dispatcher(in_class=Self)
+
+    @dispatch(Number, Number)
+    def __call__(self, x, y):
+        return B.array([[0.]])
+
+    @dispatch(B.Numeric, B.Numeric)
+    def __call__(self, x, y):
+        return B.zeros((B.shape(x)[0], B.shape(y)[0]), dtype=x.dtype)
 
 
 class EQ(Kernel, Referentiable):
