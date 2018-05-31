@@ -42,7 +42,9 @@ class Normal(RandomVector, Referentiable):
         self.spd = var if isinstance(var, SPD) else Dense(var)
         self.dtype = self.var.dtype
         self.dim = B.shape(self.var)[0]
-        self.mean = ZeroMean() if mean is None else mean
+        if mean is None:
+            mean = B.zeros([self.dim, 1], dtype=self.dtype)
+        self.mean = mean
 
     @property
     def var(self):
@@ -168,7 +170,7 @@ class GP(RandomProcess, Referentiable):
     dispatch = Dispatcher(in_class=Self)
 
     def __init__(self, kernel, mean=None):
-        self.mean = mean if mean else 0 * ConstantMean()
+        self.mean = mean if mean else ZeroMean()
         self.kernel = kernel
 
     def __call__(self, x):
