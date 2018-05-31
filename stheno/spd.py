@@ -126,8 +126,7 @@ class Dense(SPD):
             return B.dot(left, right, tr_a=True)
 
     def inv_prod(self, a):
-        return B.trisolve(self.cholesky(), B.trisolve(self.cholesky(), a),
-                          tr_a=True)
+        return B.cholesky_solve(self.cholesky(), a)
 
     def root(self):
         if self._root is None:
