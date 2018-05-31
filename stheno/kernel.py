@@ -3,28 +3,24 @@
 from __future__ import absolute_import, division, print_function
 
 from lab import B
-from plum import Dispatcher, Self, Referentiable
+from plum import Dispatcher, Self, Referentiable, Number
+from stheno import Input
 
-__all__ = ['Kernel', 'StationaryKernel', 'EQ', 'Matern12', 'Exp', 'Matern32',
-           'Matern52', 'RQ', 'Noise', 'Linear', 'PosteriorKernel']
+__all__ = ['Kernel', 'ProductKernel', 'SumKernel', 'ConstantKernel',
+           'ScaledKernel', 'StretchedKernel', 'PeriodicKernel',
+           'EQ', 'RQ', 'Matern12', 'Exp', 'Matern32', 'Matern52',
+           'Kronecker', 'Linear', 'PosteriorKernel']
 
 
 class Kernel(Referentiable):
     """Kernel function.
 
     Kernels can be added and multiplied.
-
-    Args:
-        f (function): Function that implements the kernel. It should take in
-            two design matrices and return the resulting kernel matrix.
     """
-
     dispatch = Dispatcher(in_class=Self)
 
-    def __init__(self, f):
-        self.f = f
-
-    def __call__(self, x, y=None):
+    @dispatch(object, object)
+    def __call__(self, x, y):
         """Construct the kernel for design matrices of points.
 
         Args:
@@ -35,84 +31,187 @@ class Kernel(Referentiable):
         Returns:
             Kernel matrix.
         """
-        y = x if y is None else y
-        if B.rank(x) != 2 or B.rank(y) != 2:
-            raise ValueError('Arguments must have rank 2.')
-        return self.f(x, y)
+        raise NotImplementedError()
+
+    @dispatch(Input, Input)
+    def __call__(self, x, y):
+        return self(x.get(), y.get())
+
+    @dispatch(object)
+    def __call__(self, x):
+        return self(x, x)
 
     @dispatch(Self)
     def __add__(self, other):
-        return Kernel(lambda *args: self(*args) + other(*args))
+        return SumKernel(self, other)
 
     @dispatch(object)
     def __add__(self, other):
-        return Kernel(lambda *args: self(*args) + other)
+        return SumKernel(self, other * ConstantKernel())
 
     def __radd__(self, other):
         return self + other
 
     @dispatch(Self)
     def __mul__(self, other):
-        return Kernel(lambda *args: self(*args) * other(*args))
+        return ProductKernel(self, other)
 
     @dispatch(object)
     def __mul__(self, other):
-        return Kernel(lambda *args: self(*args) * other)
+        return ScaledKernel(self, other)
 
     def __rmul__(self, other):
         return self * other
 
-    def stretch(self, scale):
+    def stretch(self, stretch):
         """Stretch the kernel.
 
         Args:
-            scale (tensor): Scale.
+            scale (tensor): Stretch.
         """
-        return Kernel(lambda x, y: self.f(x / scale, y / scale))
+        return StretchedKernel(self, stretch)
 
-    def periodic(self, period=1):
+    def periodic(self, period):
         """Map to a periodic space.
 
         Args:
-            period (tensor, optional): Period. Defaults to `1`.
+            period (tensor): Period.
         """
-
-        def feat_map(x):
-            scale = 2 * B.pi / B.cast(period, x.dtype)
-            return B.concatenate((B.sin(x * scale),
-                                  B.cos(x * scale)), axis=1)
-
-        return Kernel(lambda x, y: self.f(feat_map(x), feat_map(y)))
+        return PeriodicKernel(self, period)
 
 
-class StationaryKernel(Kernel, Referentiable):
-    """Stationary kernel."""
+class SumKernel(Kernel, Referentiable):
+    """Sum of two kernels.
+
+    Args:
+        k1 (instance of :class:`.kernel.Kernel`): First kernel in sum.
+        k2 (instance of :class:`.kernel.Kernel`): Second kernel in sum.
+    """
 
     dispatch = Dispatcher(in_class=Self)
 
-    def stretch(self, scale):
-        return StationaryKernel(Kernel.stretch(self, scale).f)
+    def __init__(self, k1, k2):
+        self.k1 = k1
+        self.k2 = k2
 
-    def periodic(self, period=1):
-        return StationaryKernel(Kernel.periodic(self, period).f)
-
-    @dispatch(Self)
-    def __add__(self, other):
-        return StationaryKernel(Kernel.__add__(self, other).f)
-
-    @dispatch(Self)
-    def __mul__(self, other):
-        return StationaryKernel(Kernel.__mul__(self, other).f)
+    @dispatch(object, object)
+    def __call__(self, x, y):
+        return self.k1(x, y) + self.k2(x, y)
 
 
-class EQ(StationaryKernel):
+class ProductKernel(Kernel, Referentiable):
+    """Product of two kernels.
+
+    Args:
+        k1 (instance of :class:`.kernel.Kernel`): First kernel in product.
+        k2 (instance of :class:`.kernel.Kernel`): Second kernel in product.
+    """
+
+    dispatch = Dispatcher(in_class=Self)
+
+    def __init__(self, k1, k2):
+        self.k1 = k1
+        self.k2 = k2
+
+    @dispatch(object, object)
+    def __call__(self, x, y):
+        return self.k1(x, y) * self.k2(x, y)
+
+
+class StretchedKernel(Kernel, Referentiable):
+    """Stretched kernel.
+
+    Args:
+        k (instance of :class:`.kernel.Kernel`): Kernel to stretch.
+        stretch (tensor): Stretch.
+    """
+
+    dispatch = Dispatcher(in_class=Self)
+
+    def __init__(self, k, stretch):
+        self.k = k
+        self.stretch = stretch
+
+    @dispatch(B.Numeric, B.Numeric)
+    def __call__(self, x, y):
+        return self.k(x / self.stretch, y / self.stretch)
+
+
+class ScaledKernel(Kernel, Referentiable):
+    """Scaled kernel.
+
+    Args:
+        k (instance of :class:`.kernel.Kernel`): Kernel to scale.
+        scale (tensor): Scale.
+    """
+
+    dispatch = Dispatcher(in_class=Self)
+
+    def __init__(self, k, scale):
+        self.k = k
+        self.scale = scale
+
+    @dispatch(object, object)
+    def __call__(self, x, y):
+        return self.scale * self.k(x, y)
+
+
+class PeriodicKernel(Kernel, Referentiable):
+    """Periodic kernel.
+
+    Args:
+        k (instance of :class:`.kernel.Kernel`): Kernel to make periodic.
+        scale (tensor): Period.
+    """
+
+    dispatch = Dispatcher(in_class=Self)
+
+    def __init__(self, k, period):
+        self.k = k
+        self.period = period
+
+    @dispatch(Number, Number)
+    def __call__(self, x, y):
+        def feat_map(z):
+            z = z * 2 * B.pi / self.period
+            return B.array([[B.sin(z), B.cos(z)]])
+
+        return self.k(feat_map(x), feat_map(y))
+
+    @dispatch(B.Numeric, B.Numeric)
+    def __call__(self, x, y):
+        def feat_map(z):
+            z = z * 2 * B.pi / self.period
+            return B.concat((B.sin(z), B.cos(z)), axis=1)
+
+        return self.k(feat_map(x), feat_map(y))
+
+
+class ConstantKernel(Kernel, Referentiable):
+    """Constant kernel of `1`."""
+
+    dispatch = Dispatcher(in_class=Self)
+
+    @dispatch(Number, Number)
+    def __call__(self, x, y):
+        return B.array([[1.]])
+
+    @dispatch(B.Numeric, B.Numeric)
+    def __call__(self, x, y):
+        return B.ones((B.shape(x)[0], B.shape(y)[0]))
+
+
+class EQ(Kernel, Referentiable):
     """Exponentiated quadratic kernel."""
 
-    def __init__(self):
-        self.f = lambda x, y: B.exp(-.5 * B.pw_dists2(x, y))
+    dispatch = Dispatcher(in_class=Self)
+
+    @dispatch(B.Numeric, B.Numeric)
+    def __call__(self, x, y):
+        return B.exp(-.5 * B.pw_dists2(x, y))
 
 
-class RQ(StationaryKernel):
+class RQ(Kernel, Referentiable):
     """Rational quadratic kernel.
 
     Args:
@@ -120,70 +219,98 @@ class RQ(StationaryKernel):
             determines the weight of the tails of the kernel.
     """
 
+    dispatch = Dispatcher(in_class=Self)
+
     def __init__(self, alpha):
-        alpha = B.cast(alpha)
-        self.f = lambda x, y: (1 + .5 * B.pw_dists2(x, y) / alpha) ** (-alpha)
+        self.alpha = alpha
+
+    @dispatch(B.Numeric, B.Numeric)
+    def __call__(self, x, y):
+        return (1 + .5 * B.pw_dists2(x, y) / self.alpha) ** (-self.alpha)
 
 
-class Exp(StationaryKernel):
+class Exp(Kernel, Referentiable):
     """Exponential kernel."""
 
-    def __init__(self):
-        self.f = lambda x, y: B.exp(-(B.pw_dists2(x, y) + 1e-6) ** .5)
+    dispatch = Dispatcher(in_class=Self)
+
+    @dispatch(B.Numeric, B.Numeric)
+    def __call__(self, x, y):
+        return B.exp(-B.pw_dists(x, y))
 
 
 Matern12 = Exp  #: Alias for the exponential kernel.
 
 
-class Matern32(StationaryKernel):
+class Matern32(Kernel, Referentiable):
     """Matern--3/2 kernel."""
 
-    def __init__(self):
-        def f(x, y):
-            r = 3 ** .5 * (B.pw_dists2(x, y) + 1e-6) ** .5
-            return (1 + r) * B.exp(-r)
+    dispatch = Dispatcher(in_class=Self)
 
-        self.f = f
+    @dispatch(B.Numeric, B.Numeric)
+    def __call__(self, x, y):
+        r = 3 ** .5 * B.pw_dists(x, y)
+        return (1 + r) * B.exp(-r)
 
 
-class Matern52(StationaryKernel):
+class Matern52(Kernel, Referentiable):
     """Matern--5/2 kernel."""
 
-    def __init__(self):
-        def f(x, y):
-            dists2 = B.pw_dists2(x, y)
-            r1 = 5 ** .5 * (dists2 + 1e-6) ** .5
-            r2 = 5 * dists2 / 3
-            return (1 + r1 + r2) * B.exp(-r1)
+    dispatch = Dispatcher(in_class=Self)
 
-        self.f = f
-
-
-class Noise(StationaryKernel):
-    """Noise kernel."""
-
-    def __init__(self):
-        def f(x, y):
-            dists = B.pw_dists2(x, y) ** .5
-            return B.cast(dists < 1e-10, x.dtype)
-
-        self.f = f
+    @dispatch(B.Numeric, B.Numeric)
+    def __call__(self, x, y):
+        r1 = 5 ** .5 * B.pw_dists(x, y)
+        r2 = 5 * B.pw_dists2(x, y) / 3
+        return (1 + r1 + r2) * B.exp(-r1)
 
 
-class Linear(Kernel):
+class Kronecker(Kernel, Referentiable):
+    """Kronecker kernel.
+
+    Args:
+        epsilon (float, optional): Tolerance for equality in squared distance.
+    """
+
+    dispatch = Dispatcher(in_class=Self)
+
+    def __init__(self, epsilon=1e-6):
+        self.epsilon = epsilon
+
+    @dispatch(B.Numeric, B.Numeric)
+    def __call__(self, x, y):
+        dists2 = B.pw_dists2(x, y)
+        return B.cast(dists2 < self.epsilon, x.dtype)
+
+
+class Linear(Kernel, Referentiable):
     """Linear kernel."""
 
-    def __init__(self):
-        def f(x, y):
-            return B.matmul(x, y, tr_a=True)
+    dispatch = Dispatcher(in_class=Self)
 
-        self.f = f
+    @dispatch(B.Numeric, B.Numeric)
+    def __call__(self, x, y):
+        return B.matmul(x, y, tr_a=True)
 
 
-class PosteriorKernel(Kernel):
+class PosteriorKernel(Kernel, Referentiable):
+    """Posterior kernel.
+
+    Args:
+        gp (instance of :class:`.random.GP`): Corresponding GP.
+        z (matrix): Locations of data.
+        Kz (instance of :class:`.spd.SPD`): Kernel matrix of data.
+    """
+
+    dispatch = Dispatcher(in_class=Self)
+
     def __init__(self, gp, z, Kz):
-        def f(x, y):
-            return (gp.kernel(x, y) - Kz.quadratic_form(gp.kernel(z, x),
-                                                        gp.kernel(z, y)))
+        self.gp = gp
+        self.z = z
+        self.Kz = Kz
 
-        self.f = f
+    @dispatch(object, object)
+    def __call__(self, x, y):
+        return (self.gp.kernel(x, y) -
+                self.Kz.quadratic_form(self.gp.kernel(self.z, x),
+                                       self.gp.kernel(self.z, y)))
