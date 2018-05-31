@@ -8,13 +8,13 @@ import numpy as np
 from stheno import B, GP, RQ, Matern12, Matern32, Matern52, EQ
 
 # Add some regularisation.
-B.default_reg_diag = 1e-6
+B.epsilon = 1e-6
 
 # Define the grid for which we are going to generate function values.
 x = np.linspace(0, 5, 500)[:, None]
 
 # Define a number of kernels.
-kernels = [RQ(1e-1), Matern12(), Matern32(), Matern52(), EQ().periodic()]
+kernels = [RQ(1e-1), Matern12(), Matern32(), Matern52(), EQ().periodic(1.)]
 names = ['RQ', 'Matern--1/2', 'Matern--3/2', 'Matern--5/2', 'Periodic EQ']
 
 # Generate a function for each of the defined kernels.

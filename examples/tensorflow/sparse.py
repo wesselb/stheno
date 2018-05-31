@@ -7,9 +7,9 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.contrib.opt import ScipyOptimizerInterface as SOI
 
-from stheno.tf import B, GP, EQ, SPD, PosteriorKernel, Normal, Noise
+from stheno.tf import B, GP, EQ, Dense, PosteriorKernel, Normal, Kronecker
 
-B.default_reg_diag = 1e-8
+B.epsilon = 1e-8
 
 # Start a TensorFlow session.
 s = tf.Session()
@@ -45,8 +45,8 @@ var = tf.exp(log_var)
 s.run(tf.variables_initializer([log_scale, log_var]))
 
 # Create the GP that we are going to fit to the data.
-q_gp = GP(kernel=var * EQ().stretch(scale) + 1e-6 * Noise())
-K = SPD(q_gp.kernel(x_u))
+q_gp = GP(kernel=var * EQ().stretch(scale) + 1e-6 * Kronecker())
+K = Dense(q_gp.kernel(x_u))
 q_L = tf.Variable(s.run(K.cholesky()))
 q_mu2 = tf.Variable(np.zeros((n_u, 1)))
 s.run(tf.variables_initializer([q_L, q_mu2]))
