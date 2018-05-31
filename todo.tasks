@@ -3,7 +3,7 @@ Current TODO:
     ✓ Arithmetic for GPs. @done (18-05-30 20:13)
     ✓ Fix examples. @done (18-05-30 20:27)
     ✓ Extended input space GP regression. @started @done (18-05-31 12:02)
-        ☐ Simple posterior decomposition.
+        ✓ Simple posterior decomposition. @started @done (18-05-31 15:41)
     ☐ TF variables handling.
 
 Features:

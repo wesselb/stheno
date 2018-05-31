@@ -16,8 +16,8 @@ class ComponentKernel(Kernel, Referentiable):
     Uses :class:`.input.Component`.
 
     Args:
-        ks (matrix of class:`.kernel.Kernel`s): Kernel between the various
-            components, indexed by type parameter.
+        ks (matrix of instances :class:`.kernel.Kernel`): Kernel between the
+            various components, indexed by type parameter.
     """
     dispatch = Dispatcher(in_class=Self)
 
@@ -32,12 +32,14 @@ class ComponentKernel(Kernel, Referentiable):
 class AdditiveComponentKernel(ComponentKernel, Referentiable):
     """Kernel consisting of additive, independent components.
 
-    Uses :class:`.input.Component`, :class:`Observed`, and :class:`Latent`.
+    Uses :class:`.input.Component`, :class:`.input.Observed`, and
+    :class:`.input.Latent`.
 
     Args:
-        ks (dict of class:`.kernel.Kernel`s): Kernels of the components.
-        latent (list of class:`.input.Input`s, optional): List of input types
-            that make up the latent process.
+        ks (dict of instances of :class:`.kernel.Kernel`): Kernels of the
+            components.
+        latent (list of instances of :class:`.input.Input`, optional): List of
+            input types that make up the latent process.
     """
 
     def __init__(self, ks, latent=None):
