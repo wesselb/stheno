@@ -13,6 +13,10 @@ class SPD(object):
     __metaclass__ = ABCMeta
 
     @abstractproperty
+    def dtype(self):
+        """Data type of the matrix"""
+
+    @abstractproperty
     def shape(self):
         """Shape of the matrix"""
 
@@ -88,6 +92,10 @@ class Dense(SPD):
         self._root = None
 
     @property
+    def dtype(self):
+        return self._mat.dtype
+
+    @property
     def mat(self):
         return self._mat
 
@@ -148,6 +156,10 @@ class Diagonal(Dense, Referentiable):
         self._diag = diag
 
     @property
+    def dtype(self):
+        return self._diag.dtype
+
+    @property
     def diag(self):
         return self._diag
 
@@ -201,6 +213,10 @@ class UniformDiagonal(Diagonal, Referentiable):
         Diagonal.__init__(self, None)
         self.diag_scale = diag_scale
         self._n = n
+
+    @property
+    def dtype(self):
+        return self.diag_scale.dtype
 
     @property
     def shape(self):

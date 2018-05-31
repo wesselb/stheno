@@ -40,7 +40,7 @@ class Normal(RandomVector, Referentiable):
 
     def __init__(self, var, mean=None):
         self.spd = var if isinstance(var, SPD) else Dense(var)
-        self.dtype = self.var.dtype
+        self.dtype = self.spd.dtype
         self.dim = B.shape(self.var)[0]
         if mean is None:
             mean = B.zeros([self.dim, 1], dtype=self.dtype)
