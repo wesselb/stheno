@@ -16,7 +16,7 @@ init:
 	pip install -r requirements.txt
 
 test:
-	python /usr/local/bin/nosetests tests --with-coverage --cover-html --cover-package=stheno
+	python /usr/local/bin/nosetests tests --with-coverage --cover-html --cover-package=stheno -v --nologcapture
 
 clean:
 	rm -rf .coverage cover
