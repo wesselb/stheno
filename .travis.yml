@@ -5,6 +5,6 @@ python:
 install:
   - pip install --no-cache-dir -U -r requirements.txt | cat
 script:
-  - nosetests tests --with-coverage --cover-package=lab
+  - nosetests tests --with-coverage --cover-package=stheno
 after_success:
   - coveralls
