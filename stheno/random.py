@@ -5,8 +5,7 @@ from __future__ import absolute_import, division, print_function
 from lab import B
 from plum import Dispatcher, Self, Referentiable
 
-from stheno import Dense, PosteriorMean, PosteriorKernel, SPD, ConstantMean, \
-    ZeroMean
+from stheno import PosteriorMean, PosteriorKernel, SPD, ZeroMean
 
 __all__ = ['Normal', 'GP']
 
@@ -39,7 +38,7 @@ class Normal(RandomVector, Referentiable):
     dispatch = Dispatcher(in_class=Self)
 
     def __init__(self, var, mean=None):
-        self.spd = var if isinstance(var, SPD) else Dense(var)
+        self.spd = var if isinstance(var, SPD) else SPD(var)
         self.dtype = self.spd.dtype
         self.dim = B.shape(self.var)[0]
         if mean is None:
@@ -83,7 +82,8 @@ class Normal(RandomVector, Referentiable):
             other (instance of :class:`.random.Normal`): Other normal.
         """
         return (self.spd.ratio(other.spd) +
-                other.spd.mah_dist2(other.mean, self.mean) - self.dim +
+                other.spd.mah_dist2(other.mean, self.mean) -
+                B.cast(self.dim, dtype=self.dtype) +
                 other.spd.log_det() - self.spd.log_det()) / 2
 
     @dispatch(Self)
@@ -94,7 +94,7 @@ class Normal(RandomVector, Referentiable):
         Args:
             other (instance of :class:`.random.Normal`): Other normal.
         """
-        root = Dense(B.dot(B.dot(self.spd.root(), other.var),
+        root = SPD(B.dot(B.dot(self.spd.root(), other.var),
                            self.spd.root())).root()
         var_part = B.trace(self.var) + B.trace(other.var) - 2 * B.trace(root)
         mean_part = B.sum((self.mean - other.mean) ** 2)
@@ -124,11 +124,11 @@ class Normal(RandomVector, Referentiable):
 
     @dispatch(object)
     def __add__(self, other):
-        return Normal(self.var, self.mean + other)
+        return Normal(self.spd, self.mean + other)
 
     @dispatch(Self)
     def __add__(self, other):
-        return Normal(self.var + other.var, self.mean + other.mean)
+        return Normal(self.spd + other.spd, self.mean + other.mean)
 
     @dispatch(Random)
     def __mul__(self, other):
@@ -143,7 +143,7 @@ class Normal(RandomVector, Referentiable):
     @dispatch(object)
     def __mul__(self, other):
         if B.is_scalar(other):
-            return Normal(self.var * other ** 2, self.mean * other)
+            return Normal(self.spd * other ** 2, self.mean * other)
         else:
             return Normal(B.dot(B.dot(other, self.var), other, tr_b=True),
                           B.dot(self.mean, other))
@@ -151,7 +151,7 @@ class Normal(RandomVector, Referentiable):
     @dispatch(object)
     def __rmul__(self, other):
         if B.is_scalar(other):
-            return Normal(self.var * other ** 2, self.mean * other)
+            return Normal(self.spd * other ** 2, self.mean * other)
         else:
             return Normal(B.dot(B.dot(other, self.var), other, tr_b=True),
                           B.dot(other, self.mean))
@@ -195,7 +195,7 @@ class GP(RandomProcess, Referentiable):
         Returns:
             Instance of :class:`.random.GP`.
         """
-        K = Dense(B.reg(self.kernel(x)))
+        K = SPD(B.reg(self.kernel(x)))
         return GP(PosteriorKernel(self, x, K), PosteriorMean(self, x, K, y))
 
     def predict(self, x):

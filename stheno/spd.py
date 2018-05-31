@@ -4,86 +4,18 @@ from __future__ import print_function, division, absolute_import
 
 from lab import B
 from abc import ABCMeta, abstractmethod, abstractproperty
-from plum import Referentiable, Self, Dispatcher
+from plum import Referentiable, Self, Dispatcher, parametric, Kind
 
-__all__ = ['SPD', 'Dense', 'Diagonal', 'UniformDiagonal']
-
-
-class SPD(object):
-    __metaclass__ = ABCMeta
-
-    @abstractproperty
-    def dtype(self):
-        """Data type of the matrix"""
-
-    @abstractproperty
-    def shape(self):
-        """Shape of the matrix"""
-
-    @abstractproperty
-    def mat(self):
-        """The matrix"""
-
-    @abstractproperty
-    def diag(self):
-        """Diagonal of the matrix"""
-
-    @abstractmethod
-    def cholesky(self):
-        """Compute the Cholesky decomposition."""
-
-    @abstractmethod
-    def log_det(self):
-        """Compute the log-determinant."""
-
-    @abstractmethod
-    def mah_dist2(self, a, b=None, sum=True):
-        """Compute the square of the Mahalanobis distance between two matrices.
-
-        Args:
-            a (matrix): First matrix.
-            b (matrix): Second matrix. Defaults to first matrix.
-            sum (bool, optional): Compute the sum of all distances instead
-                of returning all distances.
-        """
-
-    @abstractmethod
-    def ratio(self, denom):
-        """Compute the ratio with respect to another positive-definite matrix.
-
-        Args:
-            denom (instance of :class:`.pdmat.PDMat`): Denominator in the
-                ratio.
-        """
-
-    @abstractmethod
-    def quadratic_form(self, a, b=None):
-        """Compute the quadratic form `transpose(a) inv(self.mat) b`.
-
-        Args:
-            a (matrix): `a`.
-            b (matrix): `b`.
-        """
-
-    @abstractmethod
-    def inv_prod(self, a):
-        """Compute the matrix-vector product `inv(self.mat) a`.
-
-        Args:
-            a (matrix): `a`
-        """
-
-    @abstractmethod
-    def root(self):
-        """Compute a square root."""
+__all__ = ['SPD', 'Diagonal', 'UniformDiagonal']
 
 
-class Dense(SPD):
-    """Dense symmetric positive-definite matrix.
+class SPD(Referentiable):
+    """Symmetric positive-definite matrix.
 
     Args:
         mat (matrix): Symmetric positive-definite matrix.
     """
+    dispatch = Dispatcher(in_class=Self)
 
     def __init__(self, mat):
         self._mat = mat
@@ -93,39 +25,65 @@ class Dense(SPD):
 
     @property
     def dtype(self):
-        return self._mat.dtype
+        """Data type of the matrix"""
+        return B.dtype(self._mat)
 
     @property
     def mat(self):
+        """The matrix"""
         return self._mat
 
     @property
     def diag(self):
+        """Diagonal of the matrix"""
         return B.diag(self._mat)
 
     @property
     def shape(self):
+        """Shape of the matrix"""
         return B.shape(self.mat)
 
     def cholesky(self):
+        """Compute the Cholesky decomposition."""
         if self._cholesky is None:
             self._cholesky = B.cholesky(B.reg(self.mat))
         return self._cholesky
 
     def log_det(self):
+        """Compute the log-determinant."""
         if self._log_det is None:
             self._log_det = 2 * B.sum(B.log(B.diag(self.cholesky())))
         return self._log_det
 
     def mah_dist2(self, a, b=None, sum=True):
+        """Compute the square of the Mahalanobis distance between two matrices.
+
+        Args:
+            a (matrix): First matrix.
+            b (matrix): Second matrix. Defaults to first matrix.
+            sum (bool, optional): Compute the sum of all distances instead
+                of returning all distances.
+        """
         diff = a if b is None else a - b
         iL_diff = B.trisolve(self.cholesky(), diff)
         return B.sum(iL_diff ** 2) if sum else B.sum(iL_diff ** 2, axis=0)
 
     def ratio(self, denom):
+        """Compute the ratio with respect to another positive-definite matrix.
+
+        Args:
+            denom (instance of :class:`.pdmat.PDMat`): Denominator in the
+                ratio.
+        """
         return B.sum(B.trisolve(denom.cholesky(), self.cholesky()) ** 2)
 
     def quadratic_form(self, a, b=None):
+        """Compute the quadratic form `transpose(a) inv(self.mat) b`.
+
+        Args:
+            a (matrix): `a`.
+            b (matrix): `b`.
+        """
         if b is None:
             return self.mah_dist2(a)
         else:
@@ -134,16 +92,54 @@ class Dense(SPD):
             return B.dot(left, right, tr_a=True)
 
     def inv_prod(self, a):
+        """Compute the matrix-vector product `inv(self.mat) a`.
+
+        Args:
+            a (matrix): `a`
+        """
         return B.cholesky_solve(self.cholesky(), a)
 
     def root(self):
+        """Compute a square root."""
         if self._root is None:
             vals, vecs = B.eig(B.reg(self.mat))
             self._root = B.dot(vecs * vals[None, :] ** .5, vecs, tr_b=True)
         return self._root
 
+    @dispatch(object)
+    def __radd__(self, other):
+        return self + other
 
-class Diagonal(Dense, Referentiable):
+    @dispatch(object)
+    def __add__(self, other):
+        return SPD(self.mat + other)
+
+    @dispatch(Self)
+    def __add__(self, other):
+        return SPD(self.mat + other.mat)
+
+    @dispatch(object)
+    def __rmul__(self, other):
+        return self * other
+
+    @dispatch(object)
+    def __mul__(self, other):
+        if B.is_scalar(other):
+            return self * Kind('scalar')(other)
+        else:
+            raise NotImplementedError('Can only multiply a SPD by '
+                                      'a scalar.')
+
+    @dispatch(Kind('scalar'))
+    def __mul__(self, other):
+        return SPD(other.get() * self.mat)
+
+    @dispatch(Self)
+    def __mul__(self, other):
+        raise NotImplementedError('Cannot multiply two SPDs.')
+
+
+class Diagonal(SPD, Referentiable):
     """Diagonal symmetric positive-definite matrix.
 
     Args:
@@ -152,12 +148,12 @@ class Diagonal(Dense, Referentiable):
     dispatch = Dispatcher(in_class=Self)
 
     def __init__(self, diag):
-        Dense.__init__(self, None)
+        SPD.__init__(self, None)
         self._diag = diag
 
     @property
     def dtype(self):
-        return self._diag.dtype
+        return B.dtype(self._diag)
 
     @property
     def diag(self):
@@ -199,6 +195,14 @@ class Diagonal(Dense, Referentiable):
     def root(self):
         return self.cholesky()
 
+    @dispatch(Self)
+    def __add__(self, other):
+        return Diagonal(self.diag + other.diag)
+
+    @dispatch(Kind('scalar'))
+    def __mul__(self, other):
+        return Diagonal(other.get() * self.diag)
+
 
 class UniformDiagonal(Diagonal, Referentiable):
     """Uniformly diagonal symmetric positive-definite matrix.
@@ -216,7 +220,7 @@ class UniformDiagonal(Diagonal, Referentiable):
 
     @property
     def dtype(self):
-        return self.diag_scale.dtype
+        return B.dtype(self.diag_scale)
 
     @property
     def shape(self):
@@ -224,14 +228,14 @@ class UniformDiagonal(Diagonal, Referentiable):
 
     @property
     def mat(self):
-        return B.eye(self._n) * self.diag_scale
+        return B.eye(self._n, dtype=self.dtype) * self.diag_scale
 
     @property
     def diag(self):
-        return B.ones(self._n) * self.diag_scale
+        return B.ones(self._n, dtype=self.dtype) * self.diag_scale
 
     def log_det(self):
-        return self._n * B.log(self.diag_scale)
+        return B.cast(self._n, dtype=self.dtype) * B.log(self.diag_scale)
 
     def mah_dist2(self, a, b=None, sum=True):
         diff = a if b is None else a - b
@@ -240,17 +244,26 @@ class UniformDiagonal(Diagonal, Referentiable):
 
     @dispatch(Self)
     def ratio(self, denom):
-        return self._n * self.diag_scale / denom.diag_scale
+        return B.cast(self._n, dtype=self.dtype) \
+               * self.diag_scale / denom.diag_scale
 
     def quadratic_form(self, a, b=None):
         if b is None:
             return self.mah_dist2(a)
         else:
-            return B.dot(a / self.diag_scale ** .5, b / self.diag_scale ** .5,
-                         tr_a=True)
+            return B.dot(a / self.diag_scale ** .5,
+                         b / self.diag_scale ** .5, tr_a=True)
 
     def inv_prod(self, a):
         return a / self.diag_scale
 
     def root(self):
         return self.cholesky()
+
+    @dispatch(Self)
+    def __add__(self, other):
+        return UniformDiagonal(self.diag_scale + other.diag_scale, self._n)
+
+    @dispatch(Kind('scalar'))
+    def __mul__(self, other):
+        return UniformDiagonal(other.get() * self.diag_scale, self._n)

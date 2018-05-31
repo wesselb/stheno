@@ -6,7 +6,7 @@ import numpy as np
 from plum import Dispatcher
 from scipy.stats import multivariate_normal
 
-from stheno import Normal, Dense, Diagonal, UniformDiagonal, GP, EQ, RQ, \
+from stheno import Normal, Diagonal, UniformDiagonal, GP, EQ, RQ, \
     FunctionMean
 # noinspection PyUnresolvedReferences
 from . import eq, neq, lt, le, ge, gt, raises, call, ok, eprint
@@ -40,7 +40,7 @@ def test_normal():
     kl = dist.kl(dist2)
     yield ok, np.abs(kl_est - kl) / np.abs(kl) < 1e-2, 'kl samples'
 
-    # Check a diagonal normal and dense normal.
+    # Check a diagonal normal and SPD normal.
     mean = np.random.randn(3, 1)
     var_diag = np.random.randn(3) ** 2
     var = np.diag(var_diag)
@@ -59,7 +59,7 @@ def test_normal():
     yield ok, dist2.w2(dist1) < 1e-4, 'w2 3'
     yield ok, dist2.w2(dist2) < 1e-4, 'w2 4'
 
-    # Check a uniformly diagonal normal and dense normal.
+    # Check a uniformly diagonal normal and SPD normal.
     mean = np.random.randn(3, 1)
     var_diag_scale = np.random.randn() ** 2
     var = np.eye(3) * var_diag_scale
@@ -77,47 +77,6 @@ def test_normal():
     yield ok, dist1.w2(dist2) < 1e-4, 'w2 2'
     yield ok, dist2.w2(dist1) < 1e-4, 'w2 3'
     yield ok, dist2.w2(dist2) < 1e-4, 'w2 4'
-
-
-def test_spd():
-    def compare(spd1, spd2):
-        a = np.random.randn(3, 10)
-        b = np.random.randn(3, 10)
-        A = np.random.randn(3, 3)
-
-        yield ok, np.allclose(spd1.mat, spd2.mat), 'matrices'
-        yield ok, np.allclose(spd1.diag, spd2.diag), 'diagonals'
-        yield ok, spd1.shape == spd2.shape, 'shapes'
-        yield ok, np.allclose(spd1.cholesky(),
-                              spd2.cholesky()), 'cholesky'
-        yield ok, np.allclose(spd1.root(), spd2.root()), 'roots'
-        yield ok, np.allclose(spd1.log_det(), spd2.log_det()), 'log dets'
-        yield ok, np.allclose(spd1.mah_dist2(a), spd2.mah_dist2(a)), 'mah'
-        yield ok, np.allclose(spd1.mah_dist2(a, b),
-                              spd2.mah_dist2(a, b)), 'mah 2'
-        yield ok, np.allclose(spd1.quadratic_form(a),
-                              spd2.quadratic_form(a)), 'qf'
-        yield ok, np.allclose(spd1.quadratic_form(a, b),
-                              spd2.quadratic_form(a, b)), 'qf 2'
-        yield ok, np.allclose(spd1.ratio(spd1), spd2.ratio(spd1)), 'ratio'
-        yield ok, np.allclose(spd1.ratio(spd1), spd2.ratio(spd2)), 'ratio 2'
-        yield ok, np.allclose(spd1.ratio(spd2), spd2.ratio(spd1)), 'ratio 3'
-        yield ok, np.allclose(spd1.ratio(spd2), spd2.ratio(spd2)), 'ratio 4'
-        yield ok, np.allclose(spd1.inv_prod(A), spd2.inv_prod(A)), 'inv prod'
-
-    # Compare dense and diagonal implementation.
-    a = np.diag(np.random.randn(3) ** 2)
-    spd = Dense(a)
-    spd_diag = Diagonal(np.diag(a))
-    for x in compare(spd, spd_diag):
-        yield x
-
-    # Compare dense and uniform diagonal implementation.
-    a = np.random.randn() ** 2
-    spd = Dense(np.eye(3) * a)
-    spd_diag_uniform = UniformDiagonal(a, 3)
-    for x in compare(spd, spd_diag_uniform):
-        yield x
 
 
 def test_normal_arithmetic():

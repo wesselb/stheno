@@ -198,7 +198,7 @@ class ConstantKernel(Kernel, Referentiable):
 
     @dispatch(B.Numeric, B.Numeric)
     def __call__(self, x, y):
-        return B.ones((B.shape(x)[0], B.shape(y)[0]), dtype=x.dtype)
+        return B.ones((B.shape(x)[0], B.shape(y)[0]), dtype=B.dtype(x))
 
 
 class ZeroKernel(Kernel, Referentiable):
@@ -212,7 +212,7 @@ class ZeroKernel(Kernel, Referentiable):
 
     @dispatch(B.Numeric, B.Numeric)
     def __call__(self, x, y):
-        return B.zeros((B.shape(x)[0], B.shape(y)[0]), dtype=x.dtype)
+        return B.zeros((B.shape(x)[0], B.shape(y)[0]), dtype=B.dtype(x))
 
 
 class EQ(Kernel, Referentiable):
@@ -294,7 +294,7 @@ class Kronecker(Kernel, Referentiable):
     @dispatch(B.Numeric, B.Numeric)
     def __call__(self, x, y):
         dists2 = B.pw_dists2(x, y)
-        return B.cast(dists2 < self.epsilon, x.dtype)
+        return B.cast(dists2 < self.epsilon, B.dtype(x))
 
 
 class Linear(Kernel, Referentiable):

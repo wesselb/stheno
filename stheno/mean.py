@@ -126,7 +126,7 @@ class ConstantMean(Mean, Referentiable):
 
     @dispatch(B.Numeric)
     def __call__(self, x):
-        return B.ones((B.shape(x)[0], 1), dtype=x.dtype)
+        return B.ones((B.shape(x)[0], 1), dtype=B.dtype(x))
 
 
 class ZeroMean(Mean, Referentiable):
@@ -140,7 +140,7 @@ class ZeroMean(Mean, Referentiable):
 
     @dispatch(B.Numeric)
     def __call__(self, x):
-        return B.zeros((B.shape(x)[0], 1), dtype=x.dtype)
+        return B.zeros((B.shape(x)[0], 1), dtype=B.dtype(x))
 
 
 class FunctionMean(Mean, Referentiable):
