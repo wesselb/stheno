@@ -5,7 +5,7 @@ from __future__ import absolute_import, division, print_function
 from lab import B
 from plum import Dispatcher, Self, Referentiable
 
-from stheno import Dense, ZeroMean, PosteriorMean, PosteriorKernel, SPD
+from stheno import Dense, PosteriorMean, PosteriorKernel, SPD, ConstantMean
 
 __all__ = ['Normal', 'GP']
 
@@ -128,7 +128,6 @@ class Normal(RandomVector, Referentiable):
 
     @dispatch(Self)
     def __add__(self, other):
-        # TODO: implement + for SPD
         return Normal(self.var + other.var, self.mean + other.mean)
 
     @dispatch(Random)
@@ -164,44 +163,39 @@ class GP(RandomProcess, Referentiable):
     Args:
         kernel (instance of :class:`.kernel.Kernel`): Kernel of the
             process.
-        mean (column vector, optional): Mean function of the process. Defaults
-            to zero.
+        mean (instance of :class:`.mean.Mean`, optional): Mean function of the
+            process. Defaults to zero.
     """
 
     dispatch = Dispatcher(in_class=Self)
 
     def __init__(self, kernel, mean=None):
-        self.mean = mean if mean else ZeroMean()
+        self.mean = mean if mean else 0 * ConstantMean()
         self.kernel = kernel
 
-    def __call__(self, x, noise=None):
+    def __call__(self, x):
         """Construct a finite-dimensional distribution at specified locations.
 
         Args:
            x (design matrix): Points to construct the distribution at.
-           noise (positive float, optional): Variance of noise to add to the
-               resulting random vector.
 
         Returns:
             Instance of :class:`gptools.normal.Normal`.
         """
 
-        return Normal(B.reg(self.kernel(x), diag=noise, clip=False),
-                      self.mean(x))
+        return Normal(B.reg(self.kernel(x)), self.mean(x))
 
-    def condition(self, x, y, noise=None):
+    def condition(self, x, y):
         """Condition the GP on a number of points.
 
         Args:
             x (design matrix): Locations of the points to condition on.
             y (design matrix): Values of the points to condition on.
-            noise (positive float, optional): Variance of noise to add to the
-                resulting random process.
 
         Returns:
             Instance of :class:`.random.GP`.
         """
-        K = Dense(B.reg(self.kernel(x), diag=noise, clip=False))
+        K = Dense(B.reg(self.kernel(x)))
         return GP(PosteriorKernel(self, x, K), PosteriorMean(self, x, K, y))
 
     def predict(self, x):
@@ -215,7 +209,7 @@ class GP(RandomProcess, Referentiable):
             standard deviations.
         """
         dist = self(x)
-        return dist.mean, B.diag(dist.var.mat) ** .5
+        return dist.mean, dist.spd.diag ** .5
 
     @dispatch(Random)
     def __add__(self, other):
@@ -228,7 +222,7 @@ class GP(RandomProcess, Referentiable):
 
     @dispatch(Self)
     def __add__(self, other):
-        return Normal(self.kernel + other.kernel, self.mean + other.mean)
+        return GP(self.kernel + other.kernel, self.mean + other.mean)
 
     @dispatch(Random)
     def __mul__(self, other):
@@ -237,4 +231,7 @@ class GP(RandomProcess, Referentiable):
 
     @dispatch(object)
     def __mul__(self, other):
-        raise NotImplementedError
+        return GP(other ** 2 * self.kernel, other * self.mean)
+
+    def __rmul__(self, other):
+        return self * other
