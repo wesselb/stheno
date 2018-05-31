@@ -3,19 +3,51 @@
 from __future__ import absolute_import, division, print_function
 
 # noinspection PyUnresolvedReferences
-from . import eq, neq, lt, le, ge, gt, raises, call
+from . import eq, neq, lt, le, ge, gt, raises, call, ok, eprint
 
-from stheno import EQ, Kernel, StationaryKernel
+import numpy as np
+from stheno import EQ, Kernel, RQ, Exp, Matern12, Matern32, Matern52, Linear, \
+    Kronecker, Kernel
 
 
-def test_dispatch():
-    sk = EQ()
-    k = Kernel(lambda x, y: None)
-    operators = [lambda x, y: x + y,
-                 lambda x, y: x * y]
+def test_corner_cases():
+    yield raises, NotImplementedError, lambda: Kernel()(1.)
 
-    for op in operators:
-        yield eq, type(op(sk, k)), Kernel
-        yield eq, type(op(k, sk)), Kernel
-        yield eq, type(op(sk, sk)), StationaryKernel
-        yield eq, type(op(k, k)), Kernel
+
+def test_kronecker_kernel():
+    k = Kronecker()
+    x1 = np.random.randn(10, 2)
+    x2 = np.random.randn(10, 2)
+
+    eprint(k(x1))
+    yield ok, np.allclose(k(x1), np.eye(10)), 'same'
+    yield ok, np.allclose(k(x1, x2), np.zeros((10, 10))), 'others'
+
+
+def test_arithmetic():
+    k1 = EQ()
+    k2 = RQ(1e-1)
+    k3 = Matern12()
+    k4 = Matern32()
+    k5 = Matern52()
+    k6 = Kronecker()
+    xs1 = np.random.randn(10, 2), np.random.randn(10, 2)
+    xs2 = np.random.randn(), np.random.randn()
+
+    yield ok, np.allclose(k6(xs1[0]), k6(xs1[0], xs1[0])), 'dispatch'
+    yield ok, np.allclose((k1 * k2)(*xs1), k1(*xs1) * k2(*xs1)), 'prod'
+    yield ok, np.allclose((k1 * k2)(*xs2), k1(*xs2) * k2(*xs2)), 'prod 2'
+    yield ok, np.allclose((k3 + k4)(*xs1), k3(*xs1) + k4(*xs1)), 'sum'
+    yield ok, np.allclose((k3 + k4)(*xs2), k3(*xs2) + k4(*xs2)), 'sum 2'
+    yield ok, np.allclose((5. * k5)(*xs1), 5. * k5(*xs1)), 'prod 3'
+    yield ok, np.allclose((5. * k5)(*xs2), 5. * k5(*xs2)), 'prod 4'
+    yield ok, np.allclose((5. + k5)(*xs1), 5. + k5(*xs1)), 'sum 3'
+    yield ok, np.allclose((5. + k5)(*xs2), 5. + k5(*xs2)), 'sum 4'
+    yield ok, np.allclose(k1.stretch(2.)(*xs1),
+                          k1(xs1[0] / 2., xs1[1] / 2.)), 'stretch'
+    yield ok, np.allclose(k1.stretch(2.)(*xs2),
+                          k1(xs2[0] / 2., xs2[1] / 2.)), 'stretch 2'
+    yield ok, np.allclose(k1.periodic(1.)(*xs1),
+                          k1.periodic(1.)(xs1[0], xs1[1] + 5.)), 'periodic'
+    yield ok, np.allclose(k1.periodic(1.)(*xs2),
+                          k1.periodic(1.)(xs2[0], xs2[1] + 5.)), 'periodic 2'
