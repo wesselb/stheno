@@ -12,48 +12,39 @@ Implementation of Gaussian processes in Python
 ![Prediction](https://raw.githubusercontent.com/wesselb/stheno/master/readme_prediction.png)
 
 ```python
-import tensorflow as tf, numpy as np, matplotlib.pyplot as plt
-from tensorflow.contrib.opt import ScipyOptimizerInterface as SOI
-from stheno.tf import GP, NoisyKernel, EQ, Kronecker, Observed, Latent
-from wbml import vars32
+import matplotlib.pyplot as plt
+import numpy as np
 
-# Generate some observations.
-x = np.linspace(0, 10, 50, dtype=np.float32)[:, None]
-y = np.sin(x) + .2 ** .5 * np.random.randn(*x.shape)
+from stheno import GP, EQ, Kronecker
 
-# And generate some data to predict for.
-x_pred = np.linspace(0, 15, 500, dtype=np.float32)[:, None]
-f_pred = np.sin(x_pred)
+# Define points to predict at.
+x = np.linspace(0, 10, 100)[:, None]
+x_obs = np.linspace(0, 7, 10)[:, None]
 
-# Define the parameters of the kernel.
-s2 = vars32.positive(1.)
-scale = vars32.positive(1.)
-noise = vars32.positive(.1)
+# Construct a prior.
+f = GP(EQ())  # Latent function.
+e = GP(0.1 * Kronecker())  # Noise.
+y = f + e
 
-# Construct a GP and compute the evidence of the data.
-k_data = s2 * EQ().stretch(scale)
-k_noise = noise * Kronecker()
-p = GP(NoisyKernel(k_data, k_noise))
-lml = p(Observed(x)).log_pdf(y)
+# Sample a true, underlying function.
+f_true = f(x).sample()
 
-# Learn.
-s = tf.Session()
-vars32.init(s)
-SOI(-lml).minimize(s)
+# Condition the model on the true function and sample observations.
+y_obs = y.condition(f @ x, f_true)(x_obs).sample()
+y.revert_prior()
 
-# Perform predictions.
-p_posterior = p.condition(Observed(x), y)
-mean, lower, upper = s.run(p_posterior.predict(Latent(x_pred)))
+# Now condition on the observations to make predictions.
+mean, lower, upper = f.condition(y @ x_obs, y_obs).predict(x)
 
-# Plot.
-x, y = x.squeeze(), y.squeeze()
-x_pred, f_pred = x_pred.squeeze(), f_pred.squeeze()
-plt.plot(x_pred, f_pred, label='True', c='tab:blue')
-plt.scatter(x, y, label='Observations', c='tab:red')
-plt.plot(x_pred, mean, label='Prediction', c='tab:green')
-plt.plot(x_pred, lower, ls='--', c='tab:green')
-plt.plot(x_pred, upper, ls='--', c='tab:green')
+# Plot result.
+x, f_true, x_obs, y_obs = map(np.squeeze, (x, f_true, x_obs, y_obs))
+plt.plot(x, f_true, label='True', c='tab:blue')
+plt.scatter(x_obs, y_obs, label='Observations', c='tab:red')
+plt.plot(x, mean, label='Prediction', c='tab:green')
+plt.plot(x, lower, ls='--', c='tab:green')
+plt.plot(x, upper, ls='--', c='tab:green')
 plt.legend()
 plt.show()
+
 ```
 
