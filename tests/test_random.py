@@ -6,7 +6,7 @@ import numpy as np
 from plum import Dispatcher
 from scipy.stats import multivariate_normal
 
-from stheno import Normal, Diagonal, UniformDiagonal, GP, EQ, RQ, \
+from stheno import Normal, Diagonal, UniformDiagonal, GPPrimitive, EQ, RQ, \
     FunctionMean
 # noinspection PyUnresolvedReferences
 from . import eq, neq, lt, le, ge, gt, raises, call, ok, eprint
@@ -93,19 +93,18 @@ def test_normal_arithmetic():
     A = np.random.randn(3, 3)
     a = np.random.randn(1, 3)
     b = 5.
-    yield ok, np.allclose((dist.__mul__(a)).mean,
+    yield ok, np.allclose((dist.rmatmul(a)).mean,
                           dist.mean.dot(a)), 'mean mul'
-    yield ok, np.allclose((dist.__mul__(a)).var,
+    yield ok, np.allclose((dist.rmatmul(a)).var,
                           a.dot(dist.var).dot(a.T)), 'var mul'
-    yield ok, np.allclose((dist.__rmul__(A)).mean,
+    yield ok, np.allclose((dist.lmatmul(A)).mean,
                           A.dot(dist.mean)), 'mean rmul'
-    yield ok, np.allclose((dist.__rmul__(A)).var,
+    yield ok, np.allclose((dist.lmatmul(A)).var,
                           A.dot(dist.var).dot(A.T)), 'var rmul'
-    yield ok, np.allclose((dist.__mul__(b)).mean, dist.mean * b), 'mean mul 2'
-    yield ok, np.allclose((dist.__mul__(b)).var, dist.var * b ** 2), 'var mul 2'
-    yield ok, np.allclose((dist.__rmul__(b)).mean, dist.mean * b), 'mean rmul 2'
-    yield ok, np.allclose((dist.__rmul__(b)).var,
-                          dist.var * b ** 2), 'var rmul 2'
+    yield ok, np.allclose((dist * b).mean, dist.mean * b), 'mean mul 2'
+    yield ok, np.allclose((dist * b).var, dist.var * b ** 2), 'var mul 2'
+    yield ok, np.allclose((b * dist).mean, dist.mean * b), 'mean rmul 2'
+    yield ok, np.allclose((b * dist).var, dist.var * b ** 2), 'var rmul 2'
     yield raises, NotImplementedError, lambda: dist.__mul__(dist)
     yield raises, NotImplementedError, lambda: dist.__rmul__(dist)
     yield ok, np.allclose((dist + dist2).mean,
@@ -125,7 +124,7 @@ def test_gp():
     # Check finite-dimensional distribution construction.
     k = EQ()
     m = FunctionMean(lambda x: x ** 2)
-    p = GP(k, m)
+    p = GPPrimitive(k, m)
     x = np.random.randn(10, 1)
 
     yield ok, close(Normal(k(x), m(x)), p(x))
@@ -144,13 +143,32 @@ def test_gp():
     yield ok, np.allclose(sig ** 2,
                           np.diag(k(x + 15.))), 'variance at unknown points'
 
+    # Check that conditioning is independent of order.
+    x1 = np.random.randn(5, 2)
+    x2 = np.random.randn(5, 2)
+    y1 = np.random.randn(5, 1)
+    y2 = np.random.randn(5, 1)
+    x_test = np.random.randn(5, 2)
+    x = np.concatenate((x1, x2), axis=0)
+    y = np.concatenate((y1, y2), axis=0)
+
+    d1 = p.condition(x1, y1).condition(x2, y2)(x_test)
+    d2 = p.condition(x2, y2).condition(x1, y1)(x_test)
+    d3 = p.condition(x, y)(x_test)
+
+    yield ok, close(d1, d2), 'conditioning order'
+    yield ok, close(d1, d3)
+    yield ok, close(d2, d3)
+
 
 def test_gp_arithmetic():
     x = np.random.randn(10, 2)
 
-    gp1 = GP(EQ())
-    gp2 = GP(RQ(1e-1))
+    gp1 = GPPrimitive(EQ())
+    gp2 = GPPrimitive(RQ(1e-1))
 
+    yield raises, NotImplementedError, lambda: gp1.lmatmul(np.eye(3))
+    yield raises, NotImplementedError, lambda: gp1.rmatmul(np.eye(3))
     yield raises, NotImplementedError, lambda: gp1 * gp2
     yield raises, NotImplementedError, lambda: gp1 + Normal(np.eye(3))
     yield ok, close((5. * gp1)(x), 5. * gp1(x)), 'mul'

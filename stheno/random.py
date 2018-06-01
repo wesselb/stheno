@@ -7,7 +7,7 @@ from plum import Dispatcher, Self, Referentiable
 
 from stheno import PosteriorMean, PosteriorKernel, SPD, ZeroMean
 
-__all__ = ['Normal', 'GP']
+__all__ = ['Normal', 'GPPrimitive', 'Random']
 
 
 class Random(object):
@@ -15,6 +15,17 @@ class Random(object):
 
     def __radd__(self, other):
         return self + other
+
+    def __rmul__(self, other):
+        return self * other
+
+    def rmatmul(self, other):
+        raise NotImplementedError('Matrix multiplication not implemented for '
+                                  '{}'.format(type(self)))
+
+    def lmatmul(self, other):
+        raise NotImplementedError('Matrix multiplication not implemented for '
+                                  '{}'.format(type(self)))
 
 
 class RandomProcess(Random):
@@ -95,7 +106,7 @@ class Normal(RandomVector, Referentiable):
             other (instance of :class:`.random.Normal`): Other normal.
         """
         root = SPD(B.dot(B.dot(self.spd.root(), other.var),
-                           self.spd.root())).root()
+                         self.spd.root())).root()
         var_part = B.trace(self.var) + B.trace(other.var) - 2 * B.trace(root)
         mean_part = B.sum((self.mean - other.mean) ** 2)
         # The sum of `mean_part` and `var_par` should be positive, but this
@@ -117,47 +128,38 @@ class Normal(RandomVector, Referentiable):
             out += noise ** .5 * B.randn((self.dim, num), dtype=self.dtype)
         return out
 
+    @dispatch(object)
+    def __add__(self, other):
+        return Normal(self.spd, self.mean + other)
+
     @dispatch(Random)
     def __add__(self, other):
         raise NotImplementedError('Cannot add a Normal and a {}.'
                                   ''.format(type(other).__name__))
 
-    @dispatch(object)
-    def __add__(self, other):
-        return Normal(self.spd, self.mean + other)
-
     @dispatch(Self)
     def __add__(self, other):
         return Normal(self.spd + other.spd, self.mean + other.mean)
 
+    @dispatch(object)
+    def __mul__(self, other):
+        return Normal(self.spd * other ** 2, self.mean * other)
+
     @dispatch(Random)
     def __mul__(self, other):
         raise NotImplementedError('Cannot multiply a Normal and a {}.'
                                   ''.format(type(other).__name__))
 
-    @dispatch(Random)
-    def __rmul__(self, other):
-        raise NotImplementedError('Cannot multiply a Normal and a {}.'
-                                  ''.format(type(other).__name__))
+    def rmatmul(self, other):
+        return Normal(B.dot(B.dot(other, self.var), other, tr_b=True),
+                      B.dot(self.mean, other))
 
-    @dispatch(object)
-    def __mul__(self, other):
-        if B.is_scalar(other):
-            return Normal(self.spd * other ** 2, self.mean * other)
-        else:
-            return Normal(B.dot(B.dot(other, self.var), other, tr_b=True),
-                          B.dot(self.mean, other))
-
-    @dispatch(object)
-    def __rmul__(self, other):
-        if B.is_scalar(other):
-            return Normal(self.spd * other ** 2, self.mean * other)
-        else:
-            return Normal(B.dot(B.dot(other, self.var), other, tr_b=True),
-                          B.dot(other, self.mean))
+    def lmatmul(self, other):
+        return Normal(B.dot(B.dot(other, self.var), other, tr_b=True),
+                      B.dot(other, self.mean))
 
 
-class GP(RandomProcess, Referentiable):
+class GPPrimitive(RandomProcess, Referentiable):
     """Gaussian process.
 
     Args:
@@ -182,7 +184,6 @@ class GP(RandomProcess, Referentiable):
         Returns:
             Instance of :class:`gptools.normal.Normal`.
         """
-
         return Normal(B.reg(self.kernel(x)), self.mean(x))
 
     def condition(self, x, y):
@@ -196,7 +197,8 @@ class GP(RandomProcess, Referentiable):
             Instance of :class:`.random.GP`.
         """
         K = SPD(B.reg(self.kernel(x)))
-        return GP(PosteriorKernel(self, x, K), PosteriorMean(self, x, K, y))
+        return GPPrimitive(PosteriorKernel(self, x, K),
+                           PosteriorMean(self, x, K, y))
 
     def predict(self, x):
         """Predict at specified locations.
@@ -212,27 +214,24 @@ class GP(RandomProcess, Referentiable):
         mean, std = B.squeeze(dist.mean), dist.spd.diag ** .5
         return mean, mean - 2 * std, mean + 2 * std
 
+    @dispatch(object)
+    def __add__(self, other):
+        return GPPrimitive(self.kernel, self.mean + other)
+
     @dispatch(Random)
     def __add__(self, other):
         raise NotImplementedError('Cannot add a GP and a {}.'
                                   ''.format(type(other).__name__))
 
-    @dispatch(object)
-    def __add__(self, other):
-        return GP(self.kernel, self.mean + other)
-
     @dispatch(Self)
     def __add__(self, other):
-        return GP(self.kernel + other.kernel, self.mean + other.mean)
+        return GPPrimitive(self.kernel + other.kernel, self.mean + other.mean)
+
+    @dispatch(object)
+    def __mul__(self, other):
+        return GPPrimitive(other ** 2 * self.kernel, other * self.mean)
 
     @dispatch(Random)
     def __mul__(self, other):
         raise NotImplementedError('Cannot multiply a GP and a {}.'
                                   ''.format(type(other).__name__))
-
-    @dispatch(object)
-    def __mul__(self, other):
-        return GP(other ** 2 * self.kernel, other * self.mean)
-
-    def __rmul__(self, other):
-        return self * other
