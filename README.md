@@ -9,6 +9,8 @@ Implementation of Gaussian processes in Python
 
 ## Example: Simple Regression
 
+![Prediction](https://raw.githubusercontent.com/wesselb/stheno/master/readme_prediction.png)
+
 ```python
 import tensorflow as tf, numpy as np, matplotlib.pyplot as plt
 from tensorflow.contrib.opt import ScipyOptimizerInterface as SOI
@@ -54,6 +56,4 @@ plt.plot(x_pred, upper, ls='--', c='tab:green')
 plt.legend()
 plt.show()
 ```
-
-![Prediction](https://raw.githubusercontent.com/wesselb/stheno/master/readme_prediction.png)
 
