@@ -40,6 +40,11 @@ def test_arithmetic():
     yield ok, np.allclose((k1 * k2)(*xs2), k1(*xs2) * k2(*xs2)), 'prod 2'
     yield ok, np.allclose((k3 + k4)(*xs1), k3(*xs1) + k4(*xs1)), 'sum'
     yield ok, np.allclose((k3 + k4)(*xs2), k3(*xs2) + k4(*xs2)), 'sum 2'
+    yield ok, np.allclose((k3 - k4)(*xs1), k3(*xs1) - k4(*xs1)), 'sub'
+    yield ok, np.allclose((k3 - k4)(*xs2), k3(*xs2) - k4(*xs2)), 'sub 2'
+    yield ok, np.allclose((5. - k4)(*xs2), 5. - k4(*xs2)), 'sub 2'
+    yield ok, np.allclose((-k4)(*xs1), -k4(*xs1)), 'neg'
+    yield ok, np.allclose((-k4)(*xs2), -k4(*xs2)), 'neg 2'
     yield ok, np.allclose((5. * k5)(*xs1), 5. * k5(*xs1)), 'prod 3'
     yield ok, np.allclose((5. * k5)(*xs2), 5. * k5(*xs2)), 'prod 4'
     yield ok, np.allclose((5. + k5)(*xs1), 5. + k5(*xs1)), 'sum 3'
@@ -52,3 +57,11 @@ def test_arithmetic():
                           k1.periodic(1.)(xs1[0], xs1[1] + 5.)), 'periodic'
     yield ok, np.allclose(k1.periodic(1.)(*xs2),
                           k1.periodic(1.)(xs2[0], xs2[1] + 5.)), 'periodic 2'
+
+
+def test_reverse():
+    k = EQ()
+    x1 = np.random.randn(10, 2)
+    x2 = np.random.randn(10, 2)
+
+    yield ok, np.allclose(k(x1, x2), reversed(k)(x2, x1))

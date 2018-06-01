@@ -8,7 +8,7 @@ from stheno import Input
 import numpy as np
 
 __all__ = ['Mean', 'SumMean', 'ProductMean', 'ScaledMean', 'ConstantMean',
-           'PosteriorMean', 'FunctionMean', 'ZeroMean']
+           'PosteriorMean', 'FunctionMean', 'ZeroMean', 'PosteriorCrossMean']
 
 
 class Mean(Referentiable):
@@ -159,7 +159,39 @@ class FunctionMean(Mean, Referentiable):
         return self.f(x)
 
 
-class PosteriorMean(Mean):
+class PosteriorCrossMean(Mean, Referentiable):
+    """Posterior mean.
+
+    Args:
+        m_i (instance of :class:`.mean.Mean`): Mean of process corresponding to
+            the input.
+        m_z (instance of :class:`.mean.Mean`): Mean of process corresponding to
+            the data.
+        k_zi (instance of :class:`.kernel.Kernel`): Kernel between processes
+            corresponding to the data and the input respectively.
+        z (matrix): Locations of data.
+        Kz (instance of :class:`.spd.SPD`): Kernel matrix of data.
+        y (matrix): Observations to condition on.
+    """
+
+    dispatch = Dispatcher(in_class=Self)
+
+    def __init__(self, m_i, m_z, k_zi, z, Kz, y):
+        self.m_i = m_i
+        self.k_zi = k_zi
+        self.m_z = m_z(z)
+        self.z = z
+        self.Kz = Kz
+        self.y = y
+
+    @dispatch(object)
+    def __call__(self, x):
+        return self.m_i(x) + \
+               B.matmul(self.Kz.inv_prod(self.k_zi(self.z, x)),
+                        self.y - self.m_z, tr_a=True)
+
+
+class PosteriorMean(PosteriorCrossMean, Referentiable):
     """Posterior mean.
 
     Args:
@@ -172,13 +204,4 @@ class PosteriorMean(Mean):
     dispatch = Dispatcher(in_class=Self)
 
     def __init__(self, gp, z, Kz, y):
-        self.gp = gp
-        self.z = z
-        self.Kz = Kz
-        self.y = y
-
-    @dispatch(object)
-    def __call__(self, x):
-        return self.gp.mean(x) + \
-               B.matmul(self.Kz.inv_prod(self.gp.kernel(self.z, x)),
-                        self.y - self.gp.mean(self.z), tr_a=True)
+        PosteriorCrossMean.__init__(self, gp.mean, gp.mean, gp.kernel, z, Kz, y)

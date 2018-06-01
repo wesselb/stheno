@@ -9,7 +9,8 @@ from stheno import Input
 __all__ = ['Kernel', 'ProductKernel', 'SumKernel', 'ConstantKernel',
            'ScaledKernel', 'StretchedKernel', 'PeriodicKernel',
            'EQ', 'RQ', 'Matern12', 'Exp', 'Matern32', 'Matern52',
-           'Kronecker', 'Linear', 'PosteriorKernel', 'ZeroKernel']
+           'Kronecker', 'Linear', 'PosteriorKernel', 'ZeroKernel',
+           'PosteriorCrossKernel']
 
 
 class Kernel(Referentiable):
@@ -63,6 +64,15 @@ class Kernel(Referentiable):
     def __rmul__(self, other):
         return self * other
 
+    def __sub__(self, other):
+        return self + (-other)
+
+    def __rsub__(self, other):
+        return (-self) + other
+
+    def __neg__(self):
+        return self * -1
+
     def stretch(self, stretch):
         """Stretch the kernel.
 
@@ -78,6 +88,10 @@ class Kernel(Referentiable):
             period (tensor): Period.
         """
         return PeriodicKernel(self, period)
+
+    def __reversed__(self):
+        """Reverse the argument of the kernel."""
+        return ReversedKernel(self)
 
 
 class SumKernel(Kernel, Referentiable):
@@ -307,11 +321,40 @@ class Linear(Kernel, Referentiable):
         return B.matmul(x, y, tr_a=True)
 
 
-class PosteriorKernel(Kernel, Referentiable):
+class PosteriorCrossKernel(Kernel, Referentiable):
+    """Posterior cross kernel.
+
+    Args:
+        k_ij (instance of :class:`.kernel.Kernel`): Kernel between processes
+            corresponding to the left input and the right input respectively.
+        k_iz (instance of :class:`.kernel.Kernel`): Kernel between processes
+            corresponding to the left input and the data respectively.
+        k_zj (instance of :class:`.kernel.Kernel`): Kernel between processes
+            corresponding to the data and the right input respectively.
+        z (matrix): Locations of data.
+        Kz (instance of :class:`.spd.SPD`): Kernel matrix of data.
+    """
+
+    dispatch = Dispatcher(in_class=Self)
+
+    def __init__(self, k_ij, k_iz, k_zj, z, Kz):
+        self.k_ij = k_ij
+        self.k_iz = k_iz
+        self.k_zj = k_zj
+        self.z = z
+        self.Kz = Kz
+
+    @dispatch(object, object)
+    def __call__(self, x, y):
+        return (self.k_ij(x, y) - self.Kz.quadratic_form(self.k_iz(self.z, x),
+                                                         self.k_zj(self.z, y)))
+
+
+class PosteriorKernel(PosteriorCrossKernel, Referentiable):
     """Posterior kernel.
 
     Args:
-        gp (instance of :class:`.random.GP`): Corresponding GP.
+        gp (instance of :class:`.random.GP`): Prior GP.
         z (matrix): Locations of data.
         Kz (instance of :class:`.spd.SPD`): Kernel matrix of data.
     """
@@ -319,12 +362,20 @@ class PosteriorKernel(Kernel, Referentiable):
     dispatch = Dispatcher(in_class=Self)
 
     def __init__(self, gp, z, Kz):
-        self.gp = gp
-        self.z = z
-        self.Kz = Kz
+        PosteriorCrossKernel.__init__(
+            self, gp.kernel, gp.kernel, gp.kernel, z, Kz
+        )
 
-    @dispatch(object, object)
-    def __call__(self, x, y):
-        return (self.gp.kernel(x, y) -
-                self.Kz.quadratic_form(self.gp.kernel(self.z, x),
-                                       self.gp.kernel(self.z, y)))
+
+class ReversedKernel(Kernel):
+    """Kernel that evaluates with its arguments reversed.
+
+    Args:
+        k (instance of :class:`.kernel.Kernel`): Kernel to evaluate.
+    """
+
+    def __init__(self, k):
+        self.k = k
+
+    def __call__(self, *args):
+        return self.k(*reversed(args))
