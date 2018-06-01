@@ -134,14 +134,15 @@ def test_gp():
     sample = p(x).sample()
     post = p.condition(x, sample)
 
-    mu, sig = post.predict(x)
-    yield ok, np.allclose(mu, sample), 'mean at know points'
-    yield ok, np.all(np.abs(sig) < 1e-5), 'sigma at know points'
+    mu, lower, upper = post.predict(x)
+    yield ok, np.allclose(mu[:, None], sample), 'mean at known points'
+    yield ok, np.all(upper - lower < 1e-5), 'sigma at known points'
 
-    mu, sig = post.predict(x + 10.)
-    yield ok, np.allclose(mu, m(x + 10.)), 'mean at unknown points'
+    mu, lower, upper = post.predict(x + 15.)
+    sig = (upper - lower) / 4
+    yield ok, np.allclose(mu[:, None], m(x + 15.)), 'mean at unknown points'
     yield ok, np.allclose(sig ** 2,
-                          np.diag(k(x + 10.))), 'variance at unknown points'
+                          np.diag(k(x + 15.))), 'variance at unknown points'
 
 
 def test_gp_arithmetic():
