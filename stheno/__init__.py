@@ -10,3 +10,4 @@ from .mean import *
 from .kernel import *
 from .random import *
 from .eis import *
+from .graph import *
