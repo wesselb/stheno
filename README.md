@@ -21,7 +21,7 @@ from wbml import vars32
 x = np.linspace(0, 10, 50, dtype=np.float32)[:, None]
 y = np.sin(x) + .2 ** .5 * np.random.randn(*x.shape)
 
-# And generative some data to predict for.
+# And generate some data to predict for.
 x_pred = np.linspace(0, 15, 500, dtype=np.float32)[:, None]
 f_pred = np.sin(x_pred)
 
