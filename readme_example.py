@@ -1,15 +1,3 @@
-# Stheno
-Implementation of Gaussian processes in Python
-
-
-[![Build](https://travis-ci.org/wesselb/stheno.svg?branch=master)](https://travis-ci.org/wesselb/stheno)
-[![Coverage Status](https://coveralls.io/repos/github/wesselb/stheno/badge.svg?branch=master)](https://coveralls.io/github/wesselb/stheno?branch=master)
-[![Latest Docs](https://img.shields.io/badge/docs-latest-blue.svg)](https://stheno.readthedocs.io/en/latest)
-
-
-## Example: Simple Regression
-
-```python
 import tensorflow as tf, numpy as np, matplotlib.pyplot as plt
 from tensorflow.contrib.opt import ScipyOptimizerInterface as SOI
 from stheno.tf import GP, NoisyKernel, EQ, Kronecker, Observed, Latent
@@ -53,7 +41,3 @@ plt.plot(x_pred, lower, ls='--', c='tab:green')
 plt.plot(x_pred, upper, ls='--', c='tab:green')
 plt.legend()
 plt.show()
-```
-
-![Prediction](https://raw.githubusercontent.com/wesselb/stheno/master/readme_prediction.png)
-

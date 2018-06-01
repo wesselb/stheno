@@ -42,11 +42,12 @@ x_obs, y_obs = x[inds, :], y[inds, :]
 p_post = p.condition(Observed(x_obs), y_obs)
 
 
-def plot(x_true, y_true, x_obs, y_obs, pred_mean, pred_std):
+def plot(x_true, y_true, x_obs, y_obs, mean, lower, upper):
     x_true = x_true.numpy().squeeze()
     y_true = y_true.numpy().squeeze()
-    pred_mean = pred_mean.numpy().squeeze()
-    pred_std = pred_std.numpy().squeeze()
+    mean = mean.numpy()
+    lower = lower.numpy()
+    upper = upper.numpy()
 
     plt.plot(x_true, y_true, label='True', c='tab:blue')
     if x_obs is not None and y_obs is not None:
@@ -54,9 +55,9 @@ def plot(x_true, y_true, x_obs, y_obs, pred_mean, pred_std):
         y_obs = y_obs.numpy().squeeze()
         plt.scatter(x_obs.squeeze(), y_obs.squeeze(),
                     label='Observations', c='tab:red')
-    plt.plot(x_true, pred_mean, label='Prediction', c='tab:green')
-    plt.plot(x_true, pred_mean + 2 * pred_std, ls='--', c='tab:green')
-    plt.plot(x_true, pred_mean - 2 * pred_std, ls='--', c='tab:green')
+    plt.plot(x_true, mean, label='Prediction', c='tab:green')
+    plt.plot(x_true, lower, ls='--', c='tab:green')
+    plt.plot(x_true, upper, ls='--', c='tab:green')
     plt.legend()
 
 

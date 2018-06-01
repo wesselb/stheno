@@ -205,11 +205,12 @@ class GP(RandomProcess, Referentiable):
             x (design matrix): Locations of the points to predict for.
 
         Returns:
-            A tuple containing the predictive means and predictive marginal
-            standard deviations.
+            A tuple containing the predictive means and lower and upper 95%
+            central credible interval bounds.
         """
         dist = self(x)
-        return dist.mean, dist.spd.diag ** .5
+        mean, std = B.squeeze(dist.mean), dist.spd.diag ** .5
+        return mean, mean - 2 * std, mean + 2 * std
 
     @dispatch(Random)
     def __add__(self, other):

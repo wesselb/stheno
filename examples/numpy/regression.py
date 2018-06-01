@@ -31,16 +31,15 @@ p = GP(NoisyKernel(p_true.kernel, noise * Kronecker()))
 p_post = p.condition(Observed(x), y)
 
 # Perform prediction.
-pred_mean, pred_std = p_post.predict(Latent(x_true))
+mean, lower, upper = p_post.predict(Latent(x_true))
 
 # Plot the results.
 x_true, y_true = x_true.squeeze(), y_true.squeeze()
-pred_mean, pred_std = pred_mean.squeeze(), pred_std.squeeze()
 
 plt.plot(x_true, y_true, label='True', c='tab:blue')
 plt.scatter(x.squeeze(), y.squeeze(), label='Observations', c='tab:red')
-plt.plot(x_true, pred_mean, label='Prediction', c='tab:green')
-plt.plot(x_true, pred_mean + 2 * pred_std, ls='--', c='tab:green')
-plt.plot(x_true, pred_mean - 2 * pred_std, ls='--', c='tab:green')
+plt.plot(x_true, mean, label='Prediction', c='tab:green')
+plt.plot(x_true, lower, ls='--', c='tab:green')
+plt.plot(x_true, upper, ls='--', c='tab:green')
 plt.legend()
 plt.show()
