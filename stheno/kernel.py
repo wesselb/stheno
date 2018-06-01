@@ -327,8 +327,8 @@ class PosteriorCrossKernel(Kernel, Referentiable):
     Args:
         k_ij (instance of :class:`.kernel.Kernel`): Kernel between processes
             corresponding to the left input and the right input respectively.
-        k_iz (instance of :class:`.kernel.Kernel`): Kernel between processes
-            corresponding to the left input and the data respectively.
+        k_zi (instance of :class:`.kernel.Kernel`): Kernel between processes
+            corresponding to the data and the left input respectively.
         k_zj (instance of :class:`.kernel.Kernel`): Kernel between processes
             corresponding to the data and the right input respectively.
         z (matrix): Locations of data.
@@ -337,16 +337,16 @@ class PosteriorCrossKernel(Kernel, Referentiable):
 
     dispatch = Dispatcher(in_class=Self)
 
-    def __init__(self, k_ij, k_iz, k_zj, z, Kz):
+    def __init__(self, k_ij, k_zi, k_zj, z, Kz):
         self.k_ij = k_ij
-        self.k_iz = k_iz
+        self.k_zi = k_zi
         self.k_zj = k_zj
         self.z = z
         self.Kz = Kz
 
     @dispatch(object, object)
     def __call__(self, x, y):
-        return (self.k_ij(x, y) - self.Kz.quadratic_form(self.k_iz(self.z, x),
+        return (self.k_ij(x, y) - self.Kz.quadratic_form(self.k_zi(self.z, x),
                                                          self.k_zj(self.z, y)))
 
 
@@ -378,4 +378,4 @@ class ReversedKernel(Kernel):
         self.k = k
 
     def __call__(self, *args):
-        return self.k(*reversed(args))
+        return B.transpose(self.k(*reversed(args)))

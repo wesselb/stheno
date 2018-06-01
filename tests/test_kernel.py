@@ -62,6 +62,6 @@ def test_arithmetic():
 def test_reverse():
     k = EQ()
     x1 = np.random.randn(10, 2)
-    x2 = np.random.randn(10, 2)
+    x2 = np.random.randn(5, 2)
 
-    yield ok, np.allclose(k(x1, x2), reversed(k)(x2, x1))
+    yield ok, np.allclose(k(x1, x2), reversed(k)(x2, x1).T)

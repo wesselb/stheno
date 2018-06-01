@@ -184,7 +184,7 @@ class Graph(Referentiable):
         for pi, pj in self.kernels.keys():
             post_kernels[pi, pj] = PosteriorCrossKernel(
                 self.kernels[pi, pj],
-                self.kernels[pi, p_data], self.kernels[p_data, pj],
+                self.kernels[p_data, pi], self.kernels[p_data, pj],
                 x, Kx
             )
         self.kernels = post_kernels
