@@ -81,11 +81,11 @@ class Kernel(Referentiable):
         """
         return StretchedKernel(self, stretch)
 
-    def periodic(self, period):
+    def periodic(self, period=1):
         """Map to a periodic space.
 
         Args:
-            period (tensor): Period.
+            period (tensor): Period. Defaults to `1`.
         """
         return PeriodicKernel(self, period)
 
@@ -318,7 +318,7 @@ class Linear(Kernel, Referentiable):
 
     @dispatch(B.Numeric, B.Numeric)
     def __call__(self, x, y):
-        return B.matmul(x, y, tr_a=True)
+        return B.matmul(x, y, tr_b=True)
 
 
 class PosteriorCrossKernel(Kernel, Referentiable):
@@ -378,4 +378,4 @@ class ReversedKernel(Kernel):
         self.k = k
 
     def __call__(self, *args):
-        return B.transpose(self.k(*reversed(args)))
+        return B.transpose(self.k(*tuple(reversed(args))))
