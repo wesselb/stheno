@@ -16,7 +16,7 @@ At = Kind
 
 
 class StorageByID(Referentiable):
-    """A dictionary-like type that stores objects according to their `id`s."""
+    """A dictionary-like type that stores objects by their `id`s."""
     dispatch = Dispatcher(in_class=Self)
 
     def __init__(self):
@@ -66,6 +66,8 @@ class Kernels(StorageByID):
         try:
             return self._store[key]
         except KeyError:
+            # Kernel `k_ij` cannot be found. Try looking for `k_ji` and reverse
+            # its inputs.
             return reversed(self._store[key[1], key[0]])
 
     def __setitem__(self, item, value):
@@ -314,7 +316,7 @@ class GP(GPPrimitive, Referentiable):
         return self
 
     def __matmul__(self, other):
-        """Alternative to writing `At(self)(other)`."""
+        """Alternative to writing `At(self)(other)`"""
         return At(self)(other)
 
     def revert_prior(self):
