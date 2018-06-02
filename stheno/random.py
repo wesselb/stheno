@@ -196,7 +196,7 @@ class GPPrimitive(RandomProcess, Referentiable):
         Returns:
             Instance of :class:`.random.GP`.
         """
-        K = SPD(B.reg(self.kernel(x)))
+        K = SPD(self.kernel(x))
         return GPPrimitive(PosteriorKernel(self, x, K),
                            PosteriorMean(self, x, K, y))
 

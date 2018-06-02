@@ -233,7 +233,7 @@ class Graph(Referentiable):
             y (design matrix): Observations to condition on.
         """
         p_data, x = type_parameter(x), x.get()
-        Kx = SPD(B.reg(self.kernels[p_data](x)))
+        Kx = SPD(self.kernels[p_data](x))
 
         # Store prior if it isn't already.
         if self.prior_kernels is None:
