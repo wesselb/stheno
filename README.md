@@ -48,7 +48,7 @@ plt.show()
 
 ```
 
-# Example: Decomposition of Prediction
+## Example: Decomposition of Prediction
 
 ![Prediction](https://raw.githubusercontent.com/wesselb/stheno/master/readme_prediction2.png)
 
