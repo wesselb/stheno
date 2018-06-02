@@ -5,7 +5,7 @@ from __future__ import absolute_import, division, print_function
 import numpy as np
 
 from stheno import EQ, RQ, Matern12, Matern32, Matern52, Kronecker, Kernel, \
-    Observed
+    Observed, Linear
 # noinspection PyUnresolvedReferences
 from . import eq, neq, lt, le, ge, gt, raises, call, ok, eprint
 
@@ -32,7 +32,8 @@ def test_arithmetic():
     k4 = Matern32()
     k5 = Matern52()
     k6 = Kronecker()
-    xs1 = np.random.randn(10, 2), np.random.randn(10, 2)
+    k7 = Linear()
+    xs1 = np.random.randn(10, 2), np.random.randn(20, 2)
     xs2 = np.random.randn(), np.random.randn()
 
     yield ok, np.allclose(k6(xs1[0]), k6(xs1[0], xs1[0])), 'dispatch'
@@ -40,8 +41,8 @@ def test_arithmetic():
     yield ok, np.allclose((k1 * k2)(*xs2), k1(*xs2) * k2(*xs2)), 'prod 2'
     yield ok, np.allclose((k3 + k4)(*xs1), k3(*xs1) + k4(*xs1)), 'sum'
     yield ok, np.allclose((k3 + k4)(*xs2), k3(*xs2) + k4(*xs2)), 'sum 2'
-    yield ok, np.allclose((k3 - k4)(*xs1), k3(*xs1) - k4(*xs1)), 'sub'
-    yield ok, np.allclose((k3 - k4)(*xs2), k3(*xs2) - k4(*xs2)), 'sub 2'
+    yield ok, np.allclose((k3 - k7)(*xs1), k3(*xs1) - k7(*xs1)), 'sub'
+    yield ok, np.allclose((k3 - k7)(*xs2), k3(*xs2) - k7(*xs2)), 'sub 2'
     yield ok, np.allclose((5. - k4)(*xs2), 5. - k4(*xs2)), 'sub 2'
     yield ok, np.allclose((-k4)(*xs1), -k4(*xs1)), 'neg'
     yield ok, np.allclose((-k4)(*xs2), -k4(*xs2)), 'neg 2'
@@ -63,5 +64,9 @@ def test_reverse():
     k = EQ()
     x1 = np.random.randn(10, 2)
     x2 = np.random.randn(5, 2)
+    x3 = np.random.randn()
 
+    yield ok, np.allclose(k(x1), reversed(k)(x1))
+    yield ok, np.allclose(k(x3), reversed(k)(x3))
+    yield ok, np.allclose(k(x1, x2), reversed(k)(x1, x2))
     yield ok, np.allclose(k(x1, x2), reversed(k)(x2, x1).T)
