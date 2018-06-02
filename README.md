@@ -6,6 +6,8 @@ Implementation of Gaussian processes in Python
 [![Coverage Status](https://coveralls.io/repos/github/wesselb/stheno/badge.svg?branch=master)](https://coveralls.io/github/wesselb/stheno?branch=master)
 [![Latest Docs](https://img.shields.io/badge/docs-latest-blue.svg)](https://stheno.readthedocs.io/en/latest)
 
+See also [Stheno.jl](https://github.com/willtebbutt/Stheno.jl).
+
 
 ## Example: Simple Regression
 

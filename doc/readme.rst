@@ -5,6 +5,8 @@ Implementation of Gaussian processes in Python
 
 |Build| |Coverage Status| |Latest Docs|
 
+See also `Stheno.jl <https://github.com/willtebbutt/Stheno.jl>`__.
+
 Example: Simple Regression
 --------------------------
 
@@ -50,7 +52,7 @@ Example: Simple Regression
     plt.show()
 
 Example: Decomposition of Prediction
-====================================
+------------------------------------
 
 .. figure:: https://raw.githubusercontent.com/wesselb/stheno/master/readme_prediction2.png
    :alt: Prediction
