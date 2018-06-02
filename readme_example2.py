@@ -1,14 +1,11 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from lab import B
 
 from stheno import GP, model, EQ, RQ, Linear, Kronecker, Exp
 
-B.epsilon = 1e-8
-
 # Define points to predict at.
-x = np.linspace(0, 10, 2000)[:, None]
-x_obs = np.linspace(0, 7, 500)[:, None]
+x = np.linspace(0, 10, 200)[:, None]
+x_obs = np.linspace(0, 7, 50)[:, None]
 
 # Construct a latent function consisting of four different components.
 f_smooth = GP(EQ())
