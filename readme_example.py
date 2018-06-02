@@ -9,8 +9,8 @@ x_obs = np.linspace(0, 7, 10)[:, None]
 
 # Construct a prior.
 f = GP(EQ())  # Latent function.
-e = GP(0.1 * Kronecker())  # Noise.
-y = f + e
+e = GP(Kronecker())  # Noise.
+y = f + 0.1 * e
 
 # Sample a true, underlying function.
 f_true = f(x).sample()
