@@ -179,16 +179,23 @@ class PosteriorCrossMean(Mean, Referentiable):
     def __init__(self, m_i, m_z, k_zi, z, Kz, y):
         self.m_i = m_i
         self.k_zi = k_zi
-        self.m_z = m_z(z)
+        self.m_z = m_z
+        self._m_z_z = None
         self.z = z
         self.Kz = Kz
         self.y = y
+
+    @property
+    def m_z_z(self):
+        if self._m_z_z is None:
+            self._m_z_z = self.m_z(self.z)
+        return self._m_z_z
 
     @dispatch(object)
     def __call__(self, x):
         return self.m_i(x) + \
                B.matmul(self.Kz.inv_prod(self.k_zi(self.z, x)),
-                        self.y - self.m_z, tr_a=True)
+                        self.y - self.m_z_z, tr_a=True)
 
 
 class PosteriorMean(PosteriorCrossMean, Referentiable):

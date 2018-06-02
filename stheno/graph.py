@@ -23,11 +23,11 @@ class StorageByID(Referentiable):
         self._store = {}
 
     @dispatch(object)
-    def _resolve(self, item):
+    def _resolve_item(self, item):
         return id(item)
 
     @dispatch(int)
-    def _resolve(self, item):
+    def _resolve_item(self, item):
         return item
 
     def __repr__(self):
@@ -36,18 +36,22 @@ class StorageByID(Referentiable):
     def __str__(self):
         return self._store.__str__()
 
-    def keys(self):
-        return self._store.keys()
+    def __getitem__(self, item):
+        try:
+            return self._store[self._resolve_item(item)]
+        except KeyError:
+            self._store[item] = self._build(item)
+            return self._store[item]
+
+    def __setitem__(self, item, mean):
+        self._store[self._resolve_item(item)] = mean
+
+    def _build(self, item):
+        raise KeyError('Cannot build object for item "{}".'.format(item))
 
 
 class Means(StorageByID):
     """A dictionary-like type to store mean functions indexed by objects."""
-
-    def __getitem__(self, item):
-        return self._store[self._resolve(item)]
-
-    def __setitem__(self, item, value):
-        self._store[self._resolve(item)] = value
 
 
 class Kernels(StorageByID):
@@ -55,23 +59,88 @@ class Kernels(StorageByID):
     pairs of objects.
     """
 
-    def _resolve(self, item):
-        if type(item) is not tuple:
-            item = item, item
-        return StorageByID._resolve(self, item[0]), \
-               StorageByID._resolve(self, item[1])
+    def _resolve_item(self, ps):
+        if type(ps) is not tuple:
+            ps = ps, ps
+        return StorageByID._resolve_item(self, ps[0]), \
+               StorageByID._resolve_item(self, ps[1])
 
-    def __getitem__(self, item):
-        key = self._resolve(item)
+    def __getitem__(self, ps):
+        pi, pj = self._resolve_item(ps)
         try:
-            return self._store[key]
+            return self._store[pi, pj]
         except KeyError:
-            # Kernel `k_ij` cannot be found. Try looking for `k_ji` and reverse
-            # its inputs.
-            return reversed(self._store[key[1], key[0]])
+            pass
 
-    def __setitem__(self, item, value):
-        self._store[self._resolve(item)] = value
+        # Kernel `k_ij` cannot be found. Try looking for `k_ji` and reverse
+        # its inputs.
+        try:
+            return reversed(self._store[pj, pi])
+        except KeyError:
+            pass
+
+        # Finally, try building the kernel.
+        self._store[pi, pj] = self._build((pi, pj))
+        return self._store[pi, pj]
+
+
+class PosteriorMeans(Means):
+    """A posterior version of :class:`.graph.Means`.
+
+    Args:
+        prior_kernels (instance of :class:`.graph.Kernels`): Prior kernels.
+        prior_means (instance of :class:`.graph.Means`): Prior means.
+        p_data (instance of :class:`.graph.GP`): Process corresponding to the
+            data.
+        x (design matrix): Locations of observations.
+        Kx (matrix): Kernel matrix of observations.
+        y (matrix): Observations.
+    """
+
+    def __init__(self, prior_kernels, prior_means, p_data, x, Kx, y):
+        Means.__init__(self)
+        self.prior_kernels = prior_kernels
+        self.prior_means = prior_means
+        self.p_data = p_data
+        self.x = x
+        self.Kx = Kx
+        self.y = y
+
+    def _build(self, p):
+        return PosteriorCrossMean(
+            self.prior_means[p],
+            self.prior_means[self.p_data],
+            self.prior_kernels[self.p_data, p],
+            self.x, self.Kx, self.y
+        )
+
+
+class PosteriorKernels(Kernels):
+    """A posterior version of :class:`.graph.Kernels`.
+
+    Args:
+        prior_kernels (instance of :class:`.graph.Kernels`): Prior kernels.
+        p_data (instance of :class:`.graph.GP`): Process corresponding to the
+            data.
+        x (design matrix): Locations of observations.
+        Kx (matrix): Kernel matrix of observations.
+    """
+
+    def __init__(self, prior_kernels, p_data, x, Kx):
+        Kernels.__init__(self)
+        self.prior_kernels = prior_kernels
+        self.p_data = p_data
+        self.x = x
+        self.Kx = Kx
+
+    def _build(self, ps):
+        pi, pj = ps
+        return PosteriorCrossKernel(
+            self.prior_kernels[pi, pj],
+            self.prior_kernels[self.p_data, pi],
+            self.prior_kernels[self.p_data, pj],
+            self.x, self.Kx
+        )
 
 
 PromisedGP = PromisedType()
@@ -171,25 +240,12 @@ class Graph(Referentiable):
             self.prior_kernels = self.kernels
             self.prior_means = self.means
 
-        # Compute posterior means.
-        post_means = Means()
-        for p in self.ps:
-            post_means[p] = PosteriorCrossMean(
-                self.means[p],
-                self.means[p_data], self.kernels[p_data, p],
-                x, Kx, y
-            )
-        self.means = post_means
-
-        # Compute posterior kernels.
-        post_kernels = Kernels()
-        for pi, pj in self.kernels.keys():
-            post_kernels[pi, pj] = PosteriorCrossKernel(
-                self.kernels[pi, pj],
-                self.kernels[p_data, pi], self.kernels[p_data, pj],
-                x, Kx
-            )
-        self.kernels = post_kernels
+        prior_kernels = self.kernels
+        prior_means = self.means
+        self.kernels = PosteriorKernels(prior_kernels, p_data, x, Kx)
+        self.means = PosteriorMeans(
+            prior_kernels, prior_means, p_data, x, Kx, y
+        )
 
     def revert_prior(self):
         """Revert the model back to the state before any conditioning
