@@ -55,16 +55,21 @@ class SPD(Referentiable):
             self._log_det = 2 * B.sum(B.log(B.diag(self.cholesky())))
         return self._log_det
 
-    def mah_dist2(self, a, b=None, sum=True):
-        """Compute the square of the Mahalanobis distance between two matrices.
+    @dispatch(object, object)
+    def mah_dist2(self, a, b, sum=True):
+        """Compute the square of the Mahalanobis distance between vectors.
 
         Args:
             a (matrix): First matrix.
-            b (matrix): Second matrix. Defaults to first matrix.
+            b (matrix, optional): Second matrix. If omitted, `a` is assumed
+                to be the differences.
             sum (bool, optional): Compute the sum of all distances instead
                 of returning all distances.
         """
-        diff = a if b is None else a - b
+        return self.mah_dist2(a - b, sum=sum)
+
+    @dispatch(object)
+    def mah_dist2(self, diff, sum=True):
         iL_diff = B.trisolve(self.cholesky(), diff)
         return B.sum(iL_diff ** 2) if sum else B.sum(iL_diff ** 2, axis=0)
 
@@ -77,19 +82,22 @@ class SPD(Referentiable):
         """
         return B.sum(B.trisolve(denom.cholesky(), self.cholesky()) ** 2)
 
-    def quadratic_form(self, a, b=None):
+    @dispatch(object)
+    def quadratic_form(self, a):
         """Compute the quadratic form `transpose(a) inv(self.mat) b`.
 
         Args:
             a (matrix): `a`.
-            b (matrix): `b`.
+            b (matrix, optional): `b`. Defaults to `a`.
         """
-        if b is None:
-            return self.mah_dist2(a)
-        else:
-            left = B.trisolve(self.cholesky(), a)
-            right = B.trisolve(self.cholesky(), b)
-            return B.dot(left, right, tr_a=True)
+        prod = B.trisolve(self.cholesky(), a)
+        return B.dot(prod, prod, tr_a=True)
+
+    @dispatch(object, object)
+    def quadratic_form(self, a, b):
+        left = B.trisolve(self.cholesky(), a)
+        right = B.trisolve(self.cholesky(), b)
+        return B.dot(left, right, tr_a=True)
 
     def inv_prod(self, a):
         """Compute the matrix-vector product `inv(self.mat) a`.
@@ -173,8 +181,8 @@ class Diagonal(SPD, Referentiable):
     def log_det(self):
         return B.sum(B.log(self.diag))
 
-    def mah_dist2(self, a, b=None, sum=True):
-        diff = a if b is None else a - b
+    @dispatch(object)
+    def mah_dist2(self, diff, sum=True):
         iL_diff = diff / self.diag[:, None] ** .5
         return B.sum(iL_diff ** 2) if sum else B.sum(iL_diff ** 2, axis=0)
 
@@ -182,12 +190,15 @@ class Diagonal(SPD, Referentiable):
     def ratio(self, denom):
         return B.sum(self.diag / denom.diag)
 
-    def quadratic_form(self, a, b=None):
-        if b is None:
-            return self.mah_dist2(a)
-        else:
-            isqrt_diag = self.diag[:, None] ** .5
-            return B.dot(a / isqrt_diag, b / isqrt_diag, tr_a=True)
+    @dispatch(object, object)
+    def quadratic_form(self, a, b):
+        isqrt_diag = self.diag[:, None] ** .5
+        return B.dot(a / isqrt_diag, b / isqrt_diag, tr_a=True)
+
+    @dispatch(object)
+    def quadratic_form(self, a):
+        iL_a = a / self.diag[:, None] ** .5
+        return B.dot(iL_a, iL_a, tr_a=True)
 
     def inv_prod(self, a):
         return a / self.diag[:, None]
@@ -237,8 +248,8 @@ class UniformDiagonal(Diagonal, Referentiable):
     def log_det(self):
         return B.cast(self._n, dtype=self.dtype) * B.log(self.diag_scale)
 
-    def mah_dist2(self, a, b=None, sum=True):
-        diff = a if b is None else a - b
+    @dispatch(object)
+    def mah_dist2(self, diff, sum=True):
         iL_diff = diff / self.diag_scale ** .5
         return B.sum(iL_diff ** 2) if sum else B.sum(iL_diff ** 2, axis=0)
 
@@ -247,12 +258,15 @@ class UniformDiagonal(Diagonal, Referentiable):
         return B.cast(self._n, dtype=self.dtype) \
                * self.diag_scale / denom.diag_scale
 
-    def quadratic_form(self, a, b=None):
-        if b is None:
-            return self.mah_dist2(a)
-        else:
-            return B.dot(a / self.diag_scale ** .5,
-                         b / self.diag_scale ** .5, tr_a=True)
+    @dispatch(object, object)
+    def quadratic_form(self, a, b):
+        return B.dot(a / self.diag_scale ** .5,
+                     b / self.diag_scale ** .5, tr_a=True)
+
+    @dispatch(object)
+    def quadratic_form(self, a):
+        iL_a = a / self.diag_scale ** .5
+        return B.dot(iL_a, iL_a, tr_a=True)
 
     def inv_prod(self, a):
         return a / self.diag_scale
