@@ -378,4 +378,4 @@ class ReversedKernel(Kernel):
         self.k = k
 
     def __call__(self, *args):
-        return B.transpose(self.k(*tuple(reversed(args))))
+        return B.transpose(self.k(*reversed(args)))
