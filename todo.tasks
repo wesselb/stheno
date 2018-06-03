@@ -1,12 +1,10 @@
 Features:
-    ☐ Multi-output functionality:
-        ☐ LMK -> IMK
-    ☐ Conditioning with Normals.
-    ☐ Conditioning under certain kernels preserves the kernel.
+    ☐ Sparse approximations
+    ☐ Efficient joint sampling
+    ☐ Multi-output kernels
 
 Optimisations:
-    ☐ Implement * and + for SPDs, and use these in the arithmetic of Normals.
-    ☐ Caching of computation in kernels.
+    ☐ Caching of computation in kernels
 
 Examples:
     ☐ Variational inference
@@ -17,13 +15,14 @@ Examples:
 
 Documentation:
     ☐ Improve docstrings.
-    ☐ Write examples.
+    ☐ Write examples. @started
     ☐ Write documentation. @started
         ☐ Define terminology in the docstrings: design matrix, shape, etc.
 
 
 ＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿
 Archive:
+ ✓ Implement * and + for SPDs, and use these in the arithmetic of Normals. @done (18-06-02 17:49) @project(Optimisations)
  ✓ Write tests. @started @done (18-05-31 16:14) @project(Documentation / Other)
  ✓ Regression @done (18-05-31 16:13) @project(Features)
  ✓ Posterior decomposition @done (18-05-31 16:13) @project(Examples)
