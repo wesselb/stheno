@@ -43,21 +43,26 @@ class AdditiveComponentKernel(ComponentKernel, Referentiable):
     """
 
     def __init__(self, ks, latent=None):
-        latent = [] if latent is None else latent
+        InputTypes = {Observed, Latent} | set(ks.keys())
 
-        class KernelMatrix(object):
-            def __getitem__(self, indices):
-                i1, i2 = indices
+        class KernelMatrix(Referentiable):
+            def __getitem__(self, item):
+                i1, i2 = item
 
+                # Check that both inputs are actually part of the kernel.
+                if i1 not in InputTypes or i2 not in InputTypes:
+                    raise RuntimeError(
+                        'Either "{}" or "{}" is not a component of the kernel.'
+                        ''.format(i1.__name__, i2.__name__))
+
+                # TODO: Refactor logic here. Make more readable.
                 # Handle latent.
-                if i1 == Latent or i2 == Latent:
+                if latent and (i1 == Latent or i2 == Latent):
                     if i1 == i2 or i1 == Observed or i2 == Observed:
                         return sum([ks[i] for i in latent], ZeroKernel())
                     else:
-                        if i1 == Latent:
-                            return ks[i2] if i2 in latent else ZeroKernel()
-                        else:
-                            return ks[i1] if i1 in latent else ZeroKernel()
+                        i = i1 if i1 == Latent else i2
+                        return ks[i] if i in latent else ZeroKernel()
 
                 # Handle observed, assuming there is no latent.
                 if i1 == Observed or i2 == Observed:
@@ -66,11 +71,8 @@ class AdditiveComponentKernel(ComponentKernel, Referentiable):
                     else:
                         return ks[i1] if i2 == Observed else ks[i2]
 
-                # Standard implementation.
-                if i1 == i2:
-                    return ks[i1]
-                else:
-                    return ZeroKernel()
+                # The rest is independent. Easy.
+                return ks[i1] if i1 == i2 else ZeroKernel()
 
         ComponentKernel.__init__(self, KernelMatrix())
 
@@ -88,9 +90,9 @@ class NoisyKernel(Kernel, Referentiable):
 
     def __init__(self, k_f, k_n):
         self.k_f = k_f
-        self.k_y = k_n + k_f
+        self.k_y = k_f + k_n
 
-    @dispatch(Input, Input)
+    @dispatch({Latent, Observed}, {Latent, Observed})
     def __call__(self, x, y):
         return self.k_f(x.get(), y.get())
 
