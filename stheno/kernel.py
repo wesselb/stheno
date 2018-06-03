@@ -334,7 +334,7 @@ class ZeroKernel(Kernel, Referentiable):
 
     @property
     def length_scale(self):
-        return np.nan
+        return 0
 
 
 class EQ(Kernel, Referentiable):

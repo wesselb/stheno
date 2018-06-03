@@ -5,7 +5,7 @@ from __future__ import absolute_import, division, print_function
 import numpy as np
 
 from stheno import Means, Kernels, Graph, GP, EQ, model, At, \
-    FunctionMean
+    FunctionMean, Linear
 # noinspection PyUnresolvedReferences,
 from . import eq, neq, lt, le, ge, gt, raises, call, ok, eprint
 
@@ -120,6 +120,37 @@ def test_at_shorthand():
 
     yield eq, type(x), At(p1)
     yield eq, x.get(), 1
+
+
+def test_properties():
+    model = Graph()
+
+    p1 = GP(EQ(), graph=model)
+    p2 = GP(EQ().stretch(2), graph=model)
+    p3 = GP(EQ().periodic(10), graph=model)
+
+    p = p1 + 2 * p2
+
+    yield eq, p.stationary, True, 'stationary'
+    yield eq, p.var, 1 + 2 ** 2, 'var'
+    eprint(p.length_scale)
+    eprint((1 + 2 * 2 ** 2) / (1 + 2 ** 2))
+
+    yield ok, np.allclose(p.length_scale,
+                          (1 + 2 * 2 ** 2) / (1 + 2 ** 2)), 'scale'
+    yield eq, p.period, 0, 'period'
+
+    yield eq, p3.period, 10, 'period'
+
+    p = p3 + p
+
+    yield eq, p.stationary, True, 'stationary 2'
+    yield eq, p.var, 1 + 2 ** 2 + 1, 'var 2'
+    yield eq, p.period, 0, 'period 2'
+
+    p = p + GP(Linear(), graph=model)
+
+    yield eq, p.stationary, False, 'stationary 3'
 
 
 def test_case1():

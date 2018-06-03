@@ -201,7 +201,7 @@ def test_kernel_zero():
     # Verify that the kernel has the right properties.
     yield eq, k.stationary, True
     yield eq, k.var, 0
-    yield ok, k.length_scale is np.nan
+    yield eq, k.length_scale, 0
     yield eq, k.period, 0
 
 
@@ -287,9 +287,9 @@ def test_properties_scaled():
 
 
 def test_properties_product():
-    k = (2 * EQ()) * (5 * RQ(1e-2))
+    k = (2 * EQ().stretch(10)) * (3 * RQ(1e-2).stretch(20))
 
     yield eq, k.stationary, True
-    yield eq, k.length_scale, 1
+    yield eq, k.length_scale, 10
     yield eq, k.period, 0
-    yield eq, k.var, 10
+    yield eq, k.var, 6
