@@ -5,7 +5,9 @@ from __future__ import absolute_import, division, print_function
 from lab import B
 from plum import Dispatcher, Self, Referentiable
 
-from stheno import PosteriorMean, PosteriorKernel, SPD, ZeroMean
+from .kernel import PosteriorKernel
+from .mean import ZeroMean, PosteriorMean
+from .spd import SPD
 
 __all__ = ['Normal', 'GPPrimitive', 'Random']
 

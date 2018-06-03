@@ -8,7 +8,7 @@ from types import FunctionType
 from lab import B
 from plum import Dispatcher, Self, Referentiable
 
-from stheno import Input
+from .input import Input
 
 __all__ = ['Mean', 'SumMean', 'ProductMean', 'ScaledMean', 'ConstantMean',
            'PosteriorMean', 'FunctionMean', 'ZeroMean', 'PosteriorCrossMean']

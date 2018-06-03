@@ -2,14 +2,14 @@
 
 from __future__ import absolute_import, division, print_function
 
+from abc import ABCMeta
 from numbers import Number
-from abc import ABCMeta, abstractproperty
-import numpy as np
 
+import numpy as np
 from lab import B
 from plum import Dispatcher, Self, Referentiable
 
-from stheno import Input
+from .input import Input
 
 __all__ = ['Kernel', 'ProductKernel', 'SumKernel', 'ConstantKernel',
            'ScaledKernel', 'StretchedKernel', 'PeriodicKernel',

@@ -2,10 +2,10 @@
 
 from __future__ import absolute_import, division, print_function
 
-from plum import Dispatcher, Self, Referentiable, type_parameter
+from plum import Dispatcher, Self, Referentiable
 
-from stheno import Kernel, Input, Observed, Component, ConstantKernel, \
-    ZeroKernel, Latent
+from .input import Observed, Latent, Component
+from .kernel import Kernel, ZeroKernel
 
 __all__ = ['NoisyKernel', 'ComponentKernel', 'AdditiveComponentKernel']
 
