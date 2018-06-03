@@ -23,7 +23,7 @@ e = e_indep + .3 * e_exp
 
 # Sum the latent function and observation noise to get a model for the
 # observations.
-y = f + 0.5 * e
+y = f + .5 * e
 
 # Component by component, sample a true, underlying function and observations.
 f_true_smooth = f_smooth(x).sample()

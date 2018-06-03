@@ -5,12 +5,12 @@ from stheno import GP, EQ, Kronecker
 
 # Define points to predict at.
 x = np.linspace(0, 10, 100)[:, None]
-x_obs = np.linspace(0, 7, 10)[:, None]
+x_obs = np.linspace(0, 7, 20)[:, None]
 
 # Construct a prior.
-f = GP(EQ())  # Latent function.
+f = GP(EQ().periodic(5.))  # Latent function.
 e = GP(Kronecker())  # Noise.
-y = f + 0.1 * e
+y = f + .5 * e
 
 # Sample a true, underlying function.
 f_true = f(x).sample()
