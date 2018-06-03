@@ -38,7 +38,7 @@ def test_normal():
     samples = dist.sample(50000)
     kl_est = np.mean(dist.log_pdf(samples)) - np.mean(dist2.log_pdf(samples))
     kl = dist.kl(dist2)
-    yield ok, np.abs(kl_est - kl) / np.abs(kl) < 1e-2, 'kl samples'
+    yield ok, np.abs(kl_est - kl) / np.abs(kl) < 5e-2, 'kl samples'
 
     # Check a diagonal normal and SPD normal.
     mean = np.random.randn(3, 1)
@@ -54,10 +54,10 @@ def test_normal():
     yield ok, np.allclose(dist1.kl(dist1), 0.), 'kl 2'
     yield ok, np.allclose(dist2.kl(dist2), 0.), 'kl 3'
     yield ok, np.allclose(dist2.kl(dist1), 0.), 'kl 4'
-    yield ok, dist1.w2(dist1) < 1e-4, 'w2 1'
-    yield ok, dist1.w2(dist2) < 1e-4, 'w2 2'
-    yield ok, dist2.w2(dist1) < 1e-4, 'w2 3'
-    yield ok, dist2.w2(dist2) < 1e-4, 'w2 4'
+    yield ok, dist1.w2(dist1) < 5e-4, 'w2 1'
+    yield ok, dist1.w2(dist2) < 5e-4, 'w2 2'
+    yield ok, dist2.w2(dist1) < 5e-4, 'w2 3'
+    yield ok, dist2.w2(dist2) < 5e-4, 'w2 4'
 
     # Check a uniformly diagonal normal and SPD normal.
     mean = np.random.randn(3, 1)
@@ -137,11 +137,11 @@ def test_gp():
     yield ok, np.allclose(mu[:, None], sample), 'mean at known points'
     yield ok, np.all(upper - lower < 1e-5), 'sigma at known points'
 
-    mu, lower, upper = post.predict(x + 15.)
+    mu, lower, upper = post.predict(x + 20.)
     sig = (upper - lower) / 4
-    yield ok, np.allclose(mu[:, None], m(x + 15.)), 'mean at unknown points'
+    yield ok, np.allclose(mu[:, None], m(x + 20.)), 'mean at unknown points'
     yield ok, np.allclose(sig ** 2,
-                          np.diag(k(x + 15.))), 'variance at unknown points'
+                          np.diag(k(x + 20.))), 'variance at unknown points'
 
     # Check that conditioning is independent of order.
     x1 = np.random.randn(5, 2)

@@ -81,7 +81,66 @@ def test_kernels():
     yield eq, (2, 5), mat[a2, a1]
 
 
-def test_additive_model():
+def test_sum_other():
+    model = Graph()
+    p1 = GP(EQ(), FunctionMean(lambda x: x ** 2), graph=model)
+    p2 = p1 + 5.
+    p3 = 5. + p1
+
+    x = np.random.randn(5, 1)
+    yield ok, np.allclose(p1.mean(x) + 5., p2.mean(x))
+    yield ok, np.allclose(p1.mean(x) + 5., p3.mean(x))
+    yield ok, np.allclose(p1.kernel(x), p2.kernel(x))
+    yield ok, np.allclose(p1.kernel(x), p3.kernel(x))
+    yield ok, np.allclose(p1.kernel(At(p2)(x), At(p3)(x)),
+                          p1.kernel(x))
+
+
+def test_mul_other():
+    model = Graph()
+    p1 = GP(EQ(), FunctionMean(lambda x: x ** 2), graph=model)
+    p2 = 5. * p1
+    p3 = p1 * 5.
+
+    yield raises, NotImplementedError, lambda: p1 * p2
+
+    x = np.random.randn(5, 1)
+    yield ok, np.allclose(5. * p1.mean(x), p2.mean(x))
+    yield ok, np.allclose(5. * p1.mean(x), p3.mean(x))
+    yield ok, np.allclose(25. * p1.kernel(x), p2.kernel(x))
+    yield ok, np.allclose(25. * p1.kernel(x), p3.kernel(x))
+    yield ok, np.allclose(p1.kernel(At(p2)(x), At(p3)(x)),
+                          25. * p1.kernel(x))
+
+
+def test_at_shorthand():
+    model = Graph()
+    p1 = GP(EQ(), graph=model)
+    x = p1.__matmul__(1)
+
+    yield eq, type(x), At(p1)
+    yield eq, x.get(), 1
+
+
+def test_case1():
+    # Test summing the same GP with itself.
+    model = Graph()
+    p1 = GP(EQ(), graph=model)
+    p2 = p1 + p1 + p1 + p1 + p1
+    x = np.linspace(0, 10, 5)[:, None]
+
+    yield ok, np.allclose(p2(x).var, 25 * p1(x).var), 'variance'
+    yield ok, np.allclose(p2(x).mean, np.zeros((5, 1))), 'mean'
+
+    y = np.random.randn(5, 1)
+    model.condition(At(p1)(x), y)
+
+    yield ok, np.allclose(p2(x).mean, 5 * y), 'posterior mean'
+
+
+def test_case2():
+    # Test some additive model.
+
     model = Graph()
     p1 = GP(EQ(), graph=model)
     p2 = GP(EQ(), graph=model)
@@ -137,44 +196,3 @@ def test_additive_model():
     p3.revert_prior()
 
     yield ok, np.allclose(p3.condition(x, y1 + y2)(x).mean, y1 + y2)
-
-
-def test_sum_other():
-    model = Graph()
-    p1 = GP(EQ(), FunctionMean(lambda x: x ** 2), graph=model)
-    p2 = p1 + 5.
-    p3 = 5. + p1
-
-    x = np.random.randn(5, 1)
-    yield ok, np.allclose(p1.mean(x) + 5., p2.mean(x))
-    yield ok, np.allclose(p1.mean(x) + 5., p3.mean(x))
-    yield ok, np.allclose(p1.kernel(x), p2.kernel(x))
-    yield ok, np.allclose(p1.kernel(x), p3.kernel(x))
-    yield ok, np.allclose(p1.kernel(At(p2)(x), At(p3)(x)),
-                          p1.kernel(x))
-
-
-def test_mul_other():
-    model = Graph()
-    p1 = GP(EQ(), FunctionMean(lambda x: x ** 2), graph=model)
-    p2 = 5. * p1
-    p3 = p1 * 5.
-
-    yield raises, NotImplementedError, lambda: p1 * p2
-
-    x = np.random.randn(5, 1)
-    yield ok, np.allclose(5. * p1.mean(x), p2.mean(x))
-    yield ok, np.allclose(5. * p1.mean(x), p3.mean(x))
-    yield ok, np.allclose(25. * p1.kernel(x), p2.kernel(x))
-    yield ok, np.allclose(25. * p1.kernel(x), p3.kernel(x))
-    yield ok, np.allclose(p1.kernel(At(p2)(x), At(p3)(x)),
-                          25. * p1.kernel(x))
-
-
-def test_at_shorthand():
-    model = Graph()
-    p1 = GP(EQ(), graph=model)
-    x = p1.__matmul__(1)
-
-    yield eq, type(x), At(p1)
-    yield eq, x.get(), 1

@@ -2,12 +2,14 @@
 
 from __future__ import absolute_import, division, print_function
 
-# noinspection PyUnresolvedReferences
-from . import eq, neq, lt, le, ge, gt, raises, call, ok, eprint
+from numbers import Number
 
 import numpy as np
-from stheno import FunctionMean, ZeroMean, Mean, Observed
-from plum import Dispatcher, Number
+from plum import Dispatcher
+
+from stheno import FunctionMean, ZeroMean, Mean, Observed, ConstantMean
+# noinspection PyUnresolvedReferences
+from . import eq, neq, lt, le, ge, gt, raises, call, ok, eprint
 
 
 def test_corner_cases():
@@ -45,3 +47,12 @@ def test_arithmetic():
     yield ok, np.allclose((5. * m1)(x2), 5. * m1(x2)), 'prod 4'
     yield ok, np.allclose((5. + m1)(x1), 5. + m1(x1)), 'sum 3'
     yield ok, np.allclose((5. + m1)(x2), 5. + m1(x2)), 'sum 4'
+
+
+def test_function_mean():
+    m1 = 5 * ConstantMean() + (lambda x: x ** 2)
+    m2 = (lambda x: x ** 2) + 5 * ConstantMean()
+    x = np.random.randn(10, 1)
+
+    yield ok, np.allclose(m1(x), 5 + x ** 2)
+    yield ok, np.allclose(m2(x), 5 + x ** 2)

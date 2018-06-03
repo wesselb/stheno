@@ -2,10 +2,13 @@
 
 from __future__ import absolute_import, division, print_function
 
+from numbers import Number
+from types import FunctionType
+
 from lab import B
-from plum import Dispatcher, Self, Referentiable, Number
+from plum import Dispatcher, Self, Referentiable
+
 from stheno import Input
-import numpy as np
 
 __all__ = ['Mean', 'SumMean', 'ProductMean', 'ScaledMean', 'ConstantMean',
            'PosteriorMean', 'FunctionMean', 'ZeroMean', 'PosteriorCrossMean']
@@ -34,6 +37,10 @@ class Mean(Referentiable):
     @dispatch(Input)
     def __call__(self, x):
         return self(x.get())
+
+    @dispatch(FunctionType)
+    def __add__(self, other):
+        return self + FunctionMean(other)
 
     @dispatch(Self)
     def __add__(self, other):

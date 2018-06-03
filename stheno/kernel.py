@@ -2,8 +2,13 @@
 
 from __future__ import absolute_import, division, print_function
 
+from numbers import Number
+from abc import ABCMeta, abstractproperty
+import numpy as np
+
 from lab import B
-from plum import Dispatcher, Self, Referentiable, Number
+from plum import Dispatcher, Self, Referentiable
+
 from stheno import Input
 
 __all__ = ['Kernel', 'ProductKernel', 'SumKernel', 'ConstantKernel',
@@ -18,6 +23,7 @@ class Kernel(Referentiable):
 
     Kernels can be added and multiplied.
     """
+    __metaclass__ = ABCMeta
     dispatch = Dispatcher(in_class=Self)
 
     @dispatch(object, object)
@@ -64,15 +70,6 @@ class Kernel(Referentiable):
     def __rmul__(self, other):
         return self * other
 
-    def __sub__(self, other):
-        return self + (-other)
-
-    def __rsub__(self, other):
-        return (-self) + other
-
-    def __neg__(self):
-        return self * -1
-
     def stretch(self, stretch):
         """Stretch the kernel.
 
@@ -90,12 +87,38 @@ class Kernel(Referentiable):
         return PeriodicKernel(self, period)
 
     def __reversed__(self):
-        """Reverse the argument of the kernel."""
+        """Reverse the arguments of the kernel."""
         return ReversedKernel(self)
+
+    @property
+    def stationary(self):
+        """Stationarity of the kernel"""
+        return True
+
+    @property
+    def var(self):
+        """Variance of the kernel. Returns `np.nan` if the variance is
+        undefined or cannot be determined.
+        """
+        return 1
+
+    @property
+    def length_scale(self):
+        """Approximation to the length scale of the kernel. Returns `np.nan`
+        if the length scale is undefined or cannot be determined.
+        """
+        return 1
+
+    @property
+    def period(self):
+        """Period of the kernel. Returns `np.nan` is the period is undefined
+        or cannot be determined.
+        """
+        return 0
 
 
 class SumKernel(Kernel, Referentiable):
-    """Sum of two kernels.
+    """Sum of kernels.
 
     Args:
         k1 (instance of :class:`.kernel.Kernel`): First kernel in sum.
@@ -111,6 +134,19 @@ class SumKernel(Kernel, Referentiable):
     @dispatch(object, object)
     def __call__(self, x, y):
         return self.k1(x, y) + self.k2(x, y)
+
+    @property
+    def stationary(self):
+        return self.k1.stationary and self.k2.stationary
+
+    @property
+    def var(self):
+        return self.k1.var + self.k2.var
+
+    @property
+    def length_scale(self):
+        return (self.k1.var * self.k1.length_scale +
+                self.k2.var * self.k2.length_scale) / self.var
 
 
 class ProductKernel(Kernel, Referentiable):
@@ -131,6 +167,18 @@ class ProductKernel(Kernel, Referentiable):
     def __call__(self, x, y):
         return self.k1(x, y) * self.k2(x, y)
 
+    @property
+    def stationary(self):
+        return self.k1.stationary and self.k2.stationary
+
+    @property
+    def var(self):
+        return self.k1.var * self.k2.var
+
+    @property
+    def length_scale(self):
+        return B.minimum(self.k1.length_scale, self.k2.length_scale)
+
 
 class StretchedKernel(Kernel, Referentiable):
     """Stretched kernel.
@@ -149,6 +197,22 @@ class StretchedKernel(Kernel, Referentiable):
     @dispatch(B.Numeric, B.Numeric)
     def __call__(self, x, y):
         return self.k(x / self.stretch, y / self.stretch)
+
+    @property
+    def stationary(self):
+        return self.k.stationary
+
+    @property
+    def var(self):
+        return self.k.var
+
+    @property
+    def length_scale(self):
+        return self.k.length_scale * self.stretch
+
+    @property
+    def period(self):
+        return self.k.period * self.stretch
 
 
 class ScaledKernel(Kernel, Referentiable):
@@ -169,6 +233,22 @@ class ScaledKernel(Kernel, Referentiable):
     def __call__(self, x, y):
         return self.scale * self.k(x, y)
 
+    @property
+    def stationary(self):
+        return self.k.stationary
+
+    @property
+    def var(self):
+        return self.scale * self.k.var
+
+    @property
+    def length_scale(self):
+        return self.k.length_scale
+
+    @property
+    def period(self):
+        return self.k.period
+
 
 class PeriodicKernel(Kernel, Referentiable):
     """Periodic kernel.
@@ -182,7 +262,7 @@ class PeriodicKernel(Kernel, Referentiable):
 
     def __init__(self, k, period):
         self.k = k
-        self.period = period
+        self._period = period
 
     @dispatch(Number, Number)
     def __call__(self, x, y):
@@ -200,6 +280,22 @@ class PeriodicKernel(Kernel, Referentiable):
 
         return self.k(feat_map(x), feat_map(y))
 
+    @property
+    def stationary(self):
+        return self.k.stationary
+
+    @property
+    def var(self):
+        return self.k.var
+
+    @property
+    def length_scale(self):
+        return self.k.length_scale
+
+    @property
+    def period(self):
+        return self._period
+
 
 class ConstantKernel(Kernel, Referentiable):
     """Constant kernel of `1`."""
@@ -214,6 +310,10 @@ class ConstantKernel(Kernel, Referentiable):
     def __call__(self, x, y):
         return B.ones((B.shape(x)[0], B.shape(y)[0]), dtype=B.dtype(x))
 
+    @property
+    def length_scale(self):
+        return np.inf
+
 
 class ZeroKernel(Kernel, Referentiable):
     """Constant kernel of `0`."""
@@ -227,6 +327,14 @@ class ZeroKernel(Kernel, Referentiable):
     @dispatch(B.Numeric, B.Numeric)
     def __call__(self, x, y):
         return B.zeros((B.shape(x)[0], B.shape(y)[0]), dtype=B.dtype(x))
+
+    @property
+    def var(self):
+        return 0
+
+    @property
+    def length_scale(self):
+        return np.nan
 
 
 class EQ(Kernel, Referentiable):
@@ -310,6 +418,10 @@ class Kronecker(Kernel, Referentiable):
         dists2 = B.pw_dists2(x, y)
         return B.cast(dists2 < self.epsilon, B.dtype(x))
 
+    @property
+    def length_scale(self):
+        return 0
+
 
 class Linear(Kernel, Referentiable):
     """Linear kernel."""
@@ -319,6 +431,18 @@ class Linear(Kernel, Referentiable):
     @dispatch(B.Numeric, B.Numeric)
     def __call__(self, x, y):
         return B.matmul(x, y, tr_b=True)
+
+    @property
+    def stationary(self):
+        return False
+
+    @property
+    def length_scale(self):
+        return np.nan
+
+    @property
+    def var(self):
+        return np.nan
 
 
 class PosteriorCrossKernel(Kernel, Referentiable):
@@ -349,6 +473,18 @@ class PosteriorCrossKernel(Kernel, Referentiable):
         return (self.k_ij(x, y) - self.Kz.quadratic_form(self.k_zi(self.z, x),
                                                          self.k_zj(self.z, y)))
 
+    @property
+    def stationary(self):
+        return False
+
+    @property
+    def length_scale(self):
+        return np.nan
+
+    @property
+    def var(self):
+        return np.nan
+
 
 class PosteriorKernel(PosteriorCrossKernel, Referentiable):
     """Posterior kernel.
@@ -367,7 +503,7 @@ class PosteriorKernel(PosteriorCrossKernel, Referentiable):
         )
 
 
-class ReversedKernel(Kernel):
+class ReversedKernel(Kernel, Referentiable):
     """Kernel that evaluates with its arguments reversed.
 
     Args:
@@ -378,4 +514,24 @@ class ReversedKernel(Kernel):
         self.k = k
 
     def __call__(self, *args):
+        # Nothing has to be done if the kernel is stationary, or the underlying
+        # kernel also has its arguments reversed.
+        if self.stationary or type(self.k) == ReversedKernel:
+            return self.k(*args)
         return B.transpose(self.k(*reversed(args)))
+
+    @property
+    def stationary(self):
+        return self.k.stationary
+
+    @property
+    def var(self):
+        return self.k.var
+
+    @property
+    def length_scale(self):
+        return self.k.length_scale
+
+    @property
+    def period(self):
+        return self.k.period
