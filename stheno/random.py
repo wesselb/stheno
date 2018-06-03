@@ -235,3 +235,19 @@ class GPPrimitive(RandomProcess, Referentiable):
     def __mul__(self, other):
         raise NotImplementedError('Cannot multiply a GP and a {}.'
                                   ''.format(type(other).__name__))
+
+    @property
+    def stationary(self):
+        return self.kernel.stationary
+
+    @property
+    def var(self):
+        return self.kernel.var
+
+    @property
+    def length_scale(self):
+        return self.kernel.length_scale
+
+    @property
+    def period(self):
+        return self.kernel.period
