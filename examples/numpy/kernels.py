@@ -7,9 +7,6 @@ import numpy as np
 
 from stheno import B, GP, RQ, Matern12, Matern32, Matern52, EQ
 
-# Add some regularisation.
-B.epsilon = 1e-6
-
 # Define the grid for which we are going to generate function values.
 x = np.linspace(0, 5, 500)[:, None]
 
