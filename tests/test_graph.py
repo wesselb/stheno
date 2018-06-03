@@ -4,10 +4,9 @@ from __future__ import absolute_import, division, print_function
 
 import numpy as np
 
-from stheno import Means, Kernels, Graph, GP, EQ, model, At, \
-    FunctionMean, Linear
+from stheno import Graph, GP, EQ, At, FunctionMean, Linear
 # noinspection PyUnresolvedReferences,
-from . import eq, neq, lt, le, ge, gt, raises, call, ok, eprint
+from . import eq, raises, ok, eprint
 
 
 def test_corner_cases():
@@ -16,69 +15,6 @@ def test_corner_cases():
     p1 = GP(EQ(), graph=m1)
     p2 = GP(EQ(), graph=m2)
     yield raises, RuntimeError, lambda: p1 + p2
-
-
-def test_means():
-    class A(object):
-        pass
-
-    vec = Means()
-
-    a1 = A()
-    a2 = A()
-
-    vec[a1] = 1
-    vec[a2] = 2
-
-    yield ok, vec[a1], 1
-    yield ok, vec[a2], 1
-    yield ok, vec[id(a1)], 1
-    yield ok, vec[id(a2)], 1
-
-
-def test_kernels():
-    class A(object):
-        def reverse(self):
-            return self
-
-    mat = Kernels()
-
-    # Test diagonal assignments and extractions and conversions.
-    a = A()
-
-    mat[a] = 1
-    yield eq, mat[a], mat[a, a], 'diagonal'
-    yield eq, mat[id(a)], mat[a, a]
-    yield eq, mat[a], mat[id(a), a]
-    yield eq, mat[id(a)], mat[id(a), a]
-    yield eq, mat[a], mat[a, id(a)]
-    yield eq, mat[id(a)], mat[a, id(a)]
-    yield eq, mat[a], mat[id(a), id(a)]
-    yield eq, mat[id(a)], mat[id(a), id(a)]
-
-    mat[a, a] = 2
-    yield eq, mat[a], mat[a, a]
-    yield eq, mat[id(a)], mat[a, a]
-    yield eq, mat[a], mat[id(a), a]
-    yield eq, mat[id(a)], mat[id(a), a]
-    yield eq, mat[a], mat[a, id(a)]
-    yield eq, mat[id(a)], mat[a, id(a)]
-    yield eq, mat[a], mat[id(a), id(a)]
-    yield eq, mat[id(a)], mat[id(a), id(a)]
-
-    # Check symmetry and reversal of arguments.
-    a1 = A()
-    a2 = A()
-
-    mat[a1] = (1, 1)
-    mat[a1, a2] = (1, 2)
-    mat[a2] = (2, 2)
-
-    yield eq, (2, 1), tuple(mat[a2, a1]), 'symmetry'
-
-    mat[a2, a1] = (2, 5)
-
-    yield eq, (2, 5), mat[a2, a1]
 
 
 def test_sum_other():

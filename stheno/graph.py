@@ -2,147 +2,18 @@
 
 from __future__ import absolute_import, division, print_function
 
-from lab import B
-from plum import Dispatcher, Self, Referentiable, type_parameter, Kind, \
+from plum import Dispatcher, Self, Referentiable, type_parameter, kind, \
     PromisedType
 
-from itertools import product
-from stheno import GPPrimitive, ZeroKernel, PosteriorCrossMean, \
-    PosteriorCrossKernel, SPD, ZeroMean, Mean, Kernel, Random
+from .kernel import ZeroKernel, PosteriorCrossKernel, Kernel
+from .mean import PosteriorCrossMean, ZeroMean, Mean
+from .random import GPPrimitive, Random
+from .spd import SPD
+from .lazy import LazyVector, LazySymmetricMatrix
 
-__all__ = ['GP', 'model', 'Graph', 'At', 'Means', 'Kernels']
+__all__ = ['GP', 'model', 'Graph', 'At']
 
-At = Kind
-
-
-class StorageByID(Referentiable):
-    """A dictionary-like type that stores objects by their `id`s."""
-    dispatch = Dispatcher(in_class=Self)
-
-    def __init__(self):
-        self._store = {}
-
-    @dispatch(object)
-    def _resolve_item(self, item):
-        return id(item)
-
-    @dispatch(int)
-    def _resolve_item(self, item):
-        return item
-
-    def __repr__(self):
-        return self._store.__repr__()
-
-    def __str__(self):
-        return self._store.__str__()
-
-    def __getitem__(self, item):
-        try:
-            return self._store[self._resolve_item(item)]
-        except KeyError:
-            self._store[item] = self._build(item)
-            return self._store[item]
-
-    def __setitem__(self, item, mean):
-        self._store[self._resolve_item(item)] = mean
-
-    def _build(self, item):
-        raise KeyError('Cannot build object for item "{}".'.format(item))
-
-
-class Means(StorageByID):
-    """A dictionary-like type to store mean functions indexed by objects."""
-
-
-class Kernels(StorageByID):
-    """A dictionary-like type to store kernels functions indexed by
-    pairs of objects.
-    """
-
-    def _resolve_item(self, ps):
-        if type(ps) is not tuple:
-            ps = ps, ps
-        return StorageByID._resolve_item(self, ps[0]), \
-               StorageByID._resolve_item(self, ps[1])
-
-    def __getitem__(self, ps):
-        pi, pj = self._resolve_item(ps)
-        try:
-            return self._store[pi, pj]
-        except KeyError:
-            pass
-
-        # Kernel `k_ij` cannot be found. Try looking for `k_ji` and reverse
-        # its inputs.
-        try:
-            return reversed(self._store[pj, pi])
-        except KeyError:
-            pass
-
-        # Finally, try building the kernel.
-        self._store[pi, pj] = self._build((pi, pj))
-        return self._store[pi, pj]
-
-
-class PosteriorMeans(Means):
-    """A posterior version of :class:`.graph.Means`.
-
-    Args:
-        prior_kernels (instance of :class:`.graph.Kernels`): Prior kernels.
-        prior_means (instance of :class:`.graph.Means`): Prior means.
-        p_data (instance of :class:`.graph.GP`): Process corresponding to the
-            data.
-        x (design matrix): Locations of observations.
-        Kx (matrix): Kernel matrix of observations.
-        y (matrix): Observations.
-    """
-
-    def __init__(self, prior_kernels, prior_means, p_data, x, Kx, y):
-        Means.__init__(self)
-        self.prior_kernels = prior_kernels
-        self.prior_means = prior_means
-        self.p_data = p_data
-        self.x = x
-        self.Kx = Kx
-        self.y = y
-
-    def _build(self, p):
-        return PosteriorCrossMean(
-            self.prior_means[p],
-            self.prior_means[self.p_data],
-            self.prior_kernels[self.p_data, p],
-            self.x, self.Kx, self.y
-        )
-
-
-class PosteriorKernels(Kernels):
-    """A posterior version of :class:`.graph.Kernels`.
-
-    Args:
-        prior_kernels (instance of :class:`.graph.Kernels`): Prior kernels.
-        p_data (instance of :class:`.graph.GP`): Process corresponding to the
-            data.
-        x (design matrix): Locations of observations.
-        Kx (matrix): Kernel matrix of observations.
-    """
-
-    def __init__(self, prior_kernels, p_data, x, Kx):
-        Kernels.__init__(self)
-        self.prior_kernels = prior_kernels
-        self.p_data = p_data
-        self.x = x
-        self.Kx = Kx
-
-    def _build(self, ps):
-        pi, pj = ps
-        return PosteriorCrossKernel(
-            self.prior_kernels[pi, pj],
-            self.prior_kernels[self.p_data, pi],
-            self.prior_kernels[self.p_data, pj],
-            self.x, self.Kx
-        )
-
-
+At = kind()
 PromisedGP = PromisedType()
 
 
@@ -152,8 +23,8 @@ class Graph(Referentiable):
 
     def __init__(self):
         self.ps = []
-        self.kernels = Kernels()
-        self.means = Means()
+        self.kernels = LazySymmetricMatrix()
+        self.means = LazyVector()
         self.prior_kernels = None
         self.prior_means = None
 
@@ -166,10 +37,11 @@ class Graph(Referentiable):
             mean (instance of :class:`.mean.Mean`): Mean function of GP.
         """
         mean = ZeroMean() if mean is None else mean
+        # Update means.
         self.means[p] = mean
+        # Add rule to kernels.
         self.kernels[p] = kernel
-        for pi in self.ps:
-            self.kernels[p, pi] = ZeroKernel()
+        self.kernels.add_rule((p, None), self.ps, lambda pi: ZeroKernel())
         self.ps.append(p)
 
     @dispatch(object, PromisedGP)
@@ -190,20 +62,24 @@ class Graph(Referentiable):
     @dispatch(PromisedGP, object)
     def sum(self, p, other):
         p_sum = GP(self)
-        self.means[p_sum] = self.means[p] + other
         self.ps.append(p_sum)
-        for pi in self.ps:
-            self.kernels[pi, p_sum] = self.kernels[pi, p]
+        # Update means.
+        self.means[p_sum] = self.means[p] + other
+        # Add rule to kernels.
+        kernels = self.kernels
+        self.kernels.add_rule((p_sum, None), self.ps, lambda pi: kernels[p, pi])
         return p_sum
 
     @dispatch(PromisedGP, PromisedGP)
     def sum(self, p1, p2):
         p_sum = GP(self)
-        self.means[p_sum] = self.means[p1] + self.means[p2]
         self.ps.append(p_sum)
-        for pi in self.ps:
-            self.kernels[p_sum, pi] = self.kernels[p1, pi] + \
-                                      self.kernels[p2, pi]
+        # Update means.
+        self.means[p_sum] = self.means[p1] + self.means[p2]
+        # Add rule to kernels.
+        kernels = self.kernels
+        self.kernels.add_rule((p_sum, None), self.ps,
+                              lambda pi: kernels[p1, pi] + kernels[p2, pi])
         return p_sum
 
     def mul(self, p, other):
@@ -217,10 +93,13 @@ class Graph(Referentiable):
             The GP corresponding to the product.
         """
         p_prod = GP(self)
+        # Update means.
         self.means[p_prod] = other * self.means[p]
         self.kernels[p_prod] = other ** 2 * self.kernels[p]
-        for pi in self.ps:
-            self.kernels[p_prod, pi] = other * self.kernels[p, pi]
+        # Add rule to kernels.
+        kernels = self.kernels
+        self.kernels.add_rule((p_prod, None), self.ps,
+                              lambda pi: other * kernels[p, pi])
         self.ps.append(p_prod)
         return p_prod
 
@@ -235,17 +114,31 @@ class Graph(Referentiable):
         p_data, x = type_parameter(x), x.get()
         Kx = SPD(self.kernels[p_data](x))
 
-        # Store prior if it isn't already.
-        if self.prior_kernels is None:
-            self.prior_kernels = self.kernels
-            self.prior_means = self.means
-
         prior_kernels = self.kernels
         prior_means = self.means
-        self.kernels = PosteriorKernels(prior_kernels, p_data, x, Kx)
-        self.means = PosteriorMeans(
-            prior_kernels, prior_means, p_data, x, Kx, y
-        )
+
+        # Store prior if it isn't already.
+        if self.prior_kernels is None:
+            self.prior_kernels = prior_kernels
+            self.prior_means = prior_means
+
+        def build_posterior_mean(pi):
+            return PosteriorCrossMean(prior_means[pi],
+                                      prior_means[p_data],
+                                      prior_kernels[p_data, pi],
+                                      x, Kx, y)
+
+        def build_posterior_kernel(pi, pj):
+            return PosteriorCrossKernel(prior_kernels[pi, pj],
+                                        prior_kernels[p_data, pi],
+                                        prior_kernels[p_data, pj],
+                                        x, Kx)
+
+        # Update to posterior.
+        self.kernels = LazySymmetricMatrix()
+        self.kernels.add_rule((None, None), self.ps, build_posterior_kernel)
+        self.means = LazyVector()
+        self.means.add_rule((None,), self.ps, build_posterior_mean)
 
     def revert_prior(self):
         """Revert the model back to the state before any conditioning
@@ -312,6 +205,22 @@ class GraphKernel(Kernel, Referentiable):
         return self.graph.kernels[type_parameter(x),
                                   type_parameter(y)](x.get(), y.get())
 
+    @property
+    def stationary(self):
+        return self.graph.kernels[self.p].stationary
+
+    @property
+    def var(self):
+        return self.graph.kernels[self.p].var
+
+    @property
+    def length_scale(self):
+        return self.graph.kernels[self.p].length_scale
+
+    @property
+    def period(self):
+        return self.graph.kernels[self.p].period
+
 
 model = Graph()  #: A default graph provided for convenience
 
@@ -358,7 +267,8 @@ class GP(GPPrimitive, Referentiable):
 
     @dispatch(Random)
     def __mul__(self, other):
-        return GPPrimitive.__mul__(self, other)
+        raise NotImplementedError('Cannot multiply a GP and a {}.'
+                                  ''.format(type(other).__name__))
 
     @dispatch(At, object)
     def condition(self, x, y):
