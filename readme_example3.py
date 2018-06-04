@@ -4,7 +4,7 @@ import tensorflow as tf
 from tensorflow.contrib.opt import ScipyOptimizerInterface as SOI
 from wbml import vars64 as vs
 
-from stheno.tf import GP, EQ, Kronecker, model
+from stheno.tf import GP, EQ, Delta, model
 
 s = tf.Session()
 
@@ -14,7 +14,7 @@ x_obs = np.linspace(0, 3, 20)[:, None]
 
 # Construct the model.
 u = GP(vs.pos(.5) * EQ().stretch(vs.pos(1.)))
-e = GP(vs.pos(.5) * Kronecker())
+e = GP(vs.pos(.5) * Delta())
 alpha = vs.pos(1.2)
 vs.init(s)
 

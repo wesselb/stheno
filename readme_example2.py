@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-from stheno import GP, model, EQ, RQ, Linear, Kronecker, Exp
+from stheno import GP, model, EQ, RQ, Linear, Delta, Exp
 
 # Define points to predict at.
 x = np.linspace(0, 10, 200)[:, None]
@@ -16,7 +16,7 @@ f_linear = GP(Linear())
 f = f_smooth + f_wiggly + f_periodic + .2 * f_linear
 
 # Let the observation noise consist of a bit of exponential noise.
-e_indep = GP(Kronecker())
+e_indep = GP(Delta())
 e_exp = GP(Exp())
 
 e = e_indep + .3 * e_exp

@@ -20,7 +20,7 @@ Example: Simple Regression
     import matplotlib.pyplot as plt
     import numpy as np
 
-    from stheno import GP, EQ, Kronecker
+    from stheno import GP, EQ, Delta
 
     # Define points to predict at.
     x = np.linspace(0, 10, 100)[:, None]
@@ -28,7 +28,7 @@ Example: Simple Regression
 
     # Construct a prior.
     f = GP(EQ().periodic(5.))  # Latent function.
-    e = GP(Kronecker())  # Noise.
+    e = GP(Delta())  # Noise.
     y = f + .5 * e
 
     # Sample a true, underlying function.
@@ -64,7 +64,7 @@ Example: Decomposition of Prediction
     import matplotlib.pyplot as plt
     import numpy as np
 
-    from stheno import GP, model, EQ, RQ, Linear, Kronecker, Exp
+    from stheno import GP, model, EQ, RQ, Linear, Delta, Exp
 
     # Define points to predict at.
     x = np.linspace(0, 10, 200)[:, None]
@@ -79,7 +79,7 @@ Example: Decomposition of Prediction
     f = f_smooth + f_wiggly + f_periodic + .2 * f_linear
 
     # Let the observation noise consist of a bit of exponential noise.
-    e_indep = GP(Kronecker())
+    e_indep = GP(Delta())
     e_exp = GP(Exp())
 
     e = e_indep + .3 * e_exp
@@ -171,7 +171,7 @@ Example: Learn a Function, Incorporating Prior Knowledge About Its Form
     from tensorflow.contrib.opt import ScipyOptimizerInterface as SOI
     from wbml import vars64 as vs
 
-    from stheno.tf import GP, EQ, Kronecker, model
+    from stheno.tf import GP, EQ, Delta, model
 
     s = tf.Session()
 
@@ -181,7 +181,7 @@ Example: Learn a Function, Incorporating Prior Knowledge About Its Form
 
     # Construct the model.
     u = GP(vs.pos(.5) * EQ().stretch(vs.pos(1.)))
-    e = GP(vs.pos(.5) * Kronecker())
+    e = GP(vs.pos(.5) * Delta())
     alpha = vs.pos(1.2)
     vs.init(s)
 

@@ -5,7 +5,7 @@ from __future__ import absolute_import, print_function, division
 import matplotlib.pyplot as plt
 import numpy as np
 
-from stheno import GP, RQ, NoisyKernel, Observed, Kronecker
+from stheno import GP, RQ, NoisyKernel, Observed, Delta
 from stheno.input import Latent
 
 # Define the grid for which we are going to generate function values.
@@ -27,7 +27,7 @@ noise = .1
 y += noise ** .5 * np.random.randn(*np.shape(y))
 
 # Perform inference.
-p = GP(NoisyKernel(p_true.kernel, noise * Kronecker()))
+p = GP(NoisyKernel(p_true.kernel, noise * Delta()))
 p_post = p.condition(Observed(x), y)
 
 # Perform prediction.

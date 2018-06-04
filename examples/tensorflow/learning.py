@@ -7,7 +7,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.contrib.opt import ScipyOptimizerInterface as SOI
 
-from stheno.tf import GP, EQ, Kronecker, Observed, Latent, \
+from stheno.tf import GP, EQ, Delta, Observed, Latent, \
     AdditiveComponentKernel, Component
 
 
@@ -25,7 +25,7 @@ x_true = np.linspace(0, 1, 500)[:, None]
 # Define a GP that will generate the function values.
 true_scale = .05
 true_noise = 0.05
-p_true = GP(NoisyKernel(EQ().stretch(true_scale), true_noise * Kronecker()))
+p_true = GP(NoisyKernel(EQ().stretch(true_scale), true_noise * Delta()))
 
 # Generate the function values for the grid.
 y_true = s.run(p_true(Latent(x_true)).sample())
@@ -52,7 +52,7 @@ noise = tf.exp(log_noise)
 s.run(tf.variables_initializer([log_scale, log_noise]))
 
 # Create the GP that we are going to fit to the data.
-p = GP(NoisyKernel(EQ().stretch(scale), noise * Kronecker()))
+p = GP(NoisyKernel(EQ().stretch(scale), noise * Delta()))
 
 # Optimise the marginal likelihood with respect to the length scale of the
 # kernel.

@@ -8,7 +8,7 @@ import torch
 
 from lab.torch import B
 from stheno.torch import GP, EQ, RQ, Observed, AdditiveComponentKernel, \
-    Component, Kronecker, Latent
+    Component, Delta, Latent
 
 B.epsilon = 1e-8
 
@@ -20,7 +20,7 @@ k = AdditiveComponentKernel({
     Component('smooth'): RQ(1e-1).stretch(0.3),
     Component('periodic'): EQ().periodic(.3),
     Component('wiggly'): EQ().stretch(0.02),
-    Component('noise'): 0.1 * Kronecker()
+    Component('noise'): 0.1 * Delta()
     # Specify that the latent function consists of the sum of the below
     # components.
 }, latent=[Component('smooth'), Component('periodic'), Component('wiggly')])
