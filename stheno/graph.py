@@ -170,6 +170,9 @@ class GraphMean(Mean, Referentiable):
     def __call__(self, x):
         return self.graph.means[type_parameter(x)](x.get())
 
+    def __str__(self):
+        return str(self.graph.means[self.p])
+
 
 class GraphKernel(Kernel, Referentiable):
     """Kernel that evaluates to the right kernel for a GP attached to a graph.
@@ -220,6 +223,13 @@ class GraphKernel(Kernel, Referentiable):
     @property
     def period(self):
         return self.graph.kernels[self.p].period
+
+    @property
+    def primitive(self):
+        return self.graph.kernels[self.p].primitive
+
+    def __str__(self):
+        return str(self.graph.kernels[self.p])
 
 
 model = Graph()  #: A default graph provided for convenience

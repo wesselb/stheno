@@ -27,6 +27,10 @@ def test_component_kernel():
     yield ok, np.allclose(kc(Component(1)(x), Component(2)(x)), kzero(x))
     yield ok, np.allclose(kc(Component(2)(x), Component(1)(x)), kzero(x))
 
+    yield eq, str(ComponentKernel({Component(1): EQ(),
+                                   Component(2): EQ()})), \
+          'ComponentKernel(EQ(), EQ())'
+
 
 def test_compare_noisy_kernel_and_additive_component_kernel():
     def NoisyKernelCopy(k1, k2):
@@ -59,3 +63,6 @@ def test_compare_noisy_kernel_and_additive_component_kernel():
                           k2(x)), 'additive 3'
     yield ok, np.allclose(kn2(Component('noise')(x), Observed(x)),
                           k2(x)), 'additive 4'
+
+    yield eq, str(NoisyKernel(EQ(), RQ(1))), \
+          'NoisyKernel(EQ(), RQ(1))'

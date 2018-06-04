@@ -4,8 +4,9 @@ from __future__ import absolute_import, division, print_function
 
 import numpy as np
 
-from stheno import EQ, RQ, Matern12, Matern32, Matern52, Kronecker, Kernel, \
-    Observed, Linear, ConstantKernel, ZeroKernel, Exp, PosteriorCrossKernel, SPD
+from stheno import EQ, RQ, Matern12, Matern32, Matern52, Delta, Kernel, \
+    Observed, Linear, ConstantKernel, ZeroKernel, Exp, PosteriorCrossKernel, \
+    SPD, KernelCache, ProductKernel
 # noinspection PyUnresolvedReferences
 from . import eq, neq, lt, le, ge, gt, raises, call, ok, eprint, lam
 
@@ -22,7 +23,7 @@ def test_arithmetic():
     k3 = Matern12()
     k4 = Matern32()
     k5 = Matern52()
-    k6 = Kronecker()
+    k6 = Delta()
     k7 = Linear()
     xs1 = np.random.randn(10, 2), np.random.randn(20, 2)
     xs2 = np.random.randn(), np.random.randn()
@@ -79,8 +80,8 @@ def test_reverse():
     yield eq, k.period, 0
 
 
-def test_kernel_kronecker():
-    k = Kronecker()
+def test_kernel_delta():
+    k = Delta()
     x1 = np.random.randn(10, 2)
     x2 = np.random.randn(5, 2)
 
@@ -293,3 +294,115 @@ def test_properties_product():
     yield eq, k.length_scale, 10
     yield eq, k.period, 0
     yield eq, k.var, 6
+
+
+def test_cancellations_zero():
+    # Sums:
+    yield eq, str(EQ() + EQ()), '(EQ() + EQ())'
+    yield eq, str(ZeroKernel() + EQ()), 'EQ()'
+    yield eq, str(EQ() + ZeroKernel()), 'EQ()'
+    yield eq, str(ZeroKernel() + ZeroKernel()), '0'
+
+    # Products:
+    yield eq, str(EQ() * EQ()), '(EQ() * EQ())'
+    yield eq, str(ZeroKernel() * EQ()), '0'
+    yield eq, str(EQ() * ZeroKernel()), '0'
+    yield eq, str(ZeroKernel() * ZeroKernel()), '0'
+
+    # Scales:
+    yield eq, str(5 * ZeroKernel()), '0'
+    yield eq, str(ZeroKernel() * 5), '0'
+    yield eq, str(EQ() * 5), '(5 * EQ())'
+    yield eq, str(5 * EQ()), '(5 * EQ())'
+
+    # Stretches:
+    yield eq, str(ZeroKernel().stretch(5)), '0'
+    yield eq, str(EQ().stretch(5)), '(EQ() > 5)'
+
+    # Periodicisations:
+    yield eq, str(ZeroKernel().periodic(5)), '0'
+    yield eq, str(EQ().periodic(5)), '(EQ() per 5)'
+
+    # Reversals:
+    yield eq, str(reversed(ZeroKernel())), '0'
+    yield eq, str(reversed(EQ())), 'EQ()'
+    yield eq, str(reversed(Linear())), 'Reversed(Linear())'
+
+    # Integration:
+    yield eq, str(EQ() * EQ() + ZeroKernel() * EQ()), '(EQ() * EQ())'
+    yield eq, str(EQ() * ZeroKernel() + ZeroKernel() * EQ()), '0'
+
+
+def test_cancellations_one():
+    # Products:
+    yield eq, str(EQ() * EQ()), '(EQ() * EQ())'
+    yield eq, str(ConstantKernel() * EQ()), 'EQ()'
+    yield eq, str(EQ() * ConstantKernel()), 'EQ()'
+    yield eq, str(ConstantKernel() * ConstantKernel()), '1'
+
+
+def test_grouping():
+    # Scales:
+    yield eq, str(5 * EQ()), '(5 * EQ())'
+    yield eq, str(5 * (5 * EQ())), '(25 * EQ())'
+
+    # Stretches:
+    yield eq, str(EQ().stretch(5)), '(EQ() > 5)'
+    yield eq, str(EQ().stretch(5).stretch(5)), '(EQ() > 25)'
+
+    # Products:
+    yield eq, str((5 * EQ()) * (5 * EQ())), '(25 * EQ())'
+    yield eq, str((5 * (EQ() * EQ())) * (5 * (EQ() * EQ()))), \
+          '(25 * (EQ() * EQ()))'
+    yield eq, str((5 * RQ(1)) * (5 * RQ(2))), '((5 * RQ(1)) * (5 * RQ(2)))'
+
+    # Sums:
+    yield eq, str((5 * EQ()) + (5 * EQ())), '(10 * EQ())'
+    yield eq, str((5 * (EQ() * EQ())) + (5 * (EQ() * EQ()))), \
+          '(10 * (EQ() * EQ()))'
+    yield eq, str((5 * RQ(1)) + (5 * RQ(2))), '((5 * RQ(1)) + (5 * RQ(2)))'
+
+    # Reversal:
+    yield eq, str(reversed(Linear() + Linear())), '(Reversed(Linear()) + ' \
+                                                  'Reversed(Linear()))'
+    yield eq, str(reversed(Linear() * Linear())), '(Reversed(Linear()) * ' \
+                                                  'Reversed(Linear()))'
+
+
+def test_distributive_property():
+    k1 = RQ(1)
+    k2 = RQ(2)
+    k3 = RQ(3)
+    k4 = RQ(4)
+    yield eq, str(k1 * (k2 + k3)), '((RQ(1) * RQ(2)) + (RQ(1) * RQ(3)))'
+    yield eq, str((k1 + k2) * k3), '((RQ(1) * RQ(3)) + (RQ(2) * RQ(3)))'
+    yield eq, str((k1 + k2) * (k3 + k4)), \
+          '((((RQ(1) * RQ(3)) + (RQ(1) * RQ(4))) + ' \
+          '(RQ(2) * RQ(3))) + (RQ(2) * RQ(4)))'
+
+
+def test_kernel_cache():
+    c = KernelCache()
+
+    x1, x2 = np.random.randn(10, 10), np.random.randn(10, 10)
+    x2 = np.random.randn(10, 10)
+
+    yield eq, id(c.pw_dists(x1, x2)), id(c.pw_dists(x1, x2))
+    yield neq, id(c.pw_dists(x1, x1)), id(c.pw_dists(x1, x2))
+    yield eq, id(c.matmul(x1, x2, tr_a=True)), id(c.matmul(x1, x2, tr_a=True))
+    yield neq, id(c.matmul(x1, x2, tr_a=True)), id(c.matmul(x1, x2))
+
+    # Test that ones and zeros are cached.
+    k = ZeroKernel()
+    x1, x2 = np.random.randn(10, 10), np.random.randn(10, 10)
+    yield eq, id(k(x1, c)), id(k(x2, c))
+    x1, x2 = np.random.randn(10, 10), np.random.randn(5, 10)
+    yield neq, id(k(x1, c)), id(k(x2, c))
+    yield eq, id(k(1, c)), id(k(1, c))
+
+    k = ConstantKernel()
+    x1, x2 = np.random.randn(10, 10), np.random.randn(10, 10)
+    yield eq, id(k(x1, c)), id(k(x2, c))
+    x1, x2 = np.random.randn(10, 10), np.random.randn(5, 10)
+    yield neq, id(k(x1, c)), id(k(x2, c))
+    yield eq, id(k(1, c)), id(k(1, c))

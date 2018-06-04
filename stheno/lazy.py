@@ -79,8 +79,8 @@ class LazySymmetricTensor(Referentiable):
     """
     dispatch = Dispatcher(in_class=Self)
 
-    def __init__(self, d):
-        self.d = d
+    def __init__(self, rank):
+        self.rank = rank
         self._rules = {}
         self._store = {}
 
@@ -98,7 +98,7 @@ class LazySymmetricTensor(Referentiable):
 
     @dispatch(object)
     def _resolve_key(self, key):
-        return (self._resolve_index(key),) * self.d
+        return (self._resolve_index(key),) * self.rank
 
     @dispatch({tuple, reversed})
     def _resolve_key(self, key):
@@ -138,9 +138,9 @@ class LazySymmetricTensor(Referentiable):
         # NOTE: The building patterns should go from least specific to most
         # specific.
         # Try a universal match.
-        building_patterns = [(None,) * self.d]
+        building_patterns = [(None,) * self.rank]
         # Try single dimension patterns.
-        building_patterns += [replace_at(key, i, None) for i in range(self.d)]
+        building_patterns += [replace_at(key, i, None) for i in range(self.rank)]
 
         for pattern in building_patterns:
             # Check if a rules exists for the pattern.

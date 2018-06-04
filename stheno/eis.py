@@ -5,7 +5,7 @@ from __future__ import absolute_import, division, print_function
 from plum import Dispatcher, Self, Referentiable
 
 from .input import Observed, Latent, Component
-from .kernel import Kernel, ZeroKernel
+from .kernel import Kernel, ZeroKernel, KernelCache, cache
 
 __all__ = ['NoisyKernel', 'ComponentKernel', 'AdditiveComponentKernel']
 
@@ -24,9 +24,14 @@ class ComponentKernel(Kernel, Referentiable):
     def __init__(self, ks):
         self.ks = ks
 
-    @dispatch(Component, Component)
-    def __call__(self, x, y):
-        return self.ks[type(x), type(y)](x.get(), y.get())
+    @dispatch(Component, Component, KernelCache)
+    @cache
+    def __call__(self, x, y, cache):
+        return self.ks[type(x), type(y)](x.get(), y.get(), cache)
+
+    def __str__(self):
+        ks = self.ks.values()
+        return 'ComponentKernel({})'.format(', '.join([str(k) for k in ks]))
 
 
 class AdditiveComponentKernel(ComponentKernel, Referentiable):
@@ -76,6 +81,8 @@ class AdditiveComponentKernel(ComponentKernel, Referentiable):
 
         ComponentKernel.__init__(self, KernelMatrix())
 
+    # TODO: implement properly
+
 
 class NoisyKernel(Kernel, Referentiable):
     """Noisy observations of a latent process.
@@ -90,12 +97,17 @@ class NoisyKernel(Kernel, Referentiable):
 
     def __init__(self, k_f, k_n):
         self.k_f = k_f
+        self.k_n = k_n
         self.k_y = k_f + k_n
 
-    @dispatch({Latent, Observed}, {Latent, Observed})
-    def __call__(self, x, y):
+    @dispatch({Latent, Observed}, {Latent, Observed}, KernelCache)
+    @cache
+    def __call__(self, x, y, cache):
         return self.k_f(x.get(), y.get())
 
-    @dispatch(Observed, Observed)
-    def __call__(self, x, y):
+    @dispatch(Observed, Observed, KernelCache)
+    def __call__(self, x, y, cache):
         return self.k_y(x.get(), y.get())
+
+    def __str__(self):
+        return 'NoisyKernel({}, {})'.format(self.k_f, self.k_n)

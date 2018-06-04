@@ -3,6 +3,7 @@
 from __future__ import absolute_import, division, print_function
 
 import sys
+from time import time
 
 from nose.tools import assert_raises, assert_equal, assert_less, \
     assert_less_equal, assert_not_equal, assert_greater, \
@@ -28,3 +29,20 @@ def lam(f, args=()):
 
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
+
+
+def benchmark(f, args, n=1000, get_output=False):
+    """Benchmark the performance of a function `f` called with arguments
+    `args` in microseconds.
+
+    Args:
+        f (function): Function to benchmark.
+        args (tuple): Argument to call `f` with.
+        n (int): Repetitions.
+        get_output (bool): Also return final output of function.
+    """
+    start = time()
+    for i in range(n):
+        out = f(*args)
+    dur = (time() - start) * 1e6 / n
+    return (dur, out) if get_output else out
