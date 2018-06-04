@@ -1,3 +1,5 @@
+ ☐ What is going on with `[np.random.randn(1,1).__array_interface__['data'][0] for _ in range(2)]`?
+
 Features:
     ☐ Sparse approximations
     ☐ Efficient joint sampling
