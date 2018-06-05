@@ -126,7 +126,7 @@ class Normal(RandomVector, Referentiable):
         L = self.spd.cholesky()
         e = B.randn((self.dim, num), dtype=self.dtype)
         out = B.dot(L, e) + self.mean
-        if noise is not None and noise > 0:
+        if noise is not None:
             out += noise ** .5 * B.randn((self.dim, num), dtype=self.dtype)
         return out
 
