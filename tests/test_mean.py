@@ -7,7 +7,7 @@ from numbers import Number
 import numpy as np
 from plum import Dispatcher
 
-from stheno import FunctionMean, ZeroMean, Mean, Observed, ConstantMean
+from stheno import FunctionMean, ZeroMean, Mean, Observed, OneMean
 # noinspection PyUnresolvedReferences
 from . import eq, neq, lt, le, ge, gt, raises, call, ok, eprint
 
@@ -50,8 +50,8 @@ def test_arithmetic():
 
 
 def test_function_mean():
-    m1 = 5 * ConstantMean() + (lambda x: x ** 2)
-    m2 = (lambda x: x ** 2) + 5 * ConstantMean()
+    m1 = 5 * OneMean() + (lambda x: x ** 2)
+    m2 = (lambda x: x ** 2) + 5 * OneMean()
     x = np.random.randn(10, 1)
 
     yield ok, np.allclose(m1(x), 5 + x ** 2)

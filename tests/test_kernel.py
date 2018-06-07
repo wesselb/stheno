@@ -5,7 +5,7 @@ from __future__ import absolute_import, division, print_function
 import numpy as np
 
 from stheno import EQ, RQ, Matern12, Matern32, Matern52, Delta, Kernel, \
-    Observed, Linear, ConstantKernel, ZeroKernel, Exp, PosteriorCrossKernel, \
+    Observed, Linear, OneKernel, ZeroKernel, Exp, PosteriorCrossKernel, \
     SPD, KernelCache, ProductKernel
 # noinspection PyUnresolvedReferences
 from . import eq, neq, lt, le, ge, gt, raises, call, ok, eprint, lam
@@ -175,7 +175,7 @@ def test_kernel_mat52():
 
 
 def test_kernel_constant():
-    k = ConstantKernel()
+    k = OneKernel()
     x1 = np.random.randn(10, 2)
     x2 = np.random.randn(5, 2)
 
@@ -336,9 +336,9 @@ def test_cancellations_zero():
 def test_cancellations_one():
     # Products:
     yield eq, str(EQ() * EQ()), '(EQ() * EQ())'
-    yield eq, str(ConstantKernel() * EQ()), 'EQ()'
-    yield eq, str(EQ() * ConstantKernel()), 'EQ()'
-    yield eq, str(ConstantKernel() * ConstantKernel()), '1'
+    yield eq, str(OneKernel() * EQ()), 'EQ()'
+    yield eq, str(EQ() * OneKernel()), 'EQ()'
+    yield eq, str(OneKernel() * OneKernel()), '1'
 
 
 def test_grouping():
@@ -400,7 +400,7 @@ def test_kernel_cache():
     yield neq, id(k(x1, c)), id(k(x2, c))
     yield eq, id(k(1, c)), id(k(1, c))
 
-    k = ConstantKernel()
+    k = OneKernel()
     x1, x2 = np.random.randn(10, 10), np.random.randn(10, 10)
     yield eq, id(k(x1, c)), id(k(x2, c))
     x1, x2 = np.random.randn(10, 10), np.random.randn(5, 10)

@@ -8,13 +8,15 @@ from types import FunctionType
 from lab import B
 from plum import Dispatcher, Self, Referentiable
 
+from .field import add, mul, dispatch, Type, ZeroType, OneType, ScaledType, \
+    ProductType, SumType
 from .input import Input
 
-__all__ = ['Mean', 'SumMean', 'ProductMean', 'ScaledMean', 'ConstantMean',
+__all__ = ['Mean', 'SumMean', 'ProductMean', 'ScaledMean', 'OneMean',
            'PosteriorMean', 'FunctionMean', 'ZeroMean', 'PosteriorCrossMean']
 
 
-class Mean(Referentiable):
+class Mean(Type, Referentiable):
     """Mean function.
 
     Means can be added and multiplied.
@@ -38,91 +40,50 @@ class Mean(Referentiable):
     def __call__(self, x):
         return self(x.get())
 
-    @dispatch(FunctionType)
     def __add__(self, other):
-        return self + FunctionMean(other)
-
-    @dispatch(Self)
-    def __add__(self, other):
-        return SumMean(self, other)
-
-    @dispatch(object)
-    def __add__(self, other):
-        return SumMean(self, other * ConstantMean())
+        return add(self, other)
 
     def __radd__(self, other):
-        return self + other
+        return add(other, self)
 
-    @dispatch(Self)
     def __mul__(self, other):
-        return ProductMean(self, other)
-
-    @dispatch(object)
-    def __mul__(self, other):
-        return ScaledMean(self, other)
+        return mul(self, other)
 
     def __rmul__(self, other):
-        return self * other
+        return mul(other, self)
 
 
-class SumMean(Mean, Referentiable):
-    """Sum of two means.
-
-    Args:
-        m1 (instance of :class:`.mean.Mean`): First mean in sum.
-        m2 (instance of :class:`.mean.Mean`): Second mean in sum.
-    """
+class SumMean(Mean, SumType, Referentiable):
+    """Sum of two means."""
 
     dispatch = Dispatcher(in_class=Self)
 
-    def __init__(self, m1, m2):
-        self.m1 = m1
-        self.m2 = m2
-
     @dispatch(object)
     def __call__(self, x):
-        return self.m1(x) + self.m2(x)
+        return self[0](x) + self[1](x)
 
 
-class ProductMean(Mean, Referentiable):
-    """Product of two means.
-
-    Args:
-        m1 (instance of :class:`.mean.Mean`): First mean in product.
-        m2 (instance of :class:`.mean.Mean`): Second mean in product.
-    """
+class ProductMean(Mean, ProductType, Referentiable):
+    """Product of two means."""
 
     dispatch = Dispatcher(in_class=Self)
 
-    def __init__(self, m1, m2):
-        self.m1 = m1
-        self.m2 = m2
-
     @dispatch(object)
     def __call__(self, x):
-        return self.m1(x) * self.m2(x)
+        return self[0](x) * self[1](x)
 
 
-class ScaledMean(Mean, Referentiable):
-    """Scaled mean.
-
-    Args:
-        m (instance of :class:`.kernel.Mean`): Mean to scale.
-        scale (tensor): Scale.
-    """
+class ScaledMean(Mean, ScaledType, Referentiable):
+    """Scaled mean."""
 
     dispatch = Dispatcher(in_class=Self)
 
-    def __init__(self, m, scale):
-        self.m = m
-        self.scale = scale
-
     @dispatch(object)
     def __call__(self, x):
-        return self.scale * self.m(x)
+        return self.scale * self[0](x)
 
 
-class ConstantMean(Mean, Referentiable):
+class OneMean(Mean, OneType, Referentiable):
     """Constant mean of `1`."""
 
     dispatch = Dispatcher(in_class=Self)
@@ -136,14 +97,14 @@ class ConstantMean(Mean, Referentiable):
         return B.ones((B.shape(x)[0], 1), dtype=B.dtype(x))
 
 
-class ZeroMean(Mean, Referentiable):
+class ZeroMean(Mean, ZeroType, Referentiable):
     """Constant mean of `0`."""
 
     dispatch = Dispatcher(in_class=Self)
 
     @dispatch(Number)
     def __call__(self, x):
-        return B.array([[1.]])
+        return B.array([[0.]])
 
     @dispatch(B.Numeric)
     def __call__(self, x):
@@ -164,6 +125,9 @@ class FunctionMean(Mean, Referentiable):
     @dispatch(B.Numeric)
     def __call__(self, x):
         return self.f(x)
+
+    def __str__(self):
+        return self.f.__name__
 
 
 class PosteriorCrossMean(Mean, Referentiable):
@@ -204,6 +168,9 @@ class PosteriorCrossMean(Mean, Referentiable):
                B.matmul(self.Kz.inv_prod(self.k_zi(self.z, x)),
                         self.y - self.m_z_z, tr_a=True)
 
+    def __str__(self):
+        return 'PosteriorCrossMean()'
+
 
 class PosteriorMean(PosteriorCrossMean, Referentiable):
     """Posterior mean.
@@ -219,3 +186,24 @@ class PosteriorMean(PosteriorCrossMean, Referentiable):
 
     def __init__(self, gp, z, Kz, y):
         PosteriorCrossMean.__init__(self, gp.mean, gp.mean, gp.kernel, z, Kz, y)
+
+    def __str__(self):
+        return 'PosteriorMean()'
+
+
+# Add functions to means.
+
+@dispatch(FunctionType, Mean)
+def add(a, b): return add(FunctionMean(a), b)
+
+
+@dispatch(FunctionType, ZeroMean)
+def add(a, b): return a
+
+
+@dispatch(Mean, FunctionType)
+def add(a, b): return add(a, FunctionMean(b))
+
+
+@dispatch(ZeroMean, FunctionType)
+def add(a, b): return b
