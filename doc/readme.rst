@@ -1,9 +1,9 @@
-Stheno
-======
-
-Implementation of Gaussian processes in Python
+`Stheno <https://github.com/wesselb/stheno>`__
+==============================================
 
 |Build| |Coverage Status| |Latest Docs|
+
+Implementation of Gaussian processes in Python
 
 See also `Stheno.jl <https://github.com/willtebbutt/Stheno.jl>`__.
 
