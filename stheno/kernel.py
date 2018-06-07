@@ -20,6 +20,8 @@ __all__ = ['Kernel', 'ProductKernel', 'SumKernel', 'ConstantKernel',
 
 log = logging.getLogger(__name__)
 
+dispatch = Dispatcher()
+
 
 class KernelCache(Referentiable):
     """Cache for a kernel trace.
@@ -153,45 +155,28 @@ class Kernel(Referentiable):
         # This should not have been reached. Attempt to unwrap.
         return self(x.get(), y.get(), cache)
 
-    @dispatch(Self)
     def __add__(self, other):
-        return SumKernel(self, other)
-
-    @dispatch(object)
-    def __add__(self, other):
-        if other == 0:
-            return self
-        elif other == 1:
-            return SumKernel(self, ConstantKernel())
-        else:
-            return SumKernel(self, other * ConstantKernel())
+        return add(self, other)
 
     def __radd__(self, other):
-        return self + other
+        return add(other, self)
 
-    @dispatch(Self)
     def __mul__(self, other):
-        return ProductKernel(self, other)
-
-    @dispatch(object)
-    def __mul__(self, other):
-        if other == 0:
-            return ZeroKernel()
-        elif other == 1:
-            return self
-        else:
-            return ScaledKernel(self, other)
+        return mul(self, other)
 
     def __rmul__(self, other):
-        return self * other
+        return mul(other, self)
 
-    def stretch(self, stretch):
+    def __eq__(self, other):
+        return equal(self, other)
+
+    def stretch(self, amount):
         """Stretch the kernel.
 
         Args:
-            scale (tensor): Stretch.
+            amount (tensor): Stretch.
         """
-        return StretchedKernel(self, stretch)
+        return stretch(self, amount)
 
     def periodic(self, period=1):
         """Map to a periodic space.
@@ -199,11 +184,11 @@ class Kernel(Referentiable):
         Args:
             period (tensor): Period. Defaults to `1`.
         """
-        return PeriodicKernel(self, period)
+        return periodicise(self, period)
 
     def __reversed__(self):
         """Reverse the arguments of the kernel."""
-        return ReversedKernel(self)
+        return reverse(self)
 
     @property
     def stationary(self):
@@ -245,17 +230,6 @@ class Kernel(Referentiable):
         """Primitivess of the kernel. If a kernel is a primitive, then all
         instance of the kernel are considered equal.
         """
-        if hasattr(self, '_primitive_cache'):
-            return self._primitive_cache
-        else:
-            self._primitive_cache = self._primitive
-            return self._primitive_cache
-
-    @property
-    def _primitive(self):
-        """Primitivess of the kernel. If a kernel is a primitive, then all
-        instance of the kernel are considered equal.
-        """
         return False
 
 
@@ -282,7 +256,7 @@ class ConstantKernel(Kernel, Referentiable):
         return '1'
 
     @property
-    def _primitive(self):
+    def primitive(self):
         return True
 
 
@@ -313,7 +287,7 @@ class ZeroKernel(Kernel, Referentiable):
         return '0'
 
     @property
-    def _primitive(self):
+    def primitive(self):
         return True
 
 
@@ -328,10 +302,8 @@ class ScaledKernel(Kernel, Referentiable):
     dispatch = Dispatcher(in_class=Self)
 
     def __init__(self, k, scale):
-        # Careful with `__new__`!
-        if not hasattr(self, 'k'):
-            self.k = k
-            self.scale = scale
+        self.k = k
+        self.scale = scale
 
     @dispatch(object, object, KernelCache)
     @cache
@@ -357,22 +329,6 @@ class ScaledKernel(Kernel, Referentiable):
     def __str__(self):
         return '({} * {})'.format(self.scale, self.k)
 
-    # Cancel zero:
-
-    @dispatch(object, object)
-    def __new__(cls, k, scale):
-        return Kernel.__new__(cls)
-
-    @dispatch(ZeroKernel, object)
-    def __new__(cls, k, scale):
-        return k
-
-    # Group:
-
-    @dispatch(Self, object)
-    def __new__(cls, k, scale):
-        return ScaledKernel(k.k, k.scale * scale)
-
 
 class SumKernel(Kernel, Referentiable):
     """Sum of kernels.
@@ -385,10 +341,8 @@ class SumKernel(Kernel, Referentiable):
     dispatch = Dispatcher(in_class=Self)
 
     def __init__(self, k1, k2):
-        # See `__new__`!
-        if not hasattr(self, 'k1'):
-            self.k1 = k1
-            self.k2 = k2
+        self.k1 = k1
+        self.k2 = k2
 
     @dispatch(object, object, KernelCache)
     @cache
@@ -409,38 +363,11 @@ class SumKernel(Kernel, Referentiable):
                 self.k2.var * self.k2.length_scale) / self.var
 
     @property
-    def _primitive(self):
-        return self.k1.primitive and self.k1.primitive
+    def primitive(self):
+        return False
 
     def __str__(self):
         return '({} + {})'.format(self.k1, self.k2)
-
-    @dispatch(object, object)
-    def __new__(cls, k1, k2):
-        # Check whether the sum is trivial.
-        return Kernel.__new__(cls)
-
-    @dispatch(ZeroKernel, object)
-    def __new__(cls, k1, k2):
-        # NOTE: `k2` can be a `SumKernel`, so be extra careful in constructor!
-        return k2
-
-    @dispatch(object, ZeroKernel)
-    def __new__(cls, k1, k2):
-        # NOTE: `k2` can be a `SumKernel`, so be extra careful in constructor!
-        return k1
-
-    @dispatch(ZeroKernel, ZeroKernel)
-    def __new__(cls, k1, k2):
-        return k1
-
-    # Group:
-
-    @dispatch(ScaledKernel, ScaledKernel)
-    def __new__(cls, k1, k2):
-        if k1.k.primitive and k2.k.primitive and type(k1.k) == type(k2.k):
-            return ScaledKernel(k1.k, k1.scale + k2.scale)
-        return Kernel.__new__(cls)
 
 
 class ProductKernel(Kernel, Referentiable):
@@ -454,10 +381,8 @@ class ProductKernel(Kernel, Referentiable):
     dispatch = Dispatcher(in_class=Self)
 
     def __init__(self, k1, k2):
-        # Careful with `__new__`!
-        if not hasattr(self, 'k1'):
-            self.k1 = k1
-            self.k2 = k2
+        self.k1 = k1
+        self.k2 = k2
 
     @dispatch(object, object, KernelCache)
     @cache
@@ -476,66 +401,8 @@ class ProductKernel(Kernel, Referentiable):
     def length_scale(self):
         return B.minimum(self.k1.length_scale, self.k2.length_scale)
 
-    @property
-    def _primitive(self):
-        return self.k1.primitive and self.k1.primitive
-
     def __str__(self):
         return '({} * {})'.format(self.k1, self.k2)
-
-    @dispatch(object, object)
-    def __new__(cls, k1, k2):
-        return Kernel.__new__(cls)
-
-    # Cancel zeros:
-
-    @dispatch(ZeroKernel, object)
-    def __new__(cls, k1, k2):
-        return k1
-
-    @dispatch(object, ZeroKernel)
-    def __new__(cls, k1, k2):
-        return k2
-
-    @dispatch(ZeroKernel, ZeroKernel)
-    def __new__(cls, k1, k2):
-        return k1
-
-    # Cancel constants:
-
-    @dispatch(object, ConstantKernel)
-    def __new__(cls, k1, k2):
-        return k1
-
-    @dispatch(ConstantKernel, object)
-    def __new__(cls, k1, k2):
-        return k2
-
-    @dispatch(ConstantKernel, ConstantKernel)
-    def __new__(cls, k1, k2):
-        return k1
-
-    # Group:
-
-    @dispatch(ScaledKernel, ScaledKernel)
-    def __new__(cls, k1, k2):
-        if k1.k.primitive and k2.k.primitive and type(k1.k) == type(k2.k):
-            return ScaledKernel(k1.k, k1.scale * k2.scale)
-        return Kernel.__new__(cls)
-
-    # Distributive property:
-
-    @dispatch(SumKernel, object)
-    def __new__(cls, k1, k2):
-        return k1.k1 * k2 + k1.k2 * k2
-
-    @dispatch(object, SumKernel)
-    def __new__(cls, k1, k2):
-        return k1 * k2.k1 + k1 * k2.k2
-
-    @dispatch(SumKernel, SumKernel)
-    def __new__(cls, k1, k2):
-        return k1.k1 * k2.k1 + k1.k1 * k2.k2 + k1.k2 * k2.k1 + k1.k2 * k2.k2
 
 
 class StretchedKernel(Kernel, Referentiable):
@@ -549,10 +416,8 @@ class StretchedKernel(Kernel, Referentiable):
     dispatch = Dispatcher(in_class=Self)
 
     def __init__(self, k, stretch):
-        # Careful with `__new__`!
-        if not hasattr(self, 'k'):
-            self.k = k
-            self._stretch = stretch
+        self.k = k
+        self._stretch = stretch
 
     @dispatch(B.Numeric, B.Numeric, KernelCache)
     @cache
@@ -577,20 +442,6 @@ class StretchedKernel(Kernel, Referentiable):
 
     def __str__(self):
         return '({} > {})'.format(self.k, self._stretch)
-
-    @dispatch(object, object)
-    def __new__(cls, k, stretch):
-        return Kernel.__new__(cls)
-
-    @dispatch(ZeroKernel, object)
-    def __new__(cls, k, stretch):
-        return k
-
-    # Group:
-
-    @dispatch(Self, object)
-    def __new__(cls, k, stretch):
-        return StretchedKernel(k.k, k._stretch * stretch)
 
 
 class PeriodicKernel(Kernel, Referentiable):
@@ -644,14 +495,6 @@ class PeriodicKernel(Kernel, Referentiable):
     def __str__(self):
         return '({} per {})'.format(self.k, self._period)
 
-    @dispatch(object, object)
-    def __new__(cls, k, period):
-        return Kernel.__new__(cls)
-
-    @dispatch(ZeroKernel, object)
-    def __new__(cls, k, period):
-        return k
-
 
 class EQ(Kernel, Referentiable):
     """Exponentiated quadratic kernel."""
@@ -667,7 +510,7 @@ class EQ(Kernel, Referentiable):
         return 'EQ()'
 
     @property
-    def _primitive(self):
+    def primitive(self):
         return True
 
 
@@ -707,7 +550,7 @@ class Exp(Kernel, Referentiable):
         return 'Exp()'
 
     @property
-    def _primitive(self):
+    def primitive(self):
         return True
 
 
@@ -729,7 +572,7 @@ class Matern32(Kernel, Referentiable):
         return 'Matern32()'
 
     @property
-    def _primitive(self):
+    def primitive(self):
         return True
 
 
@@ -749,7 +592,7 @@ class Matern52(Kernel, Referentiable):
         return 'Matern52()'
 
     @property
-    def _primitive(self):
+    def primitive(self):
         return True
 
 
@@ -779,7 +622,7 @@ class Delta(Kernel, Referentiable):
         return 'Delta()'
 
     @property
-    def _primitive(self):
+    def primitive(self):
         return True
 
 
@@ -809,7 +652,7 @@ class Linear(Kernel, Referentiable):
         return 'Linear()'
 
     @property
-    def _primitive(self):
+    def primitive(self):
         return True
 
 
@@ -885,9 +728,7 @@ class ReversedKernel(Kernel, Referentiable):
     dispatch = Dispatcher(in_class=Self)
 
     def __init__(self, k):
-        # Careful with `__new__`!
-        if not hasattr(self, 'k'):
-            self.k = k
+        self.k = k
 
     @dispatch(object, object, KernelCache)
     @cache
@@ -913,25 +754,183 @@ class ReversedKernel(Kernel, Referentiable):
     def __str__(self):
         return 'Reversed({})'.format(self.k)
 
-    @dispatch(object)
-    def __new__(cls, k):
-        if k.stationary:
-            return k
-        else:
-            return Kernel.__new__(cls)
 
-    @dispatch(Self)
-    def __new__(cls, k):
-        return k.k
+# Generic multiplication.
 
-    @dispatch(ZeroKernel)
-    def __new__(cls, k):
-        return k
+@dispatch(object, Kernel)
+def mul(a, b): return mul(b, a)
 
-    @dispatch(SumKernel)
-    def __new__(cls, k):
-        return SumKernel(reversed(k.k1), reversed(k.k2))
 
-    @dispatch(ProductKernel)
-    def __new__(cls, k):
-        return ProductKernel(reversed(k.k1), reversed(k.k2))
+@dispatch(Kernel, object)
+def mul(a, b):
+    if b == 0:
+        return ZeroKernel()
+    elif b == 1:
+        return a
+    else:
+        return ScaledKernel(a, b)
+
+
+@dispatch(Kernel, Kernel)
+def mul(a, b): return ProductKernel(a, b)
+
+
+# Generic addition.
+
+@dispatch(object, Kernel)
+def add(a, b): return add(b, a)
+
+
+@dispatch(Kernel, object)
+def add(a, b):
+    if b == 0:
+        return a
+    else:
+        return SumKernel(a, mul(b, ConstantKernel()))
+
+
+@dispatch(Kernel, Kernel)
+def add(a, b): return SumKernel(a, b)
+
+
+# Cancel redundant zeros and ones.
+
+@dispatch.multi((ZeroKernel, object),
+                (ZeroKernel, Kernel),
+                (ZeroKernel, ZeroKernel),
+                (Kernel, ConstantKernel),
+                (ConstantKernel, ConstantKernel))
+def mul(a, b): return a
+
+
+@dispatch.multi((object, ZeroKernel),
+                (Kernel, ZeroKernel),
+                (ConstantKernel, Kernel))
+def mul(a, b): return b
+
+
+@dispatch.multi((ZeroKernel, object),
+                (ZeroKernel, Kernel),
+                (ZeroKernel, ZeroKernel))
+def add(a, b): return b
+
+
+@dispatch.multi((object, ZeroKernel),
+                (Kernel, ZeroKernel))
+def add(a, b): return a
+
+
+# Group factors and terms if possible.
+
+@dispatch(ScaledKernel, object)
+def mul(a, b): return mul(a.scale * b, a.k)
+
+
+@dispatch(object, ScaledKernel)
+def mul(a, b): return mul(b.scale * a, b.k)
+
+
+@dispatch(ScaledKernel, ScaledKernel)
+def mul(a, b):
+    if a.k == b.k:
+        return ScaledKernel(a.k, a.scale * b.scale)
+    else:
+        return ProductKernel(a, b)
+
+
+@dispatch(ScaledKernel, ScaledKernel)
+def add(a, b):
+    if a.k == b.k:
+        return mul(a.scale + b.scale, a.k)
+    else:
+        return SumKernel(a, b)
+
+
+# Distributive property:
+
+@dispatch.multi((object, SumKernel),
+                (Kernel, SumKernel))
+def mul(a, b): return add(mul(a, b.k1), mul(a, b.k2))
+
+
+@dispatch.multi((SumKernel, object),
+                (SumKernel, Kernel))
+def mul(a, b): return add(mul(a.k1, b), mul(a.k2, b))
+
+
+@dispatch(SumKernel, SumKernel)
+def mul(a, b):
+    return add(add(mul(a.k1, b.k1), mul(a.k1, b.k2)),
+               add(mul(a.k2, b.k1), mul(a.k2, b.k2)))
+
+
+# Stretch kernels.
+
+@dispatch(Kernel, object)
+def stretch(a, b): return StretchedKernel(a, b)
+
+
+@dispatch(ZeroKernel, object)
+def stretch(a, b): return a
+
+
+@dispatch(StretchedKernel, object)
+def stretch(a, b): return stretch(a.k, a._stretch * b)
+
+
+# Periodicise kernels.
+
+@dispatch(Kernel, object)
+def periodicise(a, b): return PeriodicKernel(a, b)
+
+
+@dispatch(ZeroKernel, object)
+def periodicise(a, b): return a
+
+
+# Reverse kernels.
+
+@dispatch(Kernel)
+def reverse(a):
+    if a.stationary:
+        return a
+    else:
+        return ReversedKernel(a)
+
+
+@dispatch(ReversedKernel)
+def reverse(a): return a.k
+
+
+@dispatch.multi((ZeroKernel,), (ConstantKernel,))
+def reverse(a): return a
+
+
+# Propagate reversal.
+
+@dispatch(SumKernel)
+def reverse(a): return add(reverse(a.k1), reverse(a.k2))
+
+
+@dispatch(ProductKernel)
+def reverse(a): return mul(reverse(a.k1), reverse(a.k2))
+
+
+@dispatch(ScaledKernel)
+def reverse(a): return a.scale * reverse(a.k)
+
+
+# Equality:
+
+@dispatch(object, object)
+def equal(a, b): return False
+
+
+@dispatch(Kernel, Kernel)
+def equal(a, b): return a.primitive and b.primitive and type(a) == type(b)
+
+
+@dispatch.multi((SumKernel, SumKernel),
+                (ProductKernel, ProductKernel))
+def equal(a, b): return (equal(a.k1, b.k1) and equal(a.k2, b.k2)) or \
+                        (equal(a.k1, b.k2) and equal(a.k2, b.k1))

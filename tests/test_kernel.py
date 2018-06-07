@@ -377,8 +377,8 @@ def test_distributive_property():
     yield eq, str(k1 * (k2 + k3)), '((RQ(1) * RQ(2)) + (RQ(1) * RQ(3)))'
     yield eq, str((k1 + k2) * k3), '((RQ(1) * RQ(3)) + (RQ(2) * RQ(3)))'
     yield eq, str((k1 + k2) * (k3 + k4)), \
-          '((((RQ(1) * RQ(3)) + (RQ(1) * RQ(4))) + ' \
-          '(RQ(2) * RQ(3))) + (RQ(2) * RQ(4)))'
+          '(((RQ(1) * RQ(3)) + (RQ(1) * RQ(4))) + ' \
+          '((RQ(2) * RQ(3)) + (RQ(2) * RQ(4))))'
 
 
 def test_kernel_cache():

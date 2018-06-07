@@ -23,11 +23,11 @@ class Random(object):
 
     def rmatmul(self, other):
         raise NotImplementedError('Matrix multiplication not implemented for '
-                                  '{}'.format(type(self)))
+                                  '{}.'.format(type(self)))
 
     def lmatmul(self, other):
         raise NotImplementedError('Matrix multiplication not implemented for '
-                                  '{}'.format(type(self)))
+                                  '{}.'.format(type(self)))
 
 
 class RandomProcess(Random):
