@@ -6,13 +6,36 @@ from plum import Dispatcher
 
 __all__ = ['dispatch', 'Type', 'PrimitiveType', 'OneType', 'ZeroType',
            'WrappedType', 'ScaledType', 'StretchedType', 'ProductType',
-           'SumType', 'mul', 'add', 'stretch']
+           'SumType', 'mul', 'add', 'stretch', 'equal']
 
 dispatch = Dispatcher()
 
 
 class Type(object):
     """A field."""
+
+    def __eq__(self, other):
+        return equal(self, other)
+
+    def __mul__(self, other):
+        return mul(self, other)
+
+    def __rmul__(self, other):
+        return mul(other, self)
+
+    def __add__(self, other):
+        return add(self, other)
+
+    def __radd__(self, other):
+        return add(other, self)
+
+    def stretch(self, extent):
+        """Stretch the element.
+
+        Args:
+            extent (tensor): Extent to stretch by.
+        """
+        return stretch(self, extent)
 
 
 class PrimitiveType(Type):
@@ -230,57 +253,90 @@ def add(a, b):
 
 
 @dispatch(Type, Type)
-def add(a, b): return new(a, SumType)(a, b)
+def add(a, b):
+    if a == b:
+        return mul(2, a)
+    else:
+        return new(a, SumType)(a, b)
 
 
 # Cancel redundant zeros and ones.
 
 @dispatch.multi((ZeroType, object),
                 (ZeroType, Type),
+                (ZeroType, ScaledType),
                 (ZeroType, ZeroType),
+
                 (Type, OneType),
+                (ScaledType, OneType),
                 (OneType, OneType))
 def mul(a, b): return a
 
 
 @dispatch.multi((object, ZeroType),
                 (Type, ZeroType),
-                (OneType, Type))
+                (ScaledType, ZeroType),
+
+                (OneType, Type),
+                (OneType, ScaledType))
 def mul(a, b): return b
 
 
 @dispatch.multi((ZeroType, object),
                 (ZeroType, Type),
+                (ZeroType, ScaledType),
                 (ZeroType, ZeroType))
 def add(a, b): return b
 
 
 @dispatch.multi((object, ZeroType),
-                (Type, ZeroType))
+                (Type, ZeroType),
+                (ScaledType, ZeroType))
 def add(a, b): return a
 
 
 # Group factors and terms if possible.
 
+@dispatch.multi((object, ScaledType),
+                (Type, ScaledType))
+def mul(a, b): return mul(b, a)
+
+
 @dispatch(ScaledType, object)
 def mul(a, b): return mul(a.scale * b, a[0])
 
 
-@dispatch(object, ScaledType)
-def mul(a, b): return mul(b.scale * a, b[0])
+@dispatch(ScaledType, Type)
+def mul(a, b): return mul(a.scale, a[0] * b)
 
 
 @dispatch(ScaledType, ScaledType)
 def mul(a, b):
-    if equal(a[0], b[0]):
+    if a[0] == b[0]:
         return new(a, ScaledType)(a[0], a.scale * b.scale)
     else:
         return new(a, ProductType)(a, b)
 
 
+@dispatch(ScaledType, Type)
+def add(a, b):
+    if a[0] == b:
+        return mul(a.scale + 1, b)
+    else:
+        return new(a, SumType)(a, b)
+
+
+@dispatch(Type, ScaledType)
+def add(a, b):
+    if a == b[0]:
+        return mul(b.scale + 1, a)
+    else:
+        return new(a, SumType)(a, b)
+
+
 @dispatch(ScaledType, ScaledType)
 def add(a, b):
-    if equal(a[0], b[0]):
+    if a[0] == b[0]:
         return mul(a.scale + b.scale, a[0])
     else:
         return new(a, SumType)(a, b)

@@ -298,7 +298,7 @@ def test_properties_product():
 
 def test_cancellations_zero():
     # Sums:
-    yield eq, str(EQ() + EQ()), '(EQ() + EQ())'
+    yield eq, str(EQ() + EQ()), '(2 * EQ())'
     yield eq, str(ZeroKernel() + EQ()), 'EQ()'
     yield eq, str(EQ() + ZeroKernel()), 'EQ()'
     yield eq, str(ZeroKernel() + ZeroKernel()), '0'
@@ -358,15 +358,16 @@ def test_grouping():
 
     # Sums:
     yield eq, str((5 * EQ()) + (5 * EQ())), '(10 * EQ())'
+    yield eq, str(EQ() + (5 * EQ())), '(6 * EQ())'
+    yield eq, str((5 * EQ()) + EQ()), '(6 * EQ())'
+    yield eq, str((EQ() + EQ())), '(2 * EQ())'
     yield eq, str((5 * (EQ() * EQ())) + (5 * (EQ() * EQ()))), \
           '(10 * (EQ() * EQ()))'
     yield eq, str((5 * RQ(1)) + (5 * RQ(2))), '((5 * RQ(1)) + (5 * RQ(2)))'
 
     # Reversal:
-    yield eq, str(reversed(Linear() + Linear())), '(Reversed(Linear()) + ' \
-                                                  'Reversed(Linear()))'
-    yield eq, str(reversed(Linear() * Linear())), '(Reversed(Linear()) * ' \
-                                                  'Reversed(Linear()))'
+    yield eq, str(reversed(Linear() + EQ())), '(Reversed(Linear()) + EQ())'
+    yield eq, str(reversed(Linear() * EQ())), '(Reversed(Linear()) * EQ())'
 
 
 def test_distributive_property():

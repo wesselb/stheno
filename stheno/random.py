@@ -253,3 +253,6 @@ class GPPrimitive(RandomProcess, Referentiable):
     @property
     def period(self):
         return self.kernel.period
+
+    def __str__(self):
+        return 'GP({}, {})'.format(self.kernel, self.mean)

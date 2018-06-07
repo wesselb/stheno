@@ -154,29 +154,6 @@ class Kernel(Type, Referentiable):
         # This should not have been reached. Attempt to unwrap.
         return self(x.get(), y.get(), cache)
 
-    def __add__(self, other):
-        return add(self, other)
-
-    def __radd__(self, other):
-        return add(other, self)
-
-    def __mul__(self, other):
-        return mul(self, other)
-
-    def __rmul__(self, other):
-        return mul(other, self)
-
-    def __eq__(self, other):
-        return equal(self, other)
-
-    def stretch(self, amount):
-        """Stretch the kernel.
-
-        Args:
-            amount (tensor): Stretch.
-        """
-        return stretch(self, amount)
-
     def periodic(self, period=1):
         """Map to a periodic space.
 
