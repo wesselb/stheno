@@ -26,10 +26,13 @@ def replace_at(tup, i, val):
 class Rule(object):
     """A rule for an :class:`.lazy.LazyTensor`.
 
+    IMPORTANT: For performance reasons, `indices` must already be resolved!
+
     Args:
         pattern (tuple): Rule pattern. Each element must be a `None` or an
             element from `indices`. A `None` represents a wildcard.
-        indices (set): Values to match wildcards with.
+        indices (set): Values to match wildcards with. These must already have
+            been resolved.
         builder (function): Function that builds the element. Only the wildcard
             elements are fed to the function.
     """
@@ -169,6 +172,7 @@ class LazySymmetricTensor(Referentiable):
             builder (function): Building function.
         """
         pattern = self._resolve_key(pattern)
+        # IMPORTANT: This assumes that the indices already have been resolved!
         rule = Rule(pattern, indices, builder)
         try:
             self._rules[pattern].append(rule)
