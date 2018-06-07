@@ -23,10 +23,15 @@ class Graph(Referentiable):
 
     def __init__(self):
         self.ps = []
+        self.pids = set()
         self.kernels = LazySymmetricMatrix()
         self.means = LazyVector()
         self.prior_kernels = None
         self.prior_means = None
+
+    def _add_p(self, p):
+        self.ps.append(p)
+        self.pids.add(id(p))
 
     def add_independent_gp(self, p, kernel, mean):
         """Add an independent GP to the model.
@@ -41,8 +46,8 @@ class Graph(Referentiable):
         self.means[p] = mean
         # Add rule to kernels.
         self.kernels[p] = kernel
-        self.kernels.add_rule((p, None), self.ps, lambda pi: ZeroKernel())
-        self.ps.append(p)
+        self.kernels.add_rule((p, None), self.pids, lambda pi: ZeroKernel())
+        self._add_p(p)
 
     @dispatch(object, PromisedGP)
     def sum(self, other, p):
@@ -62,23 +67,24 @@ class Graph(Referentiable):
     @dispatch(PromisedGP, object)
     def sum(self, p, other):
         p_sum = GP(self)
-        self.ps.append(p_sum)
+        self._add_p(p_sum)
         # Update means.
         self.means[p_sum] = self.means[p] + other
         # Add rule to kernels.
         kernels = self.kernels
-        self.kernels.add_rule((p_sum, None), self.ps, lambda pi: kernels[p, pi])
+        self.kernels.add_rule((p_sum, None), self.pids,
+                              lambda pi: kernels[p, pi])
         return p_sum
 
     @dispatch(PromisedGP, PromisedGP)
     def sum(self, p1, p2):
         p_sum = GP(self)
-        self.ps.append(p_sum)
+        self._add_p(p_sum)
         # Update means.
         self.means[p_sum] = self.means[p1] + self.means[p2]
         # Add rule to kernels.
         kernels = self.kernels
-        self.kernels.add_rule((p_sum, None), self.ps,
+        self.kernels.add_rule((p_sum, None), self.pids,
                               lambda pi: kernels[p1, pi] + kernels[p2, pi])
         return p_sum
 
@@ -95,12 +101,13 @@ class Graph(Referentiable):
         p_prod = GP(self)
         # Update means.
         self.means[p_prod] = other * self.means[p]
-        self.kernels[p_prod] = other ** 2 * self.kernels[p]
         # Add rule to kernels.
         kernels = self.kernels
-        self.kernels.add_rule((p_prod, None), self.ps,
+        self.kernels.add_rule((p_prod, p_prod), self.pids,
+                              lambda: other ** 2 * kernels[p])
+        self.kernels.add_rule((p_prod, None), self.pids,
                               lambda pi: other * kernels[p, pi])
-        self.ps.append(p_prod)
+        self._add_p(p_prod)
         return p_prod
 
     @dispatch(At, object)
@@ -136,9 +143,9 @@ class Graph(Referentiable):
 
         # Update to posterior.
         self.kernels = LazySymmetricMatrix()
-        self.kernels.add_rule((None, None), self.ps, build_posterior_kernel)
+        self.kernels.add_rule((None, None), self.pids, build_posterior_kernel)
         self.means = LazyVector()
-        self.means.add_rule((None,), self.ps, build_posterior_mean)
+        self.means.add_rule((None,), self.pids, build_posterior_mean)
 
     def revert_prior(self):
         """Revert the model back to the state before any conditioning

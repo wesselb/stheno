@@ -77,13 +77,13 @@ def test_properties():
 
     p = p3 + p
 
-    # yield eq, p.stationary, True, 'stationary 2'
-    # yield eq, p.var, 1 + 2 ** 2 + 1, 'var 2'
-    # yield eq, p.period, 0, 'period 2'
-    #
-    # p = p + GP(Linear(), graph=model)
-    #
-    # yield eq, p.stationary, False, 'stationary 3'
+    yield eq, p.stationary, True, 'stationary 2'
+    yield eq, p.var, 1 + 2 ** 2 + 1, 'var 2'
+    yield eq, p.period, 0, 'period 2'
+
+    p = p + GP(Linear(), graph=model)
+
+    yield eq, p.stationary, False, 'stationary 3'
 
 
 def test_case1():

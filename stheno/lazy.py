@@ -141,6 +141,8 @@ class LazySymmetricTensor(Referentiable):
         building_patterns = [(None,) * self.rank]
         # Try single dimension patterns.
         building_patterns += [replace_at(key, i, None) for i in range(self.rank)]
+        # Try key.
+        building_patterns += [key]
 
         for pattern in building_patterns:
             # Check if a rules exists for the pattern.
@@ -159,13 +161,15 @@ class LazySymmetricTensor(Referentiable):
 
         See :class:`.lazy.Rule`.
 
+        IMPORTANT: For performance reasons, `indices` must already be resolved!
+
         Args:
             pattern (tuple): Pattern to match.
             indices (set): Elements to match wildcards with.
             builder (function): Building function.
         """
         pattern = self._resolve_key(pattern)
-        rule = Rule(pattern, {self._resolve_index(i) for i in indices}, builder)
+        rule = Rule(pattern, indices, builder)
         try:
             self._rules[pattern].append(rule)
         except KeyError:
