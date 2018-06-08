@@ -5,7 +5,7 @@ from __future__ import absolute_import, division, print_function
 from plum import Dispatcher, Referentiable, Self
 import logging
 
-__all__ = ['LazyVector', 'LazySymmetricMatrix']
+__all__ = ['LazyVector', 'LazySymmetricMatrix', 'Rule']
 
 log = logging.getLogger(__name__)
 

@@ -7,7 +7,8 @@ from numbers import Number
 import numpy as np
 from plum import Dispatcher
 
-from stheno import FunctionMean, ZeroMean, Mean, Observed, OneMean
+from stheno import FunctionMean, ZeroMean, Mean, Observed, OneMean, \
+    PosteriorCrossMean, PosteriorMean, GP, Graph, EQ
 # noinspection PyUnresolvedReferences
 from . import eq, neq, lt, le, ge, gt, raises, call, ok, eprint
 
@@ -49,10 +50,27 @@ def test_basic_arithmetic():
     yield ok, np.allclose((5. + m1)(x2), 5. + m1(x2)), 'sum 4'
 
 
+def test_posterior_mean():
+    pcm = PosteriorCrossMean(None, None, None, None, None, None)
+    yield eq, str(pcm), 'PosteriorCrossMean()'
+
+    gp = GP(EQ(), graph=Graph())
+    pm = PosteriorMean(gp, None, None, None)
+    yield eq, str(pm), 'PosteriorMean()'
+
+
 def test_function_mean():
     m1 = 5 * OneMean() + (lambda x: x ** 2)
     m2 = (lambda x: x ** 2) + 5 * OneMean()
+    m3 = (lambda x: x ** 2) + ZeroMean()
+    m4 = ZeroMean() + (lambda x: x ** 2)
     x = np.random.randn(10, 1)
 
     yield ok, np.allclose(m1(x), 5 + x ** 2)
     yield ok, np.allclose(m2(x), 5 + x ** 2)
+    yield ok, np.allclose(m3(x), x ** 2)
+    yield ok, np.allclose(m4(x), x ** 2)
+
+    def my_function(x): pass
+
+    yield eq, str(FunctionMean(my_function)), 'my_function'

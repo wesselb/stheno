@@ -6,7 +6,7 @@ import numpy as np
 
 from stheno import EQ, RQ, Matern12, Matern32, Matern52, Delta, Kernel, \
     Observed, Linear, OneKernel, ZeroKernel, Exp, PosteriorCrossKernel, \
-    SPD, KernelCache, ProductKernel
+    SPD, KernelCache, ProductKernel, Component, PosteriorKernel, GPPrimitive
 # noinspection PyUnresolvedReferences
 from tests import ok
 from . import eq, neq, lt, le, ge, gt, raises, call, ok, eprint, lam
@@ -79,6 +79,7 @@ def test_reverse():
     yield ok, k.var is np.nan
     yield ok, k.length_scale is np.nan
     yield eq, k.period, 0
+    yield eq, str(k), 'Reversed(Linear())'
 
 
 def test_kernel_delta():
@@ -94,6 +95,7 @@ def test_kernel_delta():
     yield eq, k.var, 1
     yield eq, k.length_scale, 0
     yield eq, k.period, 0
+    yield eq, str(k), 'Delta()'
 
     yield ok, np.allclose(k(x1), np.eye(10)), 'same'
     yield ok, np.allclose(k(x1, x2), np.zeros((10, 5))), 'others'
@@ -112,6 +114,7 @@ def test_kernel_eq():
     yield eq, k.var, 1
     yield eq, k.length_scale, 1
     yield eq, k.period, 0
+    yield eq, str(k), 'EQ()'
 
 
 def test_kernel_rq():
@@ -128,10 +131,11 @@ def test_kernel_rq():
     yield eq, k.var, 1
     yield eq, k.length_scale, 1
     yield eq, k.period, 0
+    yield eq, str(k), 'RQ(0.1)'
 
 
 def test_kernel_exp():
-    k = Exp()
+    k = Matern12()
     x1 = np.random.randn(10, 2)
     x2 = np.random.randn(5, 2)
 
@@ -143,6 +147,7 @@ def test_kernel_exp():
     yield eq, k.var, 1
     yield eq, k.length_scale, 1
     yield eq, k.period, 0
+    yield eq, str(k), 'Exp()'
 
 
 def test_kernel_mat32():
@@ -158,6 +163,7 @@ def test_kernel_mat32():
     yield eq, k.var, 1
     yield eq, k.length_scale, 1
     yield eq, k.period, 0
+    yield eq, str(k), 'Matern32()'
 
 
 def test_kernel_mat52():
@@ -173,9 +179,10 @@ def test_kernel_mat52():
     yield eq, k.var, 1
     yield eq, k.length_scale, 1
     yield eq, k.period, 0
+    yield eq, str(k), 'Matern52()'
 
 
-def test_kernel_constant():
+def test_kernel_one():
     k = OneKernel()
     x1 = np.random.randn(10, 2)
     x2 = np.random.randn(5, 2)
@@ -189,6 +196,7 @@ def test_kernel_constant():
     yield eq, k.var, 1
     yield ok, k.length_scale is np.inf
     yield eq, k.period, 0
+    yield eq, str(k), '1'
 
 
 def test_kernel_zero():
@@ -205,6 +213,7 @@ def test_kernel_zero():
     yield eq, k.var, 0
     yield eq, k.length_scale, 0
     yield eq, k.period, 0
+    yield eq, str(k), '0'
 
 
 def test_kernel_linear():
@@ -220,6 +229,7 @@ def test_kernel_linear():
     yield ok, k.var is np.nan
     yield ok, k.length_scale is np.nan
     yield eq, k.period, 0
+    yield eq, str(k), 'Linear()'
 
 
 def test_kernel_posteriorcross():
@@ -238,6 +248,10 @@ def test_kernel_posteriorcross():
     yield ok, k.var is np.nan
     yield ok, k.length_scale is np.nan
     yield eq, k.period, 0
+    yield eq, str(k), 'PosteriorCrossKernel()'
+
+    k = PosteriorKernel(GPPrimitive(EQ()), None, None)
+    yield eq, str(k), 'PosteriorKernel()'
 
 
 def test_properties_sum():
@@ -308,10 +322,11 @@ def test_kernel_cache():
     yield eq, id(c.matmul(x1, x2, tr_a=True)), id(c.matmul(x1, x2, tr_a=True))
     yield neq, id(c.matmul(x1, x2, tr_a=True)), id(c.matmul(x1, x2))
 
-    # Test that ones and zeros are cached.
+    # Test that ones and zeros are cached and that all signatures work.
     k = ZeroKernel()
     x1, x2 = np.random.randn(10, 10), np.random.randn(10, 10)
     yield eq, id(k(x1, c)), id(k(x2, c))
+    yield eq, id(k(x1, c)), id(k(Component('test')(x2), c))
     x1, x2 = np.random.randn(10, 10), np.random.randn(5, 10)
     yield neq, id(k(x1, c)), id(k(x2, c))
     yield eq, id(k(1, c)), id(k(1, c))

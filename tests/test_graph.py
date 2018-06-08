@@ -23,13 +23,18 @@ def test_sum_other():
     p1 = GP(EQ(), FunctionMean(lambda x: x ** 2), graph=model)
     p2 = p1 + 5.
     p3 = 5. + p1
+    p4 = model.sum(5., p1)
 
     x = np.random.randn(5, 1)
     yield ok, np.allclose(p1.mean(x) + 5., p2.mean(x))
     yield ok, np.allclose(p1.mean(x) + 5., p3.mean(x))
+    yield ok, np.allclose(p1.mean(x) + 5., p4.mean(x))
     yield ok, np.allclose(p1.kernel(x), p2.kernel(x))
     yield ok, np.allclose(p1.kernel(x), p3.kernel(x))
+    yield ok, np.allclose(p1.kernel(x), p4.kernel(x))
     yield ok, np.allclose(p1.kernel(At(p2)(x), At(p3)(x)),
+                          p1.kernel(x))
+    yield ok, np.allclose(p1.kernel(At(p2)(x), At(p4)(x)),
                           p1.kernel(x))
 
 
@@ -115,6 +120,14 @@ def test_case2():
     x = np.linspace(0, 10, n)[:, None]
     y1 = p1(x).sample()
     y2 = p2(x).sample()
+
+    # First, test independence:
+    yield ok, np.allclose(p1.kernel(At(p2)(x), x), np.zeros((n, n)))
+    yield ok, np.allclose(p1.kernel(At(p2)(x), At(p1)(x)), np.zeros((n, n)))
+    yield ok, np.allclose(p1.kernel(x, At(p2)(x)), np.zeros((n, n)))
+    yield ok, np.allclose(p1.kernel(At(p1)(x), At(p2)(x)), np.zeros((n, n)))
+
+    # Now run through some test cases:
 
     model.condition(At(p1)(x), y1)
     model.condition(At(p2)(x), y2)

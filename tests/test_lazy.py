@@ -2,9 +2,13 @@
 
 from __future__ import absolute_import, division, print_function
 
-from stheno import LazyVector, LazySymmetricMatrix
+from stheno import LazyVector, LazySymmetricMatrix, Rule
 # noinspection PyUnresolvedReferences
 from . import eq, neq, lt, le, ge, gt, raises, call, ok, eprint
+
+
+def test_exceptions():
+    yield eq, repr(Rule(1, {1}, 1)), 'Rule(pattern=1, indices={1}, builder=1)'
 
 
 def test_indexing():
@@ -113,15 +117,15 @@ def test_building():
     m2.add_rule((None, 4), range(5),
                 lambda x: ReversibleNumber(x ** 2 + 4 ** 2))
 
-    for i in range(3):
-        yield eq, m2[i, 3].x, i + 3
-        yield eq, m2[3, i].x, 3 + i
-    yield eq, m2[3, 3].x, 3 + 3
-
     for i in range(4):
         yield eq, m2[i, 4].x, i ** 2 + 4 ** 2
         yield eq, m2[4, i].x, 4 ** 2 + i ** 2
     yield eq, m2[4, 4].x, 4 ** 2 + 4 ** 2
+
+    for i in range(3):
+        yield eq, m2[i, 3].x, i + 3
+        yield eq, m2[3, i].x, 3 + i
+    yield eq, m2[3, 3].x, 3 + 3
 
     for i in range(3):
         for j in range(3):

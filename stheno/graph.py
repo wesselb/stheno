@@ -231,10 +231,6 @@ class GraphKernel(Kernel, Referentiable):
     def period(self):
         return self.graph.kernels[self.p].period
 
-    @property
-    def primitive(self):
-        return self.graph.kernels[self.p].primitive
-
     def __str__(self):
         return str(self.graph.kernels[self.p])
 

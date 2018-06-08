@@ -7,11 +7,16 @@ from plum import Dispatcher
 from scipy.stats import multivariate_normal
 
 from stheno import Normal, Diagonal, UniformDiagonal, GPPrimitive, EQ, RQ, \
-    FunctionMean
+    FunctionMean, Graph
 # noinspection PyUnresolvedReferences
 from . import eq, neq, lt, le, ge, gt, raises, call, ok, eprint
 
 dispatch = Dispatcher()
+
+
+def test_exceptions():
+    yield raises, NotImplementedError, lambda: (Normal(np.eye(1)) +
+                                                GPPrimitive(EQ()))
 
 
 def test_normal():
@@ -27,6 +32,7 @@ def test_normal():
 
     # Test `log_pdf` and `entropy`.
     x = np.random.randn(3, 10)
+    yield raises, ValueError, lambda: dist.log_pdf(np.random.randn(10))
     yield ok, np.allclose(dist.log_pdf(x), dist_sp.logpdf(x.T)), 'log pdf'
     yield ok, np.allclose(dist.entropy(), dist_sp.entropy()), 'entropy'
 
@@ -54,10 +60,10 @@ def test_normal():
     yield ok, np.allclose(dist1.kl(dist1), 0.), 'kl 2'
     yield ok, np.allclose(dist2.kl(dist2), 0.), 'kl 3'
     yield ok, np.allclose(dist2.kl(dist1), 0.), 'kl 4'
-    yield ok, dist1.w2(dist1) < 5e-4, 'w2 1'
-    yield ok, dist1.w2(dist2) < 5e-4, 'w2 2'
-    yield ok, dist2.w2(dist1) < 5e-4, 'w2 3'
-    yield ok, dist2.w2(dist2) < 5e-4, 'w2 4'
+    yield le, dist1.w2(dist1), 5e-4, 'w2 1'
+    yield le, dist1.w2(dist2), 5e-4, 'w2 2'
+    yield le, dist2.w2(dist1), 5e-4, 'w2 3'
+    yield le, dist2.w2(dist2), 5e-4, 'w2 4'
 
     # Check a uniformly diagonal normal and SPD normal.
     mean = np.random.randn(3, 1)
@@ -73,10 +79,26 @@ def test_normal():
     yield ok, np.allclose(dist1.kl(dist1), 0.), 'kl 2'
     yield ok, np.allclose(dist2.kl(dist2), 0.), 'kl 3'
     yield ok, np.allclose(dist2.kl(dist1), 0.), 'kl 4'
-    yield ok, dist1.w2(dist1) < 1e-4, 'w2 1'
-    yield ok, dist1.w2(dist2) < 1e-4, 'w2 2'
-    yield ok, dist2.w2(dist1) < 1e-4, 'w2 3'
-    yield ok, dist2.w2(dist2) < 1e-4, 'w2 4'
+    yield le, dist1.w2(dist1), 5e-4, 'w2 1'
+    yield le, dist1.w2(dist2), 5e-4, 'w2 2'
+    yield le, dist2.w2(dist1), 5e-4, 'w2 3'
+    yield le, dist2.w2(dist2), 5e-4, 'w2 4'
+
+    # Test sampling.
+    dist = Normal(3. * np.eye(200))
+    yield le, np.abs(np.std(dist.sample(1000)) ** 2 - 3), 5e-2, 'full'
+    yield le, np.abs(np.std(dist.sample(1000, noise=2)) ** 2 - 5), 5e-2, \
+          'full 2'
+
+    dist = Normal(Diagonal(3. * np.ones(200)))
+    yield le, np.abs(np.std(dist.sample(1000)) ** 2 - 3), 5e-2, 'diag'
+    yield le, np.abs(np.std(dist.sample(1000, noise=2)) ** 2 - 5), 5e-2, \
+          'diag 2'
+
+    dist = Normal(UniformDiagonal(3., 200))
+    yield le, np.abs(np.std(dist.sample(1000)) ** 2 - 3), 5e-2, 'unif'
+    yield le, np.abs(np.std(dist.sample(1000, noise=2)) ** 2 - 5), 5e-2, \
+          'unif 2'
 
 
 def test_normal_arithmetic():
@@ -173,3 +195,4 @@ def test_gp_arithmetic():
     yield raises, NotImplementedError, lambda: gp1 + Normal(np.eye(3))
     yield ok, close((5. * gp1)(x), 5. * gp1(x)), 'mul'
     yield ok, close((gp1 + gp2)(x), gp1(x) + gp2(x)), 'add'
+    yield ok, close((gp1 + 1.)(x), gp1(x) + 1.), 'add 2'

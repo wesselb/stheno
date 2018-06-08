@@ -12,6 +12,11 @@ from . import eq, neq, lt, le, ge, gt, raises, call, ok, eprint
 dispatch = Dispatcher()
 
 
+def test_exceptions():
+    yield raises, NotImplementedError, lambda: SPD(np.eye(3)) * SPD(np.eye(3))
+    yield raises, NotImplementedError, lambda: SPD(np.eye(3)) * np.eye(3)
+
+
 def test_spd():
     def compare(spd1, spd2):
         a = np.random.randn(3, 10)
@@ -88,4 +93,3 @@ def test_spd_arithmetic():
     yield ok, np.allclose(5. + dense.mat, (5. + dense).mat)
     yield ok, np.allclose(5. + diag.mat, (5. + diag).mat)
     yield ok, np.allclose(5. + unif_diag.mat, (5. + unif_diag).mat)
-

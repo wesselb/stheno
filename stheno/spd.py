@@ -176,7 +176,7 @@ class Diagonal(SPD, Referentiable):
         return B.diag(self.diag)
 
     def cholesky(self):
-        return self.mat ** .5
+        return B.diag(self.diag ** .5)
 
     def log_det(self):
         return B.sum(B.log(self.diag))
@@ -244,6 +244,9 @@ class UniformDiagonal(Diagonal, Referentiable):
     @property
     def diag(self):
         return B.ones(self._n, dtype=self.dtype) * self.diag_scale
+
+    def cholesky(self):
+        return B.eye(self._n, dtype=self.dtype) * self.diag_scale ** .5
 
     def log_det(self):
         return B.cast(self._n, dtype=self.dtype) * B.log(self.diag_scale)

@@ -423,17 +423,23 @@ def mul(a, b): return a
 def mul(a, b): return b
 
 
-@dispatch.multi((ZeroType, object),
-                (ZeroType, Type),
+@dispatch.multi((ZeroType, Type),
                 (ZeroType, ScaledType),
                 (ZeroType, ZeroType))
 def add(a, b): return b
 
 
-@dispatch.multi((object, ZeroType),
-                (Type, ZeroType),
+@dispatch.multi((Type, ZeroType),
                 (ScaledType, ZeroType))
 def add(a, b): return a
+
+
+@dispatch(object, ZeroType)
+def add(a, b): return add(b, a)
+
+
+@dispatch(ZeroType, object)
+def add(a, b): return new(a, ScaledType)(new(a, OneType)(), b)
 
 
 # Group factors and terms if possible.
