@@ -394,8 +394,8 @@ class PeriodicKernel(Kernel, WrappedType, Referentiable):
     def period(self):
         return self._period
 
-    def __str__(self):
-        return '({} per {})'.format(self[0], self._period)
+    def display(self, t):
+        return '{} per {}'.format(t, self._period)
 
 
 class EQ(Kernel, PrimitiveType, Referentiable):
@@ -625,8 +625,16 @@ class ReversedKernel(Kernel, WrappedType, Referentiable):
     def period(self):
         return self[0].period
 
-    def __str__(self):
-        return 'Reversed({})'.format(self[0])
+    def display(self, t):
+        return 'Reversed({})'.format(t)
+
+
+@dispatch(Type, ReversedKernel)
+def need_parens(el, parent): return False
+
+
+@dispatch(ReversedKernel, ProductType)
+def need_parens(el, parent): return False
 
 
 # Periodicise kernels.

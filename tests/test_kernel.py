@@ -8,6 +8,7 @@ from stheno import EQ, RQ, Matern12, Matern32, Matern52, Delta, Kernel, \
     Observed, Linear, OneKernel, ZeroKernel, Exp, PosteriorCrossKernel, \
     SPD, KernelCache, ProductKernel
 # noinspection PyUnresolvedReferences
+from tests import ok
 from . import eq, neq, lt, le, ge, gt, raises, call, ok, eprint, lam
 
 
@@ -17,7 +18,7 @@ def test_corner_cases():
     yield ok, np.allclose(EQ()(x), EQ()(Observed(x)))
 
 
-def test_arithmetic():
+def test_basic_arithmetic():
     k1 = EQ()
     k2 = RQ(1e-1)
     k3 = Matern12()
@@ -294,92 +295,6 @@ def test_properties_product():
     yield eq, k.length_scale, 10
     yield eq, k.period, 0
     yield eq, k.var, 6
-
-
-def test_cancellations_zero():
-    # Sums:
-    yield eq, str(EQ() + EQ()), '(2 * EQ())'
-    yield eq, str(ZeroKernel() + EQ()), 'EQ()'
-    yield eq, str(EQ() + ZeroKernel()), 'EQ()'
-    yield eq, str(ZeroKernel() + ZeroKernel()), '0'
-
-    # Products:
-    yield eq, str(EQ() * EQ()), '(EQ() * EQ())'
-    yield eq, str(ZeroKernel() * EQ()), '0'
-    yield eq, str(EQ() * ZeroKernel()), '0'
-    yield eq, str(ZeroKernel() * ZeroKernel()), '0'
-
-    # Scales:
-    yield eq, str(5 * ZeroKernel()), '0'
-    yield eq, str(ZeroKernel() * 5), '0'
-    yield eq, str(EQ() * 5), '(5 * EQ())'
-    yield eq, str(5 * EQ()), '(5 * EQ())'
-
-    # Stretches:
-    yield eq, str(ZeroKernel().stretch(5)), '0'
-    yield eq, str(EQ().stretch(5)), '(EQ() > 5)'
-
-    # Periodicisations:
-    yield eq, str(ZeroKernel().periodic(5)), '0'
-    yield eq, str(EQ().periodic(5)), '(EQ() per 5)'
-
-    # Reversals:
-    yield eq, str(reversed(ZeroKernel())), '0'
-    yield eq, str(reversed(EQ())), 'EQ()'
-    yield eq, str(reversed(Linear())), 'Reversed(Linear())'
-
-    # Integration:
-    yield eq, str(EQ() * EQ() + ZeroKernel() * EQ()), '(EQ() * EQ())'
-    yield eq, str(EQ() * ZeroKernel() + ZeroKernel() * EQ()), '0'
-
-
-def test_cancellations_one():
-    # Products:
-    yield eq, str(EQ() * EQ()), '(EQ() * EQ())'
-    yield eq, str(OneKernel() * EQ()), 'EQ()'
-    yield eq, str(EQ() * OneKernel()), 'EQ()'
-    yield eq, str(OneKernel() * OneKernel()), '1'
-
-
-def test_grouping():
-    # Scales:
-    yield eq, str(5 * EQ()), '(5 * EQ())'
-    yield eq, str(5 * (5 * EQ())), '(25 * EQ())'
-
-    # Stretches:
-    yield eq, str(EQ().stretch(5)), '(EQ() > 5)'
-    yield eq, str(EQ().stretch(5).stretch(5)), '(EQ() > 25)'
-
-    # Products:
-    yield eq, str((5 * EQ()) * (5 * EQ())), '(25 * EQ())'
-    yield eq, str((5 * (EQ() * EQ())) * (5 * (EQ() * EQ()))), \
-          '(25 * (EQ() * EQ()))'
-    yield eq, str((5 * RQ(1)) * (5 * RQ(2))), '((5 * RQ(1)) * (5 * RQ(2)))'
-
-    # Sums:
-    yield eq, str((5 * EQ()) + (5 * EQ())), '(10 * EQ())'
-    yield eq, str(EQ() + (5 * EQ())), '(6 * EQ())'
-    yield eq, str((5 * EQ()) + EQ()), '(6 * EQ())'
-    yield eq, str((EQ() + EQ())), '(2 * EQ())'
-    yield eq, str((5 * (EQ() * EQ())) + (5 * (EQ() * EQ()))), \
-          '(10 * (EQ() * EQ()))'
-    yield eq, str((5 * RQ(1)) + (5 * RQ(2))), '((5 * RQ(1)) + (5 * RQ(2)))'
-
-    # Reversal:
-    yield eq, str(reversed(Linear() + EQ())), '(Reversed(Linear()) + EQ())'
-    yield eq, str(reversed(Linear() * EQ())), '(Reversed(Linear()) * EQ())'
-
-
-def test_distributive_property():
-    k1 = RQ(1)
-    k2 = RQ(2)
-    k3 = RQ(3)
-    k4 = RQ(4)
-    yield eq, str(k1 * (k2 + k3)), '((RQ(1) * RQ(2)) + (RQ(1) * RQ(3)))'
-    yield eq, str((k1 + k2) * k3), '((RQ(1) * RQ(3)) + (RQ(2) * RQ(3)))'
-    yield eq, str((k1 + k2) * (k3 + k4)), \
-          '(((RQ(1) * RQ(3)) + (RQ(1) * RQ(4))) + ' \
-          '((RQ(2) * RQ(3)) + (RQ(2) * RQ(4))))'
 
 
 def test_kernel_cache():

@@ -15,6 +15,7 @@ def test_corner_cases():
     p1 = GP(EQ(), graph=m1)
     p2 = GP(EQ(), graph=m2)
     yield raises, RuntimeError, lambda: p1 + p2
+    yield eq, str(GP(EQ(), graph=m1)), 'GP(EQ(), 0)'
 
 
 def test_sum_other():

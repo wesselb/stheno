@@ -18,7 +18,7 @@ def test_corner_cases():
     yield ok, np.allclose(ZeroMean()(x), ZeroMean()(Observed(x)))
 
 
-def test_arithmetic():
+def test_basic_arithmetic():
     dispatch = Dispatcher()
 
     @dispatch(Number)

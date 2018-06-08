@@ -2,6 +2,7 @@
 
 from __future__ import absolute_import, division, print_function
 
+from abc import abstractmethod, ABCMeta
 from plum import Dispatcher
 
 __all__ = ['dispatch', 'Type', 'PrimitiveType', 'OneType', 'ZeroType',
@@ -37,6 +38,41 @@ class Type(object):
         """
         return stretch(self, extent)
 
+    @property
+    def num_terms(self):
+        """Number of terms"""
+        return 1
+
+    def term(self, i):
+        """Get a specific term.
+
+        Args:
+            i (int): Index of term.
+        """
+        if i == 0:
+            return self
+        else:
+            raise IndexError('Index out of range.')
+
+    @property
+    def num_factors(self):
+        """Number of factors"""
+        return 1
+
+    def factor(self, i):
+        """Get a specific factor.
+
+        Args:
+            i (int): Index of factor.
+        """
+        if i == 0:
+            return self
+        else:
+            raise IndexError('Index out of range.')
+
+    def __repr__(self):
+        return str(self)
+
 
 class PrimitiveType(Type):
     """A primitive."""
@@ -62,6 +98,7 @@ class WrappedType(Type):
     Args:
         t (instance of :class:`.field.Type`): Element to wrap.
     """
+    __metaclass__ = ABCMeta
 
     def __init__(self, t):
         self.t = t
@@ -69,7 +106,47 @@ class WrappedType(Type):
     def __getitem__(self, item):
         if item == 0:
             return self.t
-        raise RuntimeError('Can only get item 0.')
+        else:
+            raise IndexError('Index out of range.')
+
+    @abstractmethod
+    def display(self, t):
+        pass
+
+    def __str__(self):
+        return pretty_print(self)
+
+
+class JoinType(Type):
+    """Two wrapped elements.
+
+    Args:
+        t1 (instance of :class:`.field.Type`): First element to wrap.
+        t2 (instance of :class:`.field.Type`): Second element to wrap.
+    """
+    __metaclass__ = ABCMeta
+
+    def __init__(self, t1, t2):
+        self.t1 = t1
+        self.t2 = t2
+
+    def __getitem__(self, item):
+        if item == 0:
+            return self.t1
+        elif item == 1:
+            return self.t2
+        else:
+            raise IndexError('Index out of range.')
+
+    def __len__(self):
+        return len(self.t1) + len(self.t2)
+
+    @abstractmethod
+    def display(self, t1, t2):
+        pass
+
+    def __str__(self):
+        return pretty_print(self)
 
 
 class ScaledType(WrappedType):
@@ -84,8 +161,18 @@ class ScaledType(WrappedType):
         WrappedType.__init__(self, t)
         self.scale = scale
 
-    def __str__(self):
-        return '({} * {})'.format(self.scale, self[0])
+    @property
+    def num_factors(self):
+        return self[0].num_factors + 1
+
+    def display(self, t):
+        return '{} * {}'.format(self.scale, t)
+
+    def factor(self, i):
+        if i >= self.num_factors:
+            raise IndexError('Index out of range.')
+        else:
+            return self.scale if i == 0 else self[0].factor(i - 1)
 
 
 class StretchedType(WrappedType):
@@ -100,54 +187,46 @@ class StretchedType(WrappedType):
         WrappedType.__init__(self, t)
         self.extent = extent
 
-    def __str__(self):
-        return '({} > {})'.format(self[0], self.extent)
+    def display(self, t):
+        return '{} > {}'.format(t, self.extent)
 
 
-class ProductType(Type):
-    """Product of elements.
+class ProductType(JoinType):
+    """Product of elements."""
 
-    Args:
-        t1 (instance of :class:`.field.Type`): First element in product.
-        t2 (instance of :class:`.field.Type`): Second element in product.
-    """
+    @property
+    def num_factors(self):
+        return self[0].num_factors + self[1].num_factors
 
-    def __init__(self, t1, t2):
-        self.t1 = t1
-        self.t2 = t2
+    def factor(self, i):
+        if i >= self.num_factors:
+            raise IndexError('Index out of range.')
+        if i < self[0].num_factors:
+            return self[0].factor(i)
+        else:
+            return self[1].factor(i - self[0].num_factors)
 
-    def __getitem__(self, item):
-        if item == 0:
-            return self.t1
-        if item == 1:
-            return self.t2
-        raise RuntimeError('Can only get items 0 or 1.')
-
-    def __str__(self):
-        return '({} * {})'.format(self[0], self[1])
+    def display(self, t1, t2):
+        return '{} * {}'.format(t1, t2)
 
 
-class SumType(Type):
-    """Sum of elements.
+class SumType(JoinType):
+    """Sum of elements."""
 
-    Args:
-        t1 (instance of :class:`.field.Type`): First element in sum.
-        t2 (instance of :class:`.field.Type`): Second element in sum.
-    """
+    @property
+    def num_terms(self):
+        return self[0].num_terms + self[1].num_terms
 
-    def __init__(self, t1, t2):
-        self.t1 = t1
-        self.t2 = t2
+    def term(self, i):
+        if i >= self.num_terms:
+            raise IndexError('Index out of range.')
+        if i < self[0].num_terms:
+            return self[0].term(i)
+        else:
+            return self[1].term(i - self[0].num_terms)
 
-    def __getitem__(self, item):
-        if item == 0:
-            return self.t1
-        if item == 1:
-            return self.t2
-        raise RuntimeError('Can only get items 0 or 1.')
-
-    def __str__(self):
-        return '({} + {})'.format(self[0], self[1])
+    def display(self, t1, t2):
+        return '{} + {}'.format(t1, t2)
 
 
 @dispatch(object, object)
@@ -192,7 +271,7 @@ def get_field(a):
     # Figure out which fields are defined.
     fields = set(Type.__subclasses__()) - \
              {PrimitiveType, ZeroType, OneType, ScaledType, WrappedType,
-              ProductType, SumType, StretchedType}
+              JoinType, ProductType, SumType, StretchedType}
 
     # Loop through the fields, and see to which one `a` corresponds.
     for t in fields:
@@ -216,6 +295,71 @@ def new(a, t):
                            ''.format(t.__name__, field.__name__))
     else:
         return candidates[0]
+
+
+# Pretty printing with minimal parentheses.
+
+@dispatch(Type)
+def pretty_print(el):
+    """Pretty print an element with a minimal number of parentheses.
+
+    Args:
+        el (instance of :class:`.field.Type`): Element to print.
+    """
+    return str(el)
+
+
+@dispatch(WrappedType)
+def pretty_print(el):
+    return el.display(pretty_print(el[0], el))
+
+
+@dispatch(JoinType)
+def pretty_print(el):
+    return el.display(pretty_print(el[0], el), pretty_print(el[1], el))
+
+
+@dispatch(object, object)
+def pretty_print(el, parent):
+    if need_parens(el, parent):
+        return '(' + pretty_print(el) + ')'
+    else:
+        return pretty_print(el)
+
+
+@dispatch(Type, SumType)
+def need_parens(el, parent):
+    """Check whether `el` needs parenthesis when printed in `parent`.
+
+    Args:
+        el (instance of :class:`.field.Type`): Element to print.
+        parent (instance of :class:`.field.Type`): Parent of element to print.
+    """
+    return False
+
+
+@dispatch(Type, ProductType)
+def need_parens(el, parent): return False
+
+
+@dispatch({SumType, WrappedType}, ProductType)
+def need_parens(el, parent): return True
+
+
+@dispatch(ScaledType, ProductType)
+def need_parens(el, parent): return False
+
+
+@dispatch(Type, WrappedType)
+def need_parens(el, parent): return False
+
+
+@dispatch({WrappedType, JoinType}, WrappedType)
+def need_parens(el, parent): return True
+
+
+@dispatch({ProductType, ScaledType}, ScaledType)
+def need_parens(el, parent): return False
 
 
 # Generic multiplication.
@@ -315,7 +459,8 @@ def mul(a, b):
     if a[0] == b[0]:
         return new(a, ScaledType)(a[0], a.scale * b.scale)
     else:
-        return new(a, ProductType)(a, b)
+        scaled = new(a, ScaledType)(a[0], a.scale * b.scale)
+        return new(a, ProductType)(scaled, b[0])
 
 
 @dispatch(ScaledType, Type)
@@ -340,23 +485,6 @@ def add(a, b):
         return mul(a.scale + b.scale, a[0])
     else:
         return new(a, SumType)(a, b)
-
-
-# Distributive property:
-
-@dispatch.multi((object, SumType),
-                (Type, SumType))
-def mul(a, b): return add(mul(a, b[0]), mul(a, b[1]))
-
-
-@dispatch.multi((SumType, object),
-                (SumType, Type))
-def mul(a, b): return add(mul(a[0], b), mul(a[1], b))
-
-
-@dispatch(SumType, SumType)
-def mul(a, b): return add(add(mul(a[0], b[0]), mul(a[0], b[1])),
-                          add(mul(a[1], b[0]), mul(a[1], b[1])))
 
 
 # Stretch:

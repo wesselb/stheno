@@ -4,6 +4,7 @@ from __future__ import absolute_import, division, print_function
 
 import sys
 from time import time
+from numpy.testing import assert_allclose
 
 from nose.tools import assert_raises, assert_equal, assert_less, \
     assert_less_equal, assert_not_equal, assert_greater, \
@@ -27,8 +28,8 @@ def lam(f, args=()):
     ok_(f(*args))
 
 
-def eprint(*args, **kwargs):
-    print(*args, file=sys.stderr, **kwargs)
+def eprint(*args, **kw_args):
+    print(*args, file=sys.stderr, **kw_args)
 
 
 def benchmark(f, args, n=1000, get_output=False):
