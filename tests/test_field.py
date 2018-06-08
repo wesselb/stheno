@@ -11,7 +11,7 @@ from . import eq
 
 def test_exceptions():
     yield raises, IndexError, lambda: EQ().stretch(1)[1]
-    yield raises, IndexError, lambda: (EQ() + EQ())[2]
+    yield raises, IndexError, lambda: (EQ() + RQ(1))[2]
     yield raises, RuntimeError, lambda: mul(1, 1)
     yield raises, RuntimeError, lambda: add(1, 1)
     yield raises, RuntimeError, lambda: stretch(1, 1)
@@ -25,6 +25,7 @@ def test_cancellations_zero():
     yield eq, str(1 * EQ()), 'EQ()'
     yield eq, str(0 * EQ()), '0'
     yield eq, str(0 + EQ()), 'EQ()'
+    yield eq, str(EQ() + 0), 'EQ()'
 
     # Sums:
     yield eq, str(EQ() + EQ()), '2 * EQ()'
