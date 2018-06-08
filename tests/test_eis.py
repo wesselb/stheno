@@ -66,3 +66,20 @@ def test_compare_noisy_kernel_and_additive_component_kernel():
 
     yield eq, str(NoisyKernel(EQ(), RQ(1))), \
           'NoisyKernel(EQ(), RQ(1))'
+
+
+def test_additive_component_kernel():
+    k = AdditiveComponentKernel({
+        Component('wiggly'): EQ(),
+        Component('noise'): EQ()
+    })
+
+    # Test independence components.
+    x = np.random.randn(10, 2)
+    yield ok, np.allclose(k(Component('wiggly')(x), Component('noise')(x)),
+                          np.zeros((10, 10)))
+    yield ok, np.allclose(k(Component('noise')(x), Component('wiggly')(x)),
+                          np.zeros((10, 10)))
+
+    # Test check.
+    yield raises, RuntimeError, lambda: k(Component('erroneous')(x))
