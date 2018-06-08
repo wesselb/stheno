@@ -2,14 +2,19 @@
 
 from __future__ import absolute_import, division, print_function
 
-from stheno import EQ, RQ, Linear, OneKernel, ZeroKernel, Delta
+from stheno import EQ, RQ, Linear, OneKernel, ZeroKernel, Delta, mul, add, \
+    stretch
 # noinspection PyUnresolvedReferences
 from tests import ok, raises
 from . import eq
 
 
 def test_exceptions():
-    yield raises, IndexError
+    yield raises, IndexError, lambda: EQ().stretch(1)[1]
+    yield raises, IndexError, lambda: (EQ() + EQ())[2]
+    yield raises, RuntimeError, lambda: mul(1, 1)
+    yield raises, RuntimeError, lambda: add(1, 1)
+    yield raises, RuntimeError, lambda: stretch(1, 1)
 
 
 def test_cancellations_zero():
@@ -106,6 +111,7 @@ def test_terms():
                    RQ(1) * RQ(2) + Delta()).term(3)), 'Delta()'
     yield raises, IndexError, lambda: (EQ() + EQ() * Linear() +
                                        RQ(1) * RQ(2) + Delta()).term(4)
+    yield raises, IndexError, lambda: EQ().term(1)
 
 
 def test_factors():
@@ -123,3 +129,4 @@ def test_factors():
           'RQ(1) + Linear()'
     yield raises, IndexError, lambda: ((EQ() + EQ()) * Delta() *
                                        (RQ(1) + Linear())).factor(4)
+    yield raises, IndexError, lambda: EQ().factor(1)
