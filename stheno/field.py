@@ -7,7 +7,7 @@ from plum import Dispatcher
 
 __all__ = ['dispatch', 'Type', 'PrimitiveType', 'OneType', 'ZeroType',
            'WrappedType', 'ScaledType', 'StretchedType', 'ProductType',
-           'SumType', 'mul', 'add', 'stretch', 'equal']
+           'SumType', 'mul', 'add', 'stretch', 'equal', 'get_field', 'new']
 
 dispatch = Dispatcher()
 
@@ -137,9 +137,6 @@ class JoinType(Type):
             return self.t2
         else:
             raise IndexError('Index out of range.')
-
-    def __len__(self):
-        return len(self.t1) + len(self.t2)
 
     @abstractmethod
     def display(self, t1, t2):

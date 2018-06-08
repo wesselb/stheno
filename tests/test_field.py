@@ -3,7 +3,7 @@
 from __future__ import absolute_import, division, print_function
 
 from stheno import EQ, RQ, Linear, OneKernel, ZeroKernel, Delta, mul, add, \
-    stretch
+    stretch, SumType, new, get_field
 # noinspection PyUnresolvedReferences
 from tests import ok, raises
 from . import eq
@@ -15,9 +15,17 @@ def test_exceptions():
     yield raises, RuntimeError, lambda: mul(1, 1)
     yield raises, RuntimeError, lambda: add(1, 1)
     yield raises, RuntimeError, lambda: stretch(1, 1)
+    yield raises, RuntimeError, lambda: get_field(1)
+    yield raises, RuntimeError, lambda: new(1, SumType)
+    yield eq, repr(EQ()), str(EQ())
 
 
 def test_cancellations_zero():
+    # With constants:
+    yield eq, str(1 * EQ()), 'EQ()'
+    yield eq, str(0 * EQ()), '0'
+    yield eq, str(0 + EQ()), 'EQ()'
+
     # Sums:
     yield eq, str(EQ() + EQ()), '2 * EQ()'
     yield eq, str(ZeroKernel() + EQ()), 'EQ()'
