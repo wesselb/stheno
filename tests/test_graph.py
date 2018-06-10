@@ -240,3 +240,22 @@ def test_selection():
     yield le, np.sum(np.abs(p2(x1).spd.diag)), 1e-10
     yield le, np.sum(np.abs(p2(x2).spd.diag)), 1e-10
     p.revert_prior()
+
+
+def test_case_derivative():
+    x = np.linspace(0, 1, 50)[:, None]
+    y = 3 * x
+
+    model = Graph()
+    p = np.std(y) * GP(EQ().stretch(.5), graph=model)
+    p_der = (p - p.shift(1e-6)) / 1e-6
+
+    yield le, np.sum(np.abs(3 - p_der.condition(At(p)(x), y)(x).mean)), 1e-2
+
+    y = 3 * x ** 2
+
+    model = Graph()
+    p = np.std(y) * GP(EQ().stretch(.5), graph=model)
+    p_der = (p - p.shift(1e-6)) / 1e-6
+
+    yield le, np.sum(np.abs(6 * x - p_der.condition(At(p)(x), y)(x).mean)), 1e-2

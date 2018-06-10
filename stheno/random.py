@@ -22,6 +22,21 @@ class Random(object):
     def __rmul__(self, other):
         return self * other
 
+    def __neg__(self):
+        return (-1) * self
+
+    def __sub__(self, other):
+        return self + (-other)
+
+    def __rsub__(self, other):
+        return (-self) + other
+
+    def __div__(self, other):
+        return self * (1. / other)
+
+    def __truediv__(self, other):
+        return Random.__div__(self, other)
+
     def rmatmul(self, other):
         raise NotImplementedError('Matrix multiplication not implemented for '
                                   '{}.'.format(type(self)))
