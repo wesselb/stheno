@@ -6,7 +6,8 @@ import numpy as np
 
 from stheno.input import Observed
 from stheno.kernel import EQ, RQ, Matern12, Matern32, Matern52, Delta, Kernel, \
-    Linear, OneKernel, ZeroKernel, PosteriorCrossKernel, PosteriorKernel
+    Linear, OneKernel, ZeroKernel, PosteriorCrossKernel, PosteriorKernel, \
+    ShiftedKernel
 from stheno.random import GPPrimitive
 from stheno.spd import SPD
 # noinspection PyUnresolvedReferences
@@ -50,7 +51,7 @@ def test_basic_arithmetic():
                           k1.periodic(1.)(xs2[0], xs2[1] + 5.)), 'periodic 2'
 
 
-def test_reverse():
+def test_reversal():
     x1 = np.random.randn(10, 2)
     x2 = np.random.randn(5, 2)
     x3 = np.random.randn()
@@ -82,6 +83,13 @@ def test_reverse():
     yield ok, k.length_scale is np.nan
     yield eq, k.period, 0
     yield eq, str(k), 'Reversed(Linear())'
+
+
+def test_shifting():
+    x1 = np.random.randn(10, 2)
+    x2 = np.random.randn(5, 2)
+    k = Linear()
+    yield ok, np.allclose(k.shift(5)(x1, x2), k(x1 - 5, x2 - 5))
 
 
 def test_kernel_delta():
@@ -297,6 +305,15 @@ def test_properties_periodic():
 
 def test_properties_scaled():
     k = 2 * EQ()
+
+    yield eq, k.stationary, True
+    yield eq, k.length_scale, 1
+    yield eq, k.period, 0
+    yield eq, k.var, 2
+
+
+def test_properties_shifted():
+    k = ShiftedKernel(2 * EQ(), 5)
 
     yield eq, k.stationary, True
     yield eq, k.length_scale, 1

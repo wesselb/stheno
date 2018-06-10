@@ -2,8 +2,9 @@
 
 from __future__ import absolute_import, division, print_function
 
-from stheno.field import mul, add, stretch, SumType, new, get_field
+from stheno.field import mul, add, stretch, SumType, new, get_field, shift
 from stheno.kernel import EQ, RQ, Linear, OneKernel, ZeroKernel, Delta
+from stheno.mean import FunctionMean, ZeroMean
 # noinspection PyUnresolvedReferences
 from tests import ok, raises
 from . import eq
@@ -15,6 +16,7 @@ def test_exceptions():
     yield raises, RuntimeError, lambda: mul(1, 1)
     yield raises, RuntimeError, lambda: add(1, 1)
     yield raises, RuntimeError, lambda: stretch(1, 1)
+    yield raises, RuntimeError, lambda: shift(1, 1)
     yield raises, RuntimeError, lambda: get_field(1)
     yield raises, RuntimeError, lambda: new(1, SumType)
     yield eq, repr(EQ()), str(EQ())
@@ -80,6 +82,10 @@ def test_grouping():
     yield eq, str(EQ().stretch(5)), 'EQ() > 5'
     yield eq, str(EQ().stretch(5).stretch(5)), 'EQ() > 25'
 
+    # Shifts:
+    yield eq, str(Linear().shift(5)), 'Linear() shift 5'
+    yield eq, str(Linear().shift(5).shift(5)), 'Linear() shift 10'
+
     # Products:
     yield eq, str((5 * EQ()) * (5 * EQ())), '25 * EQ()'
     yield eq, str((5 * (EQ() * EQ())) * (5 * EQ() * EQ())), \
@@ -139,3 +145,21 @@ def test_factors():
     yield raises, IndexError, lambda: ((EQ() + EQ()) * Delta() *
                                        (RQ(1) + Linear())).factor(4)
     yield raises, IndexError, lambda: EQ().factor(1)
+
+
+def test_shifting():
+    # Kernels:
+    yield eq, str(ZeroKernel().shift(5)), '0'
+    yield eq, str(EQ().shift(5)), 'EQ()'
+    yield eq, str(Linear().shift(5)), 'Linear() shift 5'
+    yield eq, str((5 * EQ()).shift(5)), '5 * EQ()'
+    yield eq, str((5 * Linear()).shift(5)), '(5 * Linear()) shift 5'
+
+    # Means:
+    def mean(x): return x
+
+    m = FunctionMean(mean)
+    yield eq, str(ZeroMean().shift(5)), '0'
+    yield eq, str(m.shift(5)), 'mean shift 5'
+    yield eq, str(m.shift(5).shift(5)), 'mean shift 10'
+    yield eq, str((5 * m).shift(5)), '(5 * mean) shift 5'

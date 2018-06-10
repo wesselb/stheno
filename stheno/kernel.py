@@ -12,7 +12,7 @@ from plum import Dispatcher, Self, Referentiable
 from .cache import cache, Cache
 from .field import add, mul, dispatch, Type, PrimitiveType, \
     ZeroType, OneType, ScaledType, ProductType, SumType, StretchedType, \
-    WrappedType
+    WrappedType, ShiftedType
 from .input import Input
 
 __all__ = ['Kernel', 'OneKernel', 'ZeroKernel', 'ScaledKernel', 'EQ', 'RQ',
@@ -76,7 +76,7 @@ class Kernel(Type, Referentiable):
         """Map to a periodic space.
 
         Args:
-            period (tensor): Period. Defaults to `1`.
+            period (tensor, optional): Period. Defaults to `1`.
         """
         return periodicise(self, period)
 
@@ -262,6 +262,33 @@ class StretchedKernel(Kernel, StretchedType, Referentiable):
     @property
     def period(self):
         return self[0].period * self.extent
+
+
+class ShiftedKernel(Kernel, ShiftedType, Referentiable):
+    """Shifted kernel."""
+
+    dispatch = Dispatcher(in_class=Self)
+
+    @dispatch(B.Numeric, B.Numeric, Cache)
+    @cache
+    def __call__(self, x, y, cache):
+        return self[0](x - self.amount, y - self.amount, cache)
+
+    @property
+    def _stationary(self):
+        return self[0].stationary
+
+    @property
+    def var(self):
+        return self[0].var
+
+    @property
+    def length_scale(self):
+        return self[0].length_scale
+
+    @property
+    def period(self):
+        return self[0].period
 
 
 class PeriodicKernel(Kernel, WrappedType, Referentiable):
@@ -595,3 +622,21 @@ def reverse(a): return mul(reverse(a[0]), reverse(a[1]))
 
 @dispatch(ScaledKernel)
 def reverse(a): return a.scale * reverse(a[0])
+
+
+# Shifting:
+
+@dispatch(Kernel, object)
+def shift(a, b):
+    if a.stationary:
+        return a
+    else:
+        return ShiftedKernel(a, b)
+
+
+@dispatch(ZeroKernel, object)
+def shift(a, b): return a
+
+
+@dispatch(ShiftedKernel, object)
+def shift(a, b): return shift(a[0], a.amount + b)

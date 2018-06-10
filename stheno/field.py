@@ -36,6 +36,14 @@ class Type(object):
         """
         return stretch(self, extent)
 
+    def shift(self, amount):
+        """Shift the inputs of an element by a certain amount.
+
+        Args:
+            amount (tensor): Amount to shift by.
+        """
+        return shift(self, amount)
+
     @property
     def num_terms(self):
         """Number of terms"""
@@ -175,7 +183,7 @@ class StretchedType(WrappedType):
 
     Args:
         t (instance of :class:`.field.Type`): Element to stretch.
-        extent (tensor): Extend of stretch.
+        extent (tensor): Extent of stretch.
     """
 
     def __init__(self, t, extent):
@@ -184,6 +192,22 @@ class StretchedType(WrappedType):
 
     def display(self, t):
         return '{} > {}'.format(t, self.extent)
+
+
+class ShiftedType(WrappedType):
+    """Shifted element.
+
+    Args:
+        t (instance of :class:`.field.Type`): Element to shift.
+        amount (tensor): Shift amount.
+    """
+
+    def __init__(self, t, amount):
+        WrappedType.__init__(self, t)
+        self.amount = amount
+
+    def display(self, t):
+        return '{} shift {}'.format(t, self.amount)
 
 
 class ProductType(JoinType):
@@ -254,6 +278,17 @@ def stretch(a, b):
     b (tensor): Extent of stretch.
     """
     raise NotImplementedError('Stretching not implemented for {}.'
+                              ''.format(type(a).__name__))
+
+
+@dispatch(object, object)
+def shift(a, b):
+    """Shift an element.
+
+    a (instance of :class:`.field.Type`): Element to shift.
+    b (tensor): Shift amount.
+    """
+    raise NotImplementedError('Shifting not implemented for {}.'
                               ''.format(type(a).__name__))
 
 
@@ -520,6 +555,20 @@ def stretch(a, b): return a
 
 @dispatch(StretchedType, object)
 def stretch(a, b): return stretch(a[0], a.extent * b)
+
+
+# Shifting:
+
+@dispatch(Type, object)
+def shift(a, b): return new(a, ShiftedType)(a, b)
+
+
+@dispatch(ZeroType, object)
+def shift(a, b): return a
+
+
+@dispatch(ShiftedType, object)
+def shift(a, b): return shift(a[0], a.amount + b)
 
 
 # Equality:
