@@ -12,7 +12,7 @@ from plum import Dispatcher, Self, Referentiable
 from .cache import cache, Cache
 from .field import add, mul, dispatch, Type, PrimitiveType, \
     ZeroType, OneType, ScaledType, ProductType, SumType, StretchedType, \
-    WrappedType, ShiftedType, SelectedType
+    WrappedType, ShiftedType, SelectedType, InputTransformedType
 from .input import Input
 
 __all__ = ['Kernel', 'OneKernel', 'ZeroKernel', 'ScaledKernel', 'EQ', 'RQ',
@@ -325,6 +325,32 @@ class SelectedKernel(Kernel, SelectedType, Referentiable):
             return period
         else:
             return B.take(period, self.dims)
+
+
+class InputTransformedKernel(Kernel, InputTransformedType, Referentiable):
+    """Input-transformed kernel."""
+
+    dispatch = Dispatcher(in_class=Self)
+
+    @dispatch(B.Numeric, B.Numeric, Cache)
+    @cache
+    def __call__(self, x, y, cache):
+        # If only a single transform is given, use the same for both inputs.
+        x = self.fs[0](x)
+        y = self.fs[0](y) if len(self.fs) == 1 else self.fs[1](y)
+        return self[0](x, y, cache)
+
+    @property
+    def _stationary(self):
+        return False
+
+    @property
+    def var(self):
+        return np.nan
+
+    @property
+    def length_scale(self):
+        return np.nan
 
 
 class PeriodicKernel(Kernel, WrappedType, Referentiable):

@@ -53,6 +53,14 @@ class Type(object):
         """
         return new(self, SelectedType)(self, *dims)
 
+    def transform(self, *fs):
+        """Transform the inputs.
+
+        Args:
+            \*fs (int or tuple): Transformations.
+        """
+        return new(self, InputTransformedType)(self, *fs)
+
     @property
     def num_terms(self):
         """Number of terms"""
@@ -224,7 +232,7 @@ class SelectedType(WrappedType, Referentiable):
 
     Args:
         t (instance of :class:`.field.Type`): Element to wrap.
-        dims (tensor): Dimensions to select.
+        \*dims (tensor): Dimensions to select.
     """
 
     def __init__(self, t, *dims):
@@ -238,6 +246,27 @@ class SelectedType(WrappedType, Referentiable):
         else:
             dims = self.dims
         return '{} : {}'.format(t, dims)
+
+
+class InputTransformedType(WrappedType, Referentiable):
+    """Transform the inputs for a particular type.
+
+    Args:
+        t (instance of :class:`.field.Type`): Element to wrap.
+        \*fs (tensor): Transformations
+    """
+
+    def __init__(self, t, *fs):
+        WrappedType.__init__(self, t)
+        self.fs = fs
+
+    def display(self, t):
+        if (isinstance(self.dims, tuple) or
+            isinstance(self.dims, list)) and len(self.fs) == 1:
+            fs = self.fs[0]
+        else:
+            fs = self.fs
+        return '{} transform {}'.format(t, fs)
 
 
 class ProductType(JoinType):

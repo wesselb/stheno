@@ -360,8 +360,30 @@ def test_properties_selected():
     yield assert_allclose, k.period, [2, 3]
     yield eq, k.var, 2
 
+
+def test_properties_input_transform():
+    k = Linear().transform(lambda x: x - 5)
+
+    yield eq, k.stationary, False
+    yield ok, k.length_scale is np.nan
+    yield ok, k.var is np.nan
+    yield eq, k.period, 0
+
+
+def test_selection():
     # Test that computation is valid.
     k1 = EQ().select(1, 2)
     k2 = EQ()
     x = np.random.randn(10, 3)
     yield assert_allclose, k1(x), k2(x[:, [1, 2]])
+
+
+def test_input_transform():
+    k = Linear()
+    x1, x2 = np.random.randn(10, 2), np.random.randn(10, 2)
+
+    k2 = k.transform(lambda x: x ** 2)
+    k3 = k.transform(lambda x: x ** 2, lambda x: x - 5)
+
+    yield assert_allclose, k(x1 ** 2, x2 ** 2), k2(x1, x2)
+    yield assert_allclose, k(x1 ** 2, x2 - 5), k3(x1, x2)
