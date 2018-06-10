@@ -11,6 +11,7 @@ from plum import Dispatcher, Self, Referentiable
 from .field import add, dispatch, Type, ZeroType, OneType, ScaledType, \
     ProductType, SumType
 from .input import Input
+from .cache import Cache, cache
 
 __all__ = ['FunctionMean']
 
@@ -23,21 +24,31 @@ class Mean(Type, Referentiable):
 
     dispatch = Dispatcher(in_class=Self)
 
-    @dispatch(object)
-    def __call__(self, x):
+    @dispatch(object, Cache)
+    def __call__(self, x, cache):
         """Construct the mean for a design matrix.
 
         Args:
             x (design matrix): Points to construct the mean at.
+            cache (instance of :class:`.cache.Cache`): Cache.
 
         Returns:
             Mean vector.
         """
         raise NotImplementedError()
 
+    @dispatch(object)
+    def __call__(self, x):
+        return self(x, Cache())
+
     @dispatch(Input)
     def __call__(self, x):
-        return self(x.get())
+        return self(x, Cache())
+
+    @dispatch(Input, Cache)
+    def __call__(self, x, cache):
+        # This should not have been reached. Attempt to unwrap.
+        return self(x.get(), cache)
 
 
 class SumMean(Mean, SumType, Referentiable):
@@ -45,9 +56,10 @@ class SumMean(Mean, SumType, Referentiable):
 
     dispatch = Dispatcher(in_class=Self)
 
-    @dispatch(object)
-    def __call__(self, x):
-        return self[0](x) + self[1](x)
+    @dispatch(object, Cache)
+    @cache
+    def __call__(self, x, cache):
+        return self[0](x, cache) + self[1](x, cache)
 
 
 class ProductMean(Mean, ProductType, Referentiable):
@@ -55,9 +67,10 @@ class ProductMean(Mean, ProductType, Referentiable):
 
     dispatch = Dispatcher(in_class=Self)
 
-    @dispatch(object)
-    def __call__(self, x):
-        return self[0](x) * self[1](x)
+    @dispatch(object, Cache)
+    @cache
+    def __call__(self, x, cache):
+        return self[0](x, cache) * self[1](x, cache)
 
 
 class ScaledMean(Mean, ScaledType, Referentiable):
@@ -65,9 +78,10 @@ class ScaledMean(Mean, ScaledType, Referentiable):
 
     dispatch = Dispatcher(in_class=Self)
 
-    @dispatch(object)
-    def __call__(self, x):
-        return self.scale * self[0](x)
+    @dispatch(object, Cache)
+    @cache
+    def __call__(self, x, cache):
+        return self.scale * self[0](x, cache)
 
 
 class OneMean(Mean, OneType, Referentiable):
@@ -75,13 +89,15 @@ class OneMean(Mean, OneType, Referentiable):
 
     dispatch = Dispatcher(in_class=Self)
 
-    @dispatch(Number)
-    def __call__(self, x):
-        return B.array([[1.]])
+    @dispatch(Number, Cache)
+    @cache
+    def __call__(self, x, cache):
+        return cache.ones([1, 1], dtype=B.dtype(x))
 
-    @dispatch(B.Numeric)
-    def __call__(self, x):
-        return B.ones((B.shape(x)[0], 1), dtype=B.dtype(x))
+    @dispatch(B.Numeric, Cache)
+    @cache
+    def __call__(self, x, cache):
+        return cache.ones([B.shape(x)[0], 1], dtype=B.dtype(x))
 
 
 class ZeroMean(Mean, ZeroType, Referentiable):
@@ -89,13 +105,15 @@ class ZeroMean(Mean, ZeroType, Referentiable):
 
     dispatch = Dispatcher(in_class=Self)
 
-    @dispatch(Number)
-    def __call__(self, x):
-        return B.array([[0.]])
+    @dispatch(Number, Cache)
+    @cache
+    def __call__(self, x, cache):
+        return cache.zeros([1, 1], dtype=B.dtype(x))
 
-    @dispatch(B.Numeric)
-    def __call__(self, x):
-        return B.zeros((B.shape(x)[0], 1), dtype=B.dtype(x))
+    @dispatch(B.Numeric, Cache)
+    @cache
+    def __call__(self, x, cache):
+        return cache.zeros([B.shape(x)[0], 1], dtype=B.dtype(x))
 
 
 class FunctionMean(Mean, Referentiable):
@@ -109,8 +127,9 @@ class FunctionMean(Mean, Referentiable):
     def __init__(self, f):
         self.f = f
 
-    @dispatch(B.Numeric)
-    def __call__(self, x):
+    @dispatch(B.Numeric, Cache)
+    @cache
+    def __call__(self, x, cache):
         return self.f(x)
 
     def __str__(self):
@@ -143,17 +162,17 @@ class PosteriorCrossMean(Mean, Referentiable):
         self.Kz = Kz
         self.y = y
 
-    @property
-    def m_z_z(self):
+    def m_z_z(self, cache):
         if self._m_z_z is None:
-            self._m_z_z = self.m_z(self.z)
+            self._m_z_z = self.m_z(self.z, cache)
         return self._m_z_z
 
-    @dispatch(object)
-    def __call__(self, x):
-        return self.m_i(x) + \
-               B.matmul(self.Kz.inv_prod(self.k_zi(self.z, x)),
-                        self.y - self.m_z_z, tr_a=True)
+    @dispatch(object, Cache)
+    @cache
+    def __call__(self, x, cache):
+        return self.m_i(x, cache) + \
+               B.matmul(self.Kz.inv_prod(self.k_zi(self.z, x, cache)),
+                        self.y - self.m_z_z(cache), tr_a=True)
 
     def __str__(self):
         return 'PosteriorCrossMean()'

@@ -7,6 +7,7 @@ from lab import B
 from .spd import *
 from .input import *
 from .field import *
+from .cache import *
 from .mean import *
 from .kernel import *
 from .random import *

@@ -4,15 +4,14 @@ from __future__ import absolute_import, division, print_function
 
 import numpy as np
 
-from stheno.input import Component, Observed
+from stheno.input import Observed
 from stheno.kernel import EQ, RQ, Matern12, Matern32, Matern52, Delta, Kernel, \
-    Linear, OneKernel, ZeroKernel, PosteriorCrossKernel, KernelCache, \
-    PosteriorKernel
+    Linear, OneKernel, ZeroKernel, PosteriorCrossKernel, PosteriorKernel
 from stheno.random import GPPrimitive
 from stheno.spd import SPD
 # noinspection PyUnresolvedReferences
 from tests import ok
-from . import eq, neq, raises, ok
+from . import eq, raises, ok
 
 
 def test_corner_cases():
@@ -312,31 +311,3 @@ def test_properties_product():
     yield eq, k.length_scale, 10
     yield eq, k.period, 0
     yield eq, k.var, 6
-
-
-def test_kernel_cache():
-    c = KernelCache()
-
-    x1, x2 = np.random.randn(10, 10), np.random.randn(10, 10)
-    x2 = np.random.randn(10, 10)
-
-    yield eq, id(c.pw_dists(x1, x2)), id(c.pw_dists(x1, x2))
-    yield neq, id(c.pw_dists(x1, x1)), id(c.pw_dists(x1, x2))
-    yield eq, id(c.matmul(x1, x2, tr_a=True)), id(c.matmul(x1, x2, tr_a=True))
-    yield neq, id(c.matmul(x1, x2, tr_a=True)), id(c.matmul(x1, x2))
-
-    # Test that ones and zeros are cached and that all signatures work.
-    k = ZeroKernel()
-    x1, x2 = np.random.randn(10, 10), np.random.randn(10, 10)
-    yield eq, id(k(x1, c)), id(k(x2, c))
-    yield eq, id(k(x1, c)), id(k(Component('test')(x2), c))
-    x1, x2 = np.random.randn(10, 10), np.random.randn(5, 10)
-    yield neq, id(k(x1, c)), id(k(x2, c))
-    yield eq, id(k(1, c)), id(k(1, c))
-
-    k = OneKernel()
-    x1, x2 = np.random.randn(10, 10), np.random.randn(10, 10)
-    yield eq, id(k(x1, c)), id(k(x2, c))
-    x1, x2 = np.random.randn(10, 10), np.random.randn(5, 10)
-    yield neq, id(k(x1, c)), id(k(x2, c))
-    yield eq, id(k(1, c)), id(k(1, c))

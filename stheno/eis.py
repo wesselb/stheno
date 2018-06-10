@@ -5,7 +5,8 @@ from __future__ import absolute_import, division, print_function
 from plum import Dispatcher, Self, Referentiable
 
 from .input import Observed, Latent, Component
-from .kernel import Kernel, ZeroKernel, KernelCache, cache
+from .kernel import Kernel, ZeroKernel
+from stheno.cache import cache, Cache
 
 __all__ = ['NoisyKernel', 'ComponentKernel', 'AdditiveComponentKernel']
 
@@ -24,7 +25,7 @@ class ComponentKernel(Kernel, Referentiable):
     def __init__(self, ks):
         self.ks = ks
 
-    @dispatch(Component, Component, KernelCache)
+    @dispatch(Component, Component, Cache)
     @cache
     def __call__(self, x, y, cache):
         return self.ks[type(x), type(y)](x.get(), y.get(), cache)
@@ -100,12 +101,12 @@ class NoisyKernel(Kernel, Referentiable):
         self.k_n = k_n
         self.k_y = k_f + k_n
 
-    @dispatch({Latent, Observed}, {Latent, Observed}, KernelCache)
+    @dispatch({Latent, Observed}, {Latent, Observed}, Cache)
     @cache
     def __call__(self, x, y, cache):
         return self.k_f(x.get(), y.get())
 
-    @dispatch(Observed, Observed, KernelCache)
+    @dispatch(Observed, Observed, Cache)
     def __call__(self, x, y, cache):
         return self.k_y(x.get(), y.get())
 

@@ -9,95 +9,16 @@ import numpy as np
 from lab import B
 from plum import Dispatcher, Self, Referentiable
 
+from .cache import cache, Cache
 from .field import add, mul, dispatch, Type, PrimitiveType, \
     ZeroType, OneType, ScaledType, ProductType, SumType, StretchedType, \
     WrappedType
 from .input import Input
 
 __all__ = ['ScaledKernel', 'EQ', 'RQ', 'Matern12', 'Exp', 'Matern32',
-           'Matern52', 'Delta', 'Linear', 'KernelCache']
+           'Matern52', 'Delta', 'Linear']
 
 log = logging.getLogger(__name__)
-
-
-class KernelCache(Referentiable):
-    """Cache for a kernel trace.
-
-    Caches output of calls to kernels in `cache[kernel, x, y]`.
-
-    Also caches calls to `B.*`: call instead `cache.*`.
-    """
-    dispatch = Dispatcher(in_class=Self)
-
-    def __init__(self):
-        self._kernel_outputs = {}
-        self._other = {}
-
-    @dispatch(object)
-    def _resolve(self, key):
-        return id(key)
-
-    @dispatch({int, str, bool})
-    def _resolve(self, key):
-        return key
-
-    @dispatch({tuple, list})
-    def _resolve(self, key):
-        return tuple(self._resolve(x) for x in key)
-
-    def __getitem__(self, key):
-        return self._kernel_outputs[self._resolve(key)]
-
-    def __setitem__(self, key, output):
-        self._kernel_outputs[self._resolve(key)] = output
-
-    def __getattr__(self, f):
-        def call_cached(*args, **kw_args):
-            # Let the key depend on the function name...
-            key = (f,)
-
-            # ...on the arguments...
-            key += self._resolve(args)
-
-            # ...and on the keyword arguments.
-            if len(kw_args) > 0:
-                # First, sort keyword arguments according to keys.
-                items = tuple(sorted(kw_args.items(), key=lambda x: x[0]))
-                key += self._resolve(items)
-
-            # Cached execution.
-            if key in self._other:
-                out = self._other[key]
-                print('L2 hit!')
-                return out
-            else:
-                self._other[key] = getattr(B, f)(*args, **kw_args)
-                return self._other[key]
-
-        return call_cached
-
-
-def cache(f):
-    """A decorator for `__call__` methods of kernels to cache their outputs."""
-
-    def __call__(self, x, y, cache):
-        try:
-            out = cache[self, x, y]
-            print('L1 hit!')
-            return out
-        except:
-            pass
-
-        # Try reverse of arguments.
-        try:
-            out = B.transpose(cache[self, y, x])
-            print('L1 hit!')
-            return out
-        except KeyError:
-            cache[self, x, y] = f(self, x, y, cache)
-            return cache[self, x, y]
-
-    return __call__
 
 
 class Kernel(Type, Referentiable):
@@ -107,7 +28,7 @@ class Kernel(Type, Referentiable):
     """
     dispatch = Dispatcher(in_class=Self)
 
-    @dispatch(object, object, KernelCache)
+    @dispatch(object, object, Cache)
     def __call__(self, x, y, cache):
         """Construct the kernel for design matrices of points.
 
@@ -115,7 +36,7 @@ class Kernel(Type, Referentiable):
             x (design matrix): First argument.
             y (design matrix, optional): Second argument. Defaults to first
                 argument.
-            cache (instance of :class:`.kernel.KernelCache`, optional): Cache.
+            cache (instance of :class:`.cache.Cache`, optional): Cache.
 
         Returns:
             Kernel matrix.
@@ -124,29 +45,29 @@ class Kernel(Type, Referentiable):
 
     @dispatch(object)
     def __call__(self, x):
-        return self(x, x, KernelCache())
+        return self(x, x, Cache())
 
-    @dispatch(object, KernelCache)
+    @dispatch(object, Cache)
     def __call__(self, x, cache):
         return self(x, x, cache)
 
     @dispatch(object, object)
     def __call__(self, x, y):
-        return self(x, y, KernelCache())
+        return self(x, y, Cache())
 
     @dispatch(Input)
     def __call__(self, x):
-        return self(x, x, KernelCache())
+        return self(x, x, Cache())
 
-    @dispatch(Input, KernelCache)
+    @dispatch(Input, Cache)
     def __call__(self, x, cache):
         return self(x, x, cache)
 
     @dispatch(Input, Input)
     def __call__(self, x, y):
-        return self(x, y, KernelCache())
+        return self(x, y, Cache())
 
-    @dispatch(Input, Input, KernelCache)
+    @dispatch(Input, Input, Cache)
     def __call__(self, x, y, cache):
         # This should not have been reached. Attempt to unwrap.
         return self(x.get(), y.get(), cache)
@@ -203,12 +124,12 @@ class OneKernel(Kernel, OneType, Referentiable):
 
     dispatch = Dispatcher(in_class=Self)
 
-    @dispatch(Number, Number, KernelCache)
+    @dispatch(Number, Number, Cache)
     @cache
     def __call__(self, x, y, cache):
         return cache.ones((1, 1), dtype=B.dtype(x))
 
-    @dispatch(B.Numeric, B.Numeric, KernelCache)
+    @dispatch(B.Numeric, B.Numeric, Cache)
     @cache
     def __call__(self, x, y, cache):
         return cache.ones((B.shape(x)[0], B.shape(y)[0]), dtype=B.dtype(x))
@@ -223,12 +144,12 @@ class ZeroKernel(Kernel, ZeroType, Referentiable):
 
     dispatch = Dispatcher(in_class=Self)
 
-    @dispatch(Number, Number, KernelCache)
+    @dispatch(Number, Number, Cache)
     @cache
     def __call__(self, x, y, cache):
         return cache.zeros((1, 1), dtype=B.dtype(x))
 
-    @dispatch(B.Numeric, B.Numeric, KernelCache)
+    @dispatch(B.Numeric, B.Numeric, Cache)
     @cache
     def __call__(self, x, y, cache):
         return cache.zeros((B.shape(x)[0], B.shape(y)[0]), dtype=B.dtype(x))
@@ -247,7 +168,7 @@ class ScaledKernel(Kernel, ScaledType, Referentiable):
 
     dispatch = Dispatcher(in_class=Self)
 
-    @dispatch(object, object, KernelCache)
+    @dispatch(object, object, Cache)
     @cache
     def __call__(self, x, y, cache):
         return self.scale * self[0](x, y, cache)
@@ -274,7 +195,7 @@ class SumKernel(Kernel, SumType, Referentiable):
 
     dispatch = Dispatcher(in_class=Self)
 
-    @dispatch(object, object, KernelCache)
+    @dispatch(object, object, Cache)
     @cache
     def __call__(self, x, y, cache):
         return self[0](x, y, cache) + self[1](x, y, cache)
@@ -298,7 +219,7 @@ class ProductKernel(Kernel, ProductType, Referentiable):
 
     dispatch = Dispatcher(in_class=Self)
 
-    @dispatch(object, object, KernelCache)
+    @dispatch(object, object, Cache)
     @cache
     def __call__(self, x, y, cache):
         return self[0](x, y, cache) * self[1](x, y, cache)
@@ -321,7 +242,7 @@ class StretchedKernel(Kernel, StretchedType, Referentiable):
 
     dispatch = Dispatcher(in_class=Self)
 
-    @dispatch(B.Numeric, B.Numeric, KernelCache)
+    @dispatch(B.Numeric, B.Numeric, Cache)
     @cache
     def __call__(self, x, y, cache):
         return self[0](x / self.extent, y / self.extent, cache)
@@ -357,7 +278,7 @@ class PeriodicKernel(Kernel, WrappedType, Referentiable):
         WrappedType.__init__(self, k)
         self._period = period
 
-    @dispatch(Number, Number, KernelCache)
+    @dispatch(Number, Number, Cache)
     @cache
     def __call__(self, x, y, cache):
         def feat_map(z):
@@ -366,7 +287,7 @@ class PeriodicKernel(Kernel, WrappedType, Referentiable):
 
         return self[0](feat_map(x), feat_map(y), cache)
 
-    @dispatch(B.Numeric, B.Numeric, KernelCache)
+    @dispatch(B.Numeric, B.Numeric, Cache)
     @cache
     def __call__(self, x, y, cache):
         def feat_map(z):
@@ -400,7 +321,7 @@ class EQ(Kernel, PrimitiveType, Referentiable):
 
     dispatch = Dispatcher(in_class=Self)
 
-    @dispatch(B.Numeric, B.Numeric, KernelCache)
+    @dispatch(B.Numeric, B.Numeric, Cache)
     @cache
     def __call__(self, x, y, cache):
         return B.exp(-.5 * cache.pw_dists2(x, y))
@@ -422,7 +343,7 @@ class RQ(Kernel, Referentiable):
     def __init__(self, alpha):
         self.alpha = alpha
 
-    @dispatch(B.Numeric, B.Numeric, KernelCache)
+    @dispatch(B.Numeric, B.Numeric, Cache)
     @cache
     def __call__(self, x, y, cache):
         return (1 + .5 * cache.pw_dists2(x, y) / self.alpha) ** (-self.alpha)
@@ -436,7 +357,7 @@ class Exp(Kernel, PrimitiveType, Referentiable):
 
     dispatch = Dispatcher(in_class=Self)
 
-    @dispatch(B.Numeric, B.Numeric, KernelCache)
+    @dispatch(B.Numeric, B.Numeric, Cache)
     @cache
     def __call__(self, x, y, cache):
         return B.exp(-cache.pw_dists(x, y))
@@ -453,7 +374,7 @@ class Matern32(Kernel, PrimitiveType, Referentiable):
 
     dispatch = Dispatcher(in_class=Self)
 
-    @dispatch(B.Numeric, B.Numeric, KernelCache)
+    @dispatch(B.Numeric, B.Numeric, Cache)
     @cache
     def __call__(self, x, y, cache):
         r = 3 ** .5 * cache.pw_dists(x, y)
@@ -468,7 +389,7 @@ class Matern52(Kernel, PrimitiveType, Referentiable):
 
     dispatch = Dispatcher(in_class=Self)
 
-    @dispatch(B.Numeric, B.Numeric, KernelCache)
+    @dispatch(B.Numeric, B.Numeric, Cache)
     @cache
     def __call__(self, x, y, cache):
         r1 = 5 ** .5 * cache.pw_dists(x, y)
@@ -491,7 +412,7 @@ class Delta(Kernel, PrimitiveType, Referentiable):
     def __init__(self, epsilon=1e-6):
         self.epsilon = epsilon
 
-    @dispatch(B.Numeric, B.Numeric, KernelCache)
+    @dispatch(B.Numeric, B.Numeric, Cache)
     @cache
     def __call__(self, x, y, cache):
         dists2 = cache.pw_dists2(x, y)
@@ -510,7 +431,7 @@ class Linear(Kernel, PrimitiveType, Referentiable):
 
     dispatch = Dispatcher(in_class=Self)
 
-    @dispatch(B.Numeric, B.Numeric, KernelCache)
+    @dispatch(B.Numeric, B.Numeric, Cache)
     @cache
     def __call__(self, x, y, cache):
         return cache.matmul(x, y, tr_b=True)
@@ -554,7 +475,7 @@ class PosteriorCrossKernel(Kernel, Referentiable):
         self.z = z
         self.Kz = Kz
 
-    @dispatch(object, object, KernelCache)
+    @dispatch(object, object, Cache)
     @cache
     def __call__(self, x, y, cache):
         return (self.k_ij(x, y, cache) -
@@ -601,7 +522,7 @@ class ReversedKernel(Kernel, WrappedType, Referentiable):
     """Kernel that evaluates with its arguments reversed."""
     dispatch = Dispatcher(in_class=Self)
 
-    @dispatch(object, object, KernelCache)
+    @dispatch(object, object, Cache)
     @cache
     def __call__(self, x, y, cache):
         return B.transpose(self[0](y, x, cache))
