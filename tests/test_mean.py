@@ -92,7 +92,14 @@ def test_shifting():
     x = np.random.randn(10, 3)
 
     yield assert_allclose, m.shift(5)(x), m(x - 5)
-   
+
+
+def test_stretching():
+    m = 5 * OneMean() + (lambda x: x ** 2)
+    x = np.random.randn(10, 3)
+
+    yield assert_allclose, m.stretch(5)(x), m(x / 5)
+
 
 def test_input_transform():
     m = 5 * OneMean() + (lambda x: x ** 2)

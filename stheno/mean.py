@@ -9,7 +9,8 @@ from lab import B
 from plum import Dispatcher, Self, Referentiable
 
 from .field import add, dispatch, Type, ZeroType, OneType, ScaledType, \
-    ProductType, SumType, ShiftedType, SelectedType, InputTransformedType
+    ProductType, SumType, ShiftedType, SelectedType, InputTransformedType, \
+    StretchedType
 from .input import Input
 from .cache import Cache, cache
 
@@ -82,6 +83,17 @@ class ScaledMean(Mean, ScaledType, Referentiable):
     @cache
     def __call__(self, x, cache):
         return self.scale * self[0](x, cache)
+
+
+class StretchedMean(Mean, StretchedType, Referentiable):
+    """Stretched mean."""
+
+    dispatch = Dispatcher(in_class=Self)
+
+    @dispatch(object, Cache)
+    @cache
+    def __call__(self, x, cache):
+        return self[0](x / self.extent, cache)
 
 
 class ShiftedMean(Mean, ShiftedType, Referentiable):

@@ -2,7 +2,8 @@
 
 from __future__ import absolute_import, division, print_function
 
-from stheno.field import mul, add, stretch, SumType, new, get_field, shift
+from stheno.field import mul, add, stretch, SumType, new, get_field, shift, \
+    transform, select
 from stheno.kernel import EQ, RQ, Linear, OneKernel, ZeroKernel, Delta
 from stheno.mean import FunctionMean, ZeroMean, OneMean
 # noinspection PyUnresolvedReferences
@@ -16,6 +17,8 @@ def test_exceptions():
     yield raises, RuntimeError, lambda: mul(1, 1)
     yield raises, RuntimeError, lambda: add(1, 1)
     yield raises, RuntimeError, lambda: stretch(1, 1)
+    yield raises, RuntimeError, lambda: transform(1, 1)
+    yield raises, RuntimeError, lambda: select(1, 1)
     yield raises, RuntimeError, lambda: shift(1, 1)
     yield raises, RuntimeError, lambda: get_field(1)
     yield raises, RuntimeError, lambda: new(1, SumType)
@@ -171,8 +174,14 @@ def test_selection():
     yield eq, str(EQ().select(0)), 'EQ() : 0'
     yield eq, str(EQ().select(0, 2)), 'EQ() : (0, 2)'
 
+    yield eq, str(ZeroKernel().select(0)), '0'
+    yield eq, str(OneMean().select(0)), '1'
+
 
 def test_input_transform():
     yield eq, str(EQ().transform(lambda x: x)), 'EQ() transform <lambda>'
     yield eq, str(EQ().transform(lambda x: x, lambda x: x)), \
           'EQ() transform (<lambda>, <lambda>)'
+
+    yield eq, str(ZeroKernel().transform(lambda x: x)), '0'
+    yield eq, str(OneMean().transform(lambda x: x)), '1'

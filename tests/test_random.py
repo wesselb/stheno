@@ -253,3 +253,25 @@ def test_gp_arithmetic():
     yield ok, close((5. * gp1)(x), 5. * gp1(x)), 'mul'
     yield ok, close((gp1 + gp2)(x), gp1(x) + gp2(x)), 'add'
     yield ok, close((gp1 + 1.)(x), gp1(x) + 1.), 'add 2'
+
+
+def test_gp_stretching():
+    m = FunctionMean(lambda x: x ** 2)
+    gp = GPPrimitive(EQ(), m)
+
+    yield eq, str(gp.stretch(1)), 'GP(EQ() > 1, <lambda> > 1)'
+
+
+def test_gp_select():
+    m = FunctionMean(lambda x: x ** 2)
+    gp = GPPrimitive(EQ(), m)
+
+    yield eq, str(gp.select(1)), 'GP(EQ() : 1, <lambda> : 1)'
+    yield eq, str(gp.select(1, 2)), 'GP(EQ() : (1, 2), <lambda> : (1, 2))'
+
+
+def test_gp_shifting():
+    m = FunctionMean(lambda x: x ** 2)
+    gp = GPPrimitive(EQ(), m)
+
+    yield eq, str(gp.shift(1)), 'GP(EQ(), <lambda> shift 1)'

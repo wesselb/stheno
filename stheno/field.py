@@ -51,7 +51,7 @@ class Type(object):
         Args:
             \*dims (int or tuple): Dimensions to select.
         """
-        return new(self, SelectedType)(self, *dims)
+        return select(self, *dims)
 
     def transform(self, *fs):
         """Transform the inputs.
@@ -59,7 +59,7 @@ class Type(object):
         Args:
             \*fs (int or tuple): Transformations.
         """
-        return new(self, InputTransformedType)(self, *fs)
+        return transform(self, *fs)
 
     @property
     def num_terms(self):
@@ -351,6 +351,28 @@ def shift(a, b):
                               ''.format(type(a).__name__))
 
 
+@dispatch(object, [object])
+def select(a, *dims):
+    """Select dimensions from the inputs.
+
+    a (instance of :class:`.field.Type`): Element to wrap.
+    \*dims (int): Dimensions to select.
+    """
+    raise NotImplementedError('Selection not implemented for {}.'
+                              ''.format(type(a).__name__))
+
+
+@dispatch(object, [object])
+def transform(a, *fs):
+    """Transform inputs.
+
+    a (instance of :class:`.field.Type`): Element to wrap.
+    \*fs (int): Transformations.
+    """
+    raise NotImplementedError('Input transforms not implemented for {}.'
+                              ''.format(type(a).__name__))
+
+
 field_types = set(Type.__subclasses__())
 field_cache = {}
 
@@ -608,7 +630,7 @@ def add(a, b):
 def stretch(a, b): return new(a, StretchedType)(a, b)
 
 
-@dispatch(ZeroType, object)
+@dispatch({ZeroType, OneType}, object)
 def stretch(a, b): return a
 
 
@@ -622,12 +644,32 @@ def stretch(a, b): return stretch(a[0], a.extent * b)
 def shift(a, b): return new(a, ShiftedType)(a, b)
 
 
-@dispatch(ZeroType, object)
+@dispatch({ZeroType, OneType}, object)
 def shift(a, b): return a
 
 
 @dispatch(ShiftedType, object)
 def shift(a, b): return shift(a[0], a.amount + b)
+
+
+# Selection:
+
+@dispatch(Type, [object])
+def select(a, *dims): return new(a, SelectedType)(a, *dims)
+
+
+@dispatch({ZeroType, OneType}, [object])
+def select(a, *dims): return a
+
+
+# Input transforms:
+
+@dispatch(Type, [object])
+def transform(a, *fs): return new(a, InputTransformedType)(a, *fs)
+
+
+@dispatch({ZeroType, OneType}, [object])
+def transform(a, *fs): return a
 
 
 # Equality:
