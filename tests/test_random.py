@@ -275,3 +275,11 @@ def test_gp_shifting():
     gp = GPPrimitive(EQ(), m)
 
     yield eq, str(gp.shift(1)), 'GP(EQ(), <lambda> shift 1)'
+
+
+def test_gp_transform():
+    m = FunctionMean(lambda x: x ** 2)
+    gp = GPPrimitive(EQ(), m)
+
+    yield eq, str(gp.transform(lambda x: x)), 'GP(EQ() transform <lambda>, ' \
+                                              '<lambda> transform <lambda>)'

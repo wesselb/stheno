@@ -4,6 +4,7 @@ from __future__ import absolute_import, division, print_function
 
 from plum import Dispatcher, Self, Referentiable, type_parameter, kind, \
     PromisedType
+from lab import B
 
 from .kernel import ZeroKernel, PosteriorCrossKernel, Kernel
 from .mean import PosteriorCrossMean, ZeroMean, Mean
@@ -92,7 +93,7 @@ class Graph(Referentiable):
 
         Args:
             p (instance of :class:`.graph.GP`): GP in the product.
-            other (obj): Other object in the product.
+            other (object): Other object in the product.
 
         Returns:
             The GP corresponding to the product.
@@ -108,6 +109,106 @@ class Graph(Referentiable):
                               lambda pi: other * kernels[p, pi])
         self._add_p(p_prod)
         return p_prod
+
+    def shift(self, p, amount):
+        """Shift a GP.
+
+        Args:
+            p (instance of :class:`.graph.GP`): GP to shift.
+            amount (object): Amount to shift by.
+
+        Returns:
+            The shifted GP.
+        """
+        p_shifted = GP(self)
+        # Update means.
+        self.means[p_shifted] = self.means[p].shift(amount)
+        # Add rule to kernels.
+        kernels = self.kernels
+        self.kernels.add_rule((p_shifted, p_shifted), self.pids,
+                              lambda: kernels[p].shift(amount))
+        self.kernels.add_rule((p_shifted, None), self.pids,
+                              lambda pi: kernels[p, pi].transform(
+                                  lambda x: x - amount,
+                                  lambda x: x
+                              ))
+        self._add_p(p_shifted)
+        return p_shifted
+
+    def stretch(self, p, extent):
+        """Stretch a GP.
+
+        Args:
+            p (instance of :class:`.graph.GP`): GP to stretch.
+            extent (object): Extent of stretch.
+
+        Returns:
+            The stretched GP.
+        """
+        p_stretched = GP(self)
+        # Update means.
+        self.means[p_stretched] = self.means[p].stretch(extent)
+        # Add rule to kernels.
+        kernels = self.kernels
+        self.kernels.add_rule((p_stretched, p_stretched), self.pids,
+                              lambda: kernels[p].stretch(extent))
+        self.kernels.add_rule((p_stretched, None), self.pids,
+                              lambda pi: kernels[p, pi].transform(
+                                  lambda x: x / extent,
+                                  lambda x: x
+                              ))
+        self._add_p(p_stretched)
+        return p_stretched
+
+    def select(self, p, *dims):
+        """Select input dimensions.
+
+        Args:
+            p (instance of :class:`.graph.GP`): GP to select input
+                dimensions from.
+            \*dims (object): Dimensions to select.
+
+        Returns:
+            GP with the specific input dimensions.
+        """
+        p_select = GP(self)
+        # Update means.
+        self.means[p_select] = self.means[p].select(*dims)
+        # Add rule to kernels.
+        kernels = self.kernels
+        self.kernels.add_rule((p_select, p_select), self.pids,
+                              lambda: kernels[p].select(*dims))
+        self.kernels.add_rule((p_select, None), self.pids,
+                              lambda pi: kernels[p, pi].transform(
+                                  lambda x: B.take(x, dims, axis=1),
+                                  lambda x: x
+                              ))
+        self._add_p(p_select)
+        return p_select
+
+    def transform(self, p, f):
+        """Transform the inputs of a GP.
+
+        Args:
+            p (instance of :class:`.graph.GP`): GP to input transform.
+            f (function): Input transform.
+
+        Returns:
+            Input-transformed GP.
+        """
+        p_transformed = GP(self)
+        # Update means.
+        self.means[p_transformed] = self.means[p].transform(f)
+        # Add rule to kernels.
+        kernels = self.kernels
+        self.kernels.add_rule((p_transformed, p_transformed), self.pids,
+                              lambda: kernels[p].transform(f))
+        self.kernels.add_rule((p_transformed, None), self.pids,
+                              lambda pi: kernels[p, pi].transform(
+                                  f, lambda x: x
+                              ))
+        self._add_p(p_transformed)
+        return p_transformed
 
     @dispatch(At, object)
     def condition(self, x, y):
@@ -307,6 +408,18 @@ class GP(GPPrimitive, Referentiable):
         operations.
         """
         self.graph.revert_prior()
+
+    def shift(self, amount):
+        return self.graph.shift(self, amount)
+
+    def stretch(self, extent):
+        return self.graph.stretch(self, extent)
+
+    def transform(self, f):
+        return self.graph.transform(self, f)
+
+    def select(self, *dims):
+        return self.graph.select(self, *dims)
 
 
 PromisedGP.deliver(GP)

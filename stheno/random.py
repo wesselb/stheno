@@ -342,3 +342,7 @@ class GPPrimitive(RandomProcess, Referentiable):
     def select(self, *dims):
         return GPPrimitive(self.kernel.select(*dims),
                            self.mean.select(*dims))
+
+    def transform(self, f):
+        return GPPrimitive(self.kernel.transform(f),
+                           self.mean.transform(f))
