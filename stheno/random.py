@@ -4,6 +4,7 @@ from __future__ import absolute_import, division, print_function
 
 from lab import B
 from plum import Dispatcher, Self, Referentiable
+import numpy as np
 
 from .kernel import PosteriorKernel
 from .mean import ZeroMean, PosteriorMean
@@ -53,7 +54,7 @@ class Normal(RandomVector, Referentiable):
     def __init__(self, var, mean=None):
         self.spd = var if isinstance(var, SPD) else SPD(var)
         self.dtype = self.spd.dtype
-        self.dim = B.shape(self.var)[0]
+        self.dim = self.spd.shape[0]
         if mean is None:
             mean = B.zeros([self.dim, 1], dtype=self.dtype)
         self.mean = mean
@@ -123,11 +124,17 @@ class Normal(RandomVector, Referentiable):
             noise (positive float, optional): Variance of noise to add to the
                 samples.
         """
-        L = self.spd.cholesky()
-        e = B.randn((self.dim, num), dtype=self.dtype)
-        out = B.dot(L, e) + self.mean
+        # Convert integer data types to floats.
+        if np.issubdtype(self.dtype, np.integer):
+            random_dtype = float
+        else:
+            random_dtype = self.dtype
+
+        # Perform sampling operation.
+        e = B.randn((self.dim, num), dtype=random_dtype)
+        out = self.spd.cholesky_mul(e) + self.mean
         if noise is not None:
-            out += noise ** .5 * B.randn((self.dim, num), dtype=self.dtype)
+            out += noise ** .5 * B.randn((self.dim, num), dtype=random_dtype)
         return out
 
     @dispatch(object)

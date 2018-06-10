@@ -86,18 +86,18 @@ def test_normal():
     yield le, dist2.w2(dist1), 5e-4, 'w2 3'
     yield le, dist2.w2(dist2), 5e-4, 'w2 4'
 
-    # Test sampling.
-    dist = Normal(3. * np.eye(200))
+    # Test sampling and dtype conversion.
+    dist = Normal(3 * np.eye(200, dtype=np.integer))
     yield le, np.abs(np.std(dist.sample(1000)) ** 2 - 3), 5e-2, 'full'
     yield le, np.abs(np.std(dist.sample(1000, noise=2)) ** 2 - 5), 5e-2, \
           'full 2'
 
-    dist = Normal(Diagonal(3. * np.ones(200)))
+    dist = Normal(Diagonal(3 * np.ones(200, dtype=np.integer)))
     yield le, np.abs(np.std(dist.sample(1000)) ** 2 - 3), 5e-2, 'diag'
     yield le, np.abs(np.std(dist.sample(1000, noise=2)) ** 2 - 5), 5e-2, \
           'diag 2'
 
-    dist = Normal(UniformDiagonal(3., 200))
+    dist = Normal(UniformDiagonal(3, 200))
     yield le, np.abs(np.std(dist.sample(1000)) ** 2 - 3), 5e-2, 'unif'
     yield le, np.abs(np.std(dist.sample(1000, noise=2)) ** 2 - 5), 5e-2, \
           'unif 2'

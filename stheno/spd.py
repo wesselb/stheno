@@ -48,6 +48,14 @@ class SPD(Referentiable):
             self._cholesky = B.cholesky(B.reg(self.mat))
         return self._cholesky
 
+    def cholesky_mul(self, a):
+        """Multiply the Cholesky decomposition of this matrix with `a`.
+
+        Args:
+            a (matrix): Matrix to multiply with.
+        """
+        return B.matmul(self.cholesky(), a)
+
     def log_det(self):
         """Compute the log-determinant."""
         if self._log_det is None:
@@ -177,6 +185,9 @@ class Diagonal(SPD, Referentiable):
     def cholesky(self):
         return B.diag(self.diag ** .5)
 
+    def cholesky_mul(self, a):
+        return a * self.diag[:, None] ** .5
+
     def log_det(self):
         return B.sum(B.log(self.diag))
 
@@ -246,6 +257,9 @@ class UniformDiagonal(Diagonal, Referentiable):
 
     def cholesky(self):
         return B.eye(self._n, dtype=self.dtype) * self.diag_scale ** .5
+
+    def cholesky_mul(self, a):
+        return a * self.diag_scale ** .5
 
     def log_det(self):
         return B.cast(self._n, dtype=self.dtype) * B.log(self.diag_scale)

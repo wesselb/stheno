@@ -42,6 +42,8 @@ def test_spd():
         yield ok, np.allclose(spd1.ratio(spd2), spd2.ratio(spd1)), 'ratio 3'
         yield ok, np.allclose(spd1.ratio(spd2), spd2.ratio(spd2)), 'ratio 4'
         yield ok, np.allclose(spd1.inv_prod(A), spd2.inv_prod(A)), 'inv prod'
+        yield ok, np.allclose(spd1.cholesky_mul(A),
+                              spd2.cholesky_mul(A)), 'chol mul'
 
     # Compare SPD and diagonal implementation.
     a = np.diag(np.random.randn(3) ** 2)
