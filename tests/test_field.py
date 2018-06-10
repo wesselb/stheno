@@ -2,8 +2,8 @@
 
 from __future__ import absolute_import, division, print_function
 
-from stheno import EQ, RQ, Linear, OneKernel, ZeroKernel, Delta, mul, add, \
-    stretch, SumType, new, get_field
+from stheno.field import mul, add, stretch, SumType, new, get_field
+from stheno.kernel import EQ, RQ, Linear, OneKernel, ZeroKernel, Delta
 # noinspection PyUnresolvedReferences
 from tests import ok, raises
 from . import eq

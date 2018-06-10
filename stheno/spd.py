@@ -3,8 +3,7 @@
 from __future__ import print_function, division, absolute_import
 
 from lab import B
-from abc import ABCMeta, abstractmethod, abstractproperty
-from plum import Referentiable, Self, Dispatcher, parametric, Kind
+from plum import Referentiable, Self, Dispatcher, Kind
 
 __all__ = ['SPD', 'Diagonal', 'UniformDiagonal']
 

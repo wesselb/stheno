@@ -4,8 +4,9 @@ from __future__ import absolute_import, division, print_function
 
 import numpy as np
 
-from stheno import EQ, RQ, Component, ComponentKernel, AdditiveComponentKernel, \
-    NoisyKernel, ZeroKernel, Latent, Observed
+from stheno.eis import ComponentKernel, AdditiveComponentKernel, NoisyKernel
+from stheno.input import Component, Latent, Observed
+from stheno.kernel import EQ, RQ, ZeroKernel
 # noinspection PyUnresolvedReferences
 from . import eq, neq, lt, le, ge, gt, raises, call, ok, eprint
 

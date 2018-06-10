@@ -4,9 +4,11 @@ from __future__ import absolute_import, division, print_function
 
 import numpy as np
 
-from stheno import Graph, GP, EQ, At, FunctionMean, Linear
+from stheno.graph import Graph, GP, At
+from stheno.kernel import Linear, EQ
+from stheno.mean import FunctionMean
 # noinspection PyUnresolvedReferences,
-from . import eq, raises, ok, eprint
+from . import eq, raises, ok
 
 
 def test_corner_cases():

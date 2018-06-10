@@ -2,14 +2,14 @@
 
 from __future__ import absolute_import, division, print_function
 
-from stheno import LazyVector, LazySymmetricMatrix, Rule
+from stheno.lazy import Rule, LazySymmetricMatrix, LazyVector
 # noinspection PyUnresolvedReferences
 from . import eq, neq, lt, le, ge, gt, raises, call, ok, eprint
 
 
 def test_exceptions():
-    yield eq, repr(Rule(1, {1}, 1)), 'Rule(pattern=1, indices={!r}, ' \
-                                     'builder=1)'.format({1})
+    yield eq, repr(Rule(1, {1}, 1)), \
+          'Rule(pattern=1, indices={!r}, builder=1)'.format({1})
 
 
 def test_indexing():

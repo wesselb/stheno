@@ -4,12 +4,15 @@ from __future__ import absolute_import, division, print_function
 
 import numpy as np
 
-from stheno import EQ, RQ, Matern12, Matern32, Matern52, Delta, Kernel, \
-    Observed, Linear, OneKernel, ZeroKernel, Exp, PosteriorCrossKernel, \
-    SPD, KernelCache, ProductKernel, Component, PosteriorKernel, GPPrimitive
+from stheno.input import Component, Observed
+from stheno.kernel import EQ, RQ, Matern12, Matern32, Matern52, Delta, Kernel, \
+    Linear, OneKernel, ZeroKernel, PosteriorCrossKernel, KernelCache, \
+    PosteriorKernel
+from stheno.random import GPPrimitive
+from stheno.spd import SPD
 # noinspection PyUnresolvedReferences
 from tests import ok
-from . import eq, neq, lt, le, ge, gt, raises, call, ok, eprint, lam
+from . import eq, neq, raises, ok
 
 
 def test_corner_cases():

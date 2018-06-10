@@ -9,16 +9,13 @@ import numpy as np
 from lab import B
 from plum import Dispatcher, Self, Referentiable
 
-from .field import add, mul, stretch, equal, dispatch, Type, PrimitiveType, \
+from .field import add, mul, dispatch, Type, PrimitiveType, \
     ZeroType, OneType, ScaledType, ProductType, SumType, StretchedType, \
     WrappedType
 from .input import Input
 
-__all__ = ['Kernel', 'ProductKernel', 'SumKernel', 'OneKernel',
-           'ScaledKernel', 'StretchedKernel', 'PeriodicKernel',
-           'EQ', 'RQ', 'Matern12', 'Exp', 'Matern32', 'Matern52',
-           'Delta', 'Linear', 'PosteriorKernel', 'ZeroKernel',
-           'PosteriorCrossKernel', 'KernelCache', 'cache']
+__all__ = ['ScaledKernel', 'EQ', 'RQ', 'Matern12', 'Exp', 'Matern32',
+           'Matern52', 'Delta', 'Linear', 'KernelCache']
 
 log = logging.getLogger(__name__)
 

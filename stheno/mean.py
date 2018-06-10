@@ -8,12 +8,11 @@ from types import FunctionType
 from lab import B
 from plum import Dispatcher, Self, Referentiable
 
-from .field import add, mul, dispatch, Type, ZeroType, OneType, ScaledType, \
+from .field import add, dispatch, Type, ZeroType, OneType, ScaledType, \
     ProductType, SumType
 from .input import Input
 
-__all__ = ['Mean', 'SumMean', 'ProductMean', 'ScaledMean', 'OneMean',
-           'PosteriorMean', 'FunctionMean', 'ZeroMean', 'PosteriorCrossMean']
+__all__ = ['FunctionMean']
 
 
 class Mean(Type, Referentiable):

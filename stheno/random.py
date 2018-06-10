@@ -9,7 +9,7 @@ from .kernel import PosteriorKernel
 from .mean import ZeroMean, PosteriorMean
 from .spd import SPD
 
-__all__ = ['Normal', 'GPPrimitive', 'Random']
+__all__ = ['Normal', 'GPPrimitive']
 
 
 class Random(object):

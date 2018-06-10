@@ -5,7 +5,7 @@ from __future__ import absolute_import, division, print_function
 import numpy as np
 from plum import Dispatcher
 
-from stheno import SPD, Diagonal, UniformDiagonal
+from stheno.spd import SPD, Diagonal, UniformDiagonal
 # noinspection PyUnresolvedReferences
 from . import eq, neq, lt, le, ge, gt, raises, call, ok, eprint
 

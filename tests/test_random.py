@@ -6,8 +6,10 @@ import numpy as np
 from plum import Dispatcher
 from scipy.stats import multivariate_normal
 
-from stheno import Normal, Diagonal, UniformDiagonal, GPPrimitive, EQ, RQ, \
-    FunctionMean, Graph
+from stheno.kernel import EQ, RQ
+from stheno.mean import FunctionMean
+from stheno.random import Normal, GPPrimitive
+from stheno.spd import UniformDiagonal, Diagonal
 # noinspection PyUnresolvedReferences
 from . import eq, neq, lt, le, ge, gt, raises, call, ok, eprint
 

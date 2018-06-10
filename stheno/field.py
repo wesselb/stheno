@@ -5,9 +5,7 @@ from __future__ import absolute_import, division, print_function
 from abc import abstractmethod, ABCMeta
 from plum import Dispatcher
 
-__all__ = ['dispatch', 'Type', 'PrimitiveType', 'OneType', 'ZeroType',
-           'WrappedType', 'ScaledType', 'StretchedType', 'ProductType',
-           'SumType', 'mul', 'add', 'stretch', 'equal', 'get_field', 'new']
+__all__ = []
 
 dispatch = Dispatcher()
 

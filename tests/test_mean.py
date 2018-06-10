@@ -7,8 +7,11 @@ from numbers import Number
 import numpy as np
 from plum import Dispatcher
 
-from stheno import FunctionMean, ZeroMean, Mean, Observed, OneMean, \
-    PosteriorCrossMean, PosteriorMean, GP, Graph, EQ
+from stheno.graph import GP, Graph
+from stheno.input import Observed
+from stheno.kernel import EQ
+from stheno.mean import FunctionMean, ZeroMean, Mean, OneMean, \
+    PosteriorCrossMean, PosteriorMean
 # noinspection PyUnresolvedReferences
 from . import eq, neq, lt, le, ge, gt, raises, call, ok, eprint
 
