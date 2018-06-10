@@ -9,7 +9,7 @@ from lab import B
 from plum import Dispatcher, Self, Referentiable
 
 from .field import add, dispatch, Type, ZeroType, OneType, ScaledType, \
-    ProductType, SumType, ShiftedType
+    ProductType, SumType, ShiftedType, SelectedType
 from .input import Input
 from .cache import Cache, cache
 
@@ -93,6 +93,17 @@ class ShiftedMean(Mean, ShiftedType, Referentiable):
     @cache
     def __call__(self, x, cache):
         return self[0](x - self.amount, cache)
+
+
+class SelectedMean(Mean, SelectedType, Referentiable):
+    """Mean with particular input dimensions selected."""
+
+    dispatch = Dispatcher(in_class=Self)
+
+    @dispatch(object, Cache)
+    @cache
+    def __call__(self, x, cache):
+        return self[0](B.take(x, self.dims, axis=1), cache)
 
 
 class OneMean(Mean, OneType, Referentiable):

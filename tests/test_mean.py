@@ -5,6 +5,7 @@ from __future__ import absolute_import, division, print_function
 from numbers import Number
 
 import numpy as np
+from numpy.testing import assert_allclose
 from plum import Dispatcher
 
 from stheno.graph import GP, Graph
@@ -77,3 +78,10 @@ def test_function_mean():
     def my_function(x): pass
 
     yield eq, str(FunctionMean(my_function)), 'my_function'
+
+
+def test_selected_mean():
+    m = 5 * OneMean() + (lambda x: x ** 2)
+    x = np.random.randn(10, 3)
+
+    yield assert_allclose, m.select(1, 2)(x), m(x[:, [1, 2]])

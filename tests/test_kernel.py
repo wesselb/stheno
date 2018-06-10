@@ -3,6 +3,7 @@
 from __future__ import absolute_import, division, print_function
 
 import numpy as np
+from numpy.testing import assert_allclose
 
 from stheno.input import Observed
 from stheno.kernel import EQ, RQ, Matern12, Matern32, Matern52, Delta, Kernel, \
@@ -328,3 +329,39 @@ def test_properties_product():
     yield eq, k.length_scale, 10
     yield eq, k.period, 0
     yield eq, k.var, 6
+
+
+def test_properties_selected():
+    k = (2 * EQ().stretch(5)).select(0)
+
+    yield eq, k.stationary, True
+    yield eq, k.length_scale, 5
+    yield eq, k.period, 0
+    yield eq, k.var, 2
+
+    k = (2 * EQ().stretch(5)).select(2, 3)
+
+    yield eq, k.stationary, True
+    yield eq, k.length_scale, 5
+    yield eq, k.period, 0
+    yield eq, k.var, 2
+
+    k = (2 * EQ().stretch([1, 2, 3])).select(0, 2)
+
+    yield eq, k.stationary, True
+    yield assert_allclose, k.length_scale, [1, 3]
+    yield assert_allclose, k.period, [0, 0]
+    yield eq, k.var, 2
+
+    k = (2 * EQ().periodic([1, 2, 3])).select(1, 2)
+
+    yield eq, k.stationary, True
+    yield assert_allclose, k.length_scale, [1, 1]
+    yield assert_allclose, k.period, [2, 3]
+    yield eq, k.var, 2
+
+    # Test that computation is valid.
+    k1 = EQ().select(1, 2)
+    k2 = EQ()
+    x = np.random.randn(10, 3)
+    yield assert_allclose, k1(x), k2(x[:, [1, 2]])

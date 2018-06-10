@@ -12,7 +12,7 @@ from plum import Dispatcher, Self, Referentiable
 from .cache import cache, Cache
 from .field import add, mul, dispatch, Type, PrimitiveType, \
     ZeroType, OneType, ScaledType, ProductType, SumType, StretchedType, \
-    WrappedType, ShiftedType
+    WrappedType, ShiftedType, SelectedType
 from .input import Input
 
 __all__ = ['Kernel', 'OneKernel', 'ZeroKernel', 'ScaledKernel', 'EQ', 'RQ',
@@ -257,11 +257,11 @@ class StretchedKernel(Kernel, StretchedType, Referentiable):
 
     @property
     def length_scale(self):
-        return self[0].length_scale * self.extent
+        return B.array(self[0].length_scale) * self.extent
 
     @property
     def period(self):
-        return self[0].period * self.extent
+        return B.array(self[0].period) * self.extent
 
 
 class ShiftedKernel(Kernel, ShiftedType, Referentiable):
@@ -289,6 +289,42 @@ class ShiftedKernel(Kernel, ShiftedType, Referentiable):
     @property
     def period(self):
         return self[0].period
+
+
+class SelectedKernel(Kernel, SelectedType, Referentiable):
+    """Kernel with particular input dimensions selected."""
+
+    dispatch = Dispatcher(in_class=Self)
+
+    @dispatch(B.Numeric, B.Numeric, Cache)
+    @cache
+    def __call__(self, x, y, cache):
+        return self[0](B.take(x, self.dims, axis=1),
+                       B.take(y, self.dims, axis=1), cache)
+
+    @property
+    def _stationary(self):
+        return self[0].stationary
+
+    @property
+    def var(self):
+        return self[0].var
+
+    @property
+    def length_scale(self):
+        length_scale = self[0].length_scale
+        if B.is_scalar(length_scale):
+            return length_scale
+        else:
+            return B.take(length_scale, self.dims)
+
+    @property
+    def period(self):
+        period = self[0].period
+        if B.is_scalar(period):
+            return period
+        else:
+            return B.take(period, self.dims)
 
 
 class PeriodicKernel(Kernel, WrappedType, Referentiable):

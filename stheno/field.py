@@ -3,7 +3,8 @@
 from __future__ import absolute_import, division, print_function
 
 from abc import abstractmethod, ABCMeta
-from plum import Dispatcher
+from plum import Dispatcher, Referentiable, Self
+from lab import B
 
 __all__ = []
 
@@ -43,6 +44,14 @@ class Type(object):
             amount (tensor): Amount to shift by.
         """
         return shift(self, amount)
+
+    def select(self, *dims):
+        """Select particular inputs dimensions of the input.
+
+        Args:
+            \*dims (int or tuple): Dimensions to select.
+        """
+        return new(self, SelectedType)(self, *dims)
 
     @property
     def num_terms(self):
@@ -208,6 +217,27 @@ class ShiftedType(WrappedType):
 
     def display(self, t):
         return '{} shift {}'.format(t, self.amount)
+
+
+class SelectedType(WrappedType, Referentiable):
+    """Select particular dimensions of the input features.
+
+    Args:
+        t (instance of :class:`.field.Type`): Element to wrap.
+        dims (tensor): Dimensions to select.
+    """
+
+    def __init__(self, t, *dims):
+        WrappedType.__init__(self, t)
+        self.dims = dims
+
+    def display(self, t):
+        if (isinstance(self.dims, tuple) or
+            isinstance(self.dims, list)) and len(self.dims) == 1:
+            dims = self.dims[0]
+        else:
+            dims = self.dims
+        return '{} : {}'.format(t, dims)
 
 
 class ProductType(JoinType):
