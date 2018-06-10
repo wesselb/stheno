@@ -198,6 +198,7 @@ def test_gp_construction():
     p = GPPrimitive(5)
     yield eq, type(p.kernel), ScaledKernel
 
+
 def test_gp():
     # Check finite-dimensional distribution construction.
     k = EQ()
