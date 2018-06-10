@@ -8,7 +8,7 @@ from scipy.stats import multivariate_normal
 
 from stheno.kernel import EQ, RQ
 from stheno.mean import FunctionMean
-from stheno.random import Normal, GPPrimitive
+from stheno.random import Normal, GPPrimitive, Normal1D
 from stheno.spd import UniformDiagonal, Diagonal
 # noinspection PyUnresolvedReferences
 from . import eq, neq, lt, le, ge, gt, raises, call, ok, eprint
@@ -101,6 +101,44 @@ def test_normal():
     yield le, np.abs(np.std(dist.sample(1000)) ** 2 - 3), 5e-2, 'unif'
     yield le, np.abs(np.std(dist.sample(1000, noise=2)) ** 2 - 5), 5e-2, \
           'unif 2'
+
+
+def test_normal_1d():
+    # Test broadcasting.
+    d = Normal1D(1, 0)
+    yield eq, type(d.spd), UniformDiagonal
+    yield eq, d.spd.shape, (1, 1)
+    yield eq, d.mean.shape, (1, 1)
+
+    d = Normal1D(1, [0, 0, 0])
+    yield eq, type(d.spd), UniformDiagonal
+    yield eq, d.spd.shape, (3, 3)
+    yield eq, d.mean.shape, (3, 1)
+
+    d = Normal1D([1, 2, 3], 0)
+    yield eq, type(d.spd), Diagonal
+    yield eq, d.spd.shape, (3, 3)
+    yield eq, d.mean.shape, (3, 1)
+
+    d = Normal1D([1, 2, 3], [0, 0, 0])
+    yield eq, type(d.spd), Diagonal
+    yield eq, d.spd.shape, (3, 3)
+    yield eq, d.mean.shape, (3, 1)
+
+    d = Normal1D(1)
+    yield eq, type(d.spd), UniformDiagonal
+    yield eq, d.spd.shape, (1, 1)
+    yield eq, d.mean.shape, (1, 1)
+
+    d = Normal1D([1, 2, 3])
+    yield eq, type(d.spd), Diagonal
+    yield eq, d.spd.shape, (3, 3)
+    yield eq, d.mean.shape, (3, 1)
+
+    yield raises, ValueError, lambda: Normal1D(np.eye(3))
+    yield raises, ValueError, lambda: Normal1D(np.eye(3), 0)
+    yield raises, ValueError, lambda: Normal1D(1, np.ones((3, 1)))
+    yield raises, ValueError, lambda: Normal1D([1, 2], np.ones((3, 1)))
 
 
 def test_normal_arithmetic():

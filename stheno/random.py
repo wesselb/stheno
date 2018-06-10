@@ -8,9 +8,9 @@ import numpy as np
 
 from .kernel import PosteriorKernel
 from .mean import ZeroMean, PosteriorMean
-from .spd import SPD
+from .spd import SPD, Dispatcher, UniformDiagonal, Diagonal
 
-__all__ = ['Normal', 'GPPrimitive']
+__all__ = ['Normal', 'GPPrimitive', 'Normal1D']
 
 
 class Random(object):
@@ -166,6 +166,62 @@ class Normal(RandomVector, Referentiable):
     def lmatmul(self, other):
         return Normal(B.dot(B.dot(other, self.var), other, tr_b=True),
                       B.dot(other, self.mean))
+
+
+class Normal1D(Normal, Referentiable):
+    """A one-dimensional version of :class:`.random.Normal` with convenient
+    broadcasting behaviour.
+
+    Args:
+        var (scalar or vector): Variance of the distribution.
+        mean (scalar or vector): Mean of the distribution, defaults to
+            zero.
+    """
+    dispatch = Dispatcher(in_class=Self)
+
+    def __init__(self, var, mean=None):
+        var = B.array(var)
+
+        # Consider all various ranks of `var` and `mean` for convenient
+        # broadcasting behaviour.
+        if mean is not None:
+            mean = B.array(mean)
+
+            if B.rank(var) == 1:
+                if B.rank(mean) == 0:
+                    mean = mean * \
+                           B.ones([B.shape(var)[0], 1], dtype=B.dtype(var))
+                elif B.rank(mean) == 1:
+                    mean = mean[:, None]
+                else:
+                    raise ValueError('Invalid rank {} of mean.'
+                                     ''.format(B.rank(mean)))
+                var = Diagonal(var)
+
+            elif B.rank(var) == 0:
+                if B.rank(mean) == 0:
+                    mean = mean * B.ones([1, 1], dtype=B.dtype(var))
+                    var = UniformDiagonal(var, 1)
+                elif B.rank(mean) == 1:
+                    mean = mean[:, None]
+                    var = UniformDiagonal(var, B.shape(mean)[0])
+                else:
+                    raise ValueError('Invalid rank {} of mean.'
+                                     ''.format(B.rank(mean)))
+
+            else:
+                raise ValueError('Invalid rank {} of variance.'
+                                 ''.format(B.rank(var)))
+        else:
+            if B.rank(var) == 0:
+                var = UniformDiagonal(var, 1)
+            elif B.rank(var) == 1:
+                var = Diagonal(var)
+            else:
+                raise ValueError('Invalid rank {} of variance.'
+                                 ''.format(B.rank(var)))
+
+        Normal.__init__(self, var, mean)
 
 
 class GPPrimitive(RandomProcess, Referentiable):
