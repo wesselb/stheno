@@ -257,23 +257,37 @@ def stretch(a, b):
                               ''.format(type(a).__name__))
 
 
+field_types = set(Type.__subclasses__())
+field_cache = {}
+
+
 def get_field(a):
     """Get the field type of an element.
 
     Args:
         a (instance of :class:`.field.Type`): Element to get field of.
     """
-    # Figure out which fields are defined.
-    fields = set(Type.__subclasses__()) - \
-             {PrimitiveType, ZeroType, OneType, ScaledType, WrappedType,
-              JoinType, ProductType, SumType, StretchedType}
+    try:
+        return field_cache[type(a)]
+    except KeyError:
+        # Figure out which fields are defined.
+        fields = set(Type.__subclasses__()) - field_types
 
-    # Loop through the fields, and see to which one `a` corresponds.
-    for t in fields:
-        if isinstance(a, t):
-            return t
-    raise RuntimeError('Could not determine field type of {}.'
-                       ''.format(type(a).__name__))
+        # Loop through the fields, and see to which one `a` corresponds.
+        candidates = []
+        for t in fields:
+            if isinstance(a, t):
+                candidates.append(t)
+
+        # There should only be a single candidate.
+        if len(candidates) != 1:
+            raise RuntimeError('Could not determine field type of {}.'
+                               ''.format(type(a).__name__))
+        field_cache[type(a)] = candidates[0]
+        return field_cache[type(a)]
+
+
+new_cache = {}
 
 
 def new(a, t):
@@ -283,13 +297,19 @@ def new(a, t):
         a (instance of :class:`.field.Type`): Element to create new type for.
         t (type): Type to create.
     """
-    field = get_field(a)
-    candidates = list(set(field.__subclasses__()) & set(t.__subclasses__()))
-    if len(candidates) != 1:
-        raise RuntimeError('Could not determine {} for field {}.'
-                           ''.format(t.__name__, field.__name__))
-    else:
-        return candidates[0]
+    try:
+        return new_cache[type(a), t]
+    except KeyError:
+        field = get_field(a)
+        candidates = list(set(field.__subclasses__()) & set(t.__subclasses__()))
+
+        # There should only be a single candidate.
+        if len(candidates) != 1:
+            raise RuntimeError('Could not determine {} for field {}.'
+                               ''.format(t.__name__, field.__name__))
+
+        new_cache[type(a), t] = candidates[0]
+        return new_cache[type(a), t]
 
 
 # Pretty printing with minimal parentheses.

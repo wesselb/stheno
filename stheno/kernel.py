@@ -15,8 +15,8 @@ from .field import add, mul, dispatch, Type, PrimitiveType, \
     WrappedType
 from .input import Input
 
-__all__ = ['ScaledKernel', 'EQ', 'RQ', 'Matern12', 'Exp', 'Matern32',
-           'Matern52', 'Delta', 'Linear']
+__all__ = ['Kernel', 'OneKernel', 'ZeroKernel', 'ScaledKernel', 'EQ', 'RQ',
+           'Matern12', 'Exp', 'Matern32', 'Matern52', 'Delta', 'Linear']
 
 log = logging.getLogger(__name__)
 
