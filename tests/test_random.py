@@ -6,8 +6,8 @@ import numpy as np
 from plum import Dispatcher
 from scipy.stats import multivariate_normal
 
-from stheno.kernel import EQ, RQ
-from stheno.mean import FunctionMean
+from stheno.kernel import EQ, RQ, ScaledKernel
+from stheno.mean import FunctionMean, ZeroMean, ScaledMean
 from stheno.random import Normal, GPPrimitive, Normal1D
 from stheno.spd import UniformDiagonal, Diagonal
 # noinspection PyUnresolvedReferences
@@ -181,6 +181,22 @@ def test_normal_arithmetic():
 def close(n1, n2):
     return np.allclose(n1.mean, n2.mean) and np.allclose(n1.var, n2.var)
 
+
+def test_gp_construction():
+    k = EQ()
+    m = FunctionMean(lambda x: x ** 2)
+
+    p = GPPrimitive(k)
+    yield eq, type(p.mean), ZeroMean
+
+    p = GPPrimitive(k, 5)
+    yield eq, type(p.mean), ScaledMean
+
+    p = GPPrimitive(k, m)
+    yield eq, type(p.mean), FunctionMean
+
+    p = GPPrimitive(5)
+    yield eq, type(p.kernel), ScaledKernel
 
 def test_gp():
     # Check finite-dimensional distribution construction.

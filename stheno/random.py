@@ -2,12 +2,12 @@
 
 from __future__ import absolute_import, division, print_function
 
-from lab import B
-from plum import Dispatcher, Self, Referentiable
 import numpy as np
+from lab import B
+from plum import Self, Referentiable
 
-from .kernel import PosteriorKernel
-from .mean import ZeroMean, PosteriorMean
+from .kernel import PosteriorKernel, OneKernel
+from .mean import ZeroMean, PosteriorMean, OneMean
 from .spd import SPD, Dispatcher, UniformDiagonal, Diagonal
 
 __all__ = ['Normal', 'GPPrimitive', 'Normal1D']
@@ -237,8 +237,19 @@ class GPPrimitive(RandomProcess, Referentiable):
     dispatch = Dispatcher(in_class=Self)
 
     def __init__(self, kernel, mean=None):
-        self.mean = mean if mean else ZeroMean()
-        self.kernel = kernel
+        # Resolve `mean`.
+        if mean is None:
+            self.mean = ZeroMean()
+        elif isinstance(mean, B.Numeric):
+            self.mean = mean * OneMean()
+        else:
+            self.mean = mean
+
+        # Resolve `kernel`.
+        if isinstance(kernel, B.Numeric):
+            self.kernel = kernel * OneKernel()
+        else:
+            self.kernel = kernel
 
     def __call__(self, x):
         """Construct a finite-dimensional distribution at specified locations.

@@ -41,7 +41,6 @@ class Graph(Referentiable):
             kernel (instance of :class:`.kernel.Kernel`): Kernel function of GP.
             mean (instance of :class:`.mean.Mean`): Mean function of GP.
         """
-        mean = ZeroMean() if mean is None else mean
         # Update means.
         self.means[p] = mean
         # Add rule to kernels.
@@ -252,6 +251,11 @@ class GP(GPPrimitive, Referentiable):
 
     @dispatch([object])
     def __init__(self, kernel, mean=None, graph=model):
+        # First resolve `kernel` and `mean` through `GPPrimitive`s constructor.
+        GPPrimitive.__init__(self, kernel, mean)
+        kernel, mean = self.kernel, self.mean
+
+        # Then add a new `GP` to the graph.
         GP.__init__(self, graph)
         graph.add_independent_gp(self, kernel, mean)
 
