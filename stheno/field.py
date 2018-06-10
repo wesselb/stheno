@@ -261,11 +261,11 @@ class InputTransformedType(WrappedType, Referentiable):
         self.fs = fs
 
     def display(self, t):
-        if (isinstance(self.dims, tuple) or
-            isinstance(self.dims, list)) and len(self.fs) == 1:
-            fs = self.fs[0]
+        if (isinstance(self.fs, tuple) or
+            isinstance(self.fs, list)) and len(self.fs) == 1:
+            fs = self.fs[0].__name__
         else:
-            fs = self.fs
+            fs = '({})'.format(', '.join(f.__name__ for f in self.fs))
         return '{} transform {}'.format(t, fs)
 
 

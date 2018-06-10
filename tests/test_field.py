@@ -4,7 +4,7 @@ from __future__ import absolute_import, division, print_function
 
 from stheno.field import mul, add, stretch, SumType, new, get_field, shift
 from stheno.kernel import EQ, RQ, Linear, OneKernel, ZeroKernel, Delta
-from stheno.mean import FunctionMean, ZeroMean
+from stheno.mean import FunctionMean, ZeroMean, OneMean
 # noinspection PyUnresolvedReferences
 from tests import ok, raises
 from . import eq
@@ -28,6 +28,8 @@ def test_cancellations_zero():
     yield eq, str(0 * EQ()), '0'
     yield eq, str(0 + EQ()), 'EQ()'
     yield eq, str(EQ() + 0), 'EQ()'
+    yield eq, str(0 + OneMean()), '1'
+    yield eq, str(OneMean() + 0), '1'
 
     # Sums:
     yield eq, str(EQ() + EQ()), '2 * EQ()'
@@ -163,3 +165,14 @@ def test_shifting():
     yield eq, str(m.shift(5)), 'mean shift 5'
     yield eq, str(m.shift(5).shift(5)), 'mean shift 10'
     yield eq, str((5 * m).shift(5)), '(5 * mean) shift 5'
+
+
+def test_selection():
+    yield eq, str(EQ().select(0)), 'EQ() : 0'
+    yield eq, str(EQ().select(0, 2)), 'EQ() : (0, 2)'
+
+
+def test_input_transform():
+    yield eq, str(EQ().transform(lambda x: x)), 'EQ() transform <lambda>'
+    yield eq, str(EQ().transform(lambda x: x, lambda x: x)), \
+          'EQ() transform (<lambda>, <lambda>)'
