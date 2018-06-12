@@ -281,5 +281,5 @@ def test_gp_transform():
     m = FunctionMean(lambda x: x ** 2)
     gp = GPPrimitive(EQ(), m)
 
-    yield eq, str(gp.transform(lambda x: x)), 'GP(EQ() transform <lambda>, ' \
-                                              '<lambda> transform <lambda>)'
+    yield eq, str(gp.transform(lambda x, c: x)), \
+          'GP(EQ() transform <lambda>, <lambda> transform <lambda>)'

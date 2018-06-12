@@ -4,6 +4,8 @@ from __future__ import absolute_import, division, print_function
 
 import numpy as np
 from numpy.testing import assert_allclose
+from lab import B
+from plum import Dispatcher
 
 from stheno.input import Observed
 from stheno.kernel import EQ, RQ, Matern12, Matern32, Matern52, Delta, Kernel, \
@@ -346,14 +348,14 @@ def test_properties_selected():
     yield eq, k.period, 0
     yield eq, k.var, 2
 
-    k = (2 * EQ().stretch([1, 2, 3])).select(0, 2)
+    k = (2 * EQ().stretch(np.array([1, 2, 3]))).select(0, 2)
 
     yield eq, k.stationary, True
     yield assert_allclose, k.length_scale, [1, 3]
     yield assert_allclose, k.period, [0, 0]
     yield eq, k.var, 2
 
-    k = (2 * EQ().periodic([1, 2, 3])).select(1, 2)
+    k = (2 * EQ().periodic(np.array([1, 2, 3]))).select(1, 2)
 
     yield eq, k.stationary, True
     yield assert_allclose, k.length_scale, [1, 1]
@@ -362,12 +364,17 @@ def test_properties_selected():
 
 
 def test_properties_input_transform():
-    k = Linear().transform(lambda x: x - 5)
+    k = Linear().transform(lambda x, c: x - 5)
 
     yield eq, k.stationary, False
     yield ok, k.length_scale is np.nan
     yield ok, k.var is np.nan
     yield eq, k.period, 0
+
+
+def test_properties_derivative():
+    # raise NotImplementedError()
+    pass
 
 
 def test_selection():
@@ -382,8 +389,66 @@ def test_input_transform():
     k = Linear()
     x1, x2 = np.random.randn(10, 2), np.random.randn(10, 2)
 
-    k2 = k.transform(lambda x: x ** 2)
-    k3 = k.transform(lambda x: x ** 2, lambda x: x - 5)
+    k2 = k.transform(lambda x, c: x ** 2)
+    k3 = k.transform(lambda x, c: x ** 2, lambda x, c: x - 5)
 
     yield assert_allclose, k(x1 ** 2, x2 ** 2), k2(x1, x2)
     yield assert_allclose, k(x1 ** 2, x2 - 5), k3(x1, x2)
+
+
+def test_derivative():
+    B.backend_to_tf()
+    s = B.Session()
+
+    # Test derivative of kernel EQ.
+    k = EQ()
+    x1 = B.array(np.random.randn(10, 1))
+    x2 = B.array(np.random.randn(5, 1))
+
+    # Test derivative with respect to first input.
+    ref = s.run(-k(x1, x2) * (x1 - B.transpose(x2)))
+    yield assert_allclose, s.run(k.diff(0, None)(x1, x2)), ref
+    ref = s.run(-k(x1) * (x1 - B.transpose(x1)))
+    yield assert_allclose, s.run(k.diff(0, None)(x1)), ref
+
+    # Test derivative with respect to second input.
+    ref = s.run(-k(x1, x2) * (B.transpose(x2) - x1))
+    yield assert_allclose, s.run(k.diff(None, 0)(x1, x2)), ref
+    ref = s.run(-k(x1) * (B.transpose(x1) - x1))
+    yield assert_allclose, s.run(k.diff(None, 0)(x1)), ref
+
+    # Test derivative with respect to both inputs.
+    ref = s.run(k(x1, x2) * (1 - (x1 - B.transpose(x2)) ** 2))
+    yield assert_allclose, s.run(k.diff(0, 0)(x1, x2)), ref
+    yield assert_allclose, s.run(k.diff(0)(x1, x2)), ref
+    ref = s.run(k(x1) * (1 - (x1 - B.transpose(x1)) ** 2))
+    yield assert_allclose, s.run(k.diff(0, 0)(x1)), ref
+    yield assert_allclose, s.run(k.diff(0)(x1)), ref
+
+    # Test derivative of kernel Linear.
+    k = Linear()
+    x1 = B.array(np.random.randn(10, 1))
+    x2 = B.array(np.random.randn(5, 1))
+
+    # Test derivative with respect to first input.
+    ref = s.run(B.ones((10, 5), dtype=np.float64) * B.transpose(x2))
+    yield assert_allclose, s.run(k.diff(0, None)(x1, x2)), ref
+    ref = s.run(B.ones((10, 10), dtype=np.float64) * B.transpose(x1))
+    yield assert_allclose, s.run(k.diff(0, None)(x1)), ref
+
+    # Test derivative with respect to second input.
+    ref = s.run(B.ones((10, 5), dtype=np.float64) * x1)
+    yield assert_allclose, s.run(k.diff(None, 0)(x1, x2)), ref
+    ref = s.run(B.ones((10, 10), dtype=np.float64) * x1)
+    yield assert_allclose, s.run(k.diff(None, 0)(x1)), ref
+
+    # Test derivative with respect to both inputs.
+    ref = s.run(B.ones((10, 5), dtype=np.float64))
+    yield assert_allclose, s.run(k.diff(0, 0)(x1, x2)), ref
+    yield assert_allclose, s.run(k.diff(0)(x1, x2)), ref
+    ref = s.run(B.ones((10, 10), dtype=np.float64))
+    yield assert_allclose, s.run(k.diff(0, 0)(x1)), ref
+    yield assert_allclose, s.run(k.diff(0)(x1)), ref
+
+    s.close()
+    B.backend_to_np()

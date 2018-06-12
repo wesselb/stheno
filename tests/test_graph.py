@@ -3,13 +3,14 @@
 from __future__ import absolute_import, division, print_function
 
 import numpy as np
-from numpy.testing import assert_allclose
+from numpy.testing import assert_allclose, assert_array_almost_equal
+from lab import B
 
 from stheno.graph import Graph, GP, At
 from stheno.kernel import Linear, EQ
 from stheno.mean import FunctionMean
 # noinspection PyUnresolvedReferences,
-from . import eq, raises, ok, le
+from . import eq, raises, ok, le, eprint
 
 
 def test_corner_cases():
@@ -242,20 +243,69 @@ def test_selection():
     p.revert_prior()
 
 
-def test_case_derivative():
-    x = np.linspace(0, 1, 50)[:, None]
-    y = 3 * x
+def test_case_fd_derivative():
+    x = np.linspace(0, 10, 50)[:, None]
+    y = np.sin(x)
 
     model = Graph()
-    p = np.std(y) * GP(EQ().stretch(.5), graph=model)
-    p_der = (p - p.shift(1e-6)) / 1e-6
+    p = GP(.7 * EQ().stretch(1.), graph=model)
+    p_der = (p.shift(-1e-3) - p.shift(1e-3)) / 2e-3
 
-    yield le, np.sum(np.abs(3 - p_der.condition(At(p)(x), y)(x).mean)), 1e-2
+    yield le, np.sum(np.abs(np.cos(x) -
+                            p_der.condition(At(p)(x), y)(x).mean)), 1e-4
 
-    y = 3 * x ** 2
+
+def test_case_reflection():
+    model = Graph()
+    p = GP(EQ(), graph=model)
+    p2 = 5 - p
+
+    x = np.linspace(0, 1, 10)[:, None]
+    y = p(x).sample()
+
+    model.condition(At(p)(x), y)
+    yield le, np.sum(np.abs(p2(x).mean - (5 - y))), 1e-5
+    model.revert_prior()
+    model.condition(At(p2)(x), 5 - y)
+    yield le, np.sum(np.abs(p(x).mean - y)), 1e-5
+    model.revert_prior()
 
     model = Graph()
-    p = np.std(y) * GP(EQ().stretch(.5), graph=model)
-    p_der = (p - p.shift(1e-6)) / 1e-6
+    p = GP(EQ(), graph=model)
+    p2 = -p
 
-    yield le, np.sum(np.abs(6 * x - p_der.condition(At(p)(x), y)(x).mean)), 1e-2
+    x = np.linspace(0, 1, 10)[:, None]
+    y = p(x).sample()
+
+    model.condition(At(p)(x), y)
+    yield le, np.sum(np.abs(p2(x).mean + y)), 1e-5
+    model.revert_prior()
+    model.condition(At(p2)(x), -y)
+    yield le, np.sum(np.abs(p(x).mean - y)), 1e-5
+    model.revert_prior()
+
+
+def test_case_exact_derivative():
+    B.backend_to_tf()
+    s = B.Session()
+
+    model = Graph()
+    x = np.linspace(0, 1, 100)[:, None]
+    y = 2 * x
+
+    p = GP(EQ(), graph=model)
+    dp = p.diff()
+
+    # Test conditioning on function.
+    p.condition(x, y)
+    yield le, np.sum(np.abs(s.run(dp(x).mean - 2))), 1e-3
+    p.revert_prior()
+
+    # Test conditioning on derivative.
+    dp.condition(x, y)
+    p.condition(np.zeros((1, 1)), np.zeros((1, 1)))  # Fix integration constant.
+    yield le, np.sum(np.abs(s.run(p(x).mean - x ** 2))), 1e-3
+    p.revert_prior()
+
+    s.close()
+    B.backend_to_np()

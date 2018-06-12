@@ -2,7 +2,7 @@
 
 from __future__ import absolute_import, division, print_function
 
-from stheno.lazy import Rule, LazySymmetricMatrix, LazyVector
+from stheno.lazy import Rule, LazyMatrix, LazyVector
 # noinspection PyUnresolvedReferences
 from . import eq, neq, lt, le, ge, gt, raises, call, ok, eprint
 
@@ -14,7 +14,7 @@ def test_exceptions():
 
 def test_indexing():
     v = LazyVector()
-    m = LazySymmetricMatrix()
+    m = LazyMatrix()
 
     v[1] = 1
     yield eq, v[1], 1
@@ -24,11 +24,6 @@ def test_indexing():
     m[2, 2] = 2
     yield eq, m[1, 1], 1
     yield eq, m[2], 2
-
-    # Test symmetry.
-    m[1, 2] = (1, 2)
-    yield eq, m[1, 2], (1, 2)
-    yield eq, tuple(m[2, 1]), (2, 1)
 
     # Test resolving of indices.
     class A(object):
@@ -40,7 +35,7 @@ def test_indexing():
     m[a2] = 2
 
     yield eq, m[a1, a1], 1
-    yield eq, tuple(m[a2, a1]), (2, 1)
+    yield eq, m[a1, a2], (1, 2)
     yield eq, m[a2, a2], 2
 
 
@@ -52,7 +47,7 @@ def test_building():
         def __reversed__(self):
             return ReversibleNumber(self.x)
 
-    m = LazySymmetricMatrix()
+    m = LazyMatrix()
 
     # Test universal building.
     m.add_rule((None, None), range(3), lambda x, y: ReversibleNumber(x * y))
@@ -70,6 +65,7 @@ def test_building():
 
     # Test building along first dimension.
     m.add_rule((3, None), range(4), lambda y: ReversibleNumber(3 + y))
+    m.add_rule((None, 3), range(4), lambda y: ReversibleNumber(3 + y))
 
     for i in range(3):
         for j in range(3):
@@ -89,6 +85,7 @@ def test_building():
 
     # Test building along second dimension.
     m.add_rule((None, 4), range(5), lambda x: ReversibleNumber(x ** 2 + 4 ** 2))
+    m.add_rule((4, None), range(5), lambda x: ReversibleNumber(x ** 2 + 4 ** 2))
 
     for i in range(3):
         for j in range(3):
@@ -112,10 +109,13 @@ def test_building():
     yield raises, RuntimeError, lambda: m[6, 6]
 
     # Now try all rules at once and mix up access order.
-    m2 = LazySymmetricMatrix()
+    m2 = LazyMatrix()
     m2.add_rule((None, None), range(3), lambda x, y: ReversibleNumber(x * y))
     m2.add_rule((3, None), range(4), lambda y: ReversibleNumber(3 + y))
+    m2.add_rule((None, 3), range(4), lambda y: ReversibleNumber(3 + y))
     m2.add_rule((None, 4), range(5),
+                lambda x: ReversibleNumber(x ** 2 + 4 ** 2))
+    m2.add_rule((4, None), range(5),
                 lambda x: ReversibleNumber(x ** 2 + 4 ** 2))
 
     for i in range(4):

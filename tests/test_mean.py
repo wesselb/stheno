@@ -5,6 +5,7 @@ from __future__ import absolute_import, division, print_function
 from numbers import Number
 
 import numpy as np
+from lab import B
 from numpy.testing import assert_allclose
 from plum import Dispatcher
 
@@ -80,6 +81,21 @@ def test_function_mean():
     yield eq, str(FunctionMean(my_function)), 'my_function'
 
 
+def test_derivative():
+    B.backend_to_tf()
+    s = B.Session()
+
+    m = FunctionMean(lambda x: x ** 2)
+    m2 = FunctionMean(lambda x: x ** 3)
+    x = B.array(np.random.randn(10, 1))
+
+    yield assert_allclose, s.run(m.diff(0)(x)), s.run(2 * x)
+    yield assert_allclose, s.run(m2.diff(0)(x)), s.run(3 * x ** 2)
+
+    s.close()
+    B.backend_to_np()
+
+
 def test_selected_mean():
     m = 5 * OneMean() + (lambda x: x ** 2)
     x = np.random.randn(10, 3)
@@ -105,4 +121,4 @@ def test_input_transform():
     m = 5 * OneMean() + (lambda x: x ** 2)
     x = np.random.randn(10, 3)
 
-    yield assert_allclose, m.transform(lambda x: x - 5)(x), m(x - 5)
+    yield assert_allclose, m.transform(lambda x, c: x - 5)(x), m(x - 5)
