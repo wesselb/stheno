@@ -3,6 +3,7 @@
 from __future__ import absolute_import, division, print_function
 
 from time import time
+from numbers import Number
 import logging
 
 from lab import B
@@ -28,14 +29,19 @@ class Cache(Referentiable):
         self._dump = []
         self.depth = 0
 
-    def dump(self, *args):
-        self._dump.append(args)
+    def dump(self, *objs):
+        """A dump for objects to prevent the GC from cleaning them up.
+
+        Args:
+            \*objs (object): Objects to dump.
+        """
+        self._dump.append(objs)
 
     @dispatch(object)
     def _resolve(self, key):
         return id(key)
 
-    @dispatch({int, str, bool})
+    @dispatch({Number, str, bool})
     def _resolve(self, key):
         return key
 
@@ -52,10 +58,13 @@ class Cache(Referentiable):
         self._cache_call[self._resolve(key)] = output
 
     def __getattr__(self, f):
-        # TODO: Do this better!
-        if not callable(getattr(B, f)):
-            return getattr(B, f)
+        attr = getattr(B, f)
 
+        # Simply return if `attr` is not callable.
+        if not callable(attr):
+            return attr
+
+        # Otherwise, return a wrapper.
         def call_cached(*args, **kw_args):
             # Let the key depend on the function name...
             key = (f,)
@@ -73,7 +82,7 @@ class Cache(Referentiable):
             try:
                 out = self._cache_lab[key]
                 log_cache_lab.debug('%4.0f ms: Hit for "%s" with key "%s".',
-                                    self.dur(), f, key)
+                                    self.life_ms(), f, key)
                 return out
             except KeyError:
                 pass
@@ -84,7 +93,7 @@ class Cache(Referentiable):
             except KeyError:
                 pass
 
-            self._cache_lab[key] = getattr(B, f)(*args, **kw_args)
+            self._cache_lab[key] = attr(*args, **kw_args)
             # Dump `args` and `kw_args` somewhere to prevent GC from cleaning
             # them up!
             self.dump(args, kw_args)
@@ -92,7 +101,8 @@ class Cache(Referentiable):
 
         return call_cached
 
-    def dur(self):
+    def life_ms(self):
+        """Get the number of milliseconds since the creation of the cache."""
         return (time() - self._start) * 1e3
 
 
@@ -104,18 +114,24 @@ def cache(f):
         try:
             out = cache[self, inputs]
             log_cache_call.debug('%4.0f ms: Hit for "%s".',
-                                 cache.dur(), type(self).__name__)
+                                 cache.life_ms(), type(self).__name__)
             return out
         except KeyError:
             pass
 
+        # Log and increase depth.
         log_cache_call.debug('%4.0f ms: Miss for "%s": start; depth: %d.',
-                             cache.dur(), type(self).__name__, cache.depth)
+                             cache.life_ms(), type(self).__name__, cache.depth)
         cache.depth += 1
+
+        # Perform execution.
         cache[self, inputs] = f(self, *args)
-        cache.depth -= 1
+
+        # Log and decrease depth.
         log_cache_call.debug('%4.0f ms: Miss for "%s": end.',
-                             cache.dur(), type(self).__name__)
+                             cache.life_ms(), type(self).__name__)
+        cache.depth -= 1
+
         return cache[self, inputs]
 
     return __call__
