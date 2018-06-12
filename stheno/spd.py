@@ -4,6 +4,7 @@ from __future__ import print_function, division, absolute_import
 
 from lab import B
 from plum import Referentiable, Self, Dispatcher, Kind
+from .cache import Cache
 
 __all__ = ['SPD', 'Diagonal', 'UniformDiagonal']
 
@@ -89,8 +90,8 @@ class SPD(Referentiable):
         """
         return B.sum(B.trisolve(denom.cholesky(), self.cholesky()) ** 2)
 
-    @dispatch(object)
-    def quadratic_form(self, a):
+    @dispatch(object, [Cache])
+    def quadratic_form(self, a, B=B):
         """Compute the quadratic form `transpose(a) inv(self.mat) b`.
 
         Args:
@@ -100,13 +101,13 @@ class SPD(Referentiable):
         prod = B.trisolve(self.cholesky(), a)
         return B.dot(prod, prod, tr_a=True)
 
-    @dispatch(object, object)
-    def quadratic_form(self, a, b):
+    @dispatch(object, object, [Cache])
+    def quadratic_form(self, a, b, B=B):
         left = B.trisolve(self.cholesky(), a)
         right = B.trisolve(self.cholesky(), b)
         return B.dot(left, right, tr_a=True)
 
-    def inv_prod(self, a):
+    def inv_prod(self, a, B=B):
         """Compute the matrix-vector product `inv(self.mat) a`.
 
         Args:
