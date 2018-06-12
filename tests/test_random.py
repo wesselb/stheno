@@ -19,6 +19,7 @@ dispatch = Dispatcher()
 def test_corner_cases():
     yield raises, NotImplementedError, lambda: (Normal(np.eye(1)) +
                                                 GPPrimitive(EQ()))
+    yield eq, repr(GPPrimitive(EQ())), str(GPPrimitive(EQ()))
 
 def test_normal():
     mean = np.random.randn(3, 1)
