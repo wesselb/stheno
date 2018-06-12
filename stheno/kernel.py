@@ -12,11 +12,13 @@ from plum import Dispatcher, Self, Referentiable
 from .cache import cache, Cache
 from .field import add, mul, dispatch, Type, PrimitiveType, \
     ZeroType, OneType, ScaledType, ProductType, SumType, StretchedType, \
-    WrappedType, ShiftedType, SelectedType, InputTransformedType
+    WrappedType, ShiftedType, SelectedType, InputTransformedType, JoinType, \
+    DerivativeType
 from .input import Input
 
 __all__ = ['Kernel', 'OneKernel', 'ZeroKernel', 'ScaledKernel', 'EQ', 'RQ',
-           'Matern12', 'Exp', 'Matern32', 'Matern52', 'Delta', 'Linear']
+           'Matern12', 'Exp', 'Matern32', 'Matern52', 'Delta', 'Linear',
+           'DerivativeKernel']
 
 log = logging.getLogger(__name__)
 
@@ -87,9 +89,9 @@ class Kernel(Type, Referentiable):
     @property
     def stationary(self):
         """Stationarity of the kernel"""
-        if hasattr(self, '_stationary_cache'):
+        try:
             return self._stationary_cache
-        else:
+        except AttributeError:
             self._stationary_cache = self._stationary
             return self._stationary_cache
 
@@ -131,8 +133,8 @@ class OneKernel(Kernel, OneType, Referentiable):
 
     @dispatch(B.Numeric, B.Numeric, Cache)
     @cache
-    def __call__(self, x, y, cache):
-        return cache.ones((B.shape(x)[0], B.shape(y)[0]), dtype=B.dtype(x))
+    def __call__(self, x, y, B):
+        return B.ones((B.shape(x)[0], B.shape(y)[0]), dtype=B.dtype(x))
 
     @property
     def length_scale(self):
@@ -146,13 +148,13 @@ class ZeroKernel(Kernel, ZeroType, Referentiable):
 
     @dispatch(Number, Number, Cache)
     @cache
-    def __call__(self, x, y, cache):
-        return cache.zeros((1, 1), dtype=B.dtype(x))
+    def __call__(self, x, y, B):
+        return B.zeros((1, 1), dtype=B.dtype(x))
 
     @dispatch(B.Numeric, B.Numeric, Cache)
     @cache
-    def __call__(self, x, y, cache):
-        return cache.zeros((B.shape(x)[0], B.shape(y)[0]), dtype=B.dtype(x))
+    def __call__(self, x, y, B):
+        return B.zeros((B.shape(x)[0], B.shape(y)[0]), dtype=B.dtype(x))
 
     @property
     def var(self):
@@ -170,8 +172,9 @@ class ScaledKernel(Kernel, ScaledType, Referentiable):
 
     @dispatch(object, object, Cache)
     @cache
-    def __call__(self, x, y, cache):
-        return self.scale * self[0](x, y, cache)
+    def __call__(self, x, y, B):
+        return B.multiply(B.cast(self.scale, dtype=B.dtype(x)),
+                          self[0](x, y, B))
 
     @property
     def _stationary(self):
@@ -197,8 +200,8 @@ class SumKernel(Kernel, SumType, Referentiable):
 
     @dispatch(object, object, Cache)
     @cache
-    def __call__(self, x, y, cache):
-        return self[0](x, y, cache) + self[1](x, y, cache)
+    def __call__(self, x, y, B):
+        return B.add(self[0](x, y, B), self[1](x, y, B))
 
     @property
     def _stationary(self):
@@ -221,8 +224,8 @@ class ProductKernel(Kernel, ProductType, Referentiable):
 
     @dispatch(object, object, Cache)
     @cache
-    def __call__(self, x, y, cache):
-        return self[0](x, y, cache) * self[1](x, y, cache)
+    def __call__(self, x, y, B):
+        return B.multiply(self[0](x, y, B), self[1](x, y, B))
 
     @property
     def _stationary(self):
@@ -244,8 +247,9 @@ class StretchedKernel(Kernel, StretchedType, Referentiable):
 
     @dispatch(B.Numeric, B.Numeric, Cache)
     @cache
-    def __call__(self, x, y, cache):
-        return self[0](x / self.extent, y / self.extent, cache)
+    def __call__(self, x, y, B):
+        return self[0](B.divide(x, self.extent),
+                       B.divide(y, self.extent), B)
 
     @property
     def _stationary(self):
@@ -257,11 +261,11 @@ class StretchedKernel(Kernel, StretchedType, Referentiable):
 
     @property
     def length_scale(self):
-        return B.array(self[0].length_scale) * self.extent
+        return self[0].length_scale * self.extent
 
     @property
     def period(self):
-        return B.array(self[0].period) * self.extent
+        return self[0].period * self.extent
 
 
 class ShiftedKernel(Kernel, ShiftedType, Referentiable):
@@ -271,8 +275,9 @@ class ShiftedKernel(Kernel, ShiftedType, Referentiable):
 
     @dispatch(B.Numeric, B.Numeric, Cache)
     @cache
-    def __call__(self, x, y, cache):
-        return self[0](x - self.amount, y - self.amount, cache)
+    def __call__(self, x, y, B):
+        return self[0](B.subtract(x, self.amount),
+                       B.subtract(y, self.amount), B)
 
     @property
     def _stationary(self):
@@ -298,9 +303,9 @@ class SelectedKernel(Kernel, SelectedType, Referentiable):
 
     @dispatch(B.Numeric, B.Numeric, Cache)
     @cache
-    def __call__(self, x, y, cache):
+    def __call__(self, x, y, B):
         return self[0](B.take(x, self.dims, axis=1),
-                       B.take(y, self.dims, axis=1), cache)
+                       B.take(y, self.dims, axis=1), B)
 
     @property
     def _stationary(self):
@@ -334,11 +339,11 @@ class InputTransformedKernel(Kernel, InputTransformedType, Referentiable):
 
     @dispatch(B.Numeric, B.Numeric, Cache)
     @cache
-    def __call__(self, x, y, cache):
+    def __call__(self, x, y, B):
         # If only a single transform is given, use the same for both inputs.
-        x = self.fs[0](x)
-        y = self.fs[0](y) if len(self.fs) == 1 else self.fs[1](y)
-        return self[0](x, y, cache)
+        x = self.fs[0](x, B)
+        y = self.fs[0](y, B) if len(self.fs) == 1 else self.fs[1](y, B)
+        return self[0](x, y, B)
 
     @property
     def _stationary(self):
@@ -369,21 +374,21 @@ class PeriodicKernel(Kernel, WrappedType, Referentiable):
 
     @dispatch(Number, Number, Cache)
     @cache
-    def __call__(self, x, y, cache):
+    def __call__(self, x, y, B):
         def feat_map(z):
             z = z * 2 * B.pi / self.period
             return B.array([[B.sin(z), B.cos(z)]])
 
-        return self[0](feat_map(x), feat_map(y), cache)
+        return self[0](feat_map(x), feat_map(y), B)
 
     @dispatch(B.Numeric, B.Numeric, Cache)
     @cache
-    def __call__(self, x, y, cache):
+    def __call__(self, x, y, B):
         def feat_map(z):
             z = z * 2 * B.pi / self.period
             return B.concat((B.sin(z), B.cos(z)), axis=1)
 
-        return self[0](feat_map(x), feat_map(y), cache)
+        return self[0](feat_map(x), feat_map(y), B)
 
     @property
     def _stationary(self):
@@ -412,8 +417,9 @@ class EQ(Kernel, PrimitiveType, Referentiable):
 
     @dispatch(B.Numeric, B.Numeric, Cache)
     @cache
-    def __call__(self, x, y, cache):
-        return B.exp(-.5 * cache.pw_dists2(x, y))
+    def __call__(self, x, y, B):
+        return B.exp(B.multiply(B.cast(-.5, dtype=B.dtype(x)),
+                                B.pw_dists2(x, y)))
 
     def __str__(self):
         return 'EQ()'
@@ -434,8 +440,8 @@ class RQ(Kernel, Referentiable):
 
     @dispatch(B.Numeric, B.Numeric, Cache)
     @cache
-    def __call__(self, x, y, cache):
-        return (1 + .5 * cache.pw_dists2(x, y) / self.alpha) ** (-self.alpha)
+    def __call__(self, x, y, B):
+        return (1 + .5 * B.pw_dists2(x, y) / self.alpha) ** (-self.alpha)
 
     def __str__(self):
         return 'RQ({})'.format(self.alpha)
@@ -448,8 +454,8 @@ class Exp(Kernel, PrimitiveType, Referentiable):
 
     @dispatch(B.Numeric, B.Numeric, Cache)
     @cache
-    def __call__(self, x, y, cache):
-        return B.exp(-cache.pw_dists(x, y))
+    def __call__(self, x, y, B):
+        return B.exp(-B.pw_dists(x, y))
 
     def __str__(self):
         return 'Exp()'
@@ -465,8 +471,8 @@ class Matern32(Kernel, PrimitiveType, Referentiable):
 
     @dispatch(B.Numeric, B.Numeric, Cache)
     @cache
-    def __call__(self, x, y, cache):
-        r = 3 ** .5 * cache.pw_dists(x, y)
+    def __call__(self, x, y, B):
+        r = 3 ** .5 * B.pw_dists(x, y)
         return (1 + r) * B.exp(-r)
 
     def __str__(self):
@@ -480,9 +486,9 @@ class Matern52(Kernel, PrimitiveType, Referentiable):
 
     @dispatch(B.Numeric, B.Numeric, Cache)
     @cache
-    def __call__(self, x, y, cache):
-        r1 = 5 ** .5 * cache.pw_dists(x, y)
-        r2 = 5 * cache.pw_dists2(x, y) / 3
+    def __call__(self, x, y, B):
+        r1 = 5 ** .5 * B.pw_dists(x, y)
+        r2 = 5 * B.pw_dists2(x, y) / 3
         return (1 + r1 + r2) * B.exp(-r1)
 
     def __str__(self):
@@ -503,8 +509,8 @@ class Delta(Kernel, PrimitiveType, Referentiable):
 
     @dispatch(B.Numeric, B.Numeric, Cache)
     @cache
-    def __call__(self, x, y, cache):
-        dists2 = cache.pw_dists2(x, y)
+    def __call__(self, x, y, B):
+        dists2 = B.pw_dists2(x, y)
         return B.cast(dists2 < self.epsilon, B.dtype(x))
 
     @property
@@ -522,8 +528,8 @@ class Linear(Kernel, PrimitiveType, Referentiable):
 
     @dispatch(B.Numeric, B.Numeric, Cache)
     @cache
-    def __call__(self, x, y, cache):
-        return cache.matmul(x, y, tr_b=True)
+    def __call__(self, x, y, B):
+        return B.matmul(x, y, tr_b=True)
 
     @property
     def _stationary(self):
@@ -566,10 +572,10 @@ class PosteriorCrossKernel(Kernel, Referentiable):
 
     @dispatch(object, object, Cache)
     @cache
-    def __call__(self, x, y, cache):
-        return (self.k_ij(x, y, cache) -
-                self.Kz.quadratic_form(self.k_zi(self.z, x, cache),
-                                       self.k_zj(self.z, y, cache)))
+    def __call__(self, x, y, B):
+        qf = self.Kz.quadratic_form(self.k_zi(self.z, x, B),
+                                    self.k_zj(self.z, y, B), B)
+        return B.subtract(self.k_ij(x, y, B), qf)
 
     @property
     def _stationary(self):
@@ -607,14 +613,79 @@ class PosteriorKernel(PosteriorCrossKernel, Referentiable):
         return 'PosteriorKernel()'
 
 
+class DerivativeKernel(Kernel, DerivativeType, Referentiable):
+    """Derivative of kernel."""
+    dispatch = Dispatcher(in_class=Self)
+
+    @dispatch(object, object, Cache)
+    @cache
+    def __call__(self, x, y, B):
+        i, j = self.derivs * 2 if len(self.derivs) == 1 else self.derivs
+        k = self[0]
+
+        # Derivative with respect to both `x` and `y`.
+        if i is not None and j is not None:
+            z = B.concat([x[:, i], y[:, j]], axis=0)
+            n = B.shape(x)[0]
+            K = k(B.concat([x[:, :i], z[:n, None], x[:, i + 1:]], axis=1),
+                  B.concat([y[:, :j], z[n:, None], y[:, j + 1:]], axis=1)),
+            return B.hessians(K, [z])[0][:n, n:]
+
+        # Derivative with respect to `x`.
+        elif j is None:
+            xi = x[:, i:i + 1]
+            # Give every `B.identity` a unique cache ID to prevent caching.
+            xis = [B.identity(xi, cache_id=n) for n in range(B.shape_int(y)[0])]
+
+            def f(z):
+                return k(B.concat([x[:, :i], z[0], x[:, i + 1:]], axis=1), z[1])
+
+            res = B.map_fn(f, (B.stack(xis, axis=0), y[:, None, :]),
+                           dtype=B.dtype(x))
+            return B.concat(B.gradients(B.sum(res, axis=0), xis), axis=1)
+
+        # Derivative with respect to `y`.
+        elif i is None:
+            yj = y[:, j:j + 1]
+            # Give every `B.identity` a unique cache ID to prevent caching.
+            yjs = [B.identity(yj, cache_id=n) for n in range(B.shape_int(x)[0])]
+
+            def f(z):
+                return k(z[0], B.concat([y[:, :j], z[1], y[:, j + 1:]], axis=1))
+
+            res = B.map_fn(f, (x[:, None, :], B.stack(yjs, axis=0)),
+                           dtype=B.dtype(x))
+            dKt = B.concat(B.gradients(B.sum(res, axis=0), yjs), axis=1)
+            return B.transpose(dKt)
+
+        else:
+            raise RuntimeError('No derivative specified.')
+
+    @property
+    def _stationary(self):
+        return False
+
+    @property
+    def var(self):
+        return False
+
+    @property
+    def length_scale(self):
+        return False
+
+    @property
+    def period(self):
+        return False
+
+
 class ReversedKernel(Kernel, WrappedType, Referentiable):
     """Kernel that evaluates with its arguments reversed."""
     dispatch = Dispatcher(in_class=Self)
 
     @dispatch(object, object, Cache)
     @cache
-    def __call__(self, x, y, cache):
-        return B.transpose(self[0](y, x, cache))
+    def __call__(self, x, y, B):
+        return B.transpose(self[0](y, x, B))
 
     @property
     def _stationary(self):
@@ -636,7 +707,8 @@ class ReversedKernel(Kernel, WrappedType, Referentiable):
         return 'Reversed({})'.format(t)
 
 
-@dispatch(Type, ReversedKernel)
+@dispatch.multi((Type, ReversedKernel),
+                ({WrappedType, JoinType}, ReversedKernel))
 def need_parens(el, parent): return False
 
 
