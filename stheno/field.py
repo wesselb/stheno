@@ -2,7 +2,6 @@
 
 from __future__ import absolute_import, division, print_function
 
-from abc import abstractmethod, ABCMeta
 from plum import Dispatcher, Referentiable, Self
 from lab import B
 import operator
@@ -13,10 +12,22 @@ dispatch = Dispatcher()
 
 
 def squeeze(xs):
+    """Squeeze an sequence if it only contains a single element.
+
+    Args:
+        xs (sequence): Sequence to squeeze.
+    """
     return xs[0] if len(xs) == 1 else xs
 
 
 def broadcast(op, xs, ys):
+    """Perform a binary operation `op` on elements of `xs` and `ys`. Broadcasts.
+
+    Args:
+        op (function): Binary operation.
+        xs (sequence): First sequence.
+        ys (sequence): Second sequence.
+    """
     if len(xs) == 1 and len(ys) > 1:
         # Broadcast `xs`.
         xs = xs * len(ys)
@@ -26,8 +37,8 @@ def broadcast(op, xs, ys):
 
     # Check that `xs` and `ys` are compatible now.
     if len(xs) != len(ys):
-        ValueError('Inputs "{}" and "{}" could not be broadcasted.'
-                   ''.format(xs, ys))
+        raise ValueError('Inputs "{}" and "{}" could not be broadcasted.'
+                         ''.format(xs, ys))
     # Perform operation.
     return tuple(op(x, y) for x, y in zip(xs, ys))
 
@@ -158,7 +169,6 @@ class WrappedType(Type):
     Args:
         t (instance of :class:`.field.Type`): Element to wrap.
     """
-    __metaclass__ = ABCMeta
 
     def __init__(self, t):
         self.t = t
@@ -169,9 +179,8 @@ class WrappedType(Type):
         else:
             raise IndexError('Index out of range.')
 
-    @abstractmethod
     def display(self, t):
-        pass
+        raise NotImplementedError()
 
     def __str__(self):
         return pretty_print(self)
@@ -184,7 +193,6 @@ class JoinType(Type):
         t1 (instance of :class:`.field.Type`): First element to wrap.
         t2 (instance of :class:`.field.Type`): Second element to wrap.
     """
-    __metaclass__ = ABCMeta
 
     def __init__(self, t1, t2):
         self.t1 = t1
@@ -198,9 +206,8 @@ class JoinType(Type):
         else:
             raise IndexError('Index out of range.')
 
-    @abstractmethod
     def display(self, t1, t2):
-        pass
+        raise NotImplementedError()
 
     def __str__(self):
         return pretty_print(self)
@@ -644,7 +651,13 @@ def add(a, b): return add(b, a)
 
 
 @dispatch(ZeroType, object)
-def add(a, b): return new(a, ScaledType)(new(a, OneType)(), b)
+def add(a, b):
+    if b == 0:
+        return a
+    elif b == 1:
+        return new(a, OneType)()
+    else:
+        return new(a, ScaledType)(new(a, OneType)(), b)
 
 
 # Group factors and terms if possible.

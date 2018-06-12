@@ -2,8 +2,10 @@
 
 from __future__ import absolute_import, division, print_function
 
+import operator
+
 from stheno.field import mul, add, stretch, SumType, new, get_field, shift, \
-    transform, select
+    transform, select, broadcast, WrappedType, JoinType, differentiate, Type
 from stheno.kernel import EQ, RQ, Linear, OneKernel, ZeroKernel, Delta
 from stheno.mean import FunctionMean, ZeroMean, OneMean
 # noinspection PyUnresolvedReferences
@@ -12,17 +14,30 @@ from . import eq
 
 
 def test_corner_cases():
+    class MyField(Type):
+        pass
+
     yield raises, IndexError, lambda: EQ().stretch(1)[1]
     yield raises, IndexError, lambda: (EQ() + RQ(1))[2]
     yield raises, RuntimeError, lambda: mul(1, 1)
     yield raises, RuntimeError, lambda: add(1, 1)
     yield raises, RuntimeError, lambda: stretch(1, 1)
     yield raises, RuntimeError, lambda: transform(1, 1)
+    yield raises, RuntimeError, lambda: differentiate(1, 1)
     yield raises, RuntimeError, lambda: select(1, 1)
     yield raises, RuntimeError, lambda: shift(1, 1)
     yield raises, RuntimeError, lambda: get_field(1)
-    yield raises, RuntimeError, lambda: new(1, SumType)
+    yield raises, RuntimeError, lambda: new(MyField(), SumType)
     yield eq, repr(EQ()), str(EQ())
+    yield raises, NotImplementedError, lambda: WrappedType(1).display(1)
+    yield raises, NotImplementedError, lambda: JoinType(1, 2).display(1, 2)
+
+
+def test_broadcast():
+    yield eq, broadcast(operator.add, (1, 2, 3), (2, 3, 4)), (3, 5, 7)
+    yield eq, broadcast(operator.add, (1,), (2, 3, 4)), (3, 4, 5)
+    yield eq, broadcast(operator.add, (1, 2, 3), (2,)), (3, 4, 5)
+    yield raises, ValueError, lambda: broadcast(operator.add, (1, 2), (1, 2, 3))
 
 
 def test_cancellations_zero():
@@ -33,6 +48,14 @@ def test_cancellations_zero():
     yield eq, str(EQ() + 0), 'EQ()'
     yield eq, str(0 + OneMean()), '1'
     yield eq, str(OneMean() + 0), '1'
+
+    # Adding to zero:
+    yield eq, str(0 + ZeroKernel()), '0'
+    yield eq, str(ZeroKernel() + 0), '0'
+    yield eq, str(1 + ZeroKernel()), '1'
+    yield eq, str(ZeroKernel() + 1), '1'
+    yield eq, str(2 + ZeroKernel()), '2 * 1'
+    yield eq, str(ZeroKernel() + 2), '2 * 1'
 
     # Sums:
     yield eq, str(EQ() + EQ()), '2 * EQ()'
@@ -185,3 +208,14 @@ def test_input_transform():
 
     yield eq, str(ZeroKernel().transform(lambda x: x)), '0'
     yield eq, str(OneMean().transform(lambda x: x)), '1'
+
+
+def test_derivative():
+    yield eq, str(EQ().diff(0)), 'd(0) EQ()'
+    yield eq, str(EQ().diff(0, 1)), 'd(0, 1) EQ()'
+
+    yield eq, str(ZeroKernel().diff(0)), '0'
+    yield eq, str(OneKernel().diff(0)), '0'
+
+    yield eq, str(ZeroMean().diff(0)), '0'
+    yield eq, str(OneMean().diff(0)), '0'
