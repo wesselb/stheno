@@ -5,14 +5,37 @@ from __future__ import absolute_import, division, print_function
 from abc import abstractmethod, ABCMeta
 from plum import Dispatcher, Referentiable, Self
 from lab import B
+import operator
 
 __all__ = []
 
 dispatch = Dispatcher()
 
 
-class Type(object):
+def squeeze(xs):
+    return xs[0] if len(xs) == 1 else xs
+
+
+def broadcast(op, xs, ys):
+    if len(xs) == 1 and len(ys) > 1:
+        # Broadcast `xs`.
+        xs = xs * len(ys)
+    elif len(ys) == 1 and len(xs) > 1:
+        # Broadcast `ys.
+        ys = ys * len(xs)
+
+    # Check that `xs` and `ys` are compatible now.
+    if len(xs) != len(ys):
+        ValueError('Inputs "{}" and "{}" could not be broadcasted.'
+                   ''.format(xs, ys))
+    # Perform operation.
+    return tuple(op(x, y) for x, y in zip(xs, ys))
+
+
+class Type(Referentiable):
     """A field."""
+
+    dispatch = Dispatcher(in_class=Self)
 
     def __eq__(self, other):
         return equal(self, other)
@@ -29,35 +52,40 @@ class Type(object):
     def __radd__(self, other):
         return add(other, self)
 
-    def stretch(self, extent):
+    def stretch(self, *stretches):
         """Stretch the element.
 
         Args:
-            extent (tensor): Extent to stretch by.
+            \*stretches (tensor): Per input, extent to stretch by.
         """
-        return stretch(self, extent)
+        return stretch(self, *stretches)
 
-    def shift(self, amount):
+    def shift(self, *amounts):
         """Shift the inputs of an element by a certain amount.
 
         Args:
-            amount (tensor): Amount to shift by.
+            \*amounts (tensor): Per input, amount to shift by.
         """
-        return shift(self, amount)
+        return shift(self, *amounts)
 
+    @dispatch([{tuple, list}])
     def select(self, *dims):
-        """Select particular inputs dimensions of the input.
+        """Select particular dimensions of the input features.
 
         Args:
-            \*dims (int or tuple): Dimensions to select.
+            \*dims (int or tuple): Per input, dimensions to select.
         """
         return select(self, *dims)
+
+    @dispatch([object])
+    def select(self, *dims):
+        return select(self, dims)
 
     def transform(self, *fs):
         """Transform the inputs.
 
         Args:
-            \*fs (int or tuple): Transformations.
+            \*fs (int or tuple): Per input, transformation.
         """
         return transform(self, *fs)
 
@@ -65,7 +93,7 @@ class Type(object):
         """Differentiate.
 
         Args:
-            \*derivs (int): Per input the index of the feature which to take
+            \*derivs (int): Per input, the index of the feature which to take
                 the derivatives of. Set to `None` to not take a derivative.
         """
         return differentiate(self, *derivs)
@@ -209,15 +237,15 @@ class StretchedType(WrappedType):
 
     Args:
         t (instance of :class:`.field.Type`): Element to stretch.
-        extent (tensor): Extent of stretch.
+        \*stretches (tensor): Extent of stretches.
     """
 
-    def __init__(self, t, extent):
+    def __init__(self, t, *stretches):
         WrappedType.__init__(self, t)
-        self.extent = extent
+        self.stretches = stretches
 
     def display(self, t):
-        return '{} > {}'.format(t, self.extent)
+        return '{} > {}'.format(t, squeeze(self.stretches))
 
 
 class ShiftedType(WrappedType):
@@ -225,15 +253,15 @@ class ShiftedType(WrappedType):
 
     Args:
         t (instance of :class:`.field.Type`): Element to shift.
-        amount (tensor): Shift amount.
+        \*shifts (tensor): Shift amounts.
     """
 
-    def __init__(self, t, amount):
+    def __init__(self, t, *shifts):
         WrappedType.__init__(self, t)
-        self.amount = amount
+        self.shifts = shifts
 
     def display(self, t):
-        return '{} shift {}'.format(t, self.amount)
+        return '{} shift {}'.format(t, squeeze(self.shifts))
 
 
 class SelectedType(WrappedType):
@@ -249,8 +277,7 @@ class SelectedType(WrappedType):
         self.dims = dims
 
     def display(self, t):
-        dims = self.dims[0] if len(self.dims) == 1 else self.dims
-        return '{} : {}'.format(t, dims)
+        return '{} : {}'.format(t, squeeze(tuple(list(ds) for ds in self.dims)))
 
 
 class InputTransformedType(WrappedType):
@@ -258,7 +285,7 @@ class InputTransformedType(WrappedType):
 
     Args:
         t (instance of :class:`.field.Type`): Element to wrap.
-        \*fs (tensor): Transformations
+        \*fs (tensor): Transformations.
     """
 
     def __init__(self, t, *fs):
@@ -336,8 +363,9 @@ class SumType(JoinType):
 def mul(a, b):
     """Multiply two elements.
 
-    a (instance of :class:`.field.Type`): First element in product.
-    b (instance of :class:`.field.Type`): Second element in product.
+    Args:
+        a (instance of :class:`.field.Type`): First element in product.
+        b (instance of :class:`.field.Type`): Second element in product.
     """
     raise NotImplementedError('Multiplication not implemented for {} and {}.'
                               ''.format(type(a).__name__, type(b).__name__))
@@ -347,30 +375,33 @@ def mul(a, b):
 def add(a, b):
     """Sum two elements.
 
-    a (instance of :class:`.field.Type`): First element in summation.
-    b (instance of :class:`.field.Type`): Second element in summation.
+    Args:
+        a (instance of :class:`.field.Type`): First element in summation.
+        b (instance of :class:`.field.Type`): Second element in summation.
     """
     raise NotImplementedError('Addition not implemented for {} and {}.'
                               ''.format(type(a).__name__, type(b).__name__))
 
 
-@dispatch(object, object)
-def stretch(a, b):
+@dispatch(object, [object])
+def stretch(a, *stretches):
     """Stretch an element.
 
-    a (instance of :class:`.field.Type`): Element to stretch.
-    b (tensor): Extent of stretch.
+    Args:
+        a (instance of :class:`.field.Type`): Element to stretch.
+        \*stretches (tensor): Extent of stretches.
     """
     raise NotImplementedError('Stretching not implemented for {}.'
                               ''.format(type(a).__name__))
 
 
-@dispatch(object, object)
-def shift(a, b):
+@dispatch(object, [object])
+def shift(a, *shifts):
     """Shift an element.
 
-    a (instance of :class:`.field.Type`): Element to shift.
-    b (tensor): Shift amount.
+    Args:
+        a (instance of :class:`.field.Type`): Element to shift.
+        \*shifts (tensor): Shift amounts.
     """
     raise NotImplementedError('Shifting not implemented for {}.'
                               ''.format(type(a).__name__))
@@ -380,8 +411,9 @@ def shift(a, b):
 def select(a, *dims):
     """Select dimensions from the inputs.
 
-    a (instance of :class:`.field.Type`): Element to wrap.
-    \*dims (int): Dimensions to select.
+    Args:
+        a (instance of :class:`.field.Type`): Element to wrap.
+        \*dims (int): Dimensions to select.
     """
     raise NotImplementedError('Selection not implemented for {}.'
                               ''.format(type(a).__name__))
@@ -391,8 +423,9 @@ def select(a, *dims):
 def transform(a, *fs):
     """Transform inputs.
 
-    a (instance of :class:`.field.Type`): Element to wrap.
-    \*fs (int): Transformations.
+    Args:
+        a (instance of :class:`.field.Type`): Element to wrap.
+        \*fs (int): Transformations.
     """
     raise NotImplementedError('Input transforms not implemented for {}.'
                               ''.format(type(a).__name__))
@@ -402,9 +435,10 @@ def transform(a, *fs):
 def differentiate(a, *derivs):
     """Differentiate.
 
-    a (instance of :class:`.field.Type`): Element to differentiate.
-    \*derivs (int): Per input the index of the feature which to take
-        the derivatives of. Set to `None` to not take a derivative.
+    Args:
+        a (instance of :class:`.field.Type`): Element to differentiate.
+        \*derivs (int): Per input the index of the feature which to take
+            the derivatives of. Set to `None` to not take a derivative.
     """
     raise NotImplementedError('Differentiation not implemented for {}.'
                               ''.format(type(a).__name__))
@@ -663,30 +697,32 @@ def add(a, b):
 
 # Stretch:
 
-@dispatch(Type, object)
-def stretch(a, b): return new(a, StretchedType)(a, b)
+@dispatch(Type, [object])
+def stretch(a, *stretches): return new(a, StretchedType)(a, *stretches)
 
 
-@dispatch({ZeroType, OneType}, object)
-def stretch(a, b): return a
+@dispatch({ZeroType, OneType}, [object])
+def stretch(a, *stretches): return a
 
 
-@dispatch(StretchedType, object)
-def stretch(a, b): return stretch(a[0], a.extent * b)
+@dispatch(StretchedType, [object])
+def stretch(a, *stretches):
+    return stretch(a[0], *broadcast(operator.mul, a.stretches, stretches))
 
 
 # Shifting:
 
-@dispatch(Type, object)
-def shift(a, b): return new(a, ShiftedType)(a, b)
+@dispatch(Type, [object])
+def shift(a, *shifts): return new(a, ShiftedType)(a, *shifts)
 
 
-@dispatch({ZeroType, OneType}, object)
-def shift(a, b): return a
+@dispatch({ZeroType, OneType}, [object])
+def shift(a, *shifts): return a
 
 
-@dispatch(ShiftedType, object)
-def shift(a, b): return shift(a[0], a.amount + b)
+@dispatch(ShiftedType, [object])
+def shift(a, *shifts):
+    return shift(a[0], *broadcast(operator.add, a.shifts, shifts))
 
 
 # Selection:

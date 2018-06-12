@@ -171,8 +171,8 @@ def test_shifting():
 
 
 def test_selection():
-    yield eq, str(EQ().select(0)), 'EQ() : 0'
-    yield eq, str(EQ().select(0, 2)), 'EQ() : (0, 2)'
+    yield eq, str(EQ().select(0)), 'EQ() : [0]'
+    yield eq, str(EQ().select(0, 2)), 'EQ() : [0, 2]'
 
     yield eq, str(ZeroKernel().select(0)), '0'
     yield eq, str(OneMean().select(0)), '1'

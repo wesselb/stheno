@@ -118,62 +118,62 @@ class Graph(Referentiable):
         self._add_p(p_prod)
         return p_prod
 
-    def shift(self, p, amount):
+    def shift(self, p, shift):
         """Shift a GP.
 
         Args:
             p (instance of :class:`.graph.GP`): GP to shift.
-            amount (object): Amount to shift by.
+            shift (object): Amount to shift by.
 
         Returns:
             The shifted GP.
         """
         p_shifted = GP(self)
         # Update means.
-        self.means[p_shifted] = self.means[p].shift(amount)
+        self.means[p_shifted] = self.means[p].shift(shift)
         # Add rule to kernels.
         kernels = self.kernels
         self.kernels.add_rule((p_shifted, p_shifted), self.pids,
-                              lambda: kernels[p].shift(amount))
+                              lambda: kernels[p].shift(shift))
         self.kernels.add_rule((p_shifted, None), self.pids,
                               lambda pi: kernels[p, pi].transform(
-                                  lambda x, B: B.subtract(x, amount),
+                                  lambda x, B: B.subtract(x, shift),
                                   lambda x, B: x
                               ))
         self.kernels.add_rule((None, p_shifted), self.pids,
                               lambda pi: kernels[pi, p].transform(
                                   lambda x, B: x,
-                                  lambda x, B: B.subtract(x, amount)
+                                  lambda x, B: B.subtract(x, shift)
                               ))
         self._add_p(p_shifted)
         return p_shifted
 
-    def stretch(self, p, extent):
+    def stretch(self, p, stretch):
         """Stretch a GP.
 
         Args:
             p (instance of :class:`.graph.GP`): GP to stretch.
-            extent (object): Extent of stretch.
+            stretch (object): Extent of stretch.
 
         Returns:
             The stretched GP.
         """
         p_stretched = GP(self)
         # Update means.
-        self.means[p_stretched] = self.means[p].stretch(extent)
+        self.means[p_stretched] = self.means[p].stretch(stretch)
         # Add rule to kernels.
         kernels = self.kernels
         self.kernels.add_rule((p_stretched, p_stretched), self.pids,
-                              lambda: kernels[p].stretch(extent))
+                              lambda: kernels[p].stretch(stretch))
         self.kernels.add_rule((p_stretched, None), self.pids,
                               lambda pi: kernels[p, pi].transform(
-                                  lambda x, B: B.divide(x, extent),
+                                  lambda x, B: B.divide(x, stretch),
                                   lambda x, B: x
                               ))
         self.kernels.add_rule((None, p_stretched), self.pids,
                               lambda pi: kernels[pi, p].transform(
                                   lambda x, B: x,
-                                  lambda x, B: B.divide(x, extent)
+                                  lambda x, B: B.divide(x, stretch)
                               ))
         self._add_p(p_stretched)
         return p_stretched
@@ -191,11 +191,11 @@ class Graph(Referentiable):
         """
         p_select = GP(self)
         # Update means.
-        self.means[p_select] = self.means[p].select(*dims)
+        self.means[p_select] = self.means[p].select(dims)
         # Add rule to kernels.
         kernels = self.kernels
         self.kernels.add_rule((p_select, p_select), self.pids,
-                              lambda: kernels[p].select(*dims))
+                              lambda: kernels[p].select(dims))
         self.kernels.add_rule((p_select, None), self.pids,
                               lambda pi: kernels[p, pi].transform(
                                   lambda x, B: B.take(x, dims, axis=1),
@@ -228,13 +228,11 @@ class Graph(Referentiable):
                               lambda: kernels[p].transform(f))
         self.kernels.add_rule((p_transformed, None), self.pids,
                               lambda pi: kernels[p, pi].transform(
-                                  f,
-                                  lambda x, B: x
+                                  f, (lambda x, B: x)
                               ))
         self.kernels.add_rule((None, p_transformed), self.pids,
                               lambda pi: kernels[pi, p].transform(
-                                  lambda x, B: x,
-                                  f,
+                                  (lambda x, B: x), f
                               ))
         self._add_p(p_transformed)
         return p_transformed
@@ -497,11 +495,11 @@ class GP(GPPrimitive, Referentiable):
         """
         self.graph.revert_prior()
 
-    def shift(self, amount):
-        return self.graph.shift(self, amount)
+    def shift(self, shift):
+        return self.graph.shift(self, shift)
 
-    def stretch(self, extent):
-        return self.graph.stretch(self, extent)
+    def stretch(self, stretch):
+        return self.graph.stretch(self, stretch)
 
     def transform(self, f):
         return self.graph.transform(self, f)

@@ -266,8 +266,8 @@ def test_gp_select():
     m = FunctionMean(lambda x: x ** 2)
     gp = GPPrimitive(EQ(), m)
 
-    yield eq, str(gp.select(1)), 'GP(EQ() : 1, <lambda> : 1)'
-    yield eq, str(gp.select(1, 2)), 'GP(EQ() : (1, 2), <lambda> : (1, 2))'
+    yield eq, str(gp.select(1)), 'GP(EQ() : [1], <lambda> : [1])'
+    yield eq, str(gp.select(1, 2)), 'GP(EQ() : [1, 2], <lambda> : [1, 2])'
 
 
 def test_gp_shifting():

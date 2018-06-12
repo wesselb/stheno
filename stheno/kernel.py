@@ -3,6 +3,7 @@
 from __future__ import absolute_import, division, print_function
 
 import logging
+import operator
 from numbers import Number
 
 import numpy as np
@@ -13,7 +14,7 @@ from .cache import cache, Cache
 from .field import add, mul, dispatch, Type, PrimitiveType, \
     ZeroType, OneType, ScaledType, ProductType, SumType, StretchedType, \
     WrappedType, ShiftedType, SelectedType, InputTransformedType, JoinType, \
-    DerivativeType
+    DerivativeType, broadcast
 from .input import Input
 
 __all__ = ['Kernel', 'OneKernel', 'ZeroKernel', 'ScaledKernel', 'EQ', 'RQ',
@@ -21,6 +22,10 @@ __all__ = ['Kernel', 'OneKernel', 'ZeroKernel', 'ScaledKernel', 'EQ', 'RQ',
            'DerivativeKernel']
 
 log = logging.getLogger(__name__)
+
+
+def expand(xs):
+    return xs * 2 if len(xs) == 1 else xs
 
 
 class Kernel(Type, Referentiable):
@@ -248,8 +253,8 @@ class StretchedKernel(Kernel, StretchedType, Referentiable):
     @dispatch(B.Numeric, B.Numeric, Cache)
     @cache
     def __call__(self, x, y, B):
-        return self[0](B.divide(x, self.extent),
-                       B.divide(y, self.extent), B)
+        stretches = expand(self.stretches)
+        return self[0](B.divide(x, stretches[0]), B.divide(y, stretches[1]), B)
 
     @property
     def _stationary(self):
@@ -261,11 +266,17 @@ class StretchedKernel(Kernel, StretchedType, Referentiable):
 
     @property
     def length_scale(self):
-        return self[0].length_scale * self.extent
+        if len(self.stretches) == 1:
+            return self[0].length_scale * self.stretches[0]
+        else:
+            return np.nan
 
     @property
     def period(self):
-        return self[0].period * self.extent
+        if len(self.stretches) == 1:
+            return self[0].period * self.stretches[0]
+        else:
+            return np.nan
 
 
 class ShiftedKernel(Kernel, ShiftedType, Referentiable):
@@ -276,8 +287,8 @@ class ShiftedKernel(Kernel, ShiftedType, Referentiable):
     @dispatch(B.Numeric, B.Numeric, Cache)
     @cache
     def __call__(self, x, y, B):
-        return self[0](B.subtract(x, self.amount),
-                       B.subtract(y, self.amount), B)
+        shifts = expand(self.shifts)
+        return self[0](B.subtract(x, shifts[0]), B.subtract(y, shifts[1]), B)
 
     @property
     def _stationary(self):
@@ -304,8 +315,9 @@ class SelectedKernel(Kernel, SelectedType, Referentiable):
     @dispatch(B.Numeric, B.Numeric, Cache)
     @cache
     def __call__(self, x, y, B):
-        return self[0](B.take(x, self.dims, axis=1),
-                       B.take(y, self.dims, axis=1), B)
+        dims = expand(self.dims)
+        return self[0](B.take(x, dims[0], axis=1),
+                       B.take(y, dims[1], axis=1), B)
 
     @property
     def _stationary(self):
@@ -321,7 +333,10 @@ class SelectedKernel(Kernel, SelectedType, Referentiable):
         if B.is_scalar(length_scale):
             return length_scale
         else:
-            return B.take(length_scale, self.dims)
+            if len(self.dims) == 1:
+                return B.take(length_scale, self.dims[0])
+            else:
+                return np.nan
 
     @property
     def period(self):
@@ -329,7 +344,10 @@ class SelectedKernel(Kernel, SelectedType, Referentiable):
         if B.is_scalar(period):
             return period
         else:
-            return B.take(period, self.dims)
+            if len(self.dims) == 1:
+                return B.take(period, self.dims[0])
+            else:
+                return np.nan
 
 
 class InputTransformedKernel(Kernel, InputTransformedType, Referentiable):
@@ -340,10 +358,8 @@ class InputTransformedKernel(Kernel, InputTransformedType, Referentiable):
     @dispatch(B.Numeric, B.Numeric, Cache)
     @cache
     def __call__(self, x, y, B):
-        # If only a single transform is given, use the same for both inputs.
-        x = self.fs[0](x, B)
-        y = self.fs[0](y, B) if len(self.fs) == 1 else self.fs[1](y, B)
-        return self[0](x, y, B)
+        fs = expand(self.fs)
+        return self[0](fs[0](x, B), fs[1](y, B), B)
 
     @property
     def _stationary(self):
@@ -619,7 +635,7 @@ class DerivativeKernel(Kernel, DerivativeType, Referentiable):
     @dispatch(object, object, Cache)
     @cache
     def __call__(self, x, y, B):
-        i, j = self.derivs * 2 if len(self.derivs) == 1 else self.derivs
+        i, j = expand(self.derivs)
         k = self[0]
 
         # Derivative with respect to both `x` and `y`.
@@ -730,11 +746,7 @@ def periodicise(a, b): return a
 # Reverse kernels.
 
 @dispatch(Kernel)
-def reverse(a):
-    if a.stationary:
-        return a
-    else:
-        return ReversedKernel(a)
+def reverse(a): return a if a.stationary else ReversedKernel(a)
 
 
 @dispatch(ReversedKernel)
@@ -761,17 +773,14 @@ def reverse(a): return a.scale * reverse(a[0])
 
 # Shifting:
 
-@dispatch(Kernel, object)
-def shift(a, b):
-    if a.stationary:
-        return a
-    else:
-        return ShiftedKernel(a, b)
+@dispatch(Kernel, [object])
+def shift(a, *shifts): return a if a.stationary else ShiftedKernel(a, *shifts)
 
 
-@dispatch(ZeroKernel, object)
-def shift(a, b): return a
+@dispatch(ZeroKernel, [object])
+def shift(a, *shifts): return a
 
 
-@dispatch(ShiftedKernel, object)
-def shift(a, b): return shift(a[0], a.amount + b)
+@dispatch(ShiftedKernel, [object])
+def shift(a, *shifts):
+    return shift(a[0], *broadcast(operator.add, a.shifts, shifts))

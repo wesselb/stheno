@@ -350,17 +350,17 @@ class GPPrimitive(RandomProcess, Referentiable):
     def __str__(self):
         return 'GP({}, {})'.format(self.kernel, self.mean)
 
-    def stretch(self, extent):
-        return GPPrimitive(self.kernel.stretch(extent),
-                           self.mean.stretch(extent))
+    def stretch(self, stretch):
+        return GPPrimitive(self.kernel.stretch(stretch),
+                           self.mean.stretch(stretch))
 
-    def shift(self, amount):
-        return GPPrimitive(self.kernel.shift(amount),
-                           self.mean.shift(amount))
+    def shift(self, shift):
+        return GPPrimitive(self.kernel.shift(shift),
+                           self.mean.shift(shift))
 
     def select(self, *dims):
-        return GPPrimitive(self.kernel.select(*dims),
-                           self.mean.select(*dims))
+        return GPPrimitive(self.kernel.select(dims),
+                           self.mean.select(dims))
 
     def transform(self, f):
         return GPPrimitive(self.kernel.transform(f),
