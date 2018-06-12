@@ -38,6 +38,10 @@ def test_broadcast():
     yield eq, broadcast(operator.add, (1,), (2, 3, 4)), (3, 4, 5)
     yield eq, broadcast(operator.add, (1, 2, 3), (2,)), (3, 4, 5)
     yield raises, ValueError, lambda: broadcast(operator.add, (1, 2), (1, 2, 3))
+    yield eq, str(EQ().stretch(2).stretch(1, 3)), 'EQ() > (2, 6)'
+    yield eq, str(EQ().stretch(1, 3).stretch(2)), 'EQ() > (2, 6)'
+    yield eq, str(Linear().shift(2).shift(1, 3)), 'Linear() shift (3, 5)'
+    yield eq, str(Linear().shift(1, 3).shift(2)), 'Linear() shift (3, 5)'
 
 
 def test_cancellations_zero():
