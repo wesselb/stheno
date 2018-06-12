@@ -10,7 +10,8 @@ from .kernel import ZeroKernel, PosteriorCrossKernel, Kernel
 from .mean import PosteriorCrossMean, ZeroMean, Mean
 from .random import GPPrimitive, Random
 from .spd import SPD
-from .lazy import LazyVector, LazySymmetricMatrix
+from .lazy import LazyVector, LazyMatrix
+from .cache import Cache
 
 __all__ = ['GP', 'model', 'Graph', 'At']
 
@@ -25,7 +26,7 @@ class Graph(Referentiable):
     def __init__(self):
         self.ps = []
         self.pids = set()
-        self.kernels = LazySymmetricMatrix()
+        self.kernels = LazyMatrix()
         self.means = LazyVector()
         self.prior_kernels = None
         self.prior_means = None
@@ -47,6 +48,7 @@ class Graph(Referentiable):
         # Add rule to kernels.
         self.kernels[p] = kernel
         self.kernels.add_rule((p, None), self.pids, lambda pi: ZeroKernel())
+        self.kernels.add_rule((None, p), self.pids, lambda pi: ZeroKernel())
         self._add_p(p)
 
     @dispatch(object, PromisedGP)
@@ -74,6 +76,8 @@ class Graph(Referentiable):
         kernels = self.kernels
         self.kernels.add_rule((p_sum, None), self.pids,
                               lambda pi: kernels[p, pi])
+        self.kernels.add_rule((None, p_sum), self.pids,
+                              lambda pi: kernels[pi, p])
         return p_sum
 
     @dispatch(PromisedGP, PromisedGP)
@@ -86,6 +90,8 @@ class Graph(Referentiable):
         kernels = self.kernels
         self.kernels.add_rule((p_sum, None), self.pids,
                               lambda pi: kernels[p1, pi] + kernels[p2, pi])
+        self.kernels.add_rule((None, p_sum), self.pids,
+                              lambda pi: kernels[pi, p1] + kernels[pi, p2])
         return p_sum
 
     def mul(self, p, other):
@@ -107,6 +113,8 @@ class Graph(Referentiable):
                               lambda: other ** 2 * kernels[p])
         self.kernels.add_rule((p_prod, None), self.pids,
                               lambda pi: other * kernels[p, pi])
+        self.kernels.add_rule((None, p_prod), self.pids,
+                              lambda pi: other * kernels[pi, p])
         self._add_p(p_prod)
         return p_prod
 
@@ -129,8 +137,13 @@ class Graph(Referentiable):
                               lambda: kernels[p].shift(amount))
         self.kernels.add_rule((p_shifted, None), self.pids,
                               lambda pi: kernels[p, pi].transform(
-                                  lambda x: x - amount,
-                                  lambda x: x
+                                  lambda x, B: B.subtract(x, amount),
+                                  lambda x, B: x
+                              ))
+        self.kernels.add_rule((None, p_shifted), self.pids,
+                              lambda pi: kernels[pi, p].transform(
+                                  lambda x, B: x,
+                                  lambda x, B: B.subtract(x, amount)
                               ))
         self._add_p(p_shifted)
         return p_shifted
@@ -154,8 +167,13 @@ class Graph(Referentiable):
                               lambda: kernels[p].stretch(extent))
         self.kernels.add_rule((p_stretched, None), self.pids,
                               lambda pi: kernels[p, pi].transform(
-                                  lambda x: x / extent,
-                                  lambda x: x
+                                  lambda x, B: B.divide(x, extent),
+                                  lambda x, B: x
+                              ))
+        self.kernels.add_rule((None, p_stretched), self.pids,
+                              lambda pi: kernels[pi, p].transform(
+                                  lambda x, B: x,
+                                  lambda x, B: B.divide(x, extent)
                               ))
         self._add_p(p_stretched)
         return p_stretched
@@ -180,8 +198,13 @@ class Graph(Referentiable):
                               lambda: kernels[p].select(*dims))
         self.kernels.add_rule((p_select, None), self.pids,
                               lambda pi: kernels[p, pi].transform(
-                                  lambda x: B.take(x, dims, axis=1),
-                                  lambda x: x
+                                  lambda x, B: B.take(x, dims, axis=1),
+                                  lambda x, B: x
+                              ))
+        self.kernels.add_rule((None, p_select), self.pids,
+                              lambda pi: kernels[pi, p].transform(
+                                  lambda x, B: x,
+                                  lambda x, B: B.take(x, dims, axis=1)
                               ))
         self._add_p(p_select)
         return p_select
@@ -205,10 +228,41 @@ class Graph(Referentiable):
                               lambda: kernels[p].transform(f))
         self.kernels.add_rule((p_transformed, None), self.pids,
                               lambda pi: kernels[p, pi].transform(
-                                  f, lambda x: x
+                                  f,
+                                  lambda x, B: x
+                              ))
+        self.kernels.add_rule((None, p_transformed), self.pids,
+                              lambda pi: kernels[pi, p].transform(
+                                  lambda x, B: x,
+                                  f,
                               ))
         self._add_p(p_transformed)
         return p_transformed
+
+    def diff(self, p, deriv=0):
+        """Differentiate a GP.
+
+        Args:
+            p (instance of :class:`.graph.GP`): GP to differentiate.
+            deriv (int, optional): Index of feature which to take the
+                derivative of. Defaults to `0`.
+
+        Returns:
+            Derivative of GP.
+        """
+        dp = GP(self)
+        # Update means.
+        self.means[dp] = self.means[p].diff(deriv)
+        # Add rule to kernels.
+        kernels = self.kernels
+        self.kernels.add_rule((dp, dp), self.pids,
+                              lambda: kernels[p].diff(deriv))
+        self.kernels.add_rule((dp, None), self.pids,
+                              lambda pi: kernels[p, pi].diff(deriv, None))
+        self.kernels.add_rule((None, dp), self.pids,
+                              lambda pi: kernels[pi, p].diff(None, deriv))
+        self._add_p(dp)
+        return dp
 
     @dispatch(At, object)
     def condition(self, x, y):
@@ -242,7 +296,7 @@ class Graph(Referentiable):
                                         x, Kx)
 
         # Update to posterior.
-        self.kernels = LazySymmetricMatrix()
+        self.kernels = LazyMatrix()
         self.kernels.add_rule((None, None), self.pids, build_posterior_kernel)
         self.means = LazyVector()
         self.means.add_rule((None,), self.pids, build_posterior_mean)
@@ -252,8 +306,13 @@ class Graph(Referentiable):
         operations.
         """
         if self.prior_kernels is not None:
+            # Reverts kernels and means.
             self.kernels = self.prior_kernels
             self.means = self.prior_means
+
+            # Empty storage.
+            self.prior_kernels = None
+            self.prior_means = None
 
 
 class GraphMean(Mean, Referentiable):
@@ -273,9 +332,17 @@ class GraphMean(Mean, Referentiable):
     def __call__(self, x):
         return self.graph.means[self.p](x)
 
+    @dispatch(object, Cache)
+    def __call__(self, x, cache):
+        return self.graph.means[self.p](x, cache)
+
     @dispatch(At)
     def __call__(self, x):
         return self.graph.means[type_parameter(x)](x.get())
+
+    @dispatch(At, Cache)
+    def __call__(self, x, cache):
+        return self.graph.means[type_parameter(x)](x.get(), cache)
 
     def __str__(self):
         return str(self.graph.means[self.p])
@@ -298,22 +365,43 @@ class GraphKernel(Kernel, Referentiable):
     def __call__(self, x):
         return self(x, x)
 
+    @dispatch(object, Cache)
+    def __call__(self, x, cache):
+        return self(x, x, cache)
+
     @dispatch(object, object)
     def __call__(self, x, y):
         return self.graph.kernels[self.p, self.p](x, y)
+
+    @dispatch(object, object, Cache)
+    def __call__(self, x, y, cache):
+        return self.graph.kernels[self.p, self.p](x, y, cache)
 
     @dispatch(object, At)
     def __call__(self, x, y):
         return self.graph.kernels[self.p, type_parameter(y)](x, y.get())
 
+    @dispatch(object, At, Cache)
+    def __call__(self, x, y, cache):
+        return self.graph.kernels[self.p, type_parameter(y)](x, y.get(), cache)
+
     @dispatch(At, object)
     def __call__(self, x, y):
         return self.graph.kernels[type_parameter(x), self.p](x.get(), y)
+
+    @dispatch(At, object, Cache)
+    def __call__(self, x, y, cache=None):
+        return self.graph.kernels[type_parameter(x), self.p](x.get(), y, cache)
 
     @dispatch(At, At)
     def __call__(self, x, y):
         return self.graph.kernels[type_parameter(x),
                                   type_parameter(y)](x.get(), y.get())
+
+    @dispatch(At, At, Cache)
+    def __call__(self, x, y, cache):
+        return self.graph.kernels[type_parameter(x),
+                                  type_parameter(y)](x.get(), y.get(), cache)
 
     @property
     def stationary(self):
@@ -420,6 +508,9 @@ class GP(GPPrimitive, Referentiable):
 
     def select(self, *dims):
         return self.graph.select(self, *dims)
+
+    def diff(self, *derivs):
+        return self.graph.diff(self, *derivs)
 
 
 PromisedGP.deliver(GP)
