@@ -663,19 +663,21 @@ class DerivativeKernel(Kernel, DerivativeType, Referentiable):
 
     @property
     def _stationary(self):
+        # NOTE: In the one-dimensional case, if derivatives with respect to both
+        # arguments are taken, then the result is in fact stationary.
         return False
 
     @property
     def var(self):
-        return False
+        return np.nan
 
     @property
     def length_scale(self):
-        return False
+        return np.nan
 
     @property
     def period(self):
-        return False
+        return np.nan
 
 
 class ReversedKernel(Kernel, WrappedType, Referentiable):

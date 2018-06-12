@@ -373,8 +373,12 @@ def test_properties_input_transform():
 
 
 def test_properties_derivative():
-    # raise NotImplementedError()
-    pass
+    k = EQ().diff(0)
+
+    yield eq, k.stationary, False
+    yield ok, k.length_scale is np.nan
+    yield ok, k.var is np.nan
+    yield ok, k.period is np.nan
 
 
 def test_selection():

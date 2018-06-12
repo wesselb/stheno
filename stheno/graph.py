@@ -509,8 +509,8 @@ class GP(GPPrimitive, Referentiable):
     def select(self, *dims):
         return self.graph.select(self, *dims)
 
-    def diff(self, *derivs):
-        return self.graph.diff(self, *derivs)
+    def diff(self, deriv=0):
+        return self.graph.diff(self, deriv)
 
 
 PromisedGP.deliver(GP)

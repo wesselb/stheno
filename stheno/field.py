@@ -278,8 +278,8 @@ class DerivativeType(WrappedType):
 
     Args:
         t (instance of :class:`.field.Type`): Element to compute derivatives of.
-        \*derivs (tensor): Per dimension, the feature to take derivatives of.
-            Set a dimension to `None` to not take a derivative.
+        \*derivs (tensor): Per input, the index of the dimension which to
+            take the derivative of. Set to `None` to not take a derivative.
     """
 
     def __init__(self, t, *derivs):
