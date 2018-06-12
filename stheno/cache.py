@@ -25,7 +25,11 @@ class Cache(Referentiable):
         self._cache_call = {}
         self._cache_lab = {}
         self._start = time()
+        self._dump = []
         self.depth = 0
+
+    def dump(self, *args):
+        self._dump.append(args)
 
     @dispatch(object)
     def _resolve(self, key):
@@ -43,9 +47,15 @@ class Cache(Referentiable):
         return self._cache_call[self._resolve(key)]
 
     def __setitem__(self, key, output):
+        # Dump `output` somewhere to prevent GC from cleaning it up!
+        self.dump(output)
         self._cache_call[self._resolve(key)] = output
 
     def __getattr__(self, f):
+        # TODO: Do this better!
+        if not callable(getattr(B, f)):
+            return getattr(B, f)
+
         def call_cached(*args, **kw_args):
             # Let the key depend on the function name...
             key = (f,)
@@ -55,18 +65,30 @@ class Cache(Referentiable):
 
             # ...and on the keyword arguments.
             if len(kw_args) > 0:
-                # First, sort keyword arguments according to keys.
+                # Sort keyword arguments according to keys.
                 items = tuple(sorted(kw_args.items(), key=lambda x: x[0]))
                 key += self._resolve(items)
 
-            # Cached execution.
-            if key in self._cache_lab:
+            # Attempt cached execution.
+            try:
                 out = self._cache_lab[key]
-                log_cache_lab.debug('%4.0f ms: Hit for "%s".', self.dur(), f)
+                log_cache_lab.debug('%4.0f ms: Hit for "%s" with key "%s".',
+                                    self.dur(), f, key)
                 return out
-            else:
-                self._cache_lab[key] = getattr(B, f)(*args, **kw_args)
-                return self._cache_lab[key]
+            except KeyError:
+                pass
+
+            # Filter keyword `cache_id`.
+            try:
+                del kw_args['cache_id']
+            except KeyError:
+                pass
+
+            self._cache_lab[key] = getattr(B, f)(*args, **kw_args)
+            # Dump `args` and `kw_args` somewhere to prevent GC from cleaning
+            # them up!
+            self.dump(args, kw_args)
+            return self._cache_lab[key]
 
         return call_cached
 
@@ -87,20 +109,13 @@ def cache(f):
         except KeyError:
             pass
 
-        # Try reverse of arguments.
-        try:
-            out = B.transpose(cache[self, tuple(reversed(inputs))])
-            log_cache_call.debug('%4.0f ms: Reversed hit for "%s".',
-                                 cache.dur(), type(self).__name__)
-            return out
-        except KeyError:
-            log_cache_call.debug('%4.0f ms: Miss for "%s": start; depth: %d.',
-                                 cache.dur(), type(self).__name__, cache.depth)
-            cache.depth += 1
-            cache[self, inputs] = f(self, *args)
-            cache.depth -= 1
-            log_cache_call.debug('%4.0f ms: Miss for "%s": end.',
-                                 cache.dur(), type(self).__name__)
-            return cache[self, inputs]
+        log_cache_call.debug('%4.0f ms: Miss for "%s": start; depth: %d.',
+                             cache.dur(), type(self).__name__, cache.depth)
+        cache.depth += 1
+        cache[self, inputs] = f(self, *args)
+        cache.depth -= 1
+        log_cache_call.debug('%4.0f ms: Miss for "%s": end.',
+                             cache.dur(), type(self).__name__)
+        return cache[self, inputs]
 
     return __call__
