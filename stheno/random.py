@@ -9,6 +9,7 @@ from plum import Self, Referentiable
 from .kernel import PosteriorKernel, OneKernel
 from .mean import ZeroMean, PosteriorMean, OneMean
 from .spd import SPD, Dispatcher, UniformDiagonal, Diagonal
+from .cache import Cache
 
 __all__ = ['Normal', 'GPPrimitive', 'Normal1D']
 
@@ -23,7 +24,7 @@ class Random(object):
         return self * other
 
     def __neg__(self):
-        return (-1) * self
+        return -1 * self
 
     def __sub__(self, other):
         return self + (-other)
@@ -32,7 +33,7 @@ class Random(object):
         return (-self) + other
 
     def __div__(self, other):
-        return self * (1. / other)
+        return self * (1 / other)
 
     def __truediv__(self, other):
         return Random.__div__(self, other)
@@ -266,16 +267,18 @@ class GPPrimitive(RandomProcess, Referentiable):
         else:
             self.kernel = kernel
 
-    def __call__(self, x):
+    def __call__(self, x, cache=None):
         """Construct a finite-dimensional distribution at specified locations.
 
         Args:
-           x (design matrix): Points to construct the distribution at.
+            x (design matrix): Points to construct the distribution at.
+            cache (instance of :class:`.cache.Cache`, optional): Cache.
 
         Returns:
             Instance of :class:`gptools.normal.Normal`.
         """
-        return Normal(B.reg(self.kernel(x)), self.mean(x))
+        cache = Cache() if cache is None else cache
+        return Normal(B.reg(self.kernel(x, cache)), self.mean(x, cache))
 
     def condition(self, x, y):
         """Condition the GP on a number of points.
@@ -291,17 +294,18 @@ class GPPrimitive(RandomProcess, Referentiable):
         return GPPrimitive(PosteriorKernel(self, x, K),
                            PosteriorMean(self, x, K, y))
 
-    def predict(self, x):
+    def predict(self, x, cache=None):
         """Predict at specified locations.
 
         Args:
             x (design matrix): Locations of the points to predict for.
+            cache (instance of :class:`.cache.Cache`, optional): Cache.
 
         Returns:
             A tuple containing the predictive means and lower and upper 95%
             central credible interval bounds.
         """
-        dist = self(x)
+        dist = self(x, cache)
         mean, std = B.squeeze(dist.mean), dist.spd.diag ** .5
         return mean, mean - 2 * std, mean + 2 * std
 
@@ -361,3 +365,7 @@ class GPPrimitive(RandomProcess, Referentiable):
     def transform(self, f):
         return GPPrimitive(self.kernel.transform(f),
                            self.mean.transform(f))
+
+    def diff(self, deriv=0):
+        return GPPrimitive(self.kernel.diff(deriv),
+                           self.mean.diff(deriv))
