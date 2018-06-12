@@ -6,7 +6,7 @@ from plum import Dispatcher, Self, Referentiable
 
 from .input import Observed, Latent, Component
 from .kernel import Kernel, ZeroKernel
-from stheno.cache import cache, Cache
+from .cache import cache, Cache
 
 __all__ = ['NoisyKernel', 'ComponentKernel', 'AdditiveComponentKernel']
 
