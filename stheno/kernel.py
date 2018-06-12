@@ -128,8 +128,8 @@ class OneKernel(Kernel, OneType, Referentiable):
 
     @dispatch(Number, Number, Cache)
     @cache
-    def __call__(self, x, y, cache):
-        return cache.ones((1, 1), dtype=B.dtype(x))
+    def __call__(self, x, y, B):
+        return B.ones((1, 1), dtype=B.dtype(x))
 
     @dispatch(B.Numeric, B.Numeric, Cache)
     @cache
@@ -376,7 +376,7 @@ class PeriodicKernel(Kernel, WrappedType, Referentiable):
     @cache
     def __call__(self, x, y, B):
         def feat_map(z):
-            z = z * 2 * B.pi / self.period
+            z = B.divide(B.multiply(B.multiply(z, 2), B.pi), self.period)
             return B.array([[B.sin(z), B.cos(z)]])
 
         return self[0](feat_map(x), feat_map(y), B)
@@ -385,7 +385,7 @@ class PeriodicKernel(Kernel, WrappedType, Referentiable):
     @cache
     def __call__(self, x, y, B):
         def feat_map(z):
-            z = z * 2 * B.pi / self.period
+            z = B.divide(B.multiply(B.multiply(z, 2), B.pi), self.period)
             return B.concat((B.sin(z), B.cos(z)), axis=1)
 
         return self[0](feat_map(x), feat_map(y), B)
@@ -510,8 +510,7 @@ class Delta(Kernel, PrimitiveType, Referentiable):
     @dispatch(B.Numeric, B.Numeric, Cache)
     @cache
     def __call__(self, x, y, B):
-        dists2 = B.pw_dists2(x, y)
-        return B.cast(dists2 < self.epsilon, B.dtype(x))
+        return B.cast(B.less(B.pw_dists2(x, y), self.epsilon), B.dtype(x))
 
     @property
     def length_scale(self):
@@ -574,7 +573,7 @@ class PosteriorCrossKernel(Kernel, Referentiable):
     @cache
     def __call__(self, x, y, B):
         qf = self.Kz.quadratic_form(self.k_zi(self.z, x, B),
-                                    self.k_zj(self.z, y, B), B)
+                                    self.k_zj(self.z, y, B))
         return B.subtract(self.k_ij(x, y, B), qf)
 
     @property

@@ -90,8 +90,8 @@ class SPD(Referentiable):
         """
         return B.sum(B.trisolve(denom.cholesky(), self.cholesky()) ** 2)
 
-    @dispatch(object, [Cache])
-    def quadratic_form(self, a, B=B):
+    @dispatch(object)
+    def quadratic_form(self, a):
         """Compute the quadratic form `transpose(a) inv(self.mat) b`.
 
         Args:
@@ -101,13 +101,13 @@ class SPD(Referentiable):
         prod = B.trisolve(self.cholesky(), a)
         return B.dot(prod, prod, tr_a=True)
 
-    @dispatch(object, object, [Cache])
-    def quadratic_form(self, a, b, B=B):
+    @dispatch(object, object)
+    def quadratic_form(self, a, b):
         left = B.trisolve(self.cholesky(), a)
         right = B.trisolve(self.cholesky(), b)
         return B.dot(left, right, tr_a=True)
 
-    def inv_prod(self, a, B=B):
+    def inv_prod(self, a):
         """Compute the matrix-vector product `inv(self.mat) a`.
 
         Args:

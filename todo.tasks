@@ -3,6 +3,9 @@ Features:
     ☐ Efficient multi-output kernels
     ☐ Efficient diagonal computation: pairwise and element-wise
 
+Refactor:
+    ☐ Make RQ, Exp, Matern32, and Matern52 cache friendly
+
 Examples:
     ☐ Input warping with NN
     ☐ Small Bayes opt example
