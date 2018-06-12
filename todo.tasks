@@ -1,8 +1,7 @@
- ☐ What is going on with `[np.random.randn(1,1).__array_interface__['data'][0] for _ in range(2)]`?
-
 Features:
     ☐ Sparse approximations
     ☐ Efficient multi-output kernels
+    ☐ Efficient diagonal computation: pairwise and element-wise
 
 Examples:
     ☐ Input warping with NN
@@ -19,6 +18,7 @@ Documentation:
 
 ＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿
 Archive:
+ ✓ What is going on with `[np.random.randn(1,1).__array_interface__['data'][0] for _ in range(2)]`? @done (18-06-11 13:49)
  ✓ Caching of computation in kernels @done (18-06-04 03:43) @project(Optimisations)
  ✓ Implement * and + for SPDs, and use these in the arithmetic of Normals. @done (18-06-02 17:49) @project(Optimisations)
  ✓ Write tests. @started @done (18-05-31 16:14) @project(Documentation / Other)
