@@ -61,6 +61,15 @@ class Type(object):
         """
         return transform(self, *fs)
 
+    def diff(self, *derivs):
+        """Differentiate.
+
+        Args:
+            \*derivs (int): Per input the index of the feature which to take
+                the derivatives of. Set to `None` to not take a derivative.
+        """
+        return differentiate(self, *derivs)
+
     @property
     def num_terms(self):
         """Number of terms"""
@@ -227,7 +236,7 @@ class ShiftedType(WrappedType):
         return '{} shift {}'.format(t, self.amount)
 
 
-class SelectedType(WrappedType, Referentiable):
+class SelectedType(WrappedType):
     """Select particular dimensions of the input features.
 
     Args:
@@ -240,16 +249,12 @@ class SelectedType(WrappedType, Referentiable):
         self.dims = dims
 
     def display(self, t):
-        if (isinstance(self.dims, tuple) or
-            isinstance(self.dims, list)) and len(self.dims) == 1:
-            dims = self.dims[0]
-        else:
-            dims = self.dims
+        dims = self.dims[0] if len(self.dims) == 1 else self.dims
         return '{} : {}'.format(t, dims)
 
 
-class InputTransformedType(WrappedType, Referentiable):
-    """Transform the inputs for a particular type.
+class InputTransformedType(WrappedType):
+    """Transform the inputs for a particular element.
 
     Args:
         t (instance of :class:`.field.Type`): Element to wrap.
@@ -261,12 +266,32 @@ class InputTransformedType(WrappedType, Referentiable):
         self.fs = fs
 
     def display(self, t):
-        if (isinstance(self.fs, tuple) or
-            isinstance(self.fs, list)) and len(self.fs) == 1:
+        if len(self.fs) == 1:
             fs = self.fs[0].__name__
         else:
             fs = '({})'.format(', '.join(f.__name__ for f in self.fs))
         return '{} transform {}'.format(t, fs)
+
+
+class DerivativeType(WrappedType):
+    """Compute the derivative with respect to the inputs of an element.
+
+    Args:
+        t (instance of :class:`.field.Type`): Element to compute derivatives of.
+        \*derivs (tensor): Per dimension, the feature to take derivatives of.
+            Set a dimension to `None` to not take a derivative.
+    """
+
+    def __init__(self, t, *derivs):
+        WrappedType.__init__(self, t)
+        self.derivs = derivs
+
+    def display(self, t):
+        if len(self.derivs) == 1:
+            derivs = '({})'.format(self.derivs[0])
+        else:
+            derivs = self.derivs
+        return 'd{} {}'.format(derivs, t)
 
 
 class ProductType(JoinType):
@@ -370,6 +395,18 @@ def transform(a, *fs):
     \*fs (int): Transformations.
     """
     raise NotImplementedError('Input transforms not implemented for {}.'
+                              ''.format(type(a).__name__))
+
+
+@dispatch(object, [object])
+def differentiate(a, *derivs):
+    """Differentiate.
+
+    a (instance of :class:`.field.Type`): Element to differentiate.
+    \*derivs (int): Per input the index of the feature which to take
+        the derivatives of. Set to `None` to not take a derivative.
+    """
+    raise NotImplementedError('Differentiation not implemented for {}.'
                               ''.format(type(a).__name__))
 
 
@@ -670,6 +707,20 @@ def transform(a, *fs): return new(a, InputTransformedType)(a, *fs)
 
 @dispatch({ZeroType, OneType}, [object])
 def transform(a, *fs): return a
+
+
+# Differentiation:
+
+@dispatch(Type, [object])
+def differentiate(a, *derivs): return new(a, DerivativeType)(a, *derivs)
+
+
+@dispatch(ZeroType, [object])
+def differentiate(a, *derivs): return a
+
+
+@dispatch(OneType, [object])
+def differentiate(a, *derivs): return new(a, ZeroType)()
 
 
 # Equality:
