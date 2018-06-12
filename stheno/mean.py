@@ -4,17 +4,20 @@ from __future__ import absolute_import, division, print_function
 
 from numbers import Number
 from types import FunctionType
+import logging
 
 from lab import B
 from plum import Dispatcher, Self, Referentiable
 
 from .field import add, dispatch, Type, ZeroType, OneType, ScaledType, \
     ProductType, SumType, ShiftedType, SelectedType, InputTransformedType, \
-    StretchedType
+    StretchedType, DerivativeType
 from .input import Input
 from .cache import Cache, cache
 
-__all__ = ['FunctionMean']
+__all__ = ['FunctionMean', 'DerivativeMean']
+
+log = logging.getLogger(__name__)
 
 
 class Mean(Type, Referentiable):
@@ -59,8 +62,8 @@ class SumMean(Mean, SumType, Referentiable):
 
     @dispatch(object, Cache)
     @cache
-    def __call__(self, x, cache):
-        return self[0](x, cache) + self[1](x, cache)
+    def __call__(self, x, B):
+        return B.add(self[0](x, B), self[1](x, B))
 
 
 class ProductMean(Mean, ProductType, Referentiable):
@@ -70,8 +73,8 @@ class ProductMean(Mean, ProductType, Referentiable):
 
     @dispatch(object, Cache)
     @cache
-    def __call__(self, x, cache):
-        return self[0](x, cache) * self[1](x, cache)
+    def __call__(self, x, B):
+        return B.multiply(self[0](x, B), self[1](x, B))
 
 
 class ScaledMean(Mean, ScaledType, Referentiable):
@@ -81,8 +84,8 @@ class ScaledMean(Mean, ScaledType, Referentiable):
 
     @dispatch(object, Cache)
     @cache
-    def __call__(self, x, cache):
-        return self.scale * self[0](x, cache)
+    def __call__(self, x, B):
+        return B.multiply(self.scale, self[0](x, B))
 
 
 class StretchedMean(Mean, StretchedType, Referentiable):
@@ -92,8 +95,8 @@ class StretchedMean(Mean, StretchedType, Referentiable):
 
     @dispatch(object, Cache)
     @cache
-    def __call__(self, x, cache):
-        return self[0](x / self.extent, cache)
+    def __call__(self, x, B):
+        return self[0](B.divide(x, self.extent), B)
 
 
 class ShiftedMean(Mean, ShiftedType, Referentiable):
@@ -103,8 +106,8 @@ class ShiftedMean(Mean, ShiftedType, Referentiable):
 
     @dispatch(object, Cache)
     @cache
-    def __call__(self, x, cache):
-        return self[0](x - self.amount, cache)
+    def __call__(self, x, B):
+        return self[0](B.subtract(x, self.amount), B)
 
 
 class SelectedMean(Mean, SelectedType, Referentiable):
@@ -114,8 +117,8 @@ class SelectedMean(Mean, SelectedType, Referentiable):
 
     @dispatch(object, Cache)
     @cache
-    def __call__(self, x, cache):
-        return self[0](B.take(x, self.dims, axis=1), cache)
+    def __call__(self, x, B):
+        return self[0](B.take(x, self.dims, axis=1), B)
 
 
 class InputTransformedMean(Mean, InputTransformedType, Referentiable):
@@ -125,8 +128,8 @@ class InputTransformedMean(Mean, InputTransformedType, Referentiable):
 
     @dispatch(object, Cache)
     @cache
-    def __call__(self, x, cache):
-        return self[0](self.fs[0](x), cache)
+    def __call__(self, x, B):
+        return self[0](self.fs[0](x, B), B)
 
 
 class OneMean(Mean, OneType, Referentiable):
@@ -136,13 +139,13 @@ class OneMean(Mean, OneType, Referentiable):
 
     @dispatch(Number, Cache)
     @cache
-    def __call__(self, x, cache):
-        return cache.ones([1, 1], dtype=B.dtype(x))
+    def __call__(self, x, B):
+        return B.ones([1, 1], dtype=B.dtype(x))
 
     @dispatch(B.Numeric, Cache)
     @cache
-    def __call__(self, x, cache):
-        return cache.ones([B.shape(x)[0], 1], dtype=B.dtype(x))
+    def __call__(self, x, B):
+        return B.ones([B.shape(x)[0], 1], dtype=B.dtype(x))
 
 
 class ZeroMean(Mean, ZeroType, Referentiable):
@@ -152,13 +155,13 @@ class ZeroMean(Mean, ZeroType, Referentiable):
 
     @dispatch(Number, Cache)
     @cache
-    def __call__(self, x, cache):
-        return cache.zeros([1, 1], dtype=B.dtype(x))
+    def __call__(self, x, B):
+        return B.zeros([1, 1], dtype=B.dtype(x))
 
     @dispatch(B.Numeric, Cache)
     @cache
-    def __call__(self, x, cache):
-        return cache.zeros([B.shape(x)[0], 1], dtype=B.dtype(x))
+    def __call__(self, x, B):
+        return B.zeros([B.shape(x)[0], 1], dtype=B.dtype(x))
 
 
 class FunctionMean(Mean, Referentiable):
@@ -174,11 +177,22 @@ class FunctionMean(Mean, Referentiable):
 
     @dispatch(B.Numeric, Cache)
     @cache
-    def __call__(self, x, cache):
+    def __call__(self, x, B):
         return self.f(x)
 
     def __str__(self):
         return self.f.__name__
+
+
+class DerivativeMean(Mean, DerivativeType, Referentiable):
+    """Derivative of mean."""
+    dispatch = Dispatcher(in_class=Self)
+
+    @dispatch(B.Numeric, Cache)
+    @cache
+    def __call__(self, x, B):
+        i = self.derivs[0]
+        return B.gradients(self[0](x, B), x)[0][:, i:i + 1]
 
 
 class PosteriorCrossMean(Mean, Referentiable):
@@ -207,17 +221,17 @@ class PosteriorCrossMean(Mean, Referentiable):
         self.Kz = Kz
         self.y = y
 
-    def m_z_z(self, cache):
+    def m_z_z(self, B):
         if self._m_z_z is None:
-            self._m_z_z = self.m_z(self.z, cache)
+            self._m_z_z = self.m_z(self.z, B)
         return self._m_z_z
 
     @dispatch(object, Cache)
     @cache
-    def __call__(self, x, cache):
-        return self.m_i(x, cache) + \
-               B.matmul(self.Kz.inv_prod(self.k_zi(self.z, x, cache)),
-                        self.y - self.m_z_z(cache), tr_a=True)
+    def __call__(self, x, B):
+        diff = B.subtract(self.y, self.m_z(self.z, B))
+        prod = self.Kz.inv_prod(self.k_zi(self.z, x, B), B)
+        return B.add(self.m_i(x, B), B.matmul(prod, diff, tr_a=True))
 
     def __str__(self):
         return 'PosteriorCrossMean()'
@@ -249,7 +263,7 @@ def add(a, b): return add(FunctionMean(a), b)
 
 
 @dispatch(FunctionType, ZeroMean)
-def add(a, b): return a
+def add(a, b): return FunctionMean(a)
 
 
 @dispatch(Mean, FunctionType)
@@ -257,4 +271,4 @@ def add(a, b): return add(a, FunctionMean(b))
 
 
 @dispatch(ZeroMean, FunctionType)
-def add(a, b): return b
+def add(a, b): return FunctionMean(b)
