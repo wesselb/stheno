@@ -58,12 +58,8 @@ class Rule(object):
                     return False
                 else:
                     self._args += (j,)
-                    continue
-            else:
-                if i != j:
-                    return False
-                else:
-                    continue
+            elif i != j:
+                return False
         return True
 
     def build(self):

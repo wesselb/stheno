@@ -306,6 +306,13 @@ def test_properties_stretch():
     yield eq, k.period, 0
     yield eq, k.var, 1
 
+    k = EQ().stretch(1, 2)
+
+    yield eq, k.stationary, True
+    yield ok, k.length_scale is np.nan
+    yield ok, k.period is np.nan
+    yield eq, k.var, 1
+
 
 def test_properties_periodic():
     k = EQ().stretch(2).periodic(3)
@@ -379,6 +386,16 @@ def test_properties_selected():
     yield assert_allclose, k.period, [2, 3]
     yield eq, k.var, 2
 
+    k = (2 * EQ().stretch(np.array([1, 2, 3]))).select((0, 2), (1, 2))
+
+    yield ok, k.length_scale is np.nan
+    yield ok, k.period is np.nan
+
+    k = (2 * EQ().periodic(np.array([1, 2, 3]))).select((0, 2), (1, 2))
+
+    yield eq, k.length_scale, 1
+    yield ok, k.period is np.nan
+
 
 def test_properties_input_transform():
     k = Linear().transform(lambda x, c: x - 5)
@@ -396,6 +413,8 @@ def test_properties_derivative():
     yield ok, k.length_scale is np.nan
     yield ok, k.var is np.nan
     yield ok, k.period is np.nan
+
+    yield raises, RuntimeError, lambda: EQ().diff(None, None)(1)
 
 
 def test_selection():

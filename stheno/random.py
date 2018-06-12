@@ -46,6 +46,9 @@ class Random(object):
         raise NotImplementedError('Matrix multiplication not implemented for '
                                   '{}.'.format(type(self)))
 
+    def __repr__(self):
+        return str(self)
+
 
 class RandomProcess(Random):
     """A random process."""

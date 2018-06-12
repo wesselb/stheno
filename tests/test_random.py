@@ -282,3 +282,10 @@ def test_gp_transform():
 
     yield eq, str(gp.transform(lambda x, c: x)), \
           'GP(EQ() transform <lambda>, <lambda> transform <lambda>)'
+
+
+def test_gp_derivative():
+    m = FunctionMean(lambda x: x ** 2)
+    gp = GPPrimitive(EQ(), m)
+
+    yield eq, str(gp.diff(1)), 'GP(d(1) EQ(), d(1) <lambda>)'

@@ -39,6 +39,14 @@ def test_indexing():
     yield eq, m[a2, a2], 2
 
 
+def test_rule():
+    rule = Rule((1, None, 2, None, 3), {1, 2, 3, 4, 5}, lambda: None)
+
+    yield ok, rule.applies((1, 1, 2, 5, 3))
+    yield ok, not rule.applies((1, 1, 2, 6, 3))
+    yield ok, not rule.applies((2, 1, 2, 5, 3))
+
+
 def test_building():
     class ReversibleNumber(object):
         def __init__(self, x):

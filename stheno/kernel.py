@@ -261,6 +261,7 @@ class StretchedKernel(Kernel, StretchedType, Referentiable):
         if len(self.stretches) == 1:
             return self[0].length_scale * self.stretches[0]
         else:
+            # NOTE: Can do something more clever here.
             return np.nan
 
     @property
@@ -268,6 +269,7 @@ class StretchedKernel(Kernel, StretchedType, Referentiable):
         if len(self.stretches) == 1:
             return self[0].period * self.stretches[0]
         else:
+            # NOTE: Can do something more clever here.
             return np.nan
 
 
@@ -328,6 +330,7 @@ class SelectedKernel(Kernel, SelectedType, Referentiable):
             if len(self.dims) == 1:
                 return B.take(length_scale, self.dims[0])
             else:
+                # NOTE: Can do something more clever here.
                 return np.nan
 
     @property
@@ -339,6 +342,7 @@ class SelectedKernel(Kernel, SelectedType, Referentiable):
             if len(self.dims) == 1:
                 return B.take(period, self.dims[0])
             else:
+                # NOTE: Can do something more clever here.
                 return np.nan
 
 
@@ -639,7 +643,7 @@ class DerivativeKernel(Kernel, DerivativeType, Referentiable):
             return B.hessians(K, [z])[0][:n, n:]
 
         # Derivative with respect to `x`.
-        elif j is None:
+        elif i is not None and j is None:
             xi = x[:, i:i + 1]
             # Give every `B.identity` a unique cache ID to prevent caching.
             xis = [B.identity(xi, cache_id=n) for n in range(B.shape_int(y)[0])]
@@ -652,7 +656,7 @@ class DerivativeKernel(Kernel, DerivativeType, Referentiable):
             return B.concat(B.gradients(B.sum(res, axis=0), xis), axis=1)
 
         # Derivative with respect to `y`.
-        elif i is None:
+        elif i is None and j is not None:
             yj = y[:, j:j + 1]
             # Give every `B.identity` a unique cache ID to prevent caching.
             yjs = [B.identity(yj, cache_id=n) for n in range(B.shape_int(x)[0])]
