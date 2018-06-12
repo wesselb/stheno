@@ -363,7 +363,7 @@ class GraphKernel(Kernel, Referentiable):
     def __call__(self, x):
         return self(x, x)
 
-    @dispatch(object, Cache)
+    @dispatch.multi((object, Cache), (At, Cache))
     def __call__(self, x, cache):
         return self(x, x, cache)
 

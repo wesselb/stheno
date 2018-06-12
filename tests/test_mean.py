@@ -14,6 +14,7 @@ from stheno.input import Observed
 from stheno.kernel import EQ
 from stheno.mean import FunctionMean, ZeroMean, Mean, OneMean, \
     PosteriorCrossMean, PosteriorMean
+from stheno.cache import Cache
 # noinspection PyUnresolvedReferences
 from . import eq, neq, lt, le, ge, gt, raises, call, ok, eprint
 
@@ -22,6 +23,18 @@ def test_corner_cases():
     yield raises, NotImplementedError, lambda: Mean()(1.)
     x = np.random.randn(10, 2)
     yield ok, np.allclose(ZeroMean()(x), ZeroMean()(Observed(x)))
+
+
+def test_construction():
+    m = FunctionMean(lambda x: x ** 2)
+
+    x = np.random.randn(10, 1)
+    c = Cache()
+
+    yield m, x
+    yield m, Observed(x)
+    yield m, x, c
+    yield m, Observed(x), c
 
 
 def test_basic_arithmetic():

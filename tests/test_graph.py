@@ -9,8 +9,9 @@ from lab import B
 from stheno.graph import Graph, GP, At
 from stheno.kernel import Linear, EQ
 from stheno.mean import FunctionMean
+from stheno.cache import Cache
 # noinspection PyUnresolvedReferences,
-from . import eq, raises, ok, le, eprint
+from . import eq, raises, ok, le, eprint, lam
 
 
 def test_corner_cases():
@@ -20,6 +21,31 @@ def test_corner_cases():
     p2 = GP(EQ(), graph=m2)
     yield raises, RuntimeError, lambda: p1 + p2
     yield eq, str(GP(EQ(), graph=m1)), 'GP(EQ(), 0)'
+
+
+def test_construction():
+    p = GP(EQ(), graph=Graph())
+
+    x = np.random.randn(10, 1)
+    c = Cache()
+
+    yield p.mean, x
+    yield p.mean, At(p)(x)
+    yield p.mean, x, c
+    yield p.mean, At(p)(x), c
+
+    yield p.kernel, x
+    yield p.kernel, At(p)(x)
+    yield p.kernel, x, c
+    yield p.kernel, At(p)(x), c
+    yield p.kernel, x, x
+    yield p.kernel, At(p)(x), x
+    yield p.kernel, x, At(p)(x)
+    yield p.kernel, At(p)(x), At(p)(x)
+    yield p.kernel, x, x, c
+    yield p.kernel, At(p)(x), x, c
+    yield p.kernel, x, At(p)(x), c
+    yield p.kernel, At(p)(x), At(p)(x), c
 
 
 def test_sum_other():
@@ -216,6 +242,24 @@ def test_stretching():
     p.revert_prior()
 
 
+def test_input_transform():
+    model = Graph()
+
+    p = GP(EQ(), graph=model)
+    p2 = p.transform(lambda x, B: x / 5)
+
+    n = 5
+    x = np.linspace(0, 10, n)[:, None]
+    y = p2(x).sample()
+
+    yield assert_allclose, p.condition(At(p2)(x), y)(x / 5).mean, y
+    yield le, np.sum(np.abs(p(x / 5).spd.diag)), 1e-10
+    p.revert_prior()
+    yield assert_allclose, p2.condition(At(p)(x), y)(x * 5).mean, y
+    yield le, np.sum(np.abs(p2(x * 5).spd.diag)), 1e-10
+    p.revert_prior()
+
+
 def test_selection():
     model = Graph()
 
@@ -249,10 +293,10 @@ def test_case_fd_derivative():
 
     model = Graph()
     p = GP(.7 * EQ().stretch(1.), graph=model)
-    p_der = (p.shift(-1e-3) - p.shift(1e-3)) / 2e-3
+    dp = (p.shift(-1e-3) - p.shift(1e-3)) / 2e-3
 
     yield le, np.sum(np.abs(np.cos(x) -
-                            p_der.condition(At(p)(x), y)(x).mean)), 1e-4
+                            dp.condition(At(p)(x), y)(x).mean)), 1e-4
 
 
 def test_case_reflection():

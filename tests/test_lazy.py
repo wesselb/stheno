@@ -7,7 +7,7 @@ from stheno.lazy import Rule, LazyMatrix, LazyVector
 from . import eq, neq, lt, le, ge, gt, raises, call, ok, eprint
 
 
-def test_exceptions():
+def test_corner_cases():
     yield eq, repr(Rule(1, {1}, 1)), \
           'Rule(pattern=1, indices={!r}, builder=1)'.format({1})
 

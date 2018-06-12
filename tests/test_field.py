@@ -11,7 +11,7 @@ from tests import ok, raises
 from . import eq
 
 
-def test_exceptions():
+def test_corner_cases():
     yield raises, IndexError, lambda: EQ().stretch(1)[1]
     yield raises, IndexError, lambda: (EQ() + RQ(1))[2]
     yield raises, RuntimeError, lambda: mul(1, 1)

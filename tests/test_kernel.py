@@ -13,6 +13,7 @@ from stheno.kernel import EQ, RQ, Matern12, Matern32, Matern52, Delta, Kernel, \
     ShiftedKernel
 from stheno.random import GPPrimitive
 from stheno.spd import SPD
+from stheno.cache import Cache
 # noinspection PyUnresolvedReferences
 from tests import ok
 from . import eq, raises, ok
@@ -22,6 +23,22 @@ def test_corner_cases():
     yield raises, NotImplementedError, lambda: Kernel()(1.)
     x = np.random.randn(10, 2)
     yield ok, np.allclose(EQ()(x), EQ()(Observed(x)))
+
+
+def test_construction():
+    k = EQ()
+
+    x = np.random.randn(10, 1)
+    c = Cache()
+
+    yield k, x
+    yield k, Observed(x)
+    yield k, x, c
+    yield k, Observed(x), c
+    yield k, x, x
+    yield k, Observed(x), Observed(x)
+    yield k, x, x, c
+    yield k, Observed(x), Observed(x), c
 
 
 def test_basic_arithmetic():

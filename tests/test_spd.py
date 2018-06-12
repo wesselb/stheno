@@ -12,7 +12,7 @@ from . import eq, neq, lt, le, ge, gt, raises, call, ok, eprint
 dispatch = Dispatcher()
 
 
-def test_exceptions():
+def test_corner_cases():
     yield raises, NotImplementedError, lambda: SPD(np.eye(3)) * SPD(np.eye(3))
     yield raises, NotImplementedError, lambda: SPD(np.eye(3)) * np.eye(3)
 
