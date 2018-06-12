@@ -36,6 +36,7 @@ class Rule(object):
         builder (function): Function that builds the element. Only the wildcard
             elements are fed to the function.
     """
+
     def __init__(self, pattern, indices, builder):
         self.pattern = pattern
         self.indices = set(indices)
@@ -74,8 +75,8 @@ class Rule(object):
                ''.format(self.pattern, self.indices, self.builder)
 
 
-class LazySymmetricTensor(Referentiable):
-    """A symmetric lazy tensor that indexes by the identity of its indices.
+class LazyTensor(Referentiable):
+    """A lazy tensor that indexes by the identity of its indices.
 
     Args:
         d (int): Rank of the tensor.
@@ -122,18 +123,8 @@ class LazySymmetricTensor(Referentiable):
         except KeyError:
             pass
 
-        reversed_key = tuple(reversed(key))
-        try:
-            return reversed(self._store[reversed_key])
-        except KeyError:
-            pass
-
         # Finally, try building the element.
-        try:
-            value = self._build(key)
-        except RuntimeError:
-            value = reversed(self._build(reversed_key))
-
+        value = self._build(key)
         self._store[key] = value
         return value
 
@@ -143,7 +134,8 @@ class LazySymmetricTensor(Referentiable):
         # Try a universal match.
         building_patterns = [(None,) * self.rank]
         # Try single dimension patterns.
-        building_patterns += [replace_at(key, i, None) for i in range(self.rank)]
+        building_patterns += [replace_at(key, i, None) for i in
+                              range(self.rank)]
         # Try key.
         building_patterns += [key]
 
@@ -180,13 +172,15 @@ class LazySymmetricTensor(Referentiable):
             self._rules[pattern] = [rule]
 
 
-class LazyVector(LazySymmetricTensor):
+class LazyVector(LazyTensor):
     """A lazy vector."""
+
     def __init__(self):
-        LazySymmetricTensor.__init__(self, 1)
+        LazyTensor.__init__(self, 1)
 
 
-class LazySymmetricMatrix(LazySymmetricTensor):
+class LazyMatrix(LazyTensor):
     """A lazy matrix."""
+
     def __init__(self):
-        LazySymmetricTensor.__init__(self, 2)
+        LazyTensor.__init__(self, 2)
