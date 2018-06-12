@@ -2,9 +2,9 @@
 
 from __future__ import absolute_import, division, print_function
 
-from time import time
-from numbers import Number
 import logging
+from numbers import Number
+from time import time
 
 from lab import B
 from plum import Dispatcher, Self, Referentiable
