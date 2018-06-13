@@ -3,7 +3,8 @@
 from __future__ import absolute_import, division, print_function
 
 import numpy as np
-from numpy.testing import assert_approx_equal, assert_array_almost_equal
+from numpy.testing import assert_approx_equal, assert_array_almost_equal, \
+    assert_allclose
 
 from stheno.kernel import ZeroKernel, OneKernel, Linear, EQ
 from stheno.mean import ZeroMean, OneMean
@@ -11,7 +12,7 @@ from stheno.input import Component
 from stheno.cache import Cache
 from stheno.random import GPPrimitive
 # noinspection PyUnresolvedReferences
-from . import eq, neq, ok, raises
+from . import eq, neq, ok, raises, benchmark, le, eprint
 
 
 def test_lab_cache():
@@ -99,3 +100,23 @@ def test_uprank():
     yield assert_array_almost_equal, p.condition(x, x)(x).mean, x[:, None]
     yield assert_array_almost_equal, p.condition(x, x[:, None])(x).mean, \
           x[:, None]
+
+
+def test_cache_performance():
+    c = Cache()
+    k1 = EQ()
+    k2 = EQ()
+    x = np.linspace(0, 1, 2000)
+
+    dur1, y1 = benchmark(k1, (x, c), n=1, get_output=True)
+    dur2, y2 = benchmark(k1, (x, c), n=1, get_output=True)
+    dur3, y3 = benchmark(k2, (x, c), n=1, get_output=True)
+
+    yield assert_allclose, y1, y2
+    yield assert_allclose, y1, y3
+
+    # Test performance of call cache.
+    yield le, dur2, dur1 / 500
+
+    # Test performance of LAB cache.
+    yield le, dur3, dur1 / 20
