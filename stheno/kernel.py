@@ -62,7 +62,7 @@ class Kernel(Type, Referentiable):
     def __call__(self, x):
         return self(x, x, Cache())
 
-    @dispatch.multi((object, Cache), (Input, Cache))
+    @dispatch(object, Cache)
     def __call__(self, x, cache):
         return self(x, x, cache)
 
