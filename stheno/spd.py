@@ -4,7 +4,6 @@ from __future__ import print_function, division, absolute_import
 
 from lab import B
 from plum import Referentiable, Self, Dispatcher, Kind
-from .cache import Cache
 
 __all__ = ['SPD', 'Diagonal', 'UniformDiagonal']
 

@@ -2,8 +2,9 @@
 
 from __future__ import absolute_import, division, print_function
 
-from plum import Dispatcher, Referentiable, Self
 import logging
+
+from plum import Dispatcher, Referentiable, Self
 
 __all__ = []
 

@@ -2,18 +2,16 @@
 
 from __future__ import absolute_import, division, print_function
 
-from numbers import Number
-from types import FunctionType
 import logging
 
 from lab import B
 from plum import Dispatcher, Self, Referentiable
 
-from .field import add, dispatch, Type, ZeroType, OneType, ScaledType, \
+from .cache import Cache, cache, uprank
+from .field import Type, ZeroType, OneType, ScaledType, \
     ProductType, SumType, ShiftedType, SelectedType, InputTransformedType, \
     StretchedType, DerivativeType, FunctionType, apply_optional_arg
 from .input import Input
-from .cache import Cache, cache, uprank
 
 __all__ = ['FunctionMean', 'DerivativeMean']
 

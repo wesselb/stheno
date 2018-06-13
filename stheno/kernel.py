@@ -4,7 +4,6 @@ from __future__ import absolute_import, division, print_function
 
 import logging
 import operator
-from numbers import Number
 
 import numpy as np
 from lab import B
@@ -16,7 +15,6 @@ from .field import add, mul, dispatch, Type, PrimitiveType, \
     WrappedType, ShiftedType, SelectedType, InputTransformedType, JoinType, \
     DerivativeType, broadcast, shift, stretch, select, transform, \
     FunctionType, apply_optional_arg
-
 from .input import Input
 
 __all__ = ['Kernel', 'OneKernel', 'ZeroKernel', 'ScaledKernel', 'EQ', 'RQ',

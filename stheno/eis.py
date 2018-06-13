@@ -3,11 +3,12 @@
 from __future__ import absolute_import, division, print_function
 
 import logging
+
 from plum import Dispatcher, Self, Referentiable
 
+from .cache import cache, Cache
 from .input import Observed, Latent, Component
 from .kernel import Kernel, ZeroKernel
-from .cache import cache, Cache
 
 __all__ = ['NoisyKernel', 'ComponentKernel', 'AdditiveComponentKernel']
 

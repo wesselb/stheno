@@ -2,11 +2,10 @@
 
 from __future__ import absolute_import, division, print_function
 
+import operator
 from types import FunctionType as Function
 
 from plum import Dispatcher, Referentiable, Self, NotFoundLookupError
-from lab import B
-import operator
 
 __all__ = []
 

@@ -2,18 +2,19 @@
 
 from __future__ import absolute_import, division, print_function
 
-from plum import Dispatcher, Self, Referentiable, type_parameter, kind, \
-    PromisedType
-from lab import B
-from fdm import central_fdm
 from types import FunctionType
 
+from fdm import central_fdm
+from lab import B
+from plum import Dispatcher, Self, Referentiable, type_parameter, kind, \
+    PromisedType
+
+from .cache import Cache
 from .kernel import ZeroKernel, PosteriorCrossKernel, Kernel, FunctionKernel
-from .mean import PosteriorCrossMean, ZeroMean, Mean
+from .lazy import LazyVector, LazyMatrix
+from .mean import PosteriorCrossMean, Mean
 from .random import GPPrimitive, Random
 from .spd import SPD
-from .lazy import LazyVector, LazyMatrix
-from .cache import Cache
 
 __all__ = ['GP', 'model', 'Graph', 'At']
 

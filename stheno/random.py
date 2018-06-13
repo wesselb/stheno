@@ -2,15 +2,16 @@
 
 from __future__ import absolute_import, division, print_function
 
+from types import FunctionType
+
 import numpy as np
 from lab import B
 from plum import Self, Referentiable
-from types import FunctionType
 
+from .cache import Cache
 from .kernel import PosteriorKernel, OneKernel
 from .mean import ZeroMean, PosteriorMean, OneMean
 from .spd import SPD, Dispatcher, UniformDiagonal, Diagonal
-from .cache import Cache
 
 __all__ = ['Normal', 'GPPrimitive', 'Normal1D']
 
