@@ -5,6 +5,7 @@ from __future__ import absolute_import, division, print_function
 import logging
 from numbers import Number
 from time import time
+from types import FunctionType
 
 from lab import B
 from plum import Dispatcher, Self, Referentiable
@@ -13,6 +14,8 @@ __all__ = ['Cache']
 
 log_cache_call = logging.getLogger(__name__ + '.call')
 log_cache_lab = logging.getLogger(__name__ + '.lab')
+
+dispatch = Dispatcher()
 
 
 class Cache(Referentiable):
@@ -133,5 +136,36 @@ def cache(f):
         cache.depth -= 1
 
         return cache[self, inputs]
+
+    return __call__
+
+
+@dispatch(object, [object])
+def uprank(x, B=B):
+    """Ensure that the rank of `x` is two.
+
+    Args:
+        x (tensor): Tensor to uprank.
+    """
+    if B.rank(x) > 2:
+        raise RuntimeError('Input must be at most rank 2.')
+    elif B.rank(x) == 2:
+        return x
+    elif B.rank(x) == 1:
+        return B.expand_dims(x, 1)
+    else:
+        # Rank must be 0.
+        return B.expand_dims(B.expand_dims(x, 0), 1)
+
+
+@dispatch(FunctionType)
+def uprank(f):
+    """A decorator for `__call__` to ensure that the rank of the arguments is
+    two.
+    """
+
+    def __call__(self, *args):
+        inputs, B = args[:-1], args[-1]
+        return f(self, *([uprank(x, B) for x in inputs] + [B]))
 
     return __call__

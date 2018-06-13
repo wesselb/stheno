@@ -13,7 +13,7 @@ from .field import add, dispatch, Type, ZeroType, OneType, ScaledType, \
     ProductType, SumType, ShiftedType, SelectedType, InputTransformedType, \
     StretchedType, DerivativeType
 from .input import Input
-from .cache import Cache, cache
+from .cache import Cache, cache, uprank
 
 __all__ = ['FunctionMean', 'DerivativeMean']
 
@@ -137,13 +137,9 @@ class OneMean(Mean, OneType, Referentiable):
 
     dispatch = Dispatcher(in_class=Self)
 
-    @dispatch(Number, Cache)
-    @cache
-    def __call__(self, x, B):
-        return B.ones([1, 1], dtype=B.dtype(x))
-
     @dispatch(B.Numeric, Cache)
     @cache
+    @uprank
     def __call__(self, x, B):
         return B.ones([B.shape(x)[0], 1], dtype=B.dtype(x))
 
@@ -153,13 +149,9 @@ class ZeroMean(Mean, ZeroType, Referentiable):
 
     dispatch = Dispatcher(in_class=Self)
 
-    @dispatch(Number, Cache)
-    @cache
-    def __call__(self, x, B):
-        return B.zeros([1, 1], dtype=B.dtype(x))
-
     @dispatch(B.Numeric, Cache)
     @cache
+    @uprank
     def __call__(self, x, B):
         return B.zeros([B.shape(x)[0], 1], dtype=B.dtype(x))
 
@@ -177,6 +169,7 @@ class FunctionMean(Mean, Referentiable):
 
     @dispatch(B.Numeric, Cache)
     @cache
+    @uprank
     def __call__(self, x, B):
         return self.f(x)
 
@@ -190,6 +183,7 @@ class DerivativeMean(Mean, DerivativeType, Referentiable):
 
     @dispatch(B.Numeric, Cache)
     @cache
+    @uprank
     def __call__(self, x, B):
         i = self.derivs[0]
         return B.gradients(self[0](x, B), x)[0][:, i:i + 1]
@@ -218,7 +212,7 @@ class PosteriorCrossMean(Mean, Referentiable):
         self.m_z = m_z
         self.z = z
         self.Kz = Kz
-        self.y = y
+        self.y = uprank(y)
 
     @dispatch(object, Cache)
     @cache

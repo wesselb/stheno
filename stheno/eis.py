@@ -107,6 +107,7 @@ class NoisyKernel(Kernel, Referentiable):
         return self.k_f(x.get(), y.get())
 
     @dispatch(Observed, Observed, Cache)
+    @cache
     def __call__(self, x, y, cache):
         return self.k_y(x.get(), y.get())
 

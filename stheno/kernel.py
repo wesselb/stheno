@@ -10,7 +10,7 @@ import numpy as np
 from lab import B
 from plum import Dispatcher, Self, Referentiable
 
-from .cache import cache, Cache
+from .cache import cache, Cache, uprank
 from .field import add, mul, dispatch, Type, PrimitiveType, \
     ZeroType, OneType, ScaledType, ProductType, SumType, StretchedType, \
     WrappedType, ShiftedType, SelectedType, InputTransformedType, JoinType, \
@@ -25,6 +25,12 @@ log = logging.getLogger(__name__)
 
 
 def expand(xs):
+    """Expand a sequence to the same element repeated twice if there is only
+    one element.
+
+    Args:
+        xs (sequence): Sequence to expand.
+    """
     return xs * 2 if len(xs) == 1 else xs
 
 
@@ -123,13 +129,9 @@ class OneKernel(Kernel, OneType, Referentiable):
 
     dispatch = Dispatcher(in_class=Self)
 
-    @dispatch(Number, Number, Cache)
-    @cache
-    def __call__(self, x, y, B):
-        return B.ones((1, 1), dtype=B.dtype(x))
-
     @dispatch(B.Numeric, B.Numeric, Cache)
     @cache
+    @uprank
     def __call__(self, x, y, B):
         return B.ones((B.shape(x)[0], B.shape(y)[0]), dtype=B.dtype(x))
 
@@ -143,13 +145,9 @@ class ZeroKernel(Kernel, ZeroType, Referentiable):
 
     dispatch = Dispatcher(in_class=Self)
 
-    @dispatch(Number, Number, Cache)
-    @cache
-    def __call__(self, x, y, B):
-        return B.zeros((1, 1), dtype=B.dtype(x))
-
     @dispatch(B.Numeric, B.Numeric, Cache)
     @cache
+    @uprank
     def __call__(self, x, y, B):
         return B.zeros((B.shape(x)[0], B.shape(y)[0]), dtype=B.dtype(x))
 
@@ -170,8 +168,7 @@ class ScaledKernel(Kernel, ScaledType, Referentiable):
     @dispatch(object, object, Cache)
     @cache
     def __call__(self, x, y, B):
-        return B.multiply(B.cast(self.scale, dtype=B.dtype(x)),
-                          self[0](x, y, B))
+        return B.multiply(self.scale, self[0](x, y, B))
 
     @property
     def _stationary(self):
@@ -244,6 +241,7 @@ class StretchedKernel(Kernel, StretchedType, Referentiable):
 
     @dispatch(B.Numeric, B.Numeric, Cache)
     @cache
+    @uprank
     def __call__(self, x, y, B):
         stretches = expand(self.stretches)
         return self[0](B.divide(x, stretches[0]), B.divide(y, stretches[1]), B)
@@ -284,6 +282,7 @@ class ShiftedKernel(Kernel, ShiftedType, Referentiable):
 
     @dispatch(B.Numeric, B.Numeric, Cache)
     @cache
+    @uprank
     def __call__(self, x, y, B):
         shifts = expand(self.shifts)
         return self[0](B.subtract(x, shifts[0]), B.subtract(y, shifts[1]), B)
@@ -320,6 +319,7 @@ class SelectedKernel(Kernel, SelectedType, Referentiable):
 
     @dispatch(B.Numeric, B.Numeric, Cache)
     @cache
+    @uprank
     def __call__(self, x, y, B):
         dims = expand(self.dims)
         x = x if dims[0] is None else B.take(x, dims[0], axis=1)
@@ -370,6 +370,7 @@ class InputTransformedKernel(Kernel, InputTransformedType, Referentiable):
 
     @dispatch(B.Numeric, B.Numeric, Cache)
     @cache
+    @uprank
     def __call__(self, x, y, B):
         fs = expand(self.fs)
         x = x if fs[0] is None else fs[0](x, B)
@@ -403,17 +404,9 @@ class PeriodicKernel(Kernel, WrappedType, Referentiable):
         WrappedType.__init__(self, k)
         self._period = period
 
-    @dispatch(Number, Number, Cache)
-    @cache
-    def __call__(self, x, y, B):
-        def feat_map(z):
-            z = B.divide(B.multiply(B.multiply(z, 2), B.pi), self.period)
-            return B.array([[B.sin(z), B.cos(z)]])
-
-        return self[0](feat_map(x), feat_map(y), B)
-
     @dispatch(B.Numeric, B.Numeric, Cache)
     @cache
+    @uprank
     def __call__(self, x, y, B):
         def feat_map(z):
             z = B.divide(B.multiply(B.multiply(z, 2), B.pi), self.period)
@@ -448,6 +441,7 @@ class EQ(Kernel, PrimitiveType, Referentiable):
 
     @dispatch(B.Numeric, B.Numeric, Cache)
     @cache
+    @uprank
     def __call__(self, x, y, B):
         return B.exp(B.multiply(B.cast(-.5, dtype=B.dtype(x)),
                                 B.pw_dists2(x, y)))
@@ -471,6 +465,7 @@ class RQ(Kernel, Referentiable):
 
     @dispatch(B.Numeric, B.Numeric, Cache)
     @cache
+    @uprank
     def __call__(self, x, y, B):
         return (1 + .5 * B.pw_dists2(x, y) / self.alpha) ** (-self.alpha)
 
@@ -485,6 +480,7 @@ class Exp(Kernel, PrimitiveType, Referentiable):
 
     @dispatch(B.Numeric, B.Numeric, Cache)
     @cache
+    @uprank
     def __call__(self, x, y, B):
         return B.exp(-B.pw_dists(x, y))
 
@@ -502,6 +498,7 @@ class Matern32(Kernel, PrimitiveType, Referentiable):
 
     @dispatch(B.Numeric, B.Numeric, Cache)
     @cache
+    @uprank
     def __call__(self, x, y, B):
         r = 3 ** .5 * B.pw_dists(x, y)
         return (1 + r) * B.exp(-r)
@@ -517,6 +514,7 @@ class Matern52(Kernel, PrimitiveType, Referentiable):
 
     @dispatch(B.Numeric, B.Numeric, Cache)
     @cache
+    @uprank
     def __call__(self, x, y, B):
         r1 = 5 ** .5 * B.pw_dists(x, y)
         r2 = 5 * B.pw_dists2(x, y) / 3
@@ -540,6 +538,7 @@ class Delta(Kernel, PrimitiveType, Referentiable):
 
     @dispatch(B.Numeric, B.Numeric, Cache)
     @cache
+    @uprank
     def __call__(self, x, y, B):
         return B.cast(B.less(B.pw_dists2(x, y), self.epsilon), B.dtype(x))
 
@@ -558,6 +557,7 @@ class Linear(Kernel, PrimitiveType, Referentiable):
 
     @dispatch(B.Numeric, B.Numeric, Cache)
     @cache
+    @uprank
     def __call__(self, x, y, B):
         return B.matmul(x, y, tr_b=True)
 
@@ -647,8 +647,9 @@ class DerivativeKernel(Kernel, DerivativeType, Referentiable):
     """Derivative of kernel."""
     dispatch = Dispatcher(in_class=Self)
 
-    @dispatch(object, object, Cache)
+    @dispatch(B.Numeric, B.Numeric, Cache)
     @cache
+    @uprank
     def __call__(self, x, y, B):
         i, j = expand(self.derivs)
         k = self[0]
@@ -784,6 +785,7 @@ def reverse(a): return mul(reverse(a[0]), reverse(a[1]))
 
 @dispatch(ScaledKernel)
 def reverse(a): return a.scale * reverse(a[0])
+
 
 # Shifting:
 
