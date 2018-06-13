@@ -35,6 +35,17 @@ class Graph(Referentiable):
         self.ps.append(p)
         self.pids.add(id(p))
 
+    def _update(self, mean, k_ii_generator, k_ij_generator):
+        p = GP(self)
+        self.means[p] = mean
+        self.kernels.add_rule((p, p), self.pids, k_ii_generator)
+        self.kernels.add_rule((p, None), self.pids, k_ij_generator)
+        kernels = self.kernels  # Careful with the closure!
+        self.kernels.add_rule((None, p), self.pids,
+                              lambda pi: reversed(kernels[p, pi]))
+        self._add_p(p)
+        return p
+
     def add_independent_gp(self, p, kernel, mean):
         """Add an independent GP to the model.
 
@@ -50,6 +61,7 @@ class Graph(Referentiable):
         self.kernels.add_rule((p, None), self.pids, lambda pi: ZeroKernel())
         self.kernels.add_rule((None, p), self.pids, lambda pi: ZeroKernel())
         self._add_p(p)
+        return p
 
     @dispatch(object, PromisedGP)
     def sum(self, other, p):
@@ -68,35 +80,19 @@ class Graph(Referentiable):
 
     @dispatch(PromisedGP, object)
     def sum(self, p, other):
-        p_sum = GP(self)
-        # Update means.
-        self.means[p_sum] = self.means[p] + other
-        # Add rule to kernels.
-        kernels = self.kernels
-        self.kernels.add_rule((p_sum, p_sum), self.pids, lambda: kernels[p, p])
-        self.kernels.add_rule((p_sum, None), self.pids,
-                              lambda pi: kernels[p, pi])
-        self.kernels.add_rule((None, p_sum), self.pids,
-                              lambda pi: reversed(kernels[p_sum, pi]))
-        self._add_p(p_sum)
-        return p_sum
+        kernels = self.kernels  # Careful with the closure!
+        return self._update(self.means[p] + other,
+                            lambda: kernels[p],
+                            lambda pi: kernels[p, pi])
 
     @dispatch(PromisedGP, PromisedGP)
     def sum(self, p1, p2):
-        p_sum = GP(self)
-        # Update means.
-        self.means[p_sum] = self.means[p1] + self.means[p2]
-        # Add rule to kernels.
-        kernels = self.kernels
-        self.kernels.add_rule((p_sum, p_sum), self.pids,
-                              lambda: kernels[p1] + kernels[p2] +
-                                      2 * kernels[p1, p2])
-        self.kernels.add_rule((p_sum, None), self.pids,
-                              lambda pi: kernels[p1, pi] + kernels[p2, pi])
-        self.kernels.add_rule((None, p_sum), self.pids,
-                              lambda pi: reversed(kernels[p_sum, pi]))
-        self._add_p(p_sum)
-        return p_sum
+        kernels = self.kernels  # Careful with the closure!
+        return self._update(
+            self.means[p1] + self.means[p2],
+            lambda: kernels[p1] + kernels[p2] + 2 * kernels[p1, p2],
+            lambda pi: kernels[p1, pi] + kernels[p2, pi]
+        )
 
     def mul(self, p, other):
         """Multiply a GP from the graph with another object.
@@ -108,19 +104,10 @@ class Graph(Referentiable):
         Returns:
             The GP corresponding to the product.
         """
-        p_prod = GP(self)
-        # Update means.
-        self.means[p_prod] = other * self.means[p]
-        # Add rule to kernels.
-        kernels = self.kernels
-        self.kernels.add_rule((p_prod, p_prod), self.pids,
-                              lambda: other ** 2 * kernels[p])
-        self.kernels.add_rule((p_prod, None), self.pids,
-                              lambda pi: other * kernels[p, pi])
-        self.kernels.add_rule((None, p_prod), self.pids,
-                              lambda pi: reversed(kernels[p_prod, pi]))
-        self._add_p(p_prod)
-        return p_prod
+        kernels = self.kernels  # Careful with the closure!
+        return self._update(other * self.means[p],
+                            lambda: other ** 2 * kernels[p],
+                            lambda pi: other * kernels[p, pi])
 
     def shift(self, p, shift):
         """Shift a GP.
@@ -132,19 +119,10 @@ class Graph(Referentiable):
         Returns:
             The shifted GP.
         """
-        p_shifted = GP(self)
-        # Update means.
-        self.means[p_shifted] = self.means[p].shift(shift)
-        # Add rule to kernels.
         kernels = self.kernels
-        self.kernels.add_rule((p_shifted, p_shifted), self.pids,
-                              lambda: kernels[p].shift(shift))
-        self.kernels.add_rule((p_shifted, None), self.pids,
-                              lambda pi: kernels[p, pi].shift(shift, 0))
-        self.kernels.add_rule((None, p_shifted), self.pids,
-                              lambda pi: reversed(kernels[p_shifted, pi]))
-        self._add_p(p_shifted)
-        return p_shifted
+        return self._update(self.means[p].shift(shift),
+                            lambda: kernels[p].shift(shift),
+                            lambda pi: kernels[p, pi].shift(shift, 0))
 
     def stretch(self, p, stretch):
         """Stretch a GP.
@@ -156,19 +134,10 @@ class Graph(Referentiable):
         Returns:
             The stretched GP.
         """
-        p_stretched = GP(self)
-        # Update means.
-        self.means[p_stretched] = self.means[p].stretch(stretch)
-        # Add rule to kernels.
         kernels = self.kernels
-        self.kernels.add_rule((p_stretched, p_stretched), self.pids,
-                              lambda: kernels[p].stretch(stretch))
-        self.kernels.add_rule((p_stretched, None), self.pids,
-                              lambda pi: kernels[p, pi].stretch(stretch, 1))
-        self.kernels.add_rule((None, p_stretched), self.pids,
-                              lambda pi: reversed(kernels[p_stretched, pi]))
-        self._add_p(p_stretched)
-        return p_stretched
+        return self._update(self.means[p].stretch(stretch),
+                            lambda: kernels[p].stretch(stretch),
+                            lambda pi: kernels[p, pi].stretch(stretch, 1))
 
     def select(self, p, *dims):
         """Select input dimensions.
@@ -181,19 +150,10 @@ class Graph(Referentiable):
         Returns:
             GP with the specific input dimensions.
         """
-        p_select = GP(self)
-        # Update means.
-        self.means[p_select] = self.means[p].select(dims)
-        # Add rule to kernels.
         kernels = self.kernels
-        self.kernels.add_rule((p_select, p_select), self.pids,
-                              lambda: kernels[p].select(dims))
-        self.kernels.add_rule((p_select, None), self.pids,
-                              lambda pi: kernels[p, pi].select(dims, None))
-        self.kernels.add_rule((None, p_select), self.pids,
-                              lambda pi: reversed(kernels[p_select, pi]))
-        self._add_p(p_select)
-        return p_select
+        return self._update(self.means[p].select(dims),
+                            lambda: kernels[p].select(dims),
+                            lambda pi: kernels[p, pi].select(dims, None))
 
     def transform(self, p, f):
         """Transform the inputs of a GP.
@@ -205,21 +165,10 @@ class Graph(Referentiable):
         Returns:
             Input-transformed GP.
         """
-        p_transformed = GP(self)
-        # Update means.
-        self.means[p_transformed] = self.means[p].transform(f)
-        # Add rule to kernels.
         kernels = self.kernels
-        self.kernels.add_rule((p_transformed, p_transformed), self.pids,
-                              lambda: kernels[p].transform(f))
-        self.kernels.add_rule((p_transformed, None), self.pids,
-                              lambda pi: kernels[p, pi].transform(
-                                  f, (lambda x, B: x)
-                              ))
-        self.kernels.add_rule((None, p_transformed), self.pids,
-                              lambda pi: reversed(kernels[p_transformed, pi]))
-        self._add_p(p_transformed)
-        return p_transformed
+        return self._update(self.means[p].transform(f),
+                            lambda: kernels[p].transform(f),
+                            lambda pi: kernels[p, pi].transform(f, None))
 
     def diff(self, p, deriv=0):
         """Differentiate a GP.
@@ -232,19 +181,10 @@ class Graph(Referentiable):
         Returns:
             Derivative of GP.
         """
-        dp = GP(self)
-        # Update means.
-        self.means[dp] = self.means[p].diff(deriv)
-        # Add rule to kernels.
         kernels = self.kernels
-        self.kernels.add_rule((dp, dp), self.pids,
-                              lambda: kernels[p].diff(deriv))
-        self.kernels.add_rule((dp, None), self.pids,
-                              lambda pi: kernels[p, pi].diff(deriv, None))
-        self.kernels.add_rule((None, dp), self.pids,
-                              lambda pi: reversed(kernels[dp, pi]))
-        self._add_p(dp)
-        return dp
+        return self._update(self.means[p].diff(deriv),
+                            lambda: kernels[p].diff(deriv),
+                            lambda pi: kernels[p, pi].diff(deriv, None))
 
     @dispatch(At, object)
     def condition(self, x, y):

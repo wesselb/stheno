@@ -325,9 +325,9 @@ class SelectedKernel(Kernel, SelectedType, Referentiable):
     @cache
     def __call__(self, x, y, B):
         dims = expand(self.dims)
-        x_sel = x if dims[0] is None else B.take(x, dims[0], axis=1)
-        y_sel = y if dims[1] is None else B.take(y, dims[1], axis=1)
-        return self[0](x_sel, y_sel, B)
+        x = x if dims[0] is None else B.take(x, dims[0], axis=1)
+        y = y if dims[1] is None else B.take(y, dims[1], axis=1)
+        return self[0](x, y, B)
 
     @property
     def _stationary(self):
@@ -375,7 +375,9 @@ class InputTransformedKernel(Kernel, InputTransformedType, Referentiable):
     @cache
     def __call__(self, x, y, B):
         fs = expand(self.fs)
-        return self[0](fs[0](x, B), fs[1](y, B), B)
+        x = x if fs[0] is None else fs[0](x, B)
+        y = y if fs[1] is None else fs[1](y, B)
+        return self[0](x, y, B)
 
     @property
     def _stationary(self):

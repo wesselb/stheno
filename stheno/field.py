@@ -97,7 +97,8 @@ class Type(Referentiable):
         """Transform the inputs.
 
         Args:
-            \*fs (int or tuple): Per input, transformation.
+            \*fs (int or tuple): Per input, transformation. Set to `None` to
+                not perform a transformation.
         """
         return transform(self, *fs)
 
@@ -293,7 +294,8 @@ class InputTransformedType(WrappedType):
 
     Args:
         t (instance of :class:`.field.Type`): Element to wrap.
-        \*fs (tensor): Transformations.
+        \*fs (tensor): Per input, the transformation. Set to `None` to not
+            do a transformation.
     """
 
     def __init__(self, t, *fs):
@@ -421,7 +423,7 @@ def select(a, *dims):
 
     Args:
         a (instance of :class:`.field.Type`): Element to wrap.
-        \*dims (int): Dimensions to select.
+        \*dims (int): Per input, dimensions to select.
     """
     raise NotImplementedError('Selection not implemented for {}.'
                               ''.format(type(a).__name__))
@@ -433,7 +435,8 @@ def transform(a, *fs):
 
     Args:
         a (instance of :class:`.field.Type`): Element to wrap.
-        \*fs (int): Transformations.
+        \*fs (int): Per input, the transform. Set to `None` to not perform a
+            transform.
     """
     raise NotImplementedError('Input transforms not implemented for {}.'
                               ''.format(type(a).__name__))
