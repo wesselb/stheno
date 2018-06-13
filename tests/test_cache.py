@@ -11,7 +11,7 @@ from stheno.input import Component
 from stheno.cache import Cache
 from stheno.random import GPPrimitive
 # noinspection PyUnresolvedReferences
-from . import eq, neq, ok
+from . import eq, neq, ok, raises
 
 
 def test_lab_cache():
@@ -82,6 +82,9 @@ def test_uprank():
     yield eq, k(np.ones((5, 2)), 0).shape, (5, 1)
     yield eq, k(np.ones((5, 2)), np.ones(5)).shape, (5, 5)
     yield eq, k(np.ones((5, 2)), np.ones((5, 2))).shape, (5, 5)
+
+    yield raises, ValueError, lambda: k(0, np.ones((5, 2, 1)))
+    yield raises, ValueError, lambda: k(np.ones((5, 2, 1)))
 
     m = OneMean()
 

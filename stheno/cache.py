@@ -148,7 +148,7 @@ def uprank(x, B=B):
         x (tensor): Tensor to uprank.
     """
     if B.rank(x) > 2:
-        raise RuntimeError('Input must be at most rank 2.')
+        raise ValueError('Input must be at most rank 2.')
     elif B.rank(x) == 2:
         return x
     elif B.rank(x) == 1:

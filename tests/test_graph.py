@@ -7,7 +7,7 @@ from numpy.testing import assert_allclose, assert_array_almost_equal
 from lab import B
 
 from stheno.graph import Graph, GP, At
-from stheno.kernel import Linear, EQ
+from stheno.kernel import Linear, EQ, Delta
 from stheno.mean import FunctionMean
 from stheno.cache import Cache
 # noinspection PyUnresolvedReferences,
@@ -380,3 +380,29 @@ def test_case_approximate_derivative():
 
     # Set regularisation back.
     B.epsilon = orig_epsilon
+
+
+def test_case_blr():
+    model = Graph()
+    x = np.linspace(0, 10, 100)
+
+    slope = GP(1, graph=model)
+    intercept = GP(1, graph=model)
+    f = slope * (lambda x: x) + intercept
+    y = f + 1e-2 * GP(Delta(), graph=model)
+
+    # Sample true slope and intercept.
+    true_slope = slope(0).sample()
+    true_intercept = intercept.condition(slope @ 0, true_slope)(0).sample()
+
+    # Sample observations.
+    y_obs = y.condition(intercept @ 0, true_intercept)(x).sample()
+    model.revert_prior()
+
+    # Predict.
+    model.condition(y @ x, y_obs)
+    mean_slope, mean_intercept = slope(0).mean, intercept(0).mean
+    model.revert_prior()
+
+    yield le, np.abs(true_slope[0, 0] - mean_slope[0, 0]), 5e-2
+    yield le, np.abs(true_intercept[0, 0] - mean_intercept[0, 0]), 5e-2

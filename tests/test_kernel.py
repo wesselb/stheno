@@ -395,13 +395,17 @@ def test_properties_selected():
 
     k = (2 * EQ().stretch(np.array([1, 2, 3]))).select((0, 2), (1, 2))
 
+    yield eq, k.stationary, False
     yield ok, k.length_scale is np.nan
     yield ok, k.period is np.nan
+    yield eq, k.var, 2
 
     k = (2 * EQ().periodic(np.array([1, 2, 3]))).select((0, 2), (1, 2))
 
+    yield eq, k.stationary, False
     yield eq, k.length_scale, 1
     yield ok, k.period is np.nan
+    yield eq, k.var, 2
 
 
 def test_properties_input_transform():
