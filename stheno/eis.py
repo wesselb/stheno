@@ -54,7 +54,7 @@ class AdditiveComponentKernel(ComponentKernel, Referentiable):
     def __init__(self, ks, latent=None):
         input_types = set(ks.keys())
 
-        class KernelMatrix(Referentiable):
+        class KernelMatrix(object):
             def _resolve(self, t):
                 if t == Latent:
                     return {} if latent is None else set(latent)
