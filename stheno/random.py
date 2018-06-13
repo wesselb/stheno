@@ -282,8 +282,9 @@ class GPPrimitive(RandomProcess, Referentiable):
             Instance of :class:`gptools.normal.Normal`.
         """
         cache = Cache() if cache is None else cache
-        return Normal(B.reg(self.kernel(x, cache)), self.mean(x, cache))
+        return Normal(self.kernel(x, cache), self.mean(x, cache))
 
+    @dispatch(object, object)
     def condition(self, x, y):
         """Condition the GP on a number of points.
 
@@ -297,6 +298,10 @@ class GPPrimitive(RandomProcess, Referentiable):
         K = SPD(self.kernel(x))
         return GPPrimitive(PosteriorKernel(self, x, K),
                            PosteriorMean(self, x, K, y))
+
+    @dispatch([tuple])
+    def condition(self, pairs):
+        pass
 
     def predict(self, x, cache=None):
         """Predict at specified locations.
