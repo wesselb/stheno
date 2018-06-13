@@ -393,14 +393,14 @@ def test_case_blr():
 
     # Sample true slope and intercept.
     true_slope = slope(0).sample()
-    true_intercept = intercept.condition(slope @ 0, true_slope)(0).sample()
+    true_intercept = intercept.condition(At(slope)(0), true_slope)(0).sample()
 
     # Sample observations.
-    y_obs = y.condition(intercept @ 0, true_intercept)(x).sample()
+    y_obs = y.condition(At(intercept)(0), true_intercept)(x).sample()
     model.revert_prior()
 
     # Predict.
-    model.condition(y @ x, y_obs)
+    model.condition(At(y)(x), y_obs)
     mean_slope, mean_intercept = slope(0).mean, intercept(0).mean
     model.revert_prior()
 
