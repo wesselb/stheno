@@ -20,8 +20,8 @@ import numpy as np
 from stheno import GP, EQ, Delta
 
 # Define points to predict at.
-x = np.linspace(0, 10, 100)[:, None]
-x_obs = np.linspace(0, 7, 20)[:, None]
+x = np.linspace(0, 10, 100)
+x_obs = np.linspace(0, 7, 20)
 
 # Construct a prior.
 f = GP(EQ().periodic(5.))  # Latent function.
@@ -60,8 +60,8 @@ import numpy as np
 from stheno import GP, model, EQ, RQ, Linear, Delta, Exp
 
 # Define points to predict at.
-x = np.linspace(0, 10, 200)[:, None]
-x_obs = np.linspace(0, 7, 50)[:, None]
+x = np.linspace(0, 10, 200)
+x_obs = np.linspace(0, 7, 50)
 
 # Construct a latent function consisting of four different components.
 f_smooth = GP(EQ())
@@ -165,8 +165,8 @@ from stheno.tf import GP, EQ, Delta, model
 s = tf.Session()
 
 # Define points to predict at.
-x = np.linspace(0, 5, 100)[:, None]
-x_obs = np.linspace(0, 3, 20)[:, None]
+x = np.linspace(0, 5, 100)
+x_obs = np.linspace(0, 3, 20)
 
 # Construct the model.
 u = GP(vs.pos(.5) * EQ().stretch(vs.pos(1.)))

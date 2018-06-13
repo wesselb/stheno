@@ -4,8 +4,8 @@ import numpy as np
 from stheno import GP, model, EQ, RQ, Linear, Delta, Exp
 
 # Define points to predict at.
-x = np.linspace(0, 10, 200)[:, None]
-x_obs = np.linspace(0, 7, 50)[:, None]
+x = np.linspace(0, 10, 200)
+x_obs = np.linspace(0, 7, 50)
 
 # Construct a latent function consisting of four different components.
 f_smooth = GP(EQ())

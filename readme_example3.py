@@ -9,8 +9,8 @@ from stheno.tf import GP, EQ, Delta, model
 s = tf.Session()
 
 # Define points to predict at.
-x = np.linspace(0, 5, 100)[:, None]
-x_obs = np.linspace(0, 3, 20)[:, None]
+x = np.linspace(0, 5, 100)
+x_obs = np.linspace(0, 3, 20)
 
 # Construct the model.
 u = GP(vs.pos(.5) * EQ().stretch(vs.pos(1.)))

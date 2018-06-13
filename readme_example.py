@@ -4,8 +4,8 @@ import numpy as np
 from stheno import GP, EQ, Delta
 
 # Define points to predict at.
-x = np.linspace(0, 10, 100)[:, None]
-x_obs = np.linspace(0, 7, 20)[:, None]
+x = np.linspace(0, 10, 100)
+x_obs = np.linspace(0, 7, 20)
 
 # Construct a prior.
 f = GP(EQ().periodic(5.))  # Latent function.
