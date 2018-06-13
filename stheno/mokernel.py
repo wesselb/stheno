@@ -4,13 +4,12 @@ from __future__ import absolute_import, division, print_function
 
 import logging
 
-from plum import Dispatcher, Self, Referentiable, type_parameter
 from lab import B
+from plum import Dispatcher, Self, Referentiable, type_parameter
 
 from .cache import cache, Cache
-from .input import Component
+from .graph import At
 from .kernel import Kernel
-from .graph import GP, At
 
 __all__ = ['MultiOutputKernel']
 

@@ -16,7 +16,6 @@ def test_mokernel():
     m = Graph()
     p1 = GP(1 * EQ(), graph=m)
     p2 = GP(2 * EQ().stretch(2), graph=m)
-    p3 = GP(3 * EQ().stretch(3), graph=m)
 
     mok = MultiOutputKernel(p1, p2)
     ks = m.kernels
