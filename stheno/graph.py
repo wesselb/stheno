@@ -6,19 +6,21 @@ from types import FunctionType
 
 from fdm import central_fdm
 from lab import B
-from plum import Dispatcher, Self, Referentiable, type_parameter, kind, \
-    PromisedType
+from plum import Dispatcher, Self, Referentiable, type_parameter, PromisedType
 
 from .cache import Cache
+from .cache import uprank
+from .input import Input, At
 from .kernel import ZeroKernel, PosteriorCrossKernel, Kernel, FunctionKernel
 from .lazy import LazyVector, LazyMatrix
 from .mean import PosteriorCrossMean, Mean
+from .mokernel import MultiOutputKernel as MOK
+from .momean import MultiOutputMean as MOM
 from .random import GPPrimitive, Random
 from .spd import SPD
 
-__all__ = ['GP', 'model', 'Graph', 'At']
+__all__ = ['GP', 'model', 'Graph']
 
-At = kind()
 PromisedGP = PromisedType()
 
 
@@ -246,6 +248,29 @@ class Graph(Referentiable):
             # Empty storage.
             self.prior_kernels = None
             self.prior_means = None
+
+    @dispatch([At])
+    def sample(self, *xs):
+        """Sample multiple processes simultaneously.
+
+        Args:
+            \*xs (instance of :class:`.graph.At`): Locations to sample at.
+        """
+        sample = GPPrimitive(MOK(*self.ps), MOM(*self.ps))(xs).sample()
+
+        # To unpack `x`, just keep `.get()`ing.
+        def unpack(x):
+            while isinstance(x, (At, Input)):
+                x = x.get()
+            return x
+
+        # Unpack sample.
+        lengths = [B.shape(uprank(unpack(x)))[0] for x in xs]
+        i, samples = 0, []
+        for length in lengths:
+            samples.append(sample[i:i + length, :])
+            i += length
+        return samples[0] if len(samples) == 1 else samples
 
 
 class GraphMean(Mean, Referentiable):

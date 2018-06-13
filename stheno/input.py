@@ -2,7 +2,7 @@
 
 from __future__ import absolute_import, division, print_function
 
-from plum import parametric
+from plum import parametric, kind
 
 __all__ = ['Input', 'Observed', 'Latent', 'Component']
 
@@ -31,3 +31,6 @@ class Component(Input):
 
 Observed = Component('observed')  #: Observed points
 Latent = Component('latent')  #: Latent points
+
+#: A generic parametric type used to specify locations at a particular process.
+At = kind()

@@ -5,7 +5,8 @@ from __future__ import absolute_import, division, print_function
 import numpy as np
 from numpy.testing import assert_allclose
 
-from stheno.graph import Graph, GP, At
+from stheno.graph import Graph, GP
+from stheno.input import At
 from stheno.kernel import EQ
 from stheno.momean import MultiOutputMean
 # noinspection PyUnresolvedReferences

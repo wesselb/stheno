@@ -6,7 +6,8 @@ import numpy as np
 from numpy.testing import assert_allclose
 
 from stheno.mokernel import MultiOutputKernel
-from stheno.graph import Graph, GP, At
+from stheno.graph import Graph, GP
+from stheno.input import At
 from stheno.kernel import EQ
 # noinspection PyUnresolvedReferences
 from . import eq, neq, lt, le, ge, gt, raises, call, ok, eprint

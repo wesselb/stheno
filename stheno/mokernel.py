@@ -8,7 +8,7 @@ from lab import B
 from plum import Dispatcher, Self, Referentiable, type_parameter
 
 from .cache import cache, Cache
-from .graph import At
+from .input import At
 from .kernel import Kernel
 
 __all__ = ['MultiOutputKernel']

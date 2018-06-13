@@ -6,7 +6,8 @@ import numpy as np
 from numpy.testing import assert_allclose, assert_array_almost_equal
 from lab import B
 
-from stheno.graph import Graph, GP, At
+from stheno.graph import Graph, GP
+from stheno.input import At
 from stheno.kernel import Linear, EQ, Delta
 from stheno.mean import FunctionMean
 from stheno.cache import Cache
@@ -406,3 +407,24 @@ def test_case_blr():
 
     yield le, np.abs(true_slope[0, 0] - mean_slope[0, 0]), 5e-2
     yield le, np.abs(true_intercept[0, 0] - mean_intercept[0, 0]), 5e-2
+
+
+def test_sample():
+    model = Graph()
+    p1 = GP(0, 1, graph=model)
+    p2 = GP(0, 2, graph=model)
+    p3 = GP(0, 3, graph=model)
+
+    x1 = np.linspace(0, 1, 10)
+    x2 = np.linspace(0, 1, 20)
+    x3 = np.linspace(0, 1, 30)
+
+    s1, s2, s3 = model.sample(At(p1)(x1), At(p2)(x2), At(p3)(x3))
+
+    yield eq, s1.shape, (10, 1)
+    yield eq, s2.shape, (20, 1)
+    yield eq, s3.shape, (30, 1)
+
+    yield le, np.sum(np.abs(s1 - 1)), 1e-4
+    yield le, np.sum(np.abs(s2 - 2)), 1e-4
+    yield le, np.sum(np.abs(s3 - 3)), 1e-4
