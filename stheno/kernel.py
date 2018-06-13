@@ -286,9 +286,6 @@ class ShiftedKernel(Kernel, ShiftedType, Referentiable):
     @cache
     def __call__(self, x, y, B):
         shifts = expand(self.shifts)
-        log.debug(shifts)
-        log.debug(x)
-        log.debug(y)
         return self[0](B.subtract(x, shifts[0]), B.subtract(y, shifts[1]), B)
 
     @property
@@ -787,7 +784,6 @@ def reverse(a): return mul(reverse(a[0]), reverse(a[1]))
 
 @dispatch(ScaledKernel)
 def reverse(a): return a.scale * reverse(a[0])
-
 
 # Shifting:
 

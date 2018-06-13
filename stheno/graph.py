@@ -88,11 +88,10 @@ class Graph(Referentiable):
     @dispatch(PromisedGP, PromisedGP)
     def sum(self, p1, p2):
         kernels = self.kernels  # Careful with the closure!
-        return self._update(
-            self.means[p1] + self.means[p2],
-            lambda: kernels[p1] + kernels[p2] + 2 * kernels[p1, p2],
-            lambda pi: kernels[p1, pi] + kernels[p2, pi]
-        )
+        return self._update(self.means[p1] + self.means[p2],
+                            (lambda: kernels[p1] + kernels[p2] +
+                                     kernels[p1, p2] + kernels[p2, p1]),
+                            lambda pi: kernels[p1, pi] + kernels[p2, pi])
 
     def mul(self, p, other):
         """Multiply a GP from the graph with another object.
