@@ -773,6 +773,22 @@ def reverse(a): return a[0]
 def reverse(a): return a
 
 
+@dispatch(ShiftedKernel)
+def reverse(a): return ShiftedKernel(a[0], *reversed(a.shifts))
+
+
+@dispatch(StretchedKernel)
+def reverse(a): return StretchedKernel(a[0], *reversed(a.stretches))
+
+
+@dispatch(InputTransformedKernel)
+def reverse(a): return InputTransformedKernel(a[0], *reversed(a.fs))
+
+
+@dispatch(SelectedKernel)
+def reverse(a): return SelectedKernel(a[0], *reversed(a.dims))
+
+
 # Propagate reversal.
 
 @dispatch(SumKernel)
