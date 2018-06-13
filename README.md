@@ -335,7 +335,7 @@ plt.show()
 
 ## Example: GPAR
 
-![Prediction](https://raw.githubusercontent.com/wesselb/stheno/master/readme_prediction6.png)
+![Prediction](https://raw.githubusercontent.com/wesselb/stheno/master/readme_prediction7.png)
 
 
 ```python
@@ -344,7 +344,7 @@ plt.show()
 
 ## Example: Combining RNNs and GPs
 
-![Prediction](https://raw.githubusercontent.com/wesselb/stheno/master/readme_prediction6.png)
+![Prediction](https://raw.githubusercontent.com/wesselb/stheno/master/readme_prediction8.png)
 
 
 ```python
