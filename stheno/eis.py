@@ -2,6 +2,7 @@
 
 from __future__ import absolute_import, division, print_function
 
+import logging
 from plum import Dispatcher, Self, Referentiable
 
 from .input import Observed, Latent, Component
@@ -9,6 +10,8 @@ from .kernel import Kernel, ZeroKernel
 from .cache import cache, Cache
 
 __all__ = ['NoisyKernel', 'ComponentKernel', 'AdditiveComponentKernel']
+
+log = logging.getLogger(__name__)
 
 
 class ComponentKernel(Kernel, Referentiable):
@@ -49,40 +52,25 @@ class AdditiveComponentKernel(ComponentKernel, Referentiable):
     """
 
     def __init__(self, ks, latent=None):
-        InputTypes = {Observed, Latent} | set(ks.keys())
+        input_types = set(ks.keys())
 
         class KernelMatrix(Referentiable):
+            def _resolve(self, t):
+                if t == Latent:
+                    return {} if latent is None else set(latent)
+                elif t == Observed:
+                    return input_types
+                elif t in input_types:
+                    return {t}
+                else:
+                    raise RuntimeError('Input type "{}" is not a component of '
+                                       'the kernel.'.format(t.__name__))
+
             def __getitem__(self, item):
-                i1, i2 = item
-
-                # Check that both inputs are actually part of the kernel.
-                if i1 not in InputTypes or i2 not in InputTypes:
-                    raise RuntimeError(
-                        'Either "{}" or "{}" is not a component of the kernel.'
-                        ''.format(i1.__name__, i2.__name__))
-
-                # TODO: Refactor logic here. Make more readable.
-                # Handle latent.
-                if latent and (i1 == Latent or i2 == Latent):
-                    if i1 == i2 or i1 == Observed or i2 == Observed:
-                        return sum([ks[i] for i in latent], ZeroKernel())
-                    else:
-                        i = i1 if i1 == Latent else i2
-                        return ks[i] if i in latent else ZeroKernel()
-
-                # Handle observed, assuming there is no latent.
-                if i1 == Observed or i2 == Observed:
-                    if i1 == i2:
-                        return sum(ks.values(), ZeroKernel())
-                    else:
-                        return ks[i1] if i2 == Observed else ks[i2]
-
-                # The rest is independent. Easy.
-                return ks[i1] if i1 == i2 else ZeroKernel()
+                t1s, t2s = self._resolve(item[0]), self._resolve(item[1])
+                return sum([ks[t] for t in t1s & t2s], ZeroKernel())
 
         ComponentKernel.__init__(self, KernelMatrix())
-
-    # TODO: implement properly
 
 
 class NoisyKernel(Kernel, Referentiable):
