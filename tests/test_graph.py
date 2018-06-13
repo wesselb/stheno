@@ -107,7 +107,7 @@ def test_properties():
     yield eq, p.var, 1 + 2 ** 2, 'var'
     yield assert_allclose, p.length_scale, \
           (1 + 2 * 2 ** 2) / (1 + 2 ** 2)
-    yield eq, p.period, 0, 'period'
+    yield eq, p.period, np.inf, 'period'
 
     yield eq, p3.period, 10, 'period'
 
@@ -115,7 +115,7 @@ def test_properties():
 
     yield eq, p.stationary, True, 'stationary 2'
     yield eq, p.var, 1 + 2 ** 2 + 1, 'var 2'
-    yield eq, p.period, 0, 'period 2'
+    yield eq, p.period, np.inf, 'period 2'
 
     p = p + GP(Linear(), graph=model)
 

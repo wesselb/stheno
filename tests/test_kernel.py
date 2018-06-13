@@ -94,14 +94,14 @@ def test_reversal():
     yield eq, k.stationary, True
     yield eq, k.var, 1
     yield eq, k.length_scale, 1
-    yield eq, k.period, 0
+    yield eq, k.period, np.inf
 
     # Verify that the kernel has the right properties.
     k = reversed(Linear())
     yield eq, k.stationary, False
-    yield ok, k.var is np.nan
-    yield ok, k.length_scale is np.nan
-    yield eq, k.period, 0
+    yield raises, RuntimeError, lambda: k.var
+    yield raises, RuntimeError, lambda: k.length_scale
+    yield eq, k.period, np.inf
     yield eq, str(k), 'Reversed(Linear())'
 
 
@@ -124,7 +124,7 @@ def test_kernel_delta():
     yield eq, k.stationary, True
     yield eq, k.var, 1
     yield eq, k.length_scale, 0
-    yield eq, k.period, 0
+    yield eq, k.period, np.inf
     yield eq, str(k), 'Delta()'
 
     yield ok, np.allclose(k(x1), np.eye(10)), 'same'
@@ -143,7 +143,7 @@ def test_kernel_eq():
     yield eq, k.stationary, True
     yield eq, k.var, 1
     yield eq, k.length_scale, 1
-    yield eq, k.period, 0
+    yield eq, k.period, np.inf
     yield eq, str(k), 'EQ()'
 
 
@@ -160,7 +160,7 @@ def test_kernel_rq():
     yield eq, k.stationary, True
     yield eq, k.var, 1
     yield eq, k.length_scale, 1
-    yield eq, k.period, 0
+    yield eq, k.period, np.inf
     yield eq, str(k), 'RQ(0.1)'
 
 
@@ -176,7 +176,7 @@ def test_kernel_exp():
     yield eq, k.stationary, True
     yield eq, k.var, 1
     yield eq, k.length_scale, 1
-    yield eq, k.period, 0
+    yield eq, k.period, np.inf
     yield eq, str(k), 'Exp()'
 
 
@@ -192,7 +192,7 @@ def test_kernel_mat32():
     yield eq, k.stationary, True
     yield eq, k.var, 1
     yield eq, k.length_scale, 1
-    yield eq, k.period, 0
+    yield eq, k.period, np.inf
     yield eq, str(k), 'Matern32()'
 
 
@@ -208,7 +208,7 @@ def test_kernel_mat52():
     yield eq, k.stationary, True
     yield eq, k.var, 1
     yield eq, k.length_scale, 1
-    yield eq, k.period, 0
+    yield eq, k.period, np.inf
     yield eq, str(k), 'Matern52()'
 
 
@@ -224,7 +224,7 @@ def test_kernel_one():
     # Verify that the kernel has the right properties.
     yield eq, k.stationary, True
     yield eq, k.var, 1
-    yield ok, k.length_scale is np.inf
+    yield eq, k.length_scale, 0
     yield eq, k.period, 0
     yield eq, str(k), '1'
 
@@ -256,9 +256,9 @@ def test_kernel_linear():
 
     # Verify that the kernel has the right properties.
     yield eq, k.stationary, False
-    yield ok, k.var is np.nan
-    yield ok, k.length_scale is np.nan
-    yield eq, k.period, 0
+    yield raises, RuntimeError, lambda: k.var
+    yield raises, RuntimeError, lambda: k.length_scale
+    yield eq, k.period, np.inf
     yield eq, str(k), 'Linear()'
 
 
@@ -275,9 +275,9 @@ def test_kernel_posteriorcross():
 
     # Verify that the kernel has the right properties.
     yield eq, k.stationary, False
-    yield ok, k.var is np.nan
-    yield ok, k.length_scale is np.nan
-    yield eq, k.period, 0
+    yield raises, RuntimeError, lambda: k.var
+    yield raises, RuntimeError, lambda: k.length_scale
+    yield raises, RuntimeError, lambda: k.period
     yield eq, str(k), 'PosteriorCrossKernel()'
 
     k = PosteriorKernel(GPPrimitive(EQ()), None, None)
@@ -291,7 +291,7 @@ def test_properties_sum():
 
     yield eq, k.stationary, True
     yield ok, np.allclose(k.length_scale, (1 * 2 + 3 * 5) / 4)
-    yield eq, k.period, 0
+    yield eq, k.period, np.inf
     yield eq, k.var, 4
 
     yield ok, np.allclose((EQ() + EQ()).length_scale, 1)
@@ -303,14 +303,14 @@ def test_properties_stretch():
 
     yield eq, k.stationary, True
     yield eq, k.length_scale, 2
-    yield eq, k.period, 0
+    yield eq, k.period, np.inf
     yield eq, k.var, 1
 
     k = EQ().stretch(1, 2)
 
     yield eq, k.stationary, False
-    yield ok, k.length_scale is np.nan
-    yield ok, k.period is np.nan
+    yield raises, RuntimeError, lambda: k.length_scale
+    yield raises, RuntimeError, lambda: k.period
     yield eq, k.var, 1
 
 
@@ -335,7 +335,7 @@ def test_properties_scaled():
 
     yield eq, k.stationary, True
     yield eq, k.length_scale, 1
-    yield eq, k.period, 0
+    yield eq, k.period, np.inf
     yield eq, k.var, 2
 
 
@@ -344,14 +344,14 @@ def test_properties_shifted():
 
     yield eq, k.stationary, True
     yield eq, k.length_scale, 1
-    yield eq, k.period, 0
+    yield eq, k.period, np.inf
     yield eq, k.var, 2
 
     k = (2 * EQ()).shift(5, 6)
 
     yield eq, k.stationary, False
-    yield ok, k.length_scale is np.nan
-    yield eq, k.period, 0
+    yield raises, RuntimeError, lambda: k.length_scale
+    yield eq, k.period, np.inf
     yield eq, k.var, 2
 
 
@@ -360,7 +360,7 @@ def test_properties_product():
 
     yield eq, k.stationary, True
     yield eq, k.length_scale, 10
-    yield eq, k.period, 0
+    yield eq, k.period, np.inf
     yield eq, k.var, 6
 
 
@@ -369,21 +369,21 @@ def test_properties_selected():
 
     yield eq, k.stationary, True
     yield eq, k.length_scale, 5
-    yield eq, k.period, 0
+    yield eq, k.period, np.inf
     yield eq, k.var, 2
 
     k = (2 * EQ().stretch(5)).select(2, 3)
 
     yield eq, k.stationary, True
     yield eq, k.length_scale, 5
-    yield eq, k.period, 0
+    yield eq, k.period, np.inf
     yield eq, k.var, 2
 
     k = (2 * EQ().stretch(np.array([1, 2, 3]))).select(0, 2)
 
     yield eq, k.stationary, True
     yield assert_allclose, k.length_scale, [1, 3]
-    yield assert_allclose, k.period, [0, 0]
+    yield assert_allclose, k.period, [np.inf, np.inf]
     yield eq, k.var, 2
 
     k = (2 * EQ().periodic(np.array([1, 2, 3]))).select(1, 2)
@@ -396,15 +396,15 @@ def test_properties_selected():
     k = (2 * EQ().stretch(np.array([1, 2, 3]))).select((0, 2), (1, 2))
 
     yield eq, k.stationary, False
-    yield ok, k.length_scale is np.nan
-    yield ok, k.period is np.nan
+    yield raises, RuntimeError, lambda: k.length_scale
+    yield raises, RuntimeError, lambda: k.period
     yield eq, k.var, 2
 
     k = (2 * EQ().periodic(np.array([1, 2, 3]))).select((0, 2), (1, 2))
 
     yield eq, k.stationary, False
     yield eq, k.length_scale, 1
-    yield ok, k.period is np.nan
+    yield raises, RuntimeError, lambda: k.period
     yield eq, k.var, 2
 
 
@@ -412,18 +412,18 @@ def test_properties_input_transform():
     k = Linear().transform(lambda x, c: x - 5)
 
     yield eq, k.stationary, False
-    yield ok, k.length_scale is np.nan
-    yield ok, k.var is np.nan
-    yield eq, k.period, 0
+    yield raises, RuntimeError, lambda: k.length_scale
+    yield raises, RuntimeError, lambda: k.var
+    yield raises, RuntimeError, lambda: k.period
 
 
 def test_properties_derivative():
     k = EQ().diff(0)
 
     yield eq, k.stationary, False
-    yield ok, k.length_scale is np.nan
-    yield ok, k.var is np.nan
-    yield ok, k.period is np.nan
+    yield raises, RuntimeError, lambda: k.length_scale
+    yield raises, RuntimeError, lambda: k.var
+    yield raises, RuntimeError, lambda: k.period
 
     yield raises, RuntimeError, lambda: EQ().diff(None, None)(1)
 
@@ -432,9 +432,9 @@ def test_properties_function():
     k = FunctionKernel(lambda x: x ** 2)
 
     yield eq, k.stationary, False
-    yield ok, k.length_scale is np.nan
-    yield ok, k.var is np.nan
-    yield ok, k.period is np.nan
+    yield raises, RuntimeError, lambda: k.length_scale
+    yield raises, RuntimeError, lambda: k.var
+    yield raises, RuntimeError, lambda: k.period
 
 
 def test_selection():
