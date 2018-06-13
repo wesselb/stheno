@@ -79,12 +79,13 @@ class Type(Referentiable):
         """
         return shift(self, *amounts)
 
-    @dispatch([{tuple, list}])
+    @dispatch([{tuple, list, type(None)}])
     def select(self, *dims):
         """Select particular dimensions of the input features.
 
         Args:
-            \*dims (int or tuple): Per input, dimensions to select.
+            \*dims (int, sequence, or None): Per input, dimensions to select.
+                Set to `None` to select all.
         """
         return select(self, *dims)
 

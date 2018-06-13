@@ -250,7 +250,11 @@ class StretchedKernel(Kernel, StretchedType, Referentiable):
 
     @property
     def _stationary(self):
-        return self[0].stationary
+        if len(self.stretches) == 1:
+            return self[0].stationary
+        else:
+            # NOTE: Can do something more clever here.
+            return False
 
     @property
     def var(self):
@@ -282,11 +286,18 @@ class ShiftedKernel(Kernel, ShiftedType, Referentiable):
     @cache
     def __call__(self, x, y, B):
         shifts = expand(self.shifts)
+        log.debug(shifts)
+        log.debug(x)
+        log.debug(y)
         return self[0](B.subtract(x, shifts[0]), B.subtract(y, shifts[1]), B)
 
     @property
     def _stationary(self):
-        return self[0].stationary
+        if len(self.shifts) == 1:
+            return self[0].stationary
+        else:
+            # NOTE: Can do something more clever here.
+            return False
 
     @property
     def var(self):
@@ -294,7 +305,11 @@ class ShiftedKernel(Kernel, ShiftedType, Referentiable):
 
     @property
     def length_scale(self):
-        return self[0].length_scale
+        if len(self.shifts) == 1:
+            return self[0].length_scale
+        else:
+            # NOTE: Can do something more clever here.
+            return np.nan
 
     @property
     def period(self):
@@ -310,12 +325,17 @@ class SelectedKernel(Kernel, SelectedType, Referentiable):
     @cache
     def __call__(self, x, y, B):
         dims = expand(self.dims)
-        return self[0](B.take(x, dims[0], axis=1),
-                       B.take(y, dims[1], axis=1), B)
+        x_sel = x if dims[0] is None else B.take(x, dims[0], axis=1)
+        y_sel = y if dims[1] is None else B.take(y, dims[1], axis=1)
+        return self[0](x_sel, y_sel, B)
 
     @property
     def _stationary(self):
-        return self[0].stationary
+        if len(self.dims) == 1:
+            return self[0].stationary
+        else:
+            # NOTE: Can do something more clever here.
+            return False
 
     @property
     def var(self):
@@ -770,7 +790,11 @@ def reverse(a): return a.scale * reverse(a[0])
 # Shifting:
 
 @dispatch(Kernel, [object])
-def shift(a, *shifts): return a if a.stationary else ShiftedKernel(a, *shifts)
+def shift(a, *shifts):
+    if a.stationary and len(shifts) == 1:
+        return a
+    else:
+        return ShiftedKernel(a, *shifts)
 
 
 @dispatch(ZeroKernel, [object])

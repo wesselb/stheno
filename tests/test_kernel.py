@@ -308,7 +308,7 @@ def test_properties_stretch():
 
     k = EQ().stretch(1, 2)
 
-    yield eq, k.stationary, True
+    yield eq, k.stationary, False
     yield ok, k.length_scale is np.nan
     yield ok, k.period is np.nan
     yield eq, k.var, 1
@@ -344,6 +344,13 @@ def test_properties_shifted():
 
     yield eq, k.stationary, True
     yield eq, k.length_scale, 1
+    yield eq, k.period, 0
+    yield eq, k.var, 2
+
+    k = (2 * EQ()).shift(5, 6)
+
+    yield eq, k.stationary, False
+    yield ok, k.length_scale is np.nan
     yield eq, k.period, 0
     yield eq, k.var, 2
 

@@ -69,29 +69,33 @@ class Graph(Referentiable):
     @dispatch(PromisedGP, object)
     def sum(self, p, other):
         p_sum = GP(self)
-        self._add_p(p_sum)
         # Update means.
         self.means[p_sum] = self.means[p] + other
         # Add rule to kernels.
         kernels = self.kernels
+        self.kernels.add_rule((p_sum, p_sum), self.pids, lambda: kernels[p, p])
         self.kernels.add_rule((p_sum, None), self.pids,
                               lambda pi: kernels[p, pi])
         self.kernels.add_rule((None, p_sum), self.pids,
-                              lambda pi: kernels[pi, p])
+                              lambda pi: reversed(kernels[p_sum, pi]))
+        self._add_p(p_sum)
         return p_sum
 
     @dispatch(PromisedGP, PromisedGP)
     def sum(self, p1, p2):
         p_sum = GP(self)
-        self._add_p(p_sum)
         # Update means.
         self.means[p_sum] = self.means[p1] + self.means[p2]
         # Add rule to kernels.
         kernels = self.kernels
+        self.kernels.add_rule((p_sum, p_sum), self.pids,
+                              lambda: kernels[p1] + kernels[p2] +
+                                      2 * kernels[p1, p2])
         self.kernels.add_rule((p_sum, None), self.pids,
                               lambda pi: kernels[p1, pi] + kernels[p2, pi])
         self.kernels.add_rule((None, p_sum), self.pids,
-                              lambda pi: kernels[pi, p1] + kernels[pi, p2])
+                              lambda pi: reversed(kernels[p_sum, pi]))
+        self._add_p(p_sum)
         return p_sum
 
     def mul(self, p, other):
@@ -114,7 +118,7 @@ class Graph(Referentiable):
         self.kernels.add_rule((p_prod, None), self.pids,
                               lambda pi: other * kernels[p, pi])
         self.kernels.add_rule((None, p_prod), self.pids,
-                              lambda pi: other * kernels[pi, p])
+                              lambda pi: reversed(kernels[p_prod, pi]))
         self._add_p(p_prod)
         return p_prod
 
@@ -136,15 +140,9 @@ class Graph(Referentiable):
         self.kernels.add_rule((p_shifted, p_shifted), self.pids,
                               lambda: kernels[p].shift(shift))
         self.kernels.add_rule((p_shifted, None), self.pids,
-                              lambda pi: kernels[p, pi].transform(
-                                  lambda x, B: B.subtract(x, shift),
-                                  lambda x, B: x
-                              ))
+                              lambda pi: kernels[p, pi].shift(shift, 0))
         self.kernels.add_rule((None, p_shifted), self.pids,
-                              lambda pi: kernels[pi, p].transform(
-                                  lambda x, B: x,
-                                  lambda x, B: B.subtract(x, shift)
-                              ))
+                              lambda pi: reversed(kernels[p_shifted, pi]))
         self._add_p(p_shifted)
         return p_shifted
 
@@ -166,15 +164,9 @@ class Graph(Referentiable):
         self.kernels.add_rule((p_stretched, p_stretched), self.pids,
                               lambda: kernels[p].stretch(stretch))
         self.kernels.add_rule((p_stretched, None), self.pids,
-                              lambda pi: kernels[p, pi].transform(
-                                  lambda x, B: B.divide(x, stretch),
-                                  lambda x, B: x
-                              ))
+                              lambda pi: kernels[p, pi].stretch(stretch, 1))
         self.kernels.add_rule((None, p_stretched), self.pids,
-                              lambda pi: kernels[pi, p].transform(
-                                  lambda x, B: x,
-                                  lambda x, B: B.divide(x, stretch)
-                              ))
+                              lambda pi: reversed(kernels[p_stretched, pi]))
         self._add_p(p_stretched)
         return p_stretched
 
@@ -197,15 +189,9 @@ class Graph(Referentiable):
         self.kernels.add_rule((p_select, p_select), self.pids,
                               lambda: kernels[p].select(dims))
         self.kernels.add_rule((p_select, None), self.pids,
-                              lambda pi: kernels[p, pi].transform(
-                                  lambda x, B: B.take(x, dims, axis=1),
-                                  lambda x, B: x
-                              ))
+                              lambda pi: kernels[p, pi].select(dims, None))
         self.kernels.add_rule((None, p_select), self.pids,
-                              lambda pi: kernels[pi, p].transform(
-                                  lambda x, B: x,
-                                  lambda x, B: B.take(x, dims, axis=1)
-                              ))
+                              lambda pi: reversed(kernels[p_select, pi]))
         self._add_p(p_select)
         return p_select
 
@@ -231,9 +217,7 @@ class Graph(Referentiable):
                                   f, (lambda x, B: x)
                               ))
         self.kernels.add_rule((None, p_transformed), self.pids,
-                              lambda pi: kernels[pi, p].transform(
-                                  (lambda x, B: x), f
-                              ))
+                              lambda pi: reversed(kernels[p_transformed, pi]))
         self._add_p(p_transformed)
         return p_transformed
 
@@ -258,7 +242,7 @@ class Graph(Referentiable):
         self.kernels.add_rule((dp, None), self.pids,
                               lambda pi: kernels[p, pi].diff(deriv, None))
         self.kernels.add_rule((None, dp), self.pids,
-                              lambda pi: kernels[pi, p].diff(None, deriv))
+                              lambda pi: reversed(kernels[dp, pi]))
         self._add_p(dp)
         return dp
 
