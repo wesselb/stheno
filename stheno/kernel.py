@@ -14,7 +14,7 @@ from .cache import cache, Cache, uprank
 from .field import add, mul, dispatch, Type, PrimitiveType, \
     ZeroType, OneType, ScaledType, ProductType, SumType, StretchedType, \
     WrappedType, ShiftedType, SelectedType, InputTransformedType, JoinType, \
-    DerivativeType, broadcast
+    DerivativeType, broadcast, shift, stretch, select, transform
 from .input import Input
 
 __all__ = ['Kernel', 'OneKernel', 'ZeroKernel', 'ScaledKernel', 'EQ', 'RQ',
@@ -774,19 +774,19 @@ def reverse(a): return a
 
 
 @dispatch(ShiftedKernel)
-def reverse(a): return ShiftedKernel(a[0], *reversed(a.shifts))
+def reverse(a): return shift(reversed(a[0]), *reversed(a.shifts))
 
 
 @dispatch(StretchedKernel)
-def reverse(a): return StretchedKernel(a[0], *reversed(a.stretches))
+def reverse(a): return stretch(reversed(a[0]), *reversed(a.stretches))
 
 
 @dispatch(InputTransformedKernel)
-def reverse(a): return InputTransformedKernel(a[0], *reversed(a.fs))
+def reverse(a): return transform(reversed(a[0]), *reversed(a.fs))
 
 
 @dispatch(SelectedKernel)
-def reverse(a): return SelectedKernel(a[0], *reversed(a.dims))
+def reverse(a): return select(reversed(a[0]), *reversed(a.dims))
 
 
 # Propagate reversal.

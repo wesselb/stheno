@@ -5,6 +5,7 @@ from __future__ import absolute_import, division, print_function
 from plum import Dispatcher, Self, Referentiable, type_parameter, kind, \
     PromisedType
 from lab import B
+from fdm import central_fdm
 
 from .kernel import ZeroKernel, PosteriorCrossKernel, Kernel
 from .mean import PosteriorCrossMean, ZeroMean, Mean
@@ -169,21 +170,21 @@ class Graph(Referentiable):
                             lambda: kernels[p].transform(f),
                             lambda pi: kernels[p, pi].transform(f, None))
 
-    def diff(self, p, deriv=0):
+    def diff(self, p, dim=0):
         """Differentiate a GP.
 
         Args:
             p (instance of :class:`.graph.GP`): GP to differentiate.
-            deriv (int, optional): Index of feature which to take the
-                derivative of. Defaults to `0`.
+            dim (int, optional): Dimension of feature which to take the
+                derivative with respect to. Defaults to `0`.
 
         Returns:
             Derivative of GP.
         """
         kernels = self.kernels
-        return self._update(self.means[p].diff(deriv),
-                            lambda: kernels[p].diff(deriv),
-                            lambda pi: kernels[p, pi].diff(deriv, None))
+        return self._update(self.means[p].diff(dim),
+                            lambda: kernels[p].diff(dim),
+                            lambda pi: kernels[p, pi].diff(dim, None))
 
     @dispatch(At, object)
     def condition(self, x, y):
@@ -430,8 +431,30 @@ class GP(GPPrimitive, Referentiable):
     def select(self, *dims):
         return self.graph.select(self, *dims)
 
-    def diff(self, deriv=0):
-        return self.graph.diff(self, deriv)
+    def diff(self, dim=0):
+        return self.graph.diff(self, dim)
+
+    def diff_approx(self, deriv=1, order=5, eps=1e-8, bound=1.):
+        """Approximate the derivative of the GP by constructing a finite
+        difference approximation.
+
+        Args:
+            deriv (int): Order of the derivative.
+            order (int): Order of the estimate.
+            eps (float, optional): Absolute round-off error of the function
+                evaluation. This is used to estimate the step size.
+            bound (float, optional): Upper bound of the absolute value of the
+                function and all its derivatives. This is used to estimate
+                the step size.
+        """
+        # Use the FDM library to figure out the coefficients.
+        fdm = central_fdm(order, deriv, eps=eps, bound=bound)
+
+        # Construct finite difference.
+        df = 0
+        for g, c in zip(fdm.grid, fdm.coefs):
+            df += c * self.shift(-g * fdm.step)
+        return df / fdm.step ** deriv
 
 
 PromisedGP.deliver(GP)

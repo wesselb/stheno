@@ -106,8 +106,9 @@ class Type(Referentiable):
         """Differentiate.
 
         Args:
-            \*derivs (int): Per input, the index of the feature which to take
-                the derivatives of. Set to `None` to not take a derivative.
+            \*derivs (int): Per input, dimension of the feature which to take
+                the derivatives with respect to. Set to `None` to not take a
+                derivative.
         """
         return differentiate(self, *derivs)
 
@@ -448,8 +449,9 @@ def differentiate(a, *derivs):
 
     Args:
         a (instance of :class:`.field.Type`): Element to differentiate.
-        \*derivs (int): Per input the index of the feature which to take
-            the derivatives of. Set to `None` to not take a derivative.
+        \*derivs (int): Per input, dimension of the feature which to take
+            the derivatives with respect to. Set to `None` to not take a
+            derivative.
     """
     raise NotImplementedError('Differentiation not implemented for {}.'
                               ''.format(type(a).__name__))

@@ -353,3 +353,30 @@ def test_case_exact_derivative():
 
     s.close()
     B.backend_to_np()
+
+
+def test_case_approximate_derivative():
+    model = Graph()
+    x = np.linspace(0, 1, 100)[:, None]
+    y = 2 * x
+
+    p = GP(EQ().stretch(1.), graph=model)
+    dp = p.diff_approx()
+
+    # Test conditioning on function.
+    p.condition(x, y)
+    yield le, np.sum(np.abs(dp(x).mean - 2)), 1e-3
+    p.revert_prior()
+
+    # Add some regularisation for this test case.
+    orig_epsilon = B.epsilon
+    B.epsilon = 1e-10
+
+    # Test conditioning on derivative.
+    dp.condition(x, y)
+    p.condition(0, 0)  # Fix integration constant.
+    yield le, np.sum(np.abs(p(x).mean - x ** 2)), 1e-3
+    p.revert_prior()
+
+    # Set regularisation back.
+    B.epsilon = orig_epsilon
