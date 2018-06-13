@@ -5,6 +5,7 @@ from __future__ import absolute_import, division, print_function
 import numpy as np
 from lab import B
 from plum import Self, Referentiable
+from types import FunctionType
 
 from .kernel import PosteriorKernel, OneKernel
 from .mean import ZeroMean, PosteriorMean, OneMean
@@ -259,13 +260,13 @@ class GPPrimitive(RandomProcess, Referentiable):
         # Resolve `mean`.
         if mean is None:
             self.mean = ZeroMean()
-        elif isinstance(mean, B.Numeric):
+        elif isinstance(mean, B.Numeric) or isinstance(mean, FunctionType):
             self.mean = mean * OneMean()
         else:
             self.mean = mean
 
         # Resolve `kernel`.
-        if isinstance(kernel, B.Numeric):
+        if isinstance(kernel, B.Numeric) or isinstance(kernel, FunctionType):
             self.kernel = kernel * OneKernel()
         else:
             self.kernel = kernel

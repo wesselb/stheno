@@ -14,7 +14,9 @@ from .cache import cache, Cache, uprank
 from .field import add, mul, dispatch, Type, PrimitiveType, \
     ZeroType, OneType, ScaledType, ProductType, SumType, StretchedType, \
     WrappedType, ShiftedType, SelectedType, InputTransformedType, JoinType, \
-    DerivativeType, broadcast, shift, stretch, select, transform
+    DerivativeType, broadcast, shift, stretch, select, transform, \
+    FunctionType, apply_optional_arg
+
 from .input import Input
 
 __all__ = ['Kernel', 'OneKernel', 'ZeroKernel', 'ScaledKernel', 'EQ', 'RQ',
@@ -243,8 +245,8 @@ class StretchedKernel(Kernel, StretchedType, Referentiable):
     @cache
     @uprank
     def __call__(self, x, y, B):
-        stretches = expand(self.stretches)
-        return self[0](B.divide(x, stretches[0]), B.divide(y, stretches[1]), B)
+        stretches1, stretches2 = expand(self.stretches)
+        return self[0](B.divide(x, stretches1), B.divide(y, stretches2), B)
 
     @property
     def _stationary(self):
@@ -284,8 +286,8 @@ class ShiftedKernel(Kernel, ShiftedType, Referentiable):
     @cache
     @uprank
     def __call__(self, x, y, B):
-        shifts = expand(self.shifts)
-        return self[0](B.subtract(x, shifts[0]), B.subtract(y, shifts[1]), B)
+        shifts1, shifts2 = expand(self.shifts)
+        return self[0](B.subtract(x, shifts1), B.subtract(y, shifts2), B)
 
     @property
     def _stationary(self):
@@ -321,9 +323,9 @@ class SelectedKernel(Kernel, SelectedType, Referentiable):
     @cache
     @uprank
     def __call__(self, x, y, B):
-        dims = expand(self.dims)
-        x = x if dims[0] is None else B.take(x, dims[0], axis=1)
-        y = y if dims[1] is None else B.take(y, dims[1], axis=1)
+        dims1, dims2 = expand(self.dims)
+        x = x if dims1 is None else B.take(x, dims1, axis=1)
+        y = y if dims2 is None else B.take(y, dims2, axis=1)
         return self[0](x, y, B)
 
     @property
@@ -372,9 +374,9 @@ class InputTransformedKernel(Kernel, InputTransformedType, Referentiable):
     @cache
     @uprank
     def __call__(self, x, y, B):
-        fs = expand(self.fs)
-        x = x if fs[0] is None else fs[0](x, B)
-        y = y if fs[1] is None else fs[1](y, B)
+        f1, f2 = expand(self.fs)
+        x = x if f1 is None else apply_optional_arg(f1, x, B)
+        y = y if f2 is None else apply_optional_arg(f2, y, B)
         return self[0](x, y, B)
 
     @property
@@ -696,6 +698,34 @@ class DerivativeKernel(Kernel, DerivativeType, Referentiable):
     def _stationary(self):
         # NOTE: In the one-dimensional case, if derivatives with respect to both
         # arguments are taken, then the result is in fact stationary.
+        return False
+
+    @property
+    def var(self):
+        return np.nan
+
+    @property
+    def length_scale(self):
+        return np.nan
+
+    @property
+    def period(self):
+        return np.nan
+
+
+class FunctionKernel(Kernel, FunctionType, Referentiable):
+    dispatch = Dispatcher(in_class=Self)
+
+    @dispatch(B.Numeric, B.Numeric, Cache)
+    @cache
+    @uprank
+    def __call__(self, x, y, B):
+        f1, f2 = expand(self.fs)
+        return B.multiply(apply_optional_arg(f1, x, B),
+                          B.transpose(apply_optional_arg(f2, y, B)))
+
+    @property
+    def stationary(self):
         return False
 
     @property

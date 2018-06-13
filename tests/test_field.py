@@ -6,7 +6,8 @@ import operator
 
 from stheno.field import mul, add, stretch, SumType, new, get_field, shift, \
     transform, select, broadcast, WrappedType, JoinType, differentiate, Type
-from stheno.kernel import EQ, RQ, Linear, OneKernel, ZeroKernel, Delta
+from stheno.kernel import EQ, RQ, Linear, OneKernel, ZeroKernel, Delta, \
+    FunctionKernel
 from stheno.mean import FunctionMean, ZeroMean, OneMean
 # noinspection PyUnresolvedReferences
 from tests import ok, raises
@@ -223,3 +224,36 @@ def test_derivative():
 
     yield eq, str(ZeroMean().diff(0)), '0'
     yield eq, str(OneMean().diff(0)), '0'
+
+
+def test_function():
+    def f():
+        pass
+
+    yield eq, str(ZeroKernel() * f), '0'
+    yield eq, str(f * ZeroKernel()), '0'
+    yield eq, str(OneKernel() * f), 'f'
+    yield eq, str(f * OneKernel()), 'f'
+    yield eq, str(EQ() * f), 'EQ() * f'
+    yield eq, str(f * EQ()), 'f * EQ()'
+    yield eq, str((EQ() * EQ()) * f), 'EQ() * EQ() * f'
+    yield eq, str(f * (EQ() * EQ())), 'f * EQ() * EQ()'
+    yield eq, str((5 * EQ()) * f), '5 * EQ() * f'
+    yield eq, str(f * (5 * EQ())), '5 * f * EQ()'
+
+    yield eq, str(ZeroKernel() + f), 'f'
+    yield eq, str(f + ZeroKernel()), 'f'
+    yield eq, str(OneKernel() + f), '1 + f'
+    yield eq, str(f + OneKernel()), 'f + 1'
+    yield eq, str(EQ() + f), 'EQ() + f'
+    yield eq, str(f + EQ()), 'f + EQ()'
+    yield eq, str((EQ() + RQ(1)) + f), 'EQ() + RQ(1) + f'
+    yield eq, str(f + (EQ() + RQ(1))), 'f + EQ() + RQ(1)'
+    yield eq, str((5 + EQ()) + f), '5 * 1 + EQ() + f'
+    yield eq, str(f + (5 + EQ())), 'f + 5 * 1 + EQ()'
+
+    yield eq, str(OneKernel() * f), 'f'
+    yield eq, str(OneKernel() * FunctionKernel((lambda x, c: x), f)), \
+          '(<lambda> x f)'
+    yield eq, str(OneKernel() * FunctionKernel(f, (lambda x, c: x))), \
+          '(f x <lambda>)'

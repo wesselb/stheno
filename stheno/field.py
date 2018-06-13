@@ -2,13 +2,32 @@
 
 from __future__ import absolute_import, division, print_function
 
-from plum import Dispatcher, Referentiable, Self
+from types import FunctionType as Function
+
+from plum import Dispatcher, Referentiable, Self, NotFoundLookupError
 from lab import B
 import operator
 
 __all__ = []
 
 dispatch = Dispatcher()
+
+
+def apply_optional_arg(f, arg1, arg2):
+    """If `f` takes in two or more arguments, run `f(arg1, arg2)`; otherwise,
+    run `f(arg1)`.
+
+    Args:
+        f (function): Function to run.
+        arg1 (object): First argument for `f`.
+        arg2 (object0: Optional argument for `f`.
+    """
+    try:
+        return f(arg1, arg2)
+    except TypeError:
+        return f(arg1)
+    except NotFoundLookupError:
+        return f(arg1)
 
 
 def squeeze(xs):
@@ -370,6 +389,23 @@ class SumType(JoinType):
         return '{} + {}'.format(t1, t2)
 
 
+class FunctionType(Type):
+    """An element built from a product of functions for each input.
+
+    Args:
+        \*fs (function): Per input, a function.
+    """
+
+    def __init__(self, *fs):
+        self.fs = fs
+
+    def __str__(self):
+        if len(self.fs) == 1:
+            return self.fs[0].__name__
+        else:
+            return '({})'.format(' x '.join(f.__name__ for f in self.fs))
+
+
 @dispatch(object, object)
 def mul(a, b):
     """Multiply two elements.
@@ -593,6 +629,14 @@ def mul(a, b):
         return new(a, ScaledType)(a, b)
 
 
+@dispatch(Type, Function)
+def mul(a, b): return mul(a, new(a, FunctionType)(b))
+
+
+@dispatch(Function, Type)
+def mul(a, b): return mul(new(b, FunctionType)(a), b)
+
+
 @dispatch(Type, Type)
 def mul(a, b): return new(a, ProductType)(a, b)
 
@@ -600,7 +644,15 @@ def mul(a, b): return new(a, ProductType)(a, b)
 # Generic addition.
 
 @dispatch(object, Type)
-def add(a, b): return add(b, a)
+def add(a, b):
+    if a == 0:
+        return b
+    else:
+        return new(b, SumType)(mul(a, new(b, OneType)()), b)
+
+
+@dispatch(Function, Type)
+def add(a, b): return add(new(b, FunctionType)(a), b)
 
 
 @dispatch(Type, object)
@@ -609,6 +661,10 @@ def add(a, b):
         return a
     else:
         return new(a, SumType)(a, mul(b, new(a, OneType)()))
+
+
+@dispatch(Type, Function)
+def add(a, b): return add(a, new(a, FunctionType)(b))
 
 
 @dispatch(Type, Type)
@@ -622,6 +678,7 @@ def add(a, b):
 # Cancel redundant zeros and ones.
 
 @dispatch.multi((ZeroType, object),
+                (ZeroType, Function),
                 (ZeroType, Type),
                 (ZeroType, ScaledType),
                 (ZeroType, ZeroType),
@@ -633,6 +690,7 @@ def mul(a, b): return a
 
 
 @dispatch.multi((object, ZeroType),
+                (Function, ZeroType),
                 (Type, ZeroType),
                 (ScaledType, ZeroType),
 
@@ -656,6 +714,14 @@ def add(a, b): return a
 def add(a, b): return add(b, a)
 
 
+@dispatch(Function, ZeroType)
+def add(a, b): return new(b, FunctionType)(a)
+
+
+@dispatch(ZeroType, Function)
+def add(b, a): return new(b, FunctionType)(a)
+
+
 @dispatch(ZeroType, object)
 def add(a, b):
     if b == 0:
@@ -668,8 +734,7 @@ def add(a, b):
 
 # Group factors and terms if possible.
 
-@dispatch.multi((object, ScaledType),
-                (Type, ScaledType))
+@dispatch(object, ScaledType)
 def mul(a, b): return mul(b, a)
 
 
@@ -677,8 +742,20 @@ def mul(a, b): return mul(b, a)
 def mul(a, b): return mul(a.scale * b, a[0])
 
 
+@dispatch(ScaledType, Function)
+def mul(a, b): return mul(a, new(a, FunctionType)(b))
+
+
+@dispatch(Function, ScaledType)
+def mul(a, b): return mul(new(b, FunctionType)(a), b)
+
+
 @dispatch(ScaledType, Type)
 def mul(a, b): return mul(a.scale, a[0] * b)
+
+
+@dispatch(Type, ScaledType)
+def mul(a, b): return mul(b.scale, a * b[0])
 
 
 @dispatch(ScaledType, ScaledType)

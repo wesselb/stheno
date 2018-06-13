@@ -6,8 +6,9 @@ from plum import Dispatcher, Self, Referentiable, type_parameter, kind, \
     PromisedType
 from lab import B
 from fdm import central_fdm
+from types import FunctionType
 
-from .kernel import ZeroKernel, PosteriorCrossKernel, Kernel
+from .kernel import ZeroKernel, PosteriorCrossKernel, Kernel, FunctionKernel
 from .mean import PosteriorCrossMean, ZeroMean, Mean
 from .random import GPPrimitive, Random
 from .spd import SPD
@@ -94,6 +95,7 @@ class Graph(Referentiable):
                                      kernels[p1, p2] + kernels[p2, p1]),
                             lambda pi: kernels[p1, pi] + kernels[p2, pi])
 
+    @dispatch(PromisedGP, B.Numeric)
     def mul(self, p, other):
         """Multiply a GP from the graph with another object.
 
@@ -108,6 +110,14 @@ class Graph(Referentiable):
         return self._update(other * self.means[p],
                             lambda: other ** 2 * kernels[p],
                             lambda pi: other * kernels[p, pi])
+
+    @dispatch(PromisedGP, FunctionType)
+    def mul(self, p, f):
+        kernels = self.kernels  # Careful with the closure!
+        return self._update(f * self.means[p],
+                            lambda: f * kernels[p],
+                            (lambda pi: FunctionKernel(f, lambda x: 1) *
+                                        kernels[p, pi]))
 
     def shift(self, p, shift):
         """Shift a GP.

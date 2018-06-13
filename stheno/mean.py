@@ -11,7 +11,7 @@ from plum import Dispatcher, Self, Referentiable
 
 from .field import add, dispatch, Type, ZeroType, OneType, ScaledType, \
     ProductType, SumType, ShiftedType, SelectedType, InputTransformedType, \
-    StretchedType, DerivativeType
+    StretchedType, DerivativeType, FunctionType, apply_optional_arg
 from .input import Input
 from .cache import Cache, cache, uprank
 
@@ -129,7 +129,7 @@ class InputTransformedMean(Mean, InputTransformedType, Referentiable):
     @dispatch(object, Cache)
     @cache
     def __call__(self, x, B):
-        return self[0](self.fs[0](x, B), B)
+        return self[0](apply_optional_arg(self.fs[0], x, B), B)
 
 
 class OneMean(Mean, OneType, Referentiable):
@@ -156,25 +156,14 @@ class ZeroMean(Mean, ZeroType, Referentiable):
         return B.zeros([B.shape(x)[0], 1], dtype=B.dtype(x))
 
 
-class FunctionMean(Mean, Referentiable):
-    """Mean parametrised by a function.
-
-    Args:
-        f (function): Function.
-    """
+class FunctionMean(Mean, FunctionType, Referentiable):
     dispatch = Dispatcher(in_class=Self)
-
-    def __init__(self, f):
-        self.f = f
 
     @dispatch(B.Numeric, Cache)
     @cache
     @uprank
     def __call__(self, x, B):
-        return self.f(x)
-
-    def __str__(self):
-        return self.f.__name__
+        return apply_optional_arg(self.fs[0], x, B)
 
 
 class DerivativeMean(Mean, DerivativeType, Referentiable):
@@ -242,21 +231,3 @@ class PosteriorMean(PosteriorCrossMean, Referentiable):
 
     def __str__(self):
         return 'PosteriorMean()'
-
-
-# Add functions to means.
-
-@dispatch(FunctionType, Mean)
-def add(a, b): return add(FunctionMean(a), b)
-
-
-@dispatch(FunctionType, ZeroMean)
-def add(a, b): return FunctionMean(a)
-
-
-@dispatch(Mean, FunctionType)
-def add(a, b): return add(a, FunctionMean(b))
-
-
-@dispatch(ZeroMean, FunctionType)
-def add(a, b): return FunctionMean(b)

@@ -10,7 +10,7 @@ from plum import Dispatcher
 from stheno.input import Observed
 from stheno.kernel import EQ, RQ, Matern12, Matern32, Matern52, Delta, Kernel, \
     Linear, OneKernel, ZeroKernel, PosteriorCrossKernel, PosteriorKernel, \
-    ShiftedKernel
+    ShiftedKernel, FunctionKernel
 from stheno.random import GPPrimitive
 from stheno.spd import SPD
 from stheno.cache import Cache
@@ -424,6 +424,15 @@ def test_properties_derivative():
     yield raises, RuntimeError, lambda: EQ().diff(None, None)(1)
 
 
+def test_properties_function():
+    k = FunctionKernel(lambda x: x ** 2)
+
+    yield eq, k.stationary, False
+    yield ok, k.length_scale is np.nan
+    yield ok, k.var is np.nan
+    yield ok, k.period is np.nan
+
+
 def test_selection():
     # Test that computation is valid.
     k1 = EQ().select(1, 2)
@@ -499,3 +508,17 @@ def test_derivative():
 
     s.close()
     B.backend_to_np()
+
+
+def test_function():
+    k = FunctionKernel(lambda x: x)
+    x1 = np.linspace(0, 1, 100)[:, None]
+    x2 = np.linspace(0, 1, 50)[:, None]
+
+    yield assert_allclose, k(x1), x1 * x1.T
+    yield assert_allclose, k(x1, x2), x1 * x2.T
+
+    k = FunctionKernel(lambda x: x ** 2)
+
+    yield assert_allclose, k(x1), x1 ** 2 * (x1 ** 2).T
+    yield assert_allclose, k(x1, x2), (x1 ** 2) * (x2 ** 2).T
