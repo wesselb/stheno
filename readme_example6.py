@@ -30,7 +30,7 @@ print('true intercept', true_intercept)
 print('predicted intercept', mean_intercept)
 
 # Plot result.
-x, f_true, x_obs, y_obs = map(np.squeeze, (x, f_true, x_obs, y_obs))
+f_true, y_obs = map(np.squeeze, (f_true, y_obs))
 plt.plot(x, f_true, label='True', c='tab:blue')
 plt.scatter(x_obs, y_obs, label='Observations', c='tab:red')
 plt.plot(x, mean, label='Prediction', c='tab:green')

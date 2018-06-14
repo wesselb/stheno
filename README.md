@@ -17,7 +17,7 @@ See also [Stheno.jl](https://github.com/willtebbutt/Stheno.jl).
 import matplotlib.pyplot as plt
 import numpy as np
 
-from stheno import GP, EQ, Delta
+from stheno import GP, EQ, Delta, model
 
 # Define points to predict at.
 x = np.linspace(0, 10, 100)
@@ -28,18 +28,14 @@ f = GP(EQ().periodic(5.))  # Latent function.
 e = GP(Delta())  # Noise.
 y = f + .5 * e
 
-# Sample a true, underlying function.
-f_true = f(x).sample()
-
-# Condition the model on the true function and sample observations.
-y_obs = y.condition(f @ x, f_true)(x_obs).sample()
-y.revert_prior()
+# Sample a true, underlying function and observations.
+f_true, y_obs = model.sample(f @ x, y @ x_obs)
 
 # Now condition on the observations to make predictions.
 mean, lower, upper = f.condition(y @ x_obs, y_obs).predict(x)
 
 # Plot result.
-x, f_true, x_obs, y_obs = map(np.squeeze, (x, f_true, x_obs, y_obs))
+f_true, y_obs = map(np.squeeze, (f_true, y_obs))
 plt.plot(x, f_true, label='True', c='tab:blue')
 plt.scatter(x_obs, y_obs, label='Observations', c='tab:red')
 plt.plot(x, mean, label='Prediction', c='tab:green')
@@ -103,14 +99,13 @@ pred_f = f.predict(x)
 
 # Plot results.
 def plot_prediction(x, f, pred, x_obs=None, y_obs=None):
-    plt.plot(x.squeeze(), f.squeeze(), label='True', c='tab:blue')
+    plt.plot(x, f.squeeze(), label='True', c='tab:blue')
     if x_obs is not None:
-        plt.scatter(x_obs.squeeze(), y_obs.squeeze(),
-                    label='Observations', c='tab:red')
+        plt.scatter(x_obs, y_obs.squeeze(), label='Observations', c='tab:red')
     mean, lower, upper = pred
-    plt.plot(x.squeeze(), mean, label='Prediction', c='tab:green')
-    plt.plot(x.squeeze(), lower, ls='--', c='tab:green')
-    plt.plot(x.squeeze(), upper, ls='--', c='tab:green')
+    plt.plot(x, mean, label='Prediction', c='tab:green')
+    plt.plot(x, lower, ls='--', c='tab:green')
+    plt.plot(x, upper, ls='--', c='tab:green')
     plt.legend()
 
 
@@ -186,7 +181,7 @@ print('u variance', s.run(u.var))
 mean, lower, upper = s.run(f.condition(y @ x_obs, y_obs).predict(x))
 
 # Plot result.
-x, f_true, x_obs, y_obs = map(np.squeeze, (x, f_true, x_obs, y_obs))
+f_true, y_obs = map(np.squeeze, (f_true, y_obs))
 plt.plot(x, f_true, label='True', c='tab:blue')
 plt.scatter(x_obs, y_obs, label='Observations', c='tab:red')
 plt.plot(x, mean, label='Prediction', c='tab:green')
@@ -343,14 +338,13 @@ pred_f = dddf.predict(x)
 
 # Plot result.
 def plot_prediction(x, f, pred, x_obs=None, y_obs=None):
-    plt.plot(x.squeeze(), f.squeeze(), label='True', c='tab:blue')
+    plt.plot(x, f.squeeze(), label='True', c='tab:blue')
     if x_obs is not None:
-        plt.scatter(x_obs.squeeze(), y_obs.squeeze(),
-                    label='Observations', c='tab:red')
+        plt.scatter(x_obs, y_obs.squeeze(), label='Observations', c='tab:red')
     mean, lower, upper = pred
-    plt.plot(x.squeeze(), mean, label='Prediction', c='tab:green')
-    plt.plot(x.squeeze(), lower, ls='--', c='tab:green')
-    plt.plot(x.squeeze(), upper, ls='--', c='tab:green')
+    plt.plot(x, mean, label='Prediction', c='tab:green')
+    plt.plot(x, lower, ls='--', c='tab:green')
+    plt.plot(x, upper, ls='--', c='tab:green')
     plt.legend()
 
 
@@ -406,7 +400,7 @@ y = f + e  # Observation model
 # Sample a slope, intercept, underlying function, and observations.
 true_slope, true_intercept, f_true, y_obs = \
     model.sample(slope @ 0, intercept @ 0, f @ x, y @ x_obs)
-    
+
 # Condition on the observations to make predictions.
 mean, lower, upper = f.condition(y @ x_obs, y_obs).predict(x)
 mean_slope, mean_intercept = slope(0).mean, intercept(0).mean
@@ -417,7 +411,7 @@ print('true intercept', true_intercept)
 print('predicted intercept', mean_intercept)
 
 # Plot result.
-x, f_true, x_obs, y_obs = map(np.squeeze, (x, f_true, x_obs, y_obs))
+f_true, y_obs = map(np.squeeze, (f_true, y_obs))
 plt.plot(x, f_true, label='True', c='tab:blue')
 plt.scatter(x_obs, y_obs, label='Observations', c='tab:red')
 plt.plot(x, mean, label='Prediction', c='tab:green')
