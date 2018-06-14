@@ -56,8 +56,8 @@ class Cache(Referentiable):
         return self._cache_call[self._resolve(key)]
 
     def __setitem__(self, key, output):
-        # Dump `output` somewhere to prevent GC from cleaning it up!
-        self.dump(output)
+        # Prevent GC from corrupting cache!
+        self.dump(key)
         self._cache_call[self._resolve(key)] = output
 
     def __getattr__(self, f):
@@ -96,10 +96,10 @@ class Cache(Referentiable):
             except KeyError:
                 pass
 
+            # Prevent GC from corrupting cache!
+            self.dump(f, args, kw_args)
+
             self._cache_lab[key] = attr(*args, **kw_args)
-            # Dump `args` and `kw_args` somewhere to prevent GC from cleaning
-            # them up!
-            self.dump(args, kw_args)
             return self._cache_lab[key]
 
         return call_cached
