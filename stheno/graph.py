@@ -2,15 +2,15 @@
 
 from __future__ import absolute_import, division, print_function
 
+import logging
 from types import FunctionType
 
 from fdm import central_fdm
 from lab import B
 from plum import Dispatcher, Self, Referentiable, type_parameter, PromisedType
 
-from .cache import Cache
-from .cache import uprank
-from .input import Input, At
+from .cache import Cache, uprank
+from .input import Input, At, MultiInput
 from .kernel import ZeroKernel, PosteriorCrossKernel, Kernel, FunctionKernel
 from .lazy import LazyVector, LazyMatrix
 from .mean import PosteriorCrossMean, Mean
@@ -20,6 +20,8 @@ from .random import GPPrimitive, Random
 from .spd import SPD
 
 __all__ = ['GP', 'model', 'Graph']
+
+log = logging.getLogger(__name__)
 
 PromisedGP = PromisedType()
 
@@ -199,7 +201,7 @@ class Graph(Referentiable):
                             lambda: kernels[p].diff(dim),
                             lambda pi: kernels[p, pi].diff(dim, None))
 
-    @dispatch(At, object)
+    @dispatch(At, B.Numeric)
     def condition(self, x, y):
         """Condition the graph on data.
 
@@ -236,6 +238,23 @@ class Graph(Referentiable):
         self.means = LazyVector()
         self.means.add_rule((None,), self.pids, build_posterior_mean)
 
+    @dispatch([{tuple, list}])
+    def condition(self, *pairs):
+        if not all([isinstance(x, At) for x, y in pairs]):
+            raise RuntimeError('Must explicitly specify the processes which to '
+                               'condition on.')
+
+        # Extend the graph by Cartesian product `p` of all processes.
+        mok = MOK(*self.ps)
+        p = self._update(MOM(*self.ps),
+                         lambda: mok,
+                         lambda pi: mok.transform(None, lambda y: At(pi)(y)))
+
+        # Condition the newly created vector-valued GP.
+        xs, ys = zip(*pairs)
+        y = B.concat([uprank(y) for y in ys], axis=0)
+        self.condition(At(p)(MultiInput(*xs)), y)
+
     def revert_prior(self):
         """Revert the model back to the state before any conditioning
         operations.
@@ -256,7 +275,8 @@ class Graph(Referentiable):
         Args:
             \*xs (instance of :class:`.graph.At`): Locations to sample at.
         """
-        sample = GPPrimitive(MOK(*self.ps), MOM(*self.ps))(xs).sample()
+        sample = GPPrimitive(MOK(*self.ps),
+                             MOM(*self.ps))(MultiInput(*xs)).sample()
 
         # To unpack `x`, just keep `.get()`ing.
         def unpack(x):
@@ -434,15 +454,24 @@ class GP(GPPrimitive, Referentiable):
         raise NotImplementedError('Cannot multiply a GP and a {}.'
                                   ''.format(type(other).__name__))
 
-    @dispatch(At, object)
+    @dispatch(At, B.Numeric)
     def condition(self, x, y):
         """Condition the GP """
         self.graph.condition(x, y)
         return self
 
-    @dispatch(object, object)
+    # TODO: Refactor this once type unions are fixed.
+    @dispatch.multi((B.Numeric, B.Numeric), (Input, B.Numeric))
     def condition(self, x, y):
         self.graph.condition(At(self)(x), y)
+        return self
+
+    @dispatch([{tuple, list}])
+    def condition(self, *pairs):
+        # Set any unspecified locations to this process.
+        pairs = [(x, y) if isinstance(x, At) else (At(self)(x), y)
+                 for x, y in pairs]
+        self.graph.condition(*pairs)
         return self
 
     def __matmul__(self, other):
