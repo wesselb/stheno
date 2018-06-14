@@ -245,10 +245,7 @@ class Graph(Referentiable):
                              'condition on.')
 
         # Extend the graph by Cartesian product `p` of all processes.
-        mok = MOK(*self.ps)
-        p = self._update(MOM(*self.ps),
-                         lambda: mok,
-                         lambda pi: mok.transform(None, lambda y: At(pi)(y)))
+        p = self.cross(*self.ps)
 
         # Condition the newly created vector-valued GP.
         xs, ys = zip(*pairs)
@@ -256,19 +253,19 @@ class Graph(Referentiable):
         self.condition(At(p)(MultiInput(*xs)), y)
 
     def cross(self, *ps):
-        """
+        """Construct the Cartesian product of a collection of processes.
 
         Args:
-            *ps:
+            *ps (instance of :class:`.graph.GP`): Processes to construct the
+                Cartesian product of.
 
         Returns:
-
+            The Cartesian product of `ps`.
         """
-        # Extend the graph by Cartesian product `p` of all processes.
-        mok = MOK(*self.ps)
-        return self._update(MOM(*self.ps),
-                         lambda: mok,
-                         lambda pi: mok.transform(None, lambda y: At(pi)(y)))
+        mok = MOK(*ps)
+        return self._update(MOM(*ps),
+                            lambda: mok,
+                            lambda pi: mok.transform(None, lambda y: At(pi)(y)))
 
     def revert_prior(self):
         """Revert the model back to the state before any conditioning
