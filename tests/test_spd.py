@@ -13,7 +13,6 @@ dispatch = Dispatcher()
 
 
 def test_corner_cases():
-    yield raises, NotImplementedError, lambda: SPD(np.eye(3)) * SPD(np.eye(3))
     yield raises, NotImplementedError, lambda: SPD(np.eye(3)) * np.eye(3)
 
 
@@ -79,6 +78,21 @@ def test_spd_arithmetic():
     yield ok, np.allclose(diag.mat + unif_diag.mat, (diag + unif_diag).mat)
     yield ok, np.allclose(unif_diag.mat + unif_diag.mat,
                           (unif_diag + unif_diag).mat)
+
+    yield eq, type(dense * dense), SPD, 'mul SPD'
+    yield eq, type(dense * diag), SPD
+    yield eq, type(dense * unif_diag), SPD
+    yield eq, type(diag * dense), SPD
+    yield eq, type(diag * diag), Diagonal
+    yield eq, type(diag * unif_diag), Diagonal
+    yield eq, type(unif_diag * dense), SPD
+    yield eq, type(unif_diag * diag), Diagonal
+    yield eq, type(unif_diag * unif_diag), UniformDiagonal
+
+    yield ok, np.allclose(dense.mat * diag.mat, (dense * diag).mat)
+    yield ok, np.allclose(diag.mat * unif_diag.mat, (diag * unif_diag).mat)
+    yield ok, np.allclose(unif_diag.mat * unif_diag.mat,
+                          (unif_diag * unif_diag).mat)
 
     yield eq, type(5. * dense), SPD, 'mul scalar'
     yield eq, type(5. * diag), Diagonal

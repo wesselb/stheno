@@ -151,7 +151,7 @@ class SPD(Referentiable):
 
     @dispatch(Self)
     def __mul__(self, other):
-        raise NotImplementedError('Cannot multiply two SPDs.')
+        return SPD(self.mat * other.mat)
 
 
 class Diagonal(SPD, Referentiable):
@@ -223,6 +223,10 @@ class Diagonal(SPD, Referentiable):
     @dispatch(Kind('scalar'))
     def __mul__(self, other):
         return Diagonal(other.get() * self.diag)
+
+    @dispatch(Self)
+    def __mul__(self, other):
+        return Diagonal(self.diag * other.diag)
 
 
 class UniformDiagonal(Diagonal, Referentiable):
@@ -297,3 +301,7 @@ class UniformDiagonal(Diagonal, Referentiable):
     @dispatch(Kind('scalar'))
     def __mul__(self, other):
         return UniformDiagonal(other.get() * self.diag_scale, self._n)
+
+    @dispatch(Self)
+    def __mul__(self, other):
+        return UniformDiagonal(self.diag_scale * other.diag_scale, self._n)
