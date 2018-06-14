@@ -241,8 +241,8 @@ class Graph(Referentiable):
     @dispatch([{tuple, list}])
     def condition(self, *pairs):
         if not all([isinstance(x, At) for x, y in pairs]):
-            raise RuntimeError('Must explicitly specify the processes which to '
-                               'condition on.')
+            raise ValueError('Must explicitly specify the processes which to '
+                             'condition on.')
 
         # Extend the graph by Cartesian product `p` of all processes.
         mok = MOK(*self.ps)

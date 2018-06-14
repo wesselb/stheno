@@ -300,10 +300,6 @@ class GPPrimitive(RandomProcess, Referentiable):
         return GPPrimitive(PosteriorKernel(self, x, K),
                            PosteriorMean(self, x, K, y))
 
-    @dispatch([tuple])
-    def condition(self, pairs):
-        pass
-
     def predict(self, x, cache=None):
         """Predict at specified locations.
 

@@ -455,13 +455,17 @@ def test_multi_conditioning():
     post3 = p.condition((At(p2)(x2), s2), (At(p1)(x1), s1))(x3)
     model.revert_prior()
 
+    p2.condition((x2, s2), (At(p1)(x1), s1))
+    post4 = p(x3)
+    model.revert_prior()
+
     yield assert_allclose, post1.mean, post2.mean
     yield assert_allclose, post1.mean, post3.mean
+    yield assert_allclose, post1.mean, post4.mean
     yield assert_allclose, post1.var, post2.var
     yield assert_allclose, post1.var, post3.var
-
-    # Test conversion.
-    pass
+    yield assert_allclose, post1.var, post4.var
 
     # Test `At` check.
-    pass
+    yield raises, ValueError, lambda: model.condition((0, 0))
+    
