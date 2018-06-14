@@ -40,9 +40,8 @@ print('u variance', s.run(u.var))
 mean, lower, upper = s.run(f.condition(y @ x_obs, y_obs).predict(x))
 
 # Plot result.
-f_true, y_obs = map(np.squeeze, (f_true, y_obs))
-plt.plot(x, f_true, label='True', c='tab:blue')
-plt.scatter(x_obs, y_obs, label='Observations', c='tab:red')
+plt.plot(x, f_true.squeeze(), label='True', c='tab:blue')
+plt.scatter(x_obs, y_obs.squeeze(), label='Observations', c='tab:red')
 plt.plot(x, mean, label='Prediction', c='tab:green')
 plt.plot(x, lower, ls='--', c='tab:green')
 plt.plot(x, upper, ls='--', c='tab:green')
