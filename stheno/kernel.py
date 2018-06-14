@@ -54,7 +54,8 @@ class Kernel(Type, Referentiable):
         Returns:
             Kernel matrix.
         """
-        raise NotImplementedError('Could not resolve kernel arguments.')
+        raise RuntimeError('For kernel "{}", could not resolve '
+                           'arguments "{}" and "{}".'.format(self, x, y))
 
     @dispatch(object)
     def __call__(self, x):
@@ -71,11 +72,6 @@ class Kernel(Type, Referentiable):
     @dispatch(Input, Input)
     def __call__(self, x, y):
         return self(x, y, Cache())
-
-    @dispatch(Input, Input, Cache)
-    def __call__(self, x, y, cache):
-        # This should not have been reached. Attempt to unwrap.
-        return self(x.get(), y.get(), cache)
 
     def periodic(self, period=1):
         """Map to a periodic space.
@@ -397,7 +393,7 @@ class InputTransformedKernel(Kernel, InputTransformedType, Referentiable):
 
     dispatch = Dispatcher(in_class=Self)
 
-    @dispatch(B.Numeric, B.Numeric, Cache)
+    @dispatch(object, object, Cache)
     @cache
     @uprank
     def __call__(self, x, y, B):
@@ -462,9 +458,6 @@ class EQ(Kernel, PrimitiveType, Referentiable):
     def __call__(self, x, y, B):
         return B.exp(B.multiply(B.cast(-.5, dtype=B.dtype(x)),
                                 B.pw_dists2(x, y)))
-
-    def __str__(self):
-        return 'EQ()'
 
     @property
     def _stationary(self):
@@ -533,9 +526,6 @@ class Exp(Kernel, PrimitiveType, Referentiable):
     def __call__(self, x, y, B):
         return B.exp(-B.pw_dists(x, y))
 
-    def __str__(self):
-        return 'Exp()'
-
     @property
     def _stationary(self):
         return True
@@ -568,9 +558,6 @@ class Matern32(Kernel, PrimitiveType, Referentiable):
         r = 3 ** .5 * B.pw_dists(x, y)
         return (1 + r) * B.exp(-r)
 
-    def __str__(self):
-        return 'Matern32()'
-
     @property
     def _stationary(self):
         return True
@@ -600,9 +587,6 @@ class Matern52(Kernel, PrimitiveType, Referentiable):
         r1 = 5 ** .5 * B.pw_dists(x, y)
         r2 = 5 * B.pw_dists2(x, y) / 3
         return (1 + r1 + r2) * B.exp(-r1)
-
-    def __str__(self):
-        return 'Matern52()'
 
     @property
     def _stationary(self):
@@ -639,9 +623,6 @@ class Delta(Kernel, PrimitiveType, Referentiable):
     def __call__(self, x, y, B):
         return B.cast(B.less(B.pw_dists2(x, y), self.epsilon), B.dtype(x))
 
-    def __str__(self):
-        return 'Delta()'
-
     @property
     def _stationary(self):
         return True
@@ -669,9 +650,6 @@ class Linear(Kernel, PrimitiveType, Referentiable):
     @uprank
     def __call__(self, x, y, B):
         return B.matmul(x, y, tr_b=True)
-
-    def __str__(self):
-        return 'Linear()'
 
     @property
     def _stationary(self):
@@ -712,9 +690,6 @@ class PosteriorCrossKernel(Kernel, Referentiable):
                                     self.k_zj(self.z, y, B))
         return B.subtract(self.k_ij(x, y, B), qf)
 
-    def __str__(self):
-        return 'PosteriorCrossKernel()'
-
 
 class PosteriorKernel(PosteriorCrossKernel, Referentiable):
     """Posterior kernel.
@@ -731,9 +706,6 @@ class PosteriorKernel(PosteriorCrossKernel, Referentiable):
         PosteriorCrossKernel.__init__(
             self, gp.kernel, gp.kernel, gp.kernel, z, Kz
         )
-
-    def __str__(self):
-        return 'PosteriorKernel()'
 
 
 class DerivativeKernel(Kernel, DerivativeType, Referentiable):
