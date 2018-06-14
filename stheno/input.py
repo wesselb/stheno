@@ -11,22 +11,30 @@ class Input(object):
     """Input type.
 
     Args:
-        x (tensor): Input to type.
+        \*xs (tensor): Inputs to type.
     """
 
-    def __init__(self, x):
-        self._x = x
+    def __init__(self, *xs):
+        self._xs = xs
 
     def get(self):
         """Get the wrapped input."""
-        return self._x
+        return self._xs[0] if len(self._xs) == 1 else self._xs
 
 
 @parametric
 class Component(Input):
     """A particular component.
 
-    This is a parametric type."""
+    This is a parametric type.
+    """
+
+
+class MultiInput(Input):
+    """Multiple inputs."""
+
+    def get(self):
+        return self._xs
 
 
 Observed = Component('observed')  #: Observed points
