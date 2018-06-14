@@ -63,8 +63,8 @@ def test_ones_zeros():
 
 def test_uprank():
     yield assert_allclose, uprank(0), [[0]]
-    yield assert_allclose, uprank([0]), [[0]]
-    yield assert_allclose, uprank([[0]]), [[0]]
+    yield assert_allclose, uprank(np.array([0])), [[0]]
+    yield assert_allclose, uprank(np.array([[0]])), [[0]]
     yield eq, type(uprank(Component('test')(0))), Component('test')
 
     k = OneKernel()
