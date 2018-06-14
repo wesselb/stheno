@@ -147,6 +147,11 @@ def uprank(x, B=B):
     Args:
         x (tensor): Tensor to uprank.
     """
+    # Simply return non-numerical inputs.
+    if not isinstance(x, B.Numeric):
+        return x
+
+    # Now check the rank of `x` and act accordingly.
     if B.rank(x) > 2:
         raise ValueError('Input must be at most rank 2.')
     elif B.rank(x) == 2:
