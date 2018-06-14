@@ -11,7 +11,7 @@ See also [Stheno.jl](https://github.com/willtebbutt/Stheno.jl).
 
 ## Example: Simple Regression
 
-![Prediction](https://raw.githubusercontent.com/wesselb/stheno/master/readme_prediction.png)
+![Prediction](https://raw.githubusercontent.com/wesselb/stheno/master/readme_prediction1_simple_regression.png)
 
 ```python
 import matplotlib.pyplot as plt
@@ -47,7 +47,7 @@ plt.show()
 
 ## Example: Decomposition of Prediction
 
-![Prediction](https://raw.githubusercontent.com/wesselb/stheno/master/readme_prediction2.png)
+![Prediction](https://raw.githubusercontent.com/wesselb/stheno/master/readme_prediction2_decomposition.png)
 
 ```python
 import matplotlib.pyplot as plt
@@ -136,7 +136,7 @@ plt.show()
 
 ## Example: Learn a Function, Incorporating Prior Knowledge About Its Form
 
-![Prediction](https://raw.githubusercontent.com/wesselb/stheno/master/readme_prediction3.png)
+![Prediction](https://raw.githubusercontent.com/wesselb/stheno/master/readme_prediction3_parametric.png)
 
 ```python
 import matplotlib.pyplot as plt
@@ -193,7 +193,7 @@ plt.show()
 
 ## Example: Multi-Ouput Regression
 
-![Prediction](https://raw.githubusercontent.com/wesselb/stheno/master/readme_prediction4.png)
+![Prediction](https://raw.githubusercontent.com/wesselb/stheno/master/readme_prediction4_multi-output.png)
 
 
 ```python
@@ -299,7 +299,7 @@ plt.show()
 
 ## Example: Approximate Integration
 
-![Prediction](https://raw.githubusercontent.com/wesselb/stheno/master/readme_prediction5.png)
+![Prediction](https://raw.githubusercontent.com/wesselb/stheno/master/readme_prediction5_integration.png)
 
 ```python
 import matplotlib.pyplot as plt
@@ -375,7 +375,7 @@ plt.show()
 
 ## Example: Bayesian Linear Regression
 
-![Prediction](https://raw.githubusercontent.com/wesselb/stheno/master/readme_prediction6.png)
+![Prediction](https://raw.githubusercontent.com/wesselb/stheno/master/readme_prediction6_blr.png)
 
 
 ```python
@@ -423,16 +423,16 @@ plt.show()
 
 ## Example: GPAR
 
-![Prediction](https://raw.githubusercontent.com/wesselb/stheno/master/readme_prediction7.png)
+![Prediction](https://raw.githubusercontent.com/wesselb/stheno/master/readme_prediction7_gpar.png)
 
 
 ```python
 
 ```
 
-## Example: Combining RNNs and GPs
+## Example: A GP–RNN Model
 
-![Prediction](https://raw.githubusercontent.com/wesselb/stheno/master/readme_prediction8.png)
+![Prediction](https://raw.githubusercontent.com/wesselb/stheno/master/readme_prediction8_rnn.png)
 
 
 ```python

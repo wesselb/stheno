@@ -10,7 +10,7 @@ See also `Stheno.jl <https://github.com/willtebbutt/Stheno.jl>`__.
 Example: Simple Regression
 --------------------------
 
-.. figure:: https://raw.githubusercontent.com/wesselb/stheno/master/readme_prediction.png
+.. figure:: https://raw.githubusercontent.com/wesselb/stheno/master/readme_prediction1_simple_regression.png
    :alt: Prediction
 
    Prediction
@@ -50,7 +50,7 @@ Example: Simple Regression
 Example: Decomposition of Prediction
 ------------------------------------
 
-.. figure:: https://raw.githubusercontent.com/wesselb/stheno/master/readme_prediction2.png
+.. figure:: https://raw.githubusercontent.com/wesselb/stheno/master/readme_prediction2_decomposition.png
    :alt: Prediction
 
    Prediction
@@ -143,7 +143,7 @@ Example: Decomposition of Prediction
 Example: Learn a Function, Incorporating Prior Knowledge About Its Form
 -----------------------------------------------------------------------
 
-.. figure:: https://raw.githubusercontent.com/wesselb/stheno/master/readme_prediction3.png
+.. figure:: https://raw.githubusercontent.com/wesselb/stheno/master/readme_prediction3_parametric.png
    :alt: Prediction
 
    Prediction
@@ -204,7 +204,7 @@ Example: Learn a Function, Incorporating Prior Knowledge About Its Form
 Example: Multi-Ouput Regression
 -------------------------------
 
-.. figure:: https://raw.githubusercontent.com/wesselb/stheno/master/readme_prediction4.png
+.. figure:: https://raw.githubusercontent.com/wesselb/stheno/master/readme_prediction4_multi-output.png
    :alt: Prediction
 
    Prediction
@@ -313,7 +313,7 @@ Example: Multi-Ouput Regression
 Example: Approximate Integration
 --------------------------------
 
-.. figure:: https://raw.githubusercontent.com/wesselb/stheno/master/readme_prediction5.png
+.. figure:: https://raw.githubusercontent.com/wesselb/stheno/master/readme_prediction5_integration.png
    :alt: Prediction
 
    Prediction
@@ -393,7 +393,7 @@ Example: Approximate Integration
 Example: Bayesian Linear Regression
 -----------------------------------
 
-.. figure:: https://raw.githubusercontent.com/wesselb/stheno/master/readme_prediction6.png
+.. figure:: https://raw.githubusercontent.com/wesselb/stheno/master/readme_prediction6_blr.png
    :alt: Prediction
 
    Prediction
@@ -444,17 +444,17 @@ Example: Bayesian Linear Regression
 Example: GPAR
 -------------
 
-.. figure:: https://raw.githubusercontent.com/wesselb/stheno/master/readme_prediction7.png
+.. figure:: https://raw.githubusercontent.com/wesselb/stheno/master/readme_prediction7_gpar.png
    :alt: Prediction
 
    Prediction
 
 .. code:: python
 
-Example: Combining RNNs and GPs
--------------------------------
+Example: A GP–RNN Model
+-----------------------
 
-.. figure:: https://raw.githubusercontent.com/wesselb/stheno/master/readme_prediction8.png
+.. figure:: https://raw.githubusercontent.com/wesselb/stheno/master/readme_prediction8_rnn.png
    :alt: Prediction
 
    Prediction
