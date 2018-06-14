@@ -6,7 +6,7 @@ import numpy as np
 from numpy.testing import assert_allclose
 
 from stheno.graph import Graph, GP
-from stheno.input import At
+from stheno.input import At, MultiInput
 from stheno.kernel import EQ
 from stheno.momean import MultiOutputMean
 # noinspection PyUnresolvedReferences
@@ -29,5 +29,5 @@ def test_momean():
           np.concatenate([ms[p1](x), ms[p2](x)], axis=0)
     yield assert_allclose, mom(At(p1)(x)), ms[p1](x)
     yield assert_allclose, mom(At(p2)(x)), ms[p2](x)
-    yield assert_allclose, mom((At(p2)(x), At(p1)(x))), \
+    yield assert_allclose, mom(MultiInput(At(p2)(x), At(p1)(x))), \
           np.concatenate([ms[p2](x), ms[p1](x)], axis=0)

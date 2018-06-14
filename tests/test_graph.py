@@ -8,7 +8,7 @@ from lab import B
 
 from stheno.graph import Graph, GP
 from stheno.input import At
-from stheno.kernel import Linear, EQ, Delta
+from stheno.kernel import Linear, EQ, Delta, Exp, RQ
 from stheno.mean import FunctionMean
 from stheno.cache import Cache
 # noinspection PyUnresolvedReferences,
@@ -123,7 +123,7 @@ def test_properties():
     yield eq, p.stationary, False, 'stationary 3'
 
 
-def test_case1():
+def test_case_summation_with_itself():
     # Test summing the same GP with itself.
     model = Graph()
     p1 = GP(EQ(), graph=model)
@@ -139,7 +139,7 @@ def test_case1():
     yield assert_allclose, p2(x).mean, 5 * y
 
 
-def test_case2():
+def test_case_additive_model():
     # Test some additive model.
 
     model = Graph()
@@ -409,7 +409,7 @@ def test_case_blr():
     yield le, np.abs(true_intercept[0, 0] - mean_intercept[0, 0]), 5e-2
 
 
-def test_sample():
+def test_multi_sample():
     model = Graph()
     p1 = GP(0, 1, graph=model)
     p2 = GP(0, 2, graph=model)
@@ -424,7 +424,44 @@ def test_sample():
     yield eq, s1.shape, (10, 1)
     yield eq, s2.shape, (20, 1)
     yield eq, s3.shape, (30, 1)
+    yield eq, np.shape(model.sample(At(p1)(x1))), (10, 1)
 
     yield le, np.sum(np.abs(s1 - 1)), 1e-4
     yield le, np.sum(np.abs(s2 - 2)), 1e-4
     yield le, np.sum(np.abs(s3 - 3)), 1e-4
+
+
+def test_multi_conditioning():
+    model = Graph()
+
+    p1 = GP(EQ(), graph=model)
+    p2 = GP(2 * Exp().stretch(2), graph=model)
+    p3 = GP(.5 * RQ(1e-1).stretch(.5), graph=model)
+
+    p = p1 + p2 + p3
+
+    x1 = np.linspace(0, 2, 10)
+    x2 = np.linspace(1, 3, 10)
+    x3 = np.linspace(0, 3, 10)
+
+    s1, s2 = model.sample(At(p1)(x1), At(p2)(x2))
+
+    post1 = p.condition(At(p1)(x1), s1).condition(At(p2)(x2), s2)(x3)
+    model.revert_prior()
+
+    post2 = p.condition((At(p1)(x1), s1), (At(p2)(x2), s2))(x3)
+    model.revert_prior()
+
+    post3 = p.condition((At(p2)(x2), s2), (At(p1)(x1), s1))(x3)
+    model.revert_prior()
+
+    yield assert_allclose, post1.mean, post2.mean
+    yield assert_allclose, post1.mean, post3.mean
+    yield assert_allclose, post1.var, post2.var
+    yield assert_allclose, post1.var, post3.var
+
+    # Test conversion.
+    pass
+
+    # Test `At` check.
+    pass

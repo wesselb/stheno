@@ -20,9 +20,7 @@ from . import eq, raises, ok
 
 
 def test_corner_cases():
-    yield raises, NotImplementedError, lambda: Kernel()(1.)
-    x = np.random.randn(10, 2)
-    yield ok, np.allclose(EQ()(x), EQ()(Observed(x)))
+    yield raises, RuntimeError, lambda: Kernel()(1.)
 
 
 def test_construction():
@@ -32,13 +30,13 @@ def test_construction():
     c = Cache()
 
     yield k, x
-    yield k, Observed(x)
+    yield raises, RuntimeError, lambda: k(Observed(x))
     yield k, x, c
-    yield k, Observed(x), c
+    yield raises, RuntimeError, lambda: k(Observed(x), c)
     yield k, x, x
-    yield k, Observed(x), Observed(x)
+    yield raises, RuntimeError, lambda: k(Observed(x), Observed(x))
     yield k, x, x, c
-    yield k, Observed(x), Observed(x), c
+    yield raises, RuntimeError, lambda: k(Observed(x), Observed(x), c)
 
 
 def test_basic_arithmetic():

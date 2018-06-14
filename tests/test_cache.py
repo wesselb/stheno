@@ -9,7 +9,7 @@ from numpy.testing import assert_approx_equal, assert_array_almost_equal, \
 from stheno.kernel import ZeroKernel, OneKernel, Linear, EQ
 from stheno.mean import ZeroMean, OneMean
 from stheno.input import Component
-from stheno.cache import Cache
+from stheno.cache import Cache, uprank
 from stheno.random import GPPrimitive
 # noinspection PyUnresolvedReferences
 from . import eq, neq, ok, raises, benchmark, le, eprint
@@ -27,6 +27,13 @@ def test_lab_cache():
     yield neq, id(c.matmul(x1, x2, tr_a=True)), id(c.matmul(x1, x2))
 
 
+def test_uprank():
+    yield assert_allclose, uprank(0), [[0]]
+    yield assert_allclose, uprank([0]), [[0]]
+    yield assert_allclose, uprank([[0]]), [[0]]
+    yield eq, type(uprank(Component('test')(0))), Component('test')
+
+
 def test_ones_zeros():
     c = Cache()
 
@@ -34,8 +41,6 @@ def test_ones_zeros():
     k = ZeroKernel()
     yield eq, id(k(np.random.randn(10, 10), c)), \
           id(k(np.random.randn(10, 10), c))
-    yield eq, id(k(np.random.randn(10, 10), c)), \
-          id(k(Component('test')(np.random.randn(10, 10)), c))
     yield neq, id(k(np.random.randn(10, 10), c)), \
           id(k(np.random.randn(5, 10), c))
     yield eq, id(k(1, c)), id(k(1, c))
@@ -43,8 +48,6 @@ def test_ones_zeros():
     k = OneKernel()
     yield eq, id(k(np.random.randn(10, 10), c)), \
           id(k(np.random.randn(10, 10), c))
-    yield eq, id(k(np.random.randn(10, 10), c)), \
-          id(k(Component('test')(np.random.randn(10, 10)), c))
     yield neq, id(k(np.random.randn(10, 10), c)), \
           id(k(np.random.randn(5, 10), c))
     yield eq, id(k(1, c)), id(k(1, c))
@@ -53,8 +56,6 @@ def test_ones_zeros():
     m = ZeroMean()
     yield eq, id(m(np.random.randn(10, 10), c)), \
           id(m(np.random.randn(10, 10), c))
-    yield eq, id(m(np.random.randn(10, 10), c)), \
-          id(m(Component('test')(np.random.randn(10, 10)), c))
     yield neq, id(m(np.random.randn(10, 10), c)), \
           id(m(np.random.randn(5, 10), c))
     yield eq, id(m(1, c)), id(m(1, c))
@@ -62,8 +63,6 @@ def test_ones_zeros():
     m = OneKernel()
     yield eq, id(m(np.random.randn(10, 10), c)), \
           id(m(np.random.randn(10, 10), c))
-    yield eq, id(m(np.random.randn(10, 10), c)), \
-          id(m(Component('test')(np.random.randn(10, 10)), c))
     yield neq, id(m(np.random.randn(10, 10), c)), \
           id(m(np.random.randn(5, 10), c))
     yield eq, id(m(1, c)), id(m(1, c))

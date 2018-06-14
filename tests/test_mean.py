@@ -21,8 +21,6 @@ from . import eq, neq, lt, le, ge, gt, raises, call, ok, eprint
 
 def test_corner_cases():
     yield raises, NotImplementedError, lambda: Mean()(1.)
-    x = np.random.randn(10, 2)
-    yield ok, np.allclose(ZeroMean()(x), ZeroMean()(Observed(x)))
 
 
 def test_construction():
@@ -32,9 +30,9 @@ def test_construction():
     c = Cache()
 
     yield m, x
-    yield m, Observed(x)
+    yield raises, RuntimeError, lambda: m(Observed(x))
     yield m, x, c
-    yield m, Observed(x), c
+    yield raises, RuntimeError, lambda: m(Observed(x), c)
 
 
 def test_basic_arithmetic():
