@@ -160,7 +160,7 @@ class Graph(Referentiable):
         Args:
             p (instance of :class:`.graph.GP`): GP to select input
                 dimensions from.
-            \*dims (object): Dimensions to select.
+            *dims (object): Dimensions to select.
 
         Returns:
             GP with the specific input dimensions.
@@ -255,6 +255,21 @@ class Graph(Referentiable):
         y = B.concat([uprank(y) for y in ys], axis=0)
         self.condition(At(p)(MultiInput(*xs)), y)
 
+    def cross(self, *ps):
+        """
+
+        Args:
+            *ps:
+
+        Returns:
+
+        """
+        # Extend the graph by Cartesian product `p` of all processes.
+        mok = MOK(*self.ps)
+        return self._update(MOM(*self.ps),
+                         lambda: mok,
+                         lambda pi: mok.transform(None, lambda y: At(pi)(y)))
+
     def revert_prior(self):
         """Revert the model back to the state before any conditioning
         operations.
@@ -273,7 +288,7 @@ class Graph(Referentiable):
         """Sample multiple processes simultaneously.
 
         Args:
-            \*xs (instance of :class:`.graph.At`): Locations to sample at.
+            *xs (instance of :class:`.graph.At`): Locations to sample at.
         """
         sample = GPPrimitive(MOK(*self.ps),
                              MOM(*self.ps))(MultiInput(*xs)).sample()

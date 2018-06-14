@@ -85,7 +85,7 @@ class Type(Referentiable):
         """Stretch the element.
 
         Args:
-            \*stretches (tensor): Per input, extent to stretch by.
+            *stretches (tensor): Per input, extent to stretch by.
         """
         return stretch(self, *stretches)
 
@@ -93,7 +93,7 @@ class Type(Referentiable):
         """Shift the inputs of an element by a certain amount.
 
         Args:
-            \*amounts (tensor): Per input, amount to shift by.
+            *amounts (tensor): Per input, amount to shift by.
         """
         return shift(self, *amounts)
 
@@ -102,7 +102,7 @@ class Type(Referentiable):
         """Select particular dimensions of the input features.
 
         Args:
-            \*dims (int, sequence, or None): Per input, dimensions to select.
+            *dims (int, sequence, or None): Per input, dimensions to select.
                 Set to `None` to select all.
         """
         return select(self, *dims)
@@ -115,7 +115,7 @@ class Type(Referentiable):
         """Transform the inputs.
 
         Args:
-            \*fs (int or tuple): Per input, transformation. Set to `None` to
+            *fs (int or tuple): Per input, transformation. Set to `None` to
                 not perform a transformation.
         """
         return transform(self, *fs)
@@ -124,7 +124,7 @@ class Type(Referentiable):
         """Differentiate.
 
         Args:
-            \*derivs (int): Per input, dimension of the feature which to take
+            *derivs (int): Per input, dimension of the feature which to take
                 the derivatives with respect to. Set to `None` to not take a
                 derivative.
         """
@@ -268,7 +268,7 @@ class StretchedType(WrappedType):
 
     Args:
         t (instance of :class:`.field.Type`): Element to stretch.
-        \*stretches (tensor): Extent of stretches.
+        *stretches (tensor): Extent of stretches.
     """
 
     def __init__(self, t, *stretches):
@@ -284,7 +284,7 @@ class ShiftedType(WrappedType):
 
     Args:
         t (instance of :class:`.field.Type`): Element to shift.
-        \*shifts (tensor): Shift amounts.
+        *shifts (tensor): Shift amounts.
     """
 
     def __init__(self, t, *shifts):
@@ -300,7 +300,7 @@ class SelectedType(WrappedType):
 
     Args:
         t (instance of :class:`.field.Type`): Element to wrap.
-        \*dims (tensor): Dimensions to select.
+        *dims (tensor): Dimensions to select.
     """
 
     def __init__(self, t, *dims):
@@ -316,7 +316,7 @@ class InputTransformedType(WrappedType):
 
     Args:
         t (instance of :class:`.field.Type`): Element to wrap.
-        \*fs (tensor): Per input, the transformation. Set to `None` to not
+        *fs (tensor): Per input, the transformation. Set to `None` to not
             do a transformation.
     """
 
@@ -341,7 +341,7 @@ class DerivativeType(WrappedType):
 
     Args:
         t (instance of :class:`.field.Type`): Element to compute derivatives of.
-        \*derivs (tensor): Per input, the index of the dimension which to
+        *derivs (tensor): Per input, the index of the dimension which to
             take the derivative of. Set to `None` to not take a derivative.
     """
 
@@ -399,7 +399,7 @@ class FunctionType(Type):
     """An element built from a product of functions for each input.
 
     Args:
-        \*fs (function): Per input, a function.
+        *fs (function): Per input, a function.
     """
 
     def __init__(self, *fs):
@@ -442,7 +442,7 @@ def stretch(a, *stretches):
 
     Args:
         a (instance of :class:`.field.Type`): Element to stretch.
-        \*stretches (tensor): Extent of stretches.
+        *stretches (tensor): Extent of stretches.
     """
     raise NotImplementedError('Stretching not implemented for {}.'
                               ''.format(type(a).__name__))
@@ -454,7 +454,7 @@ def shift(a, *shifts):
 
     Args:
         a (instance of :class:`.field.Type`): Element to shift.
-        \*shifts (tensor): Shift amounts.
+        *shifts (tensor): Shift amounts.
     """
     raise NotImplementedError('Shifting not implemented for {}.'
                               ''.format(type(a).__name__))
@@ -466,7 +466,7 @@ def select(a, *dims):
 
     Args:
         a (instance of :class:`.field.Type`): Element to wrap.
-        \*dims (int): Per input, dimensions to select.
+        *dims (int): Per input, dimensions to select.
     """
     raise NotImplementedError('Selection not implemented for {}.'
                               ''.format(type(a).__name__))
@@ -478,7 +478,7 @@ def transform(a, *fs):
 
     Args:
         a (instance of :class:`.field.Type`): Element to wrap.
-        \*fs (int): Per input, the transform. Set to `None` to not perform a
+        *fs (int): Per input, the transform. Set to `None` to not perform a
             transform.
     """
     raise NotImplementedError('Input transforms not implemented for {}.'
@@ -491,7 +491,7 @@ def differentiate(a, *derivs):
 
     Args:
         a (instance of :class:`.field.Type`): Element to differentiate.
-        \*derivs (int): Per input, dimension of the feature which to take
+        *derivs (int): Per input, dimension of the feature which to take
             the derivatives with respect to. Set to `None` to not take a
             derivative.
     """

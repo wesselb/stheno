@@ -23,8 +23,8 @@ Example: Simple Regression
     from stheno import GP, EQ, Delta
 
     # Define points to predict at.
-    x = np.linspace(0, 10, 100)[:, None]
-    x_obs = np.linspace(0, 7, 20)[:, None]
+    x = np.linspace(0, 10, 100)
+    x_obs = np.linspace(0, 7, 20)
 
     # Construct a prior.
     f = GP(EQ().periodic(5.))  # Latent function.
@@ -67,8 +67,8 @@ Example: Decomposition of Prediction
     from stheno import GP, model, EQ, RQ, Linear, Delta, Exp
 
     # Define points to predict at.
-    x = np.linspace(0, 10, 200)[:, None]
-    x_obs = np.linspace(0, 7, 50)[:, None]
+    x = np.linspace(0, 10, 200)
+    x_obs = np.linspace(0, 7, 50)
 
     # Construct a latent function consisting of four different components.
     f_smooth = GP(EQ())
@@ -176,8 +176,8 @@ Example: Learn a Function, Incorporating Prior Knowledge About Its Form
     s = tf.Session()
 
     # Define points to predict at.
-    x = np.linspace(0, 5, 100)[:, None]
-    x_obs = np.linspace(0, 3, 20)[:, None]
+    x = np.linspace(0, 5, 100)
+    x_obs = np.linspace(0, 3, 20)
 
     # Construct the model.
     u = GP(vs.pos(.5) * EQ().stretch(vs.pos(1.)))
@@ -215,6 +215,175 @@ Example: Learn a Function, Incorporating Prior Knowledge About Its Form
     plt.plot(x, upper, ls='--', c='tab:green')
     plt.legend()
     plt.show()
+
+Example: Multi-Ouput Regression
+-------------------------------
+
+.. figure:: https://raw.githubusercontent.com/wesselb/stheno/master/readme_prediction4.png
+   :alt: Prediction
+
+   Prediction
+
+.. code:: python
+
+Example: Approximate Integration
+--------------------------------
+
+.. figure:: https://raw.githubusercontent.com/wesselb/stheno/master/readme_prediction5.png
+   :alt: Prediction
+
+   Prediction
+
+.. code:: python
+
+    import matplotlib.pyplot as plt
+    import numpy as np
+
+    from stheno import GP, EQ, Delta, model
+
+    # Define points to predict at.
+    x = np.linspace(0, 10, 200)
+    x_obs = np.linspace(0, 10, 10)
+
+    # Construct the model.
+    f = 0.7 * GP(EQ()).stretch(1.5)
+    e = 0.2 * GP(Delta())
+
+    # Construct derivatives via finite differences.
+    df = f.diff_approx(1)
+    ddf = f.diff_approx(2)
+    dddf = f.diff_approx(3) + e
+
+    # Fix the integration constants.
+    model.condition(f @ 0, 1)
+    model.condition(df @ 0, 0)
+    model.condition(ddf @ 0, -1)
+
+    # Sample observations.
+    y_obs = np.sin(x_obs) + 0.2 * np.random.randn(*x_obs.shape)
+
+    # Condition on the observations to make predictions.
+    model.condition(dddf @ x_obs, y_obs)
+
+    # And make predictions.
+    pred_iiif = f.predict(x)
+    pred_iif = df.predict(x)
+    pred_if = ddf.predict(x)
+    pred_f = dddf.predict(x)
+
+
+    # Plot result.
+    def plot_prediction(x, f, pred, x_obs=None, y_obs=None):
+        plt.plot(x.squeeze(), f.squeeze(), label='True', c='tab:blue')
+        if x_obs is not None:
+            plt.scatter(x_obs.squeeze(), y_obs.squeeze(),
+                        label='Observations', c='tab:red')
+        mean, lower, upper = pred
+        plt.plot(x.squeeze(), mean, label='Prediction', c='tab:green')
+        plt.plot(x.squeeze(), lower, ls='--', c='tab:green')
+        plt.plot(x.squeeze(), upper, ls='--', c='tab:green')
+        plt.legend()
+
+
+    plt.figure(figsize=(10, 6))
+
+    plt.subplot(2, 2, 1)
+    plt.title('Function')
+    plot_prediction(x, np.sin(x), pred_f, x_obs=x_obs, y_obs=y_obs)
+    plt.legend()
+
+    plt.subplot(2, 2, 2)
+    plt.title('Integral of Function')
+    plot_prediction(x, -np.cos(x), pred_if)
+    plt.legend()
+
+    plt.subplot(2, 2, 3)
+    plt.title('Second Integral of Function')
+    plot_prediction(x, -np.sin(x), pred_iif)
+    plt.legend()
+
+    plt.subplot(2, 2, 4)
+    plt.title('Third Integral of Function')
+    plot_prediction(x, np.cos(x), pred_iiif)
+    plt.legend()
+
+    plt.show()
+
+Example: Bayesian Linear Regression
+-----------------------------------
+
+.. figure:: https://raw.githubusercontent.com/wesselb/stheno/master/readme_prediction6.png
+   :alt: Prediction
+
+   Prediction
+
+.. code:: python
+
+    import matplotlib.pyplot as plt
+    import numpy as np
+
+    from stheno import GP, Delta, model
+
+    # Define points to predict at.
+    x = np.linspace(0, 10, 200)
+    x_obs = np.linspace(0, 10, 10)
+
+    # Construct the model.
+    slope = GP(1)
+    intercept = GP(5)
+    f = slope * (lambda x: x) + intercept
+
+    e = 0.2 * GP(Delta())  # Noise model
+
+    y = f + e  # Observation model
+
+    # Sample a true slope and intercept.
+    true_slope = slope(0).sample()
+    true_intercept = intercept.condition(slope @ 0, true_slope)(0).sample()
+
+    # Sample a true, underlying function and observations.
+    f_true = f.condition(intercept @ x, true_intercept)(x).sample()
+    y_obs = y.condition(f @ x, f_true)(x_obs).sample()
+    model.revert_prior()
+
+    # Condition on the observations to make predictions.
+    mean, lower, upper = f.condition(y @ x_obs, y_obs).predict(x)
+    mean_slope, mean_intercept = slope(0).mean, intercept(0).mean
+
+    print('true slope', true_slope)
+    print('predicted slope', mean_slope)
+    print('true intercept', true_intercept)
+    print('predicted intercept', mean_intercept)
+
+    # Plot result.
+    x, f_true, x_obs, y_obs = map(np.squeeze, (x, f_true, x_obs, y_obs))
+    plt.plot(x, f_true, label='True', c='tab:blue')
+    plt.scatter(x_obs, y_obs, label='Observations', c='tab:red')
+    plt.plot(x, mean, label='Prediction', c='tab:green')
+    plt.plot(x, lower, ls='--', c='tab:green')
+    plt.plot(x, upper, ls='--', c='tab:green')
+    plt.legend()
+    plt.show()
+
+Example: GPAR
+-------------
+
+.. figure:: https://raw.githubusercontent.com/wesselb/stheno/master/readme_prediction7.png
+   :alt: Prediction
+
+   Prediction
+
+.. code:: python
+
+Example: Combining RNNs and GPs
+-------------------------------
+
+.. figure:: https://raw.githubusercontent.com/wesselb/stheno/master/readme_prediction8.png
+   :alt: Prediction
+
+   Prediction
+
+.. code:: python
 
 .. |Build| image:: https://travis-ci.org/wesselb/stheno.svg?branch=master
    :target: https://travis-ci.org/wesselb/stheno

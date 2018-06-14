@@ -20,7 +20,7 @@ class MultiOutputMean(Mean, Referentiable):
     """A generic multi-output mean.
 
     Args:
-        \*ps (instance of :class:`.graph.GP`): Processes that make up the
+        *ps (instance of :class:`.graph.GP`): Processes that make up the
             multi-valued process.
     """
     dispatch = Dispatcher(in_class=Self)

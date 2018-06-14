@@ -36,7 +36,7 @@ class Cache(Referentiable):
         """A dump for objects to prevent the GC from cleaning them up.
 
         Args:
-            \*objs (object): Objects to dump.
+            *objs (object): Objects to dump.
         """
         self._dump.append(objs)
 

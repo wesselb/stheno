@@ -468,4 +468,3 @@ def test_multi_conditioning():
 
     # Test `At` check.
     yield raises, ValueError, lambda: model.condition((0, 0))
-    

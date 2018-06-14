@@ -11,7 +11,7 @@ class Input(object):
     """Input type.
 
     Args:
-        \*xs (tensor): Inputs to type.
+        *xs (tensor): Inputs to type.
     """
 
     def __init__(self, *xs):
