@@ -1,26 +1,23 @@
 Features:
     ☐ Sparse approximations
-    ☐ Efficient multi-output kernels
+    ☐ Efficient multi-output kernels: low-rank SPDs returned by multi-output kernels
     ☐ Efficient diagonal computation: pairwise and element-wise
 
 Refactor:
     ☐ Make RQ, Exp, Matern32, and Matern52 cache friendly
-
-Examples:
-    ☐ Input warping with NN
-    ☐ Small Bayes opt example
-    ☐ ESS for hyperparameter inference
-    ☐ LMM/ICM @started
+    ☐ Refactor type union for Graph.condition once type unions are fixed.
+    ☐ Simply signatures in `field.py`.
 
 Documentation:
     ☐ Improve docstrings.
-    ☐ Write examples. @started
     ☐ Write documentation. @started
         ☐ Define terminology in the docstrings: design matrix, shape, etc.
 
 
 ＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿
 Archive:
+ ✓ Write examples. @started @done (18-06-13 23:40) @project(Documentation)
+ ✓ LMM/ICM @started @done (18-06-13 23:40) @project(Examples)
  ✓ What is going on with `[np.random.randn(1,1).__array_interface__['data'][0] for _ in range(2)]`? @done (18-06-11 13:49)
  ✓ Caching of computation in kernels @done (18-06-04 03:43) @project(Optimisations)
  ✓ Implement * and + for SPDs, and use these in the arithmetic of Normals. @done (18-06-02 17:49) @project(Optimisations)
