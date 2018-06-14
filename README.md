@@ -216,7 +216,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from plum import Dispatcher, Referentiable, Self
 
-from stheno import GP, EQ, Delta, model, Kernel, B
+from stheno import GP, EQ, Delta, model, Kernel
 
 
 class VGP(Referentiable):
