@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from plum import Dispatcher, Referentiable, Self
 
-from stheno import GP, EQ, Delta, model, Kernel
+from stheno import GP, EQ, Delta, model, Kernel, B
 
 
 class VGP(Referentiable):
@@ -48,7 +48,7 @@ class VGP(Referentiable):
 
 # Define points to predict at.
 x = np.linspace(0, 10, 100)
-x_obs = np.linspace(0, 7, 10)
+x_obs = np.linspace(0, 10, 10)
 
 # Model parameters:
 m = 2
@@ -80,8 +80,7 @@ preds = fs.predict(x)
 def plot_prediction(x, f, pred, x_obs=None, y_obs=None):
     plt.plot(x, f.squeeze(), label='True', c='tab:blue')
     if x_obs is not None:
-        plt.scatter(x_obs.squeeze(), y_obs.squeeze(),
-                    label='Observations', c='tab:red')
+        plt.scatter(x_obs, y_obs.squeeze(), label='Observations', c='tab:red')
     mean, lower, upper = pred
     plt.plot(x, mean, label='Prediction', c='tab:green')
     plt.plot(x, lower, ls='--', c='tab:green')
