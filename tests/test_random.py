@@ -34,7 +34,6 @@ def test_normal():
 
     # Test `log_pdf` and `entropy`.
     x = np.random.randn(3, 10)
-    yield raises, ValueError, lambda: dist.log_pdf(np.random.randn(10))
     yield ok, np.allclose(dist.log_pdf(x), dist_sp.logpdf(x.T)), 'log pdf'
     yield ok, np.allclose(dist.entropy(), dist_sp.entropy()), 'entropy'
 

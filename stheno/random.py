@@ -8,7 +8,7 @@ import numpy as np
 from lab import B
 from plum import Self, Referentiable
 
-from .cache import Cache
+from .cache import Cache, uprank
 from .kernel import PosteriorKernel, OneKernel
 from .mean import ZeroMean, PosteriorMean, OneMean
 from .spd import SPD, Dispatcher, UniformDiagonal, Diagonal
@@ -95,12 +95,10 @@ class Normal(RandomVector, Referentiable):
         Args:
             x (design matrix): Values to compute the log-pdf of.
         """
-        if B.rank(x) != 2:
-            raise ValueError('Input must have rank 2.')
         return -(self.spd.log_det() +
                  B.cast(self.dim, dtype=self.dtype) *
                  B.cast(B.log_2_pi, dtype=self.dtype) +
-                 self.spd.mah_dist2(x - self.mean, sum=False)) / 2
+                 self.spd.mah_dist2(uprank(x) - self.mean, sum=False)) / 2
 
     def entropy(self):
         """Compute the entropy."""
