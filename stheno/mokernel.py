@@ -8,7 +8,7 @@ from lab import B
 from plum import Dispatcher, Self, Referentiable, type_parameter
 
 from .cache import cache, Cache
-from .input import At
+from .input import At, MultiInput
 from .kernel import Kernel
 
 __all__ = ['MultiOutputKernel']
@@ -32,9 +32,8 @@ class MultiOutputKernel(Kernel, Referentiable):
     @dispatch(B.Numeric, B.Numeric, Cache)
     @cache
     def __call__(self, x, y, B):
-        return B.concat([B.concat([self(At(p_row)(x), At(p_col)(y), B)
-                                   for p_col in self.ps], axis=1)
-                         for p_row in self.ps], axis=0)
+        return self(MultiInput(*(At(p)(x) for p in self.ps)),
+                    MultiInput(*(At(p)(y) for p in self.ps)), B)
 
     @dispatch(At, At, Cache)
     @cache
@@ -42,11 +41,22 @@ class MultiOutputKernel(Kernel, Referentiable):
         return self.kernels[type_parameter(x),
                             type_parameter(y)](x.get(), y.get(), B)
 
-    @dispatch({tuple, list}, {tuple, list}, Cache)
+    @dispatch(MultiInput, At, Cache)
     @cache
     def __call__(self, x, y, B):
-        return B.concat([B.concat([self(xi, yi, B) for yi in y], axis=1)
-                         for xi in x], axis=0)
+        return self(x, MultiInput(y), B)
+
+    @dispatch(At, MultiInput, Cache)
+    @cache
+    def __call__(self, x, y, B):
+        return self(MultiInput(x), y, B)
+
+    @dispatch(MultiInput, MultiInput, Cache)
+    @cache
+    def __call__(self, x, y, B):
+        return B.concat([B.concat([self(xi, yi, B)
+                                   for yi in y.get()], axis=1)
+                         for xi in x.get()], axis=0)
 
     def __str__(self):
         ks = [str(self.kernels[p]) for p in self.ps]

@@ -8,7 +8,7 @@ from lab import B
 from plum import Dispatcher, Self, Referentiable, type_parameter
 
 from .cache import cache, Cache
-from .input import At
+from .input import At, MultiInput
 from .mean import Mean
 
 __all__ = []
@@ -32,17 +32,17 @@ class MultiOutputMean(Mean, Referentiable):
     @dispatch(B.Numeric, Cache)
     @cache
     def __call__(self, x, B):
-        return B.concat([self.means[p](x, B) for p in self.ps], axis=0)
+        return self(MultiInput(*(At(p)(x) for p in self.ps)), B)
 
     @dispatch(At, Cache)
     @cache
     def __call__(self, x, B):
         return self.means[type_parameter(x)](x.get(), B)
 
-    @dispatch({tuple, list}, Cache)
+    @dispatch(MultiInput, Cache)
     @cache
     def __call__(self, x, B):
-        return B.concat([self(xi, B) for xi in x], axis=0)
+        return B.concat([self(xi, B) for xi in x.get()], axis=0)
 
     def __str__(self):
         ks = [str(self.means[p]) for p in self.ps]
