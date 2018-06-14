@@ -244,7 +244,7 @@ class Graph(Referentiable):
             raise ValueError('Must explicitly specify the processes which to '
                              'condition on.')
 
-        # Extend the graph by Cartesian product `p` of all processes.
+        # Extend the graph by the Cartesian product `p` of all processes.
         p = self.cross(*self.ps)
 
         # Condition the newly created vector-valued GP.
