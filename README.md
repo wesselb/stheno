@@ -79,26 +79,16 @@ e = e_indep + .3 * e_exp
 
 # Sum the latent function and observation noise to get a model for the
 # observations.
-y = f + 0.5 * e
+y = f + .5 * e
 
-# Component by component, sample a true, underlying function and observations.
-f_true_smooth = f_smooth(x).sample()
-model.condition(f_smooth @ x, f_true_smooth)
-
-f_true_wiggly = f_wiggly(x).sample()
-model.condition(f_wiggly @ x, f_true_wiggly)
-
-f_true_periodic = f_periodic(x).sample()
-model.condition(f_periodic @ x, f_true_periodic)
-
-f_true_linear = f_linear(x).sample()
-model.condition(f_linear @ x, f_true_linear)
-
-f_true = f(x).sample()
-model.condition(f @ x, f_true)
-
-y_obs = y(x_obs).sample()
-model.revert_prior()
+# Sample a true, underlying function and observations.
+f_true_smooth, f_true_wiggly, f_true_periodic, f_true_linear, f_true, y_obs = \
+    model.sample(f_smooth @ x,
+                 f_wiggly @ x,
+                 f_periodic @ x,
+                 f_linear @ x,
+                 f @ x,
+                 y @ x_obs)
 
 # Now condition on the observations and make predictions for the latent
 # function and its various components.
@@ -336,9 +326,7 @@ ddf = f.diff_approx(2)
 dddf = f.diff_approx(3) + e
 
 # Fix the integration constants.
-model.condition(f @ 0, 1)
-model.condition(df @ 0, 0)
-model.condition(ddf @ 0, -1)
+model.condition((f @ 0, 1), (df @ 0, 0), (ddf @ 0, -1))
 
 # Sample observations.
 y_obs = np.sin(x_obs) + 0.2 * np.random.randn(*x_obs.shape)
@@ -415,15 +403,10 @@ e = 0.2 * GP(Delta())  # Noise model
 
 y = f + e  # Observation model
 
-# Sample a true slope and intercept.
-true_slope = slope(0).sample()
-true_intercept = intercept.condition(slope @ 0, true_slope)(0).sample()
-
-# Sample a true, underlying function and observations.
-f_true = f.condition(intercept @ x, true_intercept)(x).sample()
-y_obs = y.condition(f @ x, f_true)(x_obs).sample()
-model.revert_prior()
-
+# Sample a slope, intercept, underlying function, and observations.
+true_slope, true_intercept, f_true, y_obs = \
+    model.sample(slope @ 0, intercept @ 0, f @ x, y @ x_obs)
+    
 # Condition on the observations to make predictions.
 mean, lower, upper = f.condition(y @ x_obs, y_obs).predict(x)
 mean_slope, mean_intercept = slope(0).mean, intercept(0).mean

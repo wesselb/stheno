@@ -16,14 +16,9 @@ e = 0.2 * GP(Delta())  # Noise model
 
 y = f + e  # Observation model
 
-# Sample a true slope and intercept.
-true_slope = slope(0).sample()
-true_intercept = intercept.condition(slope @ 0, true_slope)(0).sample()
-
-# Sample a true, underlying function and observations.
-f_true = f.condition(intercept @ x, true_intercept)(x).sample()
-y_obs = y.condition(f @ x, f_true)(x_obs).sample()
-model.revert_prior()
+# Sample a slope, intercept, underlying function, and observations.
+true_slope, true_intercept, f_true, y_obs = \
+    model.sample(slope @ 0, intercept @ 0, f @ x, y @ x_obs)
 
 # Condition on the observations to make predictions.
 mean, lower, upper = f.condition(y @ x_obs, y_obs).predict(x)

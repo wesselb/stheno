@@ -25,24 +25,14 @@ e = e_indep + .3 * e_exp
 # observations.
 y = f + .5 * e
 
-# Component by component, sample a true, underlying function and observations.
-f_true_smooth = f_smooth(x).sample()
-model.condition(f_smooth @ x, f_true_smooth)
-
-f_true_wiggly = f_wiggly(x).sample()
-model.condition(f_wiggly @ x, f_true_wiggly)
-
-f_true_periodic = f_periodic(x).sample()
-model.condition(f_periodic @ x, f_true_periodic)
-
-f_true_linear = f_linear(x).sample()
-model.condition(f_linear @ x, f_true_linear)
-
-f_true = f(x).sample()
-model.condition(f @ x, f_true)
-
-y_obs = y(x_obs).sample()
-model.revert_prior()
+# Sample a true, underlying function and observations.
+f_true_smooth, f_true_wiggly, f_true_periodic, f_true_linear, f_true, y_obs = \
+    model.sample(f_smooth @ x,
+                 f_wiggly @ x,
+                 f_periodic @ x,
+                 f_linear @ x,
+                 f @ x,
+                 y @ x_obs)
 
 # Now condition on the observations and make predictions for the latent
 # function and its various components.

@@ -17,9 +17,7 @@ ddf = f.diff_approx(2)
 dddf = f.diff_approx(3) + e
 
 # Fix the integration constants.
-model.condition(f @ 0, 1)
-model.condition(df @ 0, 0)
-model.condition(ddf @ 0, -1)
+model.condition((f @ 0, 1), (df @ 0, 0), (ddf @ 0, -1))
 
 # Sample observations.
 y_obs = np.sin(x_obs) + 0.2 * np.random.randn(*x_obs.shape)
