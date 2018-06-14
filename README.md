@@ -471,7 +471,6 @@ f1_true = np.sin(x)
 f2_true = np.sin(x) ** 2
 
 y1_obs = np.sin(x_obs1) + 0.05 * np.random.randn(*x_obs1.shape)
-y1_obs_at_x_obs2 = y1
 y2_obs = np.sin(x_obs2) ** 2 + 0.05 * np.random.randn(*x_obs2.shape)
 
 # Learn.
