@@ -165,6 +165,9 @@ class Type(Referentiable):
     def __repr__(self):
         return str(self)
 
+    def __str__(self):
+        return self.__class__.__name__ + '()'
+
 
 class PrimitiveType(Type):
     """A primitive."""
@@ -322,10 +325,14 @@ class InputTransformedType(WrappedType):
         self.fs = fs
 
     def display(self, t):
+        # Safely get a function's name.
+        def name(f):
+            return 'None' if f is None else f.__name__
+
         if len(self.fs) == 1:
-            fs = self.fs[0].__name__
+            fs = name(self.fs[0])
         else:
-            fs = '({})'.format(', '.join(f.__name__ for f in self.fs))
+            fs = '({})'.format(', '.join(name(f) for f in self.fs))
         return '{} transform {}'.format(t, fs)
 
 
