@@ -4,8 +4,8 @@ Features:
     ☐ Efficient diagonal computation: pairwise and element-wise
 
 Refactor:
-    ☐ Make RQ, Exp, Matern32, and Matern52 cache friendly
-    ☐ Refactor type union for Graph.condition once type unions are fixed.
+    ☐ Make RQ, Exp, Matern32, and Matern52 cache friendly.
+    ☐ Refactor to type union for Graph.condition once type unions are fixed.
     ☐ Simply signatures in `field.py`.
 
 Documentation:
