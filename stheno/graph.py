@@ -128,6 +128,29 @@ class Graph(Referentiable):
                             (lambda pi: FunctionKernel(f, ones) *
                                         kernels[p, pi]))
 
+    @dispatch(PromisedGP, PromisedGP)
+    def mul(self, p1, p2):
+        # Careful with the closures!
+        kernels = self.kernels
+        means = self.means
+
+        def ones(x):
+            return B.ones([B.shape(x)[0], 1], dtype=B.dtype(x))
+
+        return self._update(
+            (lambda x, B: kernels[p1, p2].elwise(x, x, B)) +
+            means[p1] * means[p2],
+            (lambda: (kernels[p1] + FunctionKernel(means[p1], means[p1])) *
+                     (kernels[p2] + FunctionKernel(means[p2], means[p2])) +
+                     (kernels[p1, p2] + FunctionKernel(means[p1], means[p2])) *
+                     (kernels[p2, p1] + FunctionKernel(means[p2], means[p1])) -
+                     2 * FunctionKernel(means[p1] * means[p2],
+                                        means[p1] * means[p2])),
+            (lambda pi: FunctionKernel(means[p2], ones) * kernels[p1, pi] +
+                        FunctionKernel(means[p1], ones) * kernels[p2, pi]
+             ),
+        )
+
     def shift(self, p, shift):
         """Shift a GP.
 
@@ -462,6 +485,10 @@ class GP(GPPrimitive, Referentiable):
         return self.graph.sum(self, other)
 
     @dispatch(object)
+    def __mul__(self, other):
+        return self.graph.mul(self, other)
+
+    @dispatch(Self)
     def __mul__(self, other):
         return self.graph.mul(self, other)
 
