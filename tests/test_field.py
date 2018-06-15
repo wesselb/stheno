@@ -30,6 +30,7 @@ def test_corner_cases():
     yield raises, RuntimeError, lambda: get_field(1)
     yield raises, RuntimeError, lambda: new(MyField(), SumType)
     yield eq, repr(EQ()), str(EQ())
+    yield eq, EQ().__name__, 'EQ'
     yield raises, NotImplementedError, lambda: WrappedType(1).display(1)
     yield raises, NotImplementedError, lambda: JoinType(1, 2).display(1, 2)
 
@@ -43,6 +44,14 @@ def test_broadcast():
     yield eq, str(EQ().stretch(1, 3).stretch(2)), 'EQ() > (2, 6)'
     yield eq, str(Linear().shift(2).shift(1, 3)), 'Linear() shift (3, 5)'
     yield eq, str(Linear().shift(1, 3).shift(2)), 'Linear() shift (3, 5)'
+
+
+def test_subtraction_and_negation():
+    yield eq, str(-EQ()), '-1 * EQ()'
+    yield eq, str(EQ() - EQ()), '0'
+    yield eq, str(RQ(1) - EQ()), 'RQ(1) + -1 * EQ()'
+    yield eq, str(1 - EQ()), '1 + -1 * EQ()'
+    yield eq, str(EQ() - 1), 'EQ() + -1 * 1'
 
 
 def test_cancellations_zero():

@@ -15,6 +15,12 @@ from stheno.cache import Cache
 from . import eq, raises, ok, le, eprint, lam
 
 
+def abs_err(x1, x2=0): return np.sum(np.abs(x1 - x2))
+
+
+def rel_err(x1, x2): return 2 * abs_err(x1, x2) / (abs_err(x1) + abs_err(x2))
+
+
 def test_corner_cases():
     m1 = Graph()
     m2 = Graph()
@@ -216,10 +222,10 @@ def test_shifting():
     y = p2(x).sample()
 
     yield assert_allclose, p.condition(At(p2)(x), y)(x - 5).mean, y
-    yield le, np.sum(np.abs(p(x - 5).spd.diag)), 1e-10
+    yield le, abs_err(p(x - 5).spd.diag), 1e-10
     p.revert_prior()
     yield assert_allclose, p2.condition(At(p)(x), y)(x + 5).mean, y
-    yield le, np.sum(np.abs(p2(x + 5).spd.diag)), 1e-10
+    yield le, abs_err(p2(x + 5).spd.diag), 1e-10
     p.revert_prior()
 
 
@@ -234,10 +240,10 @@ def test_stretching():
     y = p2(x).sample()
 
     yield assert_allclose, p.condition(At(p2)(x), y)(x / 5).mean, y
-    yield le, np.sum(np.abs(p(x / 5).spd.diag)), 1e-10
+    yield le, abs_err(p(x / 5).spd.diag), 1e-10
     p.revert_prior()
     yield assert_allclose, p2.condition(At(p)(x), y)(x * 5).mean, y
-    yield le, np.sum(np.abs(p2(x * 5).spd.diag)), 1e-10
+    yield le, abs_err(p2(x * 5).spd.diag), 1e-10
     p.revert_prior()
 
 
@@ -252,10 +258,10 @@ def test_input_transform():
     y = p2(x).sample()
 
     yield assert_allclose, p.condition(At(p2)(x), y)(x / 5).mean, y
-    yield le, np.sum(np.abs(p(x / 5).spd.diag)), 1e-10
+    yield le, abs_err(p(x / 5).spd.diag), 1e-10
     p.revert_prior()
     yield assert_allclose, p2.condition(At(p)(x), y)(x * 5).mean, y
-    yield le, np.sum(np.abs(p2(x * 5).spd.diag)), 1e-10
+    yield le, abs_err(p2(x * 5).spd.diag), 1e-10
     p.revert_prior()
 
 
@@ -272,17 +278,17 @@ def test_selection():
     y = p2(x).sample()
 
     yield assert_allclose, p.condition(At(p2)(x1), y)(x).mean, y
-    yield le, np.sum(np.abs(p(x).spd.diag)), 1e-10
+    yield le, abs_err(p(x).spd.diag), 1e-10
     p.revert_prior()
 
     yield assert_allclose, p.condition(At(p2)(x2), y)(x).mean, y
-    yield le, np.sum(np.abs(p(x).spd.diag)), 1e-10
+    yield le, abs_err(p(x).spd.diag), 1e-10
     p.revert_prior()
 
     yield assert_allclose, p2.condition(At(p)(x), y)(x1).mean, y
     yield assert_allclose, p2(x2).mean, y
-    yield le, np.sum(np.abs(p2(x1).spd.diag)), 1e-10
-    yield le, np.sum(np.abs(p2(x2).spd.diag)), 1e-10
+    yield le, abs_err(p2(x1).spd.diag), 1e-10
+    yield le, abs_err(p2(x2).spd.diag), 1e-10
     p.revert_prior()
 
 
@@ -294,8 +300,7 @@ def test_case_fd_derivative():
     p = GP(.7 * EQ().stretch(1.), graph=model)
     dp = (p.shift(-1e-3) - p.shift(1e-3)) / 2e-3
 
-    yield le, np.sum(np.abs(np.cos(x) -
-                            dp.condition(At(p)(x), y)(x).mean)), 1e-4
+    yield le, abs_err(np.cos(x) - dp.condition(At(p)(x), y)(x).mean), 1e-4
 
 
 def test_case_reflection():
@@ -307,10 +312,10 @@ def test_case_reflection():
     y = p(x).sample()
 
     model.condition(At(p)(x), y)
-    yield le, np.sum(np.abs(p2(x).mean - (5 - y))), 1e-5
+    yield le, abs_err(p2(x).mean - (5 - y)), 1e-5
     model.revert_prior()
     model.condition(At(p2)(x), 5 - y)
-    yield le, np.sum(np.abs(p(x).mean - y)), 1e-5
+    yield le, abs_err(p(x).mean - y), 1e-5
     model.revert_prior()
 
     model = Graph()
@@ -321,10 +326,10 @@ def test_case_reflection():
     y = p(x).sample()
 
     model.condition(At(p)(x), y)
-    yield le, np.sum(np.abs(p2(x).mean + y)), 1e-5
+    yield le, abs_err(p2(x).mean + y), 1e-5
     model.revert_prior()
     model.condition(At(p2)(x), -y)
-    yield le, np.sum(np.abs(p(x).mean - y)), 1e-5
+    yield le, abs_err(p(x).mean - y), 1e-5
     model.revert_prior()
 
 
@@ -341,13 +346,13 @@ def test_case_exact_derivative():
 
     # Test conditioning on function.
     p.condition(x, y)
-    yield le, np.sum(np.abs(s.run(dp(x).mean - 2))), 1e-3
+    yield le, abs_err(s.run(dp(x).mean - 2)), 1e-3
     p.revert_prior()
 
     # Test conditioning on derivative.
     dp.condition(x, y)
     p.condition(np.zeros((1, 1)), np.zeros((1, 1)))  # Fix integration constant.
-    yield le, np.sum(np.abs(s.run(p(x).mean - x ** 2))), 1e-3
+    yield le, abs_err(s.run(p(x).mean - x ** 2)), 1e-3
     p.revert_prior()
 
     s.close()
@@ -364,7 +369,7 @@ def test_case_approximate_derivative():
 
     # Test conditioning on function.
     p.condition(x, y)
-    yield le, np.sum(np.abs(dp(x).mean - 2)), 1e-3
+    yield le, abs_err(dp(x).mean - 2), 1e-3
     p.revert_prior()
 
     # Add some regularisation for this test case.
@@ -374,7 +379,7 @@ def test_case_approximate_derivative():
     # Test conditioning on derivative.
     dp.condition(x, y)
     p.condition(0, 0)  # Fix integration constant.
-    yield le, np.sum(np.abs(p(x).mean - x ** 2)), 1e-3
+    yield le, abs_err(p(x).mean - x ** 2), 1e-3
     p.revert_prior()
 
     # Set regularisation back.
@@ -424,9 +429,9 @@ def test_multi_sample():
     yield eq, s3.shape, (30, 1)
     yield eq, np.shape(model.sample(At(p1)(x1))), (10, 1)
 
-    yield le, np.sum(np.abs(s1 - 1)), 1e-4
-    yield le, np.sum(np.abs(s2 - 2)), 1e-4
-    yield le, np.sum(np.abs(s3 - 3)), 1e-4
+    yield le, abs_err(s1 - 1), 1e-4
+    yield le, abs_err(s2 - 2), 1e-4
+    yield le, abs_err(s3 - 3), 1e-4
 
 
 def test_multi_conditioning():
@@ -466,3 +471,29 @@ def test_multi_conditioning():
 
     # Test `At` check.
     yield raises, ValueError, lambda: model.condition((0, 0))
+
+
+def test_approximate_multiplication():
+    model = Graph()
+
+    # Construct model.
+    p1 = GP(EQ(), 20, graph=model)
+    p2 = GP(EQ(), 20, graph=model)
+    p_prod = p1 * p2
+    x = np.linspace(0, 10, 50)
+
+    # Sample functions.
+    s1, s2 = model.sample(At(p1)(x), At(p2)(x))
+
+    # Infer product.
+    model.condition((At(p1)(x), s1), (At(p2)(x), s2))
+    yield le, rel_err(p_prod(x).mean, s1 * s2), 1e-3
+    model.revert_prior()
+
+    # Perform division.
+    cur_epsilon = B.epsilon
+    B.epsilon = 1e-8
+    model.condition((At(p1)(x), s1), (At(p_prod)(x), s1 * s2))
+    yield le, rel_err(p2(x).mean, s2), 1e-3
+    model.revert_prior()
+    B.epsilon = cur_epsilon
