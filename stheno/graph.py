@@ -119,9 +119,13 @@ class Graph(Referentiable):
     @dispatch(PromisedGP, FunctionType)
     def mul(self, p, f):
         kernels = self.kernels  # Careful with the closure!
+
+        def ones(x):
+            return B.ones([B.shape(x)[0], 1], dtype=B.dtype(x))
+
         return self._update(f * self.means[p],
                             lambda: f * kernels[p],
-                            (lambda pi: FunctionKernel(f, lambda x: 1) *
+                            (lambda pi: FunctionKernel(f, ones) *
                                         kernels[p, pi]))
 
     def shift(self, p, shift):

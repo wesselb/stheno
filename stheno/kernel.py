@@ -185,7 +185,8 @@ class ScaledKernel(Kernel, ScaledType, Referentiable):
     @dispatch(object, object, Cache)
     @cache
     def __call__(self, x, y, B):
-        return B.multiply(self.scale, self[0](x, y, B))
+        K = self[0](x, y, B)
+        return B.multiply(B.cast(self.scale, dtype=B.dtype(K)), K)
 
     @property
     def _stationary(self):
