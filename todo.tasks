@@ -1,6 +1,7 @@
 Features:
     ☐ Sparse approximations
     ☐ Efficient multi-output kernels: low-rank SPDs returned by multi-output kernels
+    ☐ Efficient diagonal computation: pairwise and element-wise @started
 
 Refactor:
     ☐ Make RQ, Exp, Matern32, and Matern52 cache friendly.
