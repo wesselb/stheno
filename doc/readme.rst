@@ -591,9 +591,9 @@ Example: A GP–RNN Model
     y_obs = y_true[inds_obs]
 
     # Construct the model.
-    a = vs_gp.pos(1.0) * GP(EQ()).stretch(vs_gp.pos(0.1))
-    b = vs_gp.pos(1.0) * GP(EQ()).stretch(vs_gp.pos(0.1))
-    e = vs_gp.pos(0.2) * GP(Delta())
+    a = 0.1 * GP(EQ()).stretch(vs_gp.pos(0.1))
+    b = 0.1 * GP(EQ()).stretch(vs_gp.pos(0.1))
+    e = vs_gp.pos(0.1) * GP(Delta())
 
     # RNN-only model:
     y_rnn = rnn + e
@@ -610,22 +610,16 @@ Example: A GP–RNN Model
     opt_rnn = tf.train.AdamOptimizer(1e-2).minimize(
         -lml_rnn, var_list=vs_rnn.vars
     )
-    opt_gp = SOI(-lml_gp_rnn,
-                 options={'disp': True, 'maxiter': 10},
-                 var_list=vs_gp.vars)
     opt_jointly = tf.train.AdamOptimizer(1e-3).minimize(
         -lml_gp_rnn, var_list=vs_rnn.vars + vs_gp.vars
     )
     s.run(tf.global_variables_initializer())
 
-    # Pre-train the RNN.
-    for i in range(500):
+    # Nudge the RNN into the right direction.
+    for i in range(2000):
         _, val = s.run([opt_rnn, lml_rnn])
         if i % 100 == 0:
             print(i, val)
-
-    # Pre-train the GPs.
-    opt_gp.minimize(s)
 
     # Jointly train the RNN and GPs.
     for i in range(5000):
