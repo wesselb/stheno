@@ -24,12 +24,14 @@ def elwise_generator(k):
 
     # Check `elwise`.
     yield assert_allclose, k.elwise(x1, x2)[:, 0], np.diag(k(x1, x2))
+    yield assert_allclose, k.elwise(x1, x2), Kernel.elwise(k, x1, x2)
     yield assert_allclose, k.elwise(x1)[:, 0], np.diag(k(x1))
+    yield assert_allclose, k.elwise(x1)[:, 0], np.diag(k(x1))
+    yield assert_allclose, k.elwise(x1), Kernel.elwise(k, x1)
 
 
 def test_corner_cases():
     yield raises, RuntimeError, lambda: Kernel()(1.)
-    yield raises, NotImplementedError, lambda: Kernel().elwise(1, 1, Cache())
 
 
 def test_construction():

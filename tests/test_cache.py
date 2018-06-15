@@ -6,6 +6,7 @@ import numpy as np
 from numpy.testing import assert_approx_equal, assert_array_almost_equal, \
     assert_allclose
 
+from stheno import Cache, EQ, Kernel
 from stheno.kernel import ZeroKernel, OneKernel, Linear, EQ
 from stheno.mean import ZeroMean, OneMean
 from stheno.input import Component
@@ -117,3 +118,11 @@ def test_cache_performance():
 
     # Test performance of LAB cache.
     yield le, dur3, dur1 / 20
+
+
+def test_elwise_cache_aliasing():
+    c = Cache()
+    k = EQ()
+    x1 = np.random.randn(10, 2)
+    x2 = np.random.randn(10, 2)
+    yield assert_allclose, k.elwise(x1, x2, c), Kernel.elwise(k, x1, x2, c)

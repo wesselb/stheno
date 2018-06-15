@@ -54,6 +54,19 @@ def test_construction():
     yield p.kernel, x, At(p)(x), c
     yield p.kernel, At(p)(x), At(p)(x), c
 
+    yield p.kernel.elwise, x
+    yield p.kernel.elwise, At(p)(x)
+    yield p.kernel.elwise, x, c
+    yield p.kernel.elwise, At(p)(x), c
+    yield p.kernel.elwise, x, x
+    yield p.kernel.elwise, At(p)(x), x
+    yield p.kernel.elwise, x, At(p)(x)
+    yield p.kernel.elwise, At(p)(x), At(p)(x)
+    yield p.kernel.elwise, x, x, c
+    yield p.kernel.elwise, At(p)(x), x, c
+    yield p.kernel.elwise, x, At(p)(x), c
+    yield p.kernel.elwise, At(p)(x), At(p)(x), c
+
 
 def test_sum_other():
     model = Graph()
@@ -487,13 +500,13 @@ def test_approximate_multiplication():
 
     # Infer product.
     model.condition((At(p1)(x), s1), (At(p2)(x), s2))
-    yield le, rel_err(p_prod(x).mean, s1 * s2), 1e-3
+    yield le, rel_err(p_prod(x).mean, s1 * s2), 1e-2
     model.revert_prior()
 
     # Perform division.
     cur_epsilon = B.epsilon
     B.epsilon = 1e-8
     model.condition((At(p1)(x), s1), (At(p_prod)(x), s1 * s2))
-    yield le, rel_err(p2(x).mean, s2), 1e-3
+    yield le, rel_err(p2(x).mean, s2), 1e-2
     model.revert_prior()
     B.epsilon = cur_epsilon
