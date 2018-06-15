@@ -110,9 +110,9 @@ class Cache(Referentiable):
 
 
 def cache(f):
-    """A decorator for `__call__` methods to cache their outputs."""
+    """A decorator for methods to cache their outputs."""
 
-    def __call__(self, *args):
+    def wrapped_f(self, *args):
         inputs, cache = args[:-1], args[-1]
         try:
             out = cache[self, inputs]
@@ -137,7 +137,9 @@ def cache(f):
 
         return cache[self, inputs]
 
-    return __call__
+    wrapped_f.__name__ = f.__name__
+
+    return wrapped_f
 
 
 @dispatch(object, [object])
@@ -165,12 +167,13 @@ def uprank(x, B=B):
 
 @dispatch(FunctionType)
 def uprank(f):
-    """A decorator for `__call__` to ensure that the rank of the arguments is
-    two.
+    """A decorator to ensure that the rank of the arguments is two.
     """
 
-    def __call__(self, *args):
+    def wrapped_f(self, *args):
         inputs, B = args[:-1], args[-1]
         return f(self, *([uprank(x, B) for x in inputs] + [B]))
 
-    return __call__
+    wrapped_f.__name__ = f.__name__
+
+    return wrapped_f
