@@ -48,9 +48,6 @@ class Random(object):
         raise NotImplementedError('Matrix multiplication not implemented for '
                                   '{}.'.format(type(self)))
 
-    def __repr__(self):
-        return str(self)
-
 
 class RandomProcess(Random):
     """A random process."""
@@ -354,6 +351,9 @@ class GPPrimitive(RandomProcess, Referentiable):
 
     def __str__(self):
         return 'GP({}, {})'.format(self.kernel, self.mean)
+
+    def __repr__(self):
+        return str(self)
 
     def stretch(self, stretch):
         return GPPrimitive(self.kernel.stretch(stretch),

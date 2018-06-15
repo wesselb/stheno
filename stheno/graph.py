@@ -523,6 +523,11 @@ class GP(GPPrimitive, Referentiable):
     def __add__(self, other):
         return self.graph.sum(self, other)
 
+    @dispatch(Random)
+    def __add__(self, other):
+        raise NotImplementedError('Cannot add a GP and a {}.'
+                                  ''.format(type(other).__name__))
+
     @dispatch(Self)
     def __add__(self, other):
         if self.graph != other.graph:
@@ -533,14 +538,14 @@ class GP(GPPrimitive, Referentiable):
     def __mul__(self, other):
         return self.graph.mul(self, other)
 
-    @dispatch(Self)
-    def __mul__(self, other):
-        return self.graph.mul(self, other)
-
     @dispatch(Random)
     def __mul__(self, other):
         raise NotImplementedError('Cannot multiply a GP and a {}.'
                                   ''.format(type(other).__name__))
+
+    @dispatch(Self)
+    def __mul__(self, other):
+        return self.graph.mul(self, other)
 
     @dispatch(At, B.Numeric)
     def condition(self, x, y):
