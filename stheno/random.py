@@ -309,8 +309,9 @@ class GPPrimitive(RandomProcess, Referentiable):
             A tuple containing the predictive means and lower and upper 95%
             central credible interval bounds.
         """
-        dist = self(x, cache)
-        mean, std = B.squeeze(dist.mean), dist.spd.diag ** .5
+        cache = Cache() if cache is None else cache
+        mean = B.squeeze(self.mean(x, cache))
+        std = B.squeeze(self.kernel.elwise(x, cache)) ** .5
         return mean, mean - 2 * std, mean + 2 * std
 
     @dispatch(object)

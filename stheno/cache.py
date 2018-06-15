@@ -112,10 +112,12 @@ class Cache(Referentiable):
 def cache(f):
     """A decorator for methods to cache their outputs."""
 
+    name = f.__name__
+
     def wrapped_f(self, *args):
         inputs, cache = args[:-1], args[-1]
         try:
-            out = cache[self, inputs]
+            out = cache[self, f, inputs]
             log_cache_call.debug('%4.0f ms: Hit for "%s".',
                                  cache.life_ms(), type(self).__name__)
             return out
@@ -128,16 +130,16 @@ def cache(f):
         cache.depth += 1
 
         # Perform execution.
-        cache[self, inputs] = f(self, *args)
+        cache[self, f, inputs] = f(self, *args)
 
         # Log and decrease depth.
         log_cache_call.debug('%4.0f ms: Miss for "%s": end.',
                              cache.life_ms(), type(self).__name__)
         cache.depth -= 1
 
-        return cache[self, inputs]
+        return cache[self, f, inputs]
 
-    wrapped_f.__name__ = f.__name__
+    wrapped_f.__name__ = name
 
     return wrapped_f
 

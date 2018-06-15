@@ -75,9 +75,7 @@ class Kernel(Type, Referentiable):
 
     @dispatch(object, object, Cache)
     def elwise(self, x, y, cache):
-        raise NotImplementedError('Element-wise covariance construction is '
-                                  'not implemented for {}.'
-                                  ''.format(self.__class__.__name__))
+        return B.expand_dims(B.diag(self(x, y, cache)), 1)
 
     @dispatch(object)
     def elwise(self, x):

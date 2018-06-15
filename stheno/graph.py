@@ -420,6 +420,51 @@ class GraphKernel(Kernel, Referentiable):
         return self.graph.kernels[type_parameter(x),
                                   type_parameter(y)](x.get(), y.get(), cache)
 
+    @dispatch(object)
+    def elwise(self, x):
+        return self.elwise(x, x)
+
+    @dispatch.multi((object, Cache), (At, Cache))
+    def elwise(self, x, cache):
+        return self.elwise(x, x, cache)
+
+    @dispatch(object, object)
+    def elwise(self, x, y):
+        return self.graph.kernels[self.p, self.p].elwise(x, y)
+
+    @dispatch(object, object, Cache)
+    def elwise(self, x, y, cache):
+        return self.graph.kernels[self.p, self.p].elwise(x, y, cache)
+
+    @dispatch(object, At)
+    def elwise(self, x, y):
+        return self.graph.kernels[self.p, type_parameter(y)].elwise(x, y.get())
+
+    @dispatch(object, At, Cache)
+    def elwise(self, x, y, cache):
+        return self.graph.kernels[self.p,
+                                  type_parameter(y)].elwise(x, y.get(), cache)
+
+    @dispatch(At, object)
+    def elwise(self, x, y):
+        return self.graph.kernels[type_parameter(x), self.p].elwise(x.get(), y)
+
+    @dispatch(At, object, Cache)
+    def elwise(self, x, y, cache=None):
+        return self.graph.kernels[type_parameter(x),
+                                  self.p].elwise(x.get(), y, cache)
+
+    @dispatch(At, At)
+    def elwise(self, x, y):
+        return self.graph.kernels[type_parameter(x),
+                                  type_parameter(y)].elwise(x.get(), y.get())
+
+    @dispatch(At, At, Cache)
+    def elwise(self, x, y, cache):
+        return self.graph.kernels[type_parameter(x),
+                                  type_parameter(y)].elwise(x.get(),
+                                                            y.get(), cache)
+
     @property
     def stationary(self):
         return self.graph.kernels[self.p].stationary
