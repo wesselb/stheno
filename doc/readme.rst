@@ -459,8 +459,8 @@ Example: GPAR
     s = tf.Session()
 
     # Define points to predict at.
-    x = np.linspace(0, 10, 101)
-    x_obs1 = np.linspace(0, 10, 31)
+    x = np.linspace(0, 10, 200)
+    x_obs1 = np.linspace(0, 10, 30)
     inds2 = np.random.permutation(len(x_obs1))[:10]
     x_obs2 = x_obs1[inds2]
 
@@ -472,7 +472,7 @@ Example: GPAR
     m1 = Graph()
     m2 = Graph()
     f1 = vs1.pos(1.) * GP(EQ(), graph=m1).stretch(vs1.pos(1.))
-    f2 = vs2.pos(1.) * GP(EQ(), graph=m2).stretch(vs2.pos([1., .1]))
+    f2 = vs2.pos(1.) * GP(EQ(), graph=m2).stretch(vs2.pos([1., .5]))
     sig1 = vs1.pos(0.1)
     sig2 = vs2.pos(0.1)
 
@@ -492,15 +492,15 @@ Example: GPAR
     f1_true = np.sin(x)
     f2_true = np.sin(x) ** 2
 
-    y1_obs = np.sin(x_obs1) + 0.05 * np.random.randn(*x_obs1.shape)
-    y2_obs = np.sin(x_obs2) ** 2 + 0.05 * np.random.randn(*x_obs2.shape)
+    y1_obs = np.sin(x_obs1) + 0.1 * np.random.randn(*x_obs1.shape)
+    y2_obs = np.sin(x_obs2) ** 2 + 0.1 * np.random.randn(*x_obs2.shape)
 
     # Learn.
     lml1 = y1(x_obs1).log_pdf(y1_obs)
-    SOI(-lml1, var_list=vs1.latents).minimize(s)
+    SOI(-lml1, var_list=vs1.vars).minimize(s)
 
     lml2 = y2(np.stack((x_obs2, y1_obs[inds2]), axis=1)).log_pdf(y2_obs)
-    SOI(-lml2, var_list=vs2.latents).minimize(s)
+    SOI(-lml2, var_list=vs2.vars).minimize(s)
 
     # Predict first output.
     mean1, lower1, upper1 = s.run(f1.condition(y1 @ x_obs1, y1_obs).predict(x))
@@ -539,7 +539,7 @@ Example: GPAR
 Example: A GP–RNN Model
 -----------------------
 
-.. figure:: https://raw.githubusercontent.com/wesselb/stheno/master/readme_prediction8_rnn.png
+.. figure:: https://raw.githubusercontent.com/wesselb/stheno/master/readme_prediction8_gp_rnn.png
    :alt: Prediction
 
    Prediction
