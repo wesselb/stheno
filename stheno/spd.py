@@ -106,6 +106,24 @@ class SPD(Referentiable):
         right = B.trisolve(self.cholesky(), b)
         return B.dot(left, right, tr_a=True)
 
+    @dispatch(object)
+    def quadratic_form_diag(self, a):
+        """Compute the diagonal of the quadratic form
+        `transpose(a) inv(self.mat) b`.
+
+        Args:
+            a (matrix): `a`.
+            b (matrix, optional): `b`. Defaults to `a`.
+        """
+        prod = B.trisolve(self.cholesky(), a)
+        return B.sum(prod ** 2, axis=0)
+
+    @dispatch(object, object)
+    def quadratic_form_diag(self, a, b):
+        left = B.trisolve(self.cholesky(), a)
+        right = B.trisolve(self.cholesky(), b)
+        return B.sum(left * right, axis=0)
+
     def inv_prod(self, a):
         """Compute the matrix-vector product `inv(self.mat) a`.
 
@@ -210,6 +228,14 @@ class Diagonal(SPD, Referentiable):
         iL_a = a / self.diag[:, None] ** .5
         return B.dot(iL_a, iL_a, tr_a=True)
 
+    @dispatch(object, object)
+    def quadratic_form_diag(self, a, b):
+        return B.sum(a * b / self.diag[:, None], axis=0)
+
+    @dispatch(object)
+    def quadratic_form_diag(self, a):
+        return B.sum(a ** 2 / self.diag[:, None], axis=0)
+
     def inv_prod(self, a):
         return a / self.diag[:, None]
 
@@ -287,6 +313,14 @@ class UniformDiagonal(Diagonal, Referentiable):
     def quadratic_form(self, a):
         iL_a = a / self.diag_scale ** .5
         return B.dot(iL_a, iL_a, tr_a=True)
+
+    @dispatch(object, object)
+    def quadratic_form_diag(self, a, b):
+        return B.sum(a * b / self.diag_scale, axis=0)
+
+    @dispatch(object)
+    def quadratic_form_diag(self, a):
+        return B.sum(a ** 2 / self.diag_scale, axis=0)
 
     def inv_prod(self, a):
         return a / self.diag_scale

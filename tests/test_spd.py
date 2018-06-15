@@ -36,6 +36,10 @@ def test_spd():
                               spd2.quadratic_form(a)), 'qf'
         yield ok, np.allclose(spd1.quadratic_form(a, b),
                               spd2.quadratic_form(a, b)), 'qf 2'
+        yield ok, np.allclose(spd1.quadratic_form_diag(a),
+                              spd2.quadratic_form_diag(a)), 'qf diag'
+        yield ok, np.allclose(spd1.quadratic_form_diag(a, b),
+                              spd2.quadratic_form_diag(a, b)), 'qf diag 2'
         yield ok, np.allclose(spd1.ratio(spd1), spd2.ratio(spd1)), 'ratio'
         yield ok, np.allclose(spd1.ratio(spd1), spd2.ratio(spd2)), 'ratio 2'
         yield ok, np.allclose(spd1.ratio(spd2), spd2.ratio(spd1)), 'ratio 3'

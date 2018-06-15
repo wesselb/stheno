@@ -57,12 +57,6 @@ class Kernel(Type, Referentiable):
         raise RuntimeError('For kernel "{}", could not resolve '
                            'arguments "{}" and "{}".'.format(self, x, y))
 
-    @dispatch(object, object, Cache)
-    def elwise(self, x, y, cache):
-        raise NotImplementedError('Element-wise covariance construction is '
-                                  'not implemented for {}.'
-                                  ''.format(self.__class__.__name__))
-
     @dispatch(object)
     def __call__(self, x):
         return self(x, x, Cache())
@@ -78,6 +72,28 @@ class Kernel(Type, Referentiable):
     @dispatch(Input, Input)
     def __call__(self, x, y):
         return self(x, y, Cache())
+
+    @dispatch(object, object, Cache)
+    def elwise(self, x, y, cache):
+        raise NotImplementedError('Element-wise covariance construction is '
+                                  'not implemented for {}.'
+                                  ''.format(self.__class__.__name__))
+
+    @dispatch(object)
+    def elwise(self, x):
+        return self.elwise(x, x, Cache())
+
+    @dispatch(object, Cache)
+    def elwise(self, x, cache):
+        return self.elwise(x, x, cache)
+
+    @dispatch(object, object)
+    def elwise(self, x, y):
+        return self.elwise(x, y, Cache())
+
+    @dispatch(Input, Input)
+    def elwise(self, x, y):
+        return self.elwise(x, y, Cache())
 
     def periodic(self, period=1):
         """Map to a periodic space.
@@ -203,13 +219,14 @@ class ScaledKernel(Kernel, ScaledType, Referentiable):
     @dispatch(object, object, Cache)
     @cache
     def __call__(self, x, y, B):
-        K = self[0](x, y, B)
-        return B.multiply(B.cast(self.scale, dtype=B.dtype(K)), K)
+        return self._compute(self[0](x, y, B), B)
 
     @dispatch(object, object, Cache)
     @cache
     def elwise(self, x, y, B):
-        K = self[0].elwise(x, y, B)
+        return self._compute(self[0].elwise(x, y, B), B)
+
+    def _compute(self, K, B):
         return B.multiply(B.cast(self.scale, dtype=B.dtype(K)), K)
 
     @property
@@ -303,16 +320,17 @@ class StretchedKernel(Kernel, StretchedType, Referentiable):
     @cache
     @uprank
     def __call__(self, x, y, B):
-        stretches1, stretches2 = expand(self.stretches)
-        return self[0](B.divide(x, stretches1), B.divide(y, stretches2), B)
+        return self[0](*self._compute(x, y, B))
 
     @dispatch(B.Numeric, B.Numeric, Cache)
     @cache
     @uprank
     def elwise(self, x, y, B):
+        return self[0].elwise(*self._compute(x, y, B))
+
+    def _compute(self, x, y, B):
         stretches1, stretches2 = expand(self.stretches)
-        return self[0].elwise(B.divide(x, stretches1),
-                              B.divide(y, stretches2), B)
+        return B.divide(x, stretches1), B.divide(y, stretches2), B
 
     @property
     def _stationary(self):
@@ -352,15 +370,17 @@ class ShiftedKernel(Kernel, ShiftedType, Referentiable):
     @cache
     @uprank
     def __call__(self, x, y, B):
-        shifts1, shifts2 = expand(self.shifts)
-        return self[0](B.subtract(x, shifts1), B.subtract(y, shifts2), B)
+        return self[0](*self._compute(x, y, B))
 
     @dispatch(B.Numeric, B.Numeric, Cache)
     @cache
     @uprank
     def elwise(self, x, y, B):
+        return self[0].elwise(*self._compute(x, y, B))
+
+    def _compute(self, x, y, B):
         shifts1, shifts2 = expand(self.shifts)
-        return self[0].elwise(B.subtract(x, shifts1), B.subtract(y, shifts2), B)
+        return B.subtract(x, shifts1), B.subtract(y, shifts2), B
 
     @property
     def _stationary(self):
@@ -396,19 +416,19 @@ class SelectedKernel(Kernel, SelectedType, Referentiable):
     @cache
     @uprank
     def __call__(self, x, y, B):
-        dims1, dims2 = expand(self.dims)
-        x = x if dims1 is None else B.take(x, dims1, axis=1)
-        y = y if dims2 is None else B.take(y, dims2, axis=1)
-        return self[0](x, y, B)
+        return self[0](*self._compute(x, y, B))
 
     @dispatch(B.Numeric, B.Numeric, Cache)
     @cache
     @uprank
     def elwise(self, x, y, B):
+        return self[0].elwise(*self._compute(x, y, B))
+
+    def _compute(self, x, y, B):
         dims1, dims2 = expand(self.dims)
         x = x if dims1 is None else B.take(x, dims1, axis=1)
         y = y if dims2 is None else B.take(y, dims2, axis=1)
-        return self[0].elwise(x, y, B)
+        return x, y, B
 
     @property
     def _stationary(self):
@@ -456,19 +476,19 @@ class InputTransformedKernel(Kernel, InputTransformedType, Referentiable):
     @cache
     @uprank
     def __call__(self, x, y, B):
-        f1, f2 = expand(self.fs)
-        x = x if f1 is None else apply_optional_arg(f1, x, B)
-        y = y if f2 is None else apply_optional_arg(f2, y, B)
-        return self[0](x, y, B)
+        return self[0](*self._compute(x, y, B))
 
     @dispatch(object, object, Cache)
     @cache
     @uprank
     def elwise(self, x, y, B):
+        return self[0].elwise(*self._compute(x, y, B))
+
+    def _compute(self, x, y, B):
         f1, f2 = expand(self.fs)
         x = x if f1 is None else apply_optional_arg(f1, x, B)
         y = y if f2 is None else apply_optional_arg(f2, y, B)
-        return self[0].elwise(x, y, B)
+        return x, y, B
 
 
 class PeriodicKernel(Kernel, WrappedType, Referentiable):
@@ -489,11 +509,20 @@ class PeriodicKernel(Kernel, WrappedType, Referentiable):
     @cache
     @uprank
     def __call__(self, x, y, B):
+        return self[0](*self._compute(x, y, B))
+
+    @dispatch(B.Numeric, B.Numeric, Cache)
+    @cache
+    @uprank
+    def elwise(self, x, y, B):
+        return self[0].elwise(*self._compute(x, y, B))
+
+    def _compute(self, x, y, B):
         def feat_map(z):
             z = B.divide(B.multiply(B.multiply(z, 2), B.pi), self.period)
             return B.concat((B.sin(z), B.cos(z)), axis=1)
 
-        return self[0](feat_map(x), feat_map(y), B)
+        return feat_map(x), feat_map(y), B
 
     @property
     def _stationary(self):
@@ -524,15 +553,16 @@ class EQ(Kernel, PrimitiveType, Referentiable):
     @cache
     @uprank
     def __call__(self, x, y, B):
-        return B.exp(B.multiply(B.cast(-.5, dtype=B.dtype(x)),
-                                B.pw_dists2(x, y)))
+        return self._compute(B.pw_dists2(x, y), B)
 
     @dispatch(B.Numeric, B.Numeric, Cache)
     @cache
     @uprank
     def elwise(self, x, y, B):
-        return B.exp(B.multiply(B.cast(-.5, dtype=B.dtype(x)),
-                                B.pw_dists2_elwise(x, y)))[:, None]
+        return self._compute(B.ew_dists2(x, y), B)
+
+    def _compute(self, dists2, B):
+        return B.exp(B.multiply(B.cast(-.5, dtype=B.dtype(dists2)), dists2))
 
     @property
     def _stationary(self):
@@ -568,7 +598,16 @@ class RQ(Kernel, Referentiable):
     @cache
     @uprank
     def __call__(self, x, y, B):
-        return (1 + .5 * B.pw_dists2(x, y) / self.alpha) ** (-self.alpha)
+        return self._compute(B.pw_dists2(x, y), B)
+
+    @dispatch(B.Numeric, B.Numeric, Cache)
+    @cache
+    @uprank
+    def elwise(self, x, y, B):
+        return self._compute(B.ew_dists2(x, y), B)
+
+    def _compute(self, dists2, B):
+        return (1 + .5 * dists2 / self.alpha) ** (-self.alpha)
 
     def __str__(self):
         return 'RQ({})'.format(self.alpha)
@@ -601,6 +640,12 @@ class Exp(Kernel, PrimitiveType, Referentiable):
     def __call__(self, x, y, B):
         return B.exp(-B.pw_dists(x, y))
 
+    @dispatch(B.Numeric, B.Numeric, Cache)
+    @cache
+    @uprank
+    def elwise(self, x, y, B):
+        return B.exp(-B.ew_dists(x, y))
+
     @property
     def _stationary(self):
         return True
@@ -630,7 +675,16 @@ class Matern32(Kernel, PrimitiveType, Referentiable):
     @cache
     @uprank
     def __call__(self, x, y, B):
-        r = 3 ** .5 * B.pw_dists(x, y)
+        return self._compute(B.pw_dists(x, y), B)
+
+    @dispatch(B.Numeric, B.Numeric, Cache)
+    @cache
+    @uprank
+    def elwise(self, x, y, B):
+        return self._compute(B.ew_dists(x, y), B)
+
+    def _compute(self, dists, B):
+        r = 3 ** .5 * dists
         return (1 + r) * B.exp(-r)
 
     @property
@@ -659,8 +713,17 @@ class Matern52(Kernel, PrimitiveType, Referentiable):
     @cache
     @uprank
     def __call__(self, x, y, B):
-        r1 = 5 ** .5 * B.pw_dists(x, y)
-        r2 = 5 * B.pw_dists2(x, y) / 3
+        return self._compute(B.pw_dists(x, y), B)
+
+    @dispatch(B.Numeric, B.Numeric, Cache)
+    @cache
+    @uprank
+    def elwise(self, x, y, B):
+        return self._compute(B.ew_dists(x, y), B)
+
+    def _compute(self, dists, B):
+        r1 = 5 ** .5 * dists
+        r2 = 5 * dists ** 2 / 3
         return (1 + r1 + r2) * B.exp(-r1)
 
     @property
@@ -696,7 +759,16 @@ class Delta(Kernel, PrimitiveType, Referentiable):
     @cache
     @uprank
     def __call__(self, x, y, B):
-        return B.cast(B.less(B.pw_dists2(x, y), self.epsilon), B.dtype(x))
+        return self._compute(B.pw_dists2(x, y), B)
+
+    @dispatch(B.Numeric, B.Numeric, Cache)
+    @cache
+    @uprank
+    def elwise(self, x, y, B):
+        return self._compute(B.ew_dists2(x, y), B)
+
+    def _compute(self, dists2, B):
+        return B.cast(B.less(dists2, self.epsilon), B.dtype(dists2))
 
     @property
     def _stationary(self):
@@ -725,6 +797,12 @@ class Linear(Kernel, PrimitiveType, Referentiable):
     @uprank
     def __call__(self, x, y, B):
         return B.matmul(x, y, tr_b=True)
+
+    @dispatch(B.Numeric, B.Numeric, Cache)
+    @cache
+    @uprank
+    def elwise(self, x, y, B):
+        return B.expand_dims(B.sum(B.multiply(x, y), axis=1), 1)
 
     @property
     def _stationary(self):
@@ -764,6 +842,13 @@ class PosteriorCrossKernel(Kernel, Referentiable):
         qf = self.Kz.quadratic_form(self.k_zi(self.z, x, B),
                                     self.k_zj(self.z, y, B))
         return B.subtract(self.k_ij(x, y, B), qf)
+
+    @dispatch(object, object, Cache)
+    @cache
+    def elwise(self, x, y, B):
+        qf_diag = self.Kz.quadratic_form_diag(self.k_zi(self.z, x, B),
+                                              self.k_zj(self.z, y, B))[:, None]
+        return B.subtract(self.k_ij.elwise(x, y, B), qf_diag)
 
 
 class PosteriorKernel(PosteriorCrossKernel, Referentiable):
@@ -850,6 +935,14 @@ class FunctionKernel(Kernel, FunctionType, Referentiable):
         return B.multiply(apply_optional_arg(f1, x, B),
                           B.transpose(apply_optional_arg(f2, y, B)))
 
+    @dispatch(B.Numeric, B.Numeric, Cache)
+    @cache
+    @uprank
+    def elwise(self, x, y, B):
+        f1, f2 = expand(self.fs)
+        return B.multiply(apply_optional_arg(f1, x, B),
+                          apply_optional_arg(f2, y, B))
+
 
 class ReversedKernel(Kernel, WrappedType, Referentiable):
     """Kernel that evaluates with its arguments reversed."""
@@ -859,6 +952,11 @@ class ReversedKernel(Kernel, WrappedType, Referentiable):
     @cache
     def __call__(self, x, y, B):
         return B.transpose(self[0](y, x, B))
+
+    @dispatch(object, object, Cache)
+    @cache
+    def elwise(self, x, y, B):
+        return self[0].elwise(y, x, B)
 
     @property
     def _stationary(self):

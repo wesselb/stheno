@@ -3,24 +3,33 @@
 from __future__ import absolute_import, division, print_function
 
 import numpy as np
-from numpy.testing import assert_allclose
 from lab import B
-from plum import Dispatcher
+from numpy.testing import assert_allclose
 
+from stheno.cache import Cache
 from stheno.input import Observed
 from stheno.kernel import EQ, RQ, Matern12, Matern32, Matern52, Delta, Kernel, \
     Linear, OneKernel, ZeroKernel, PosteriorCrossKernel, PosteriorKernel, \
     ShiftedKernel, FunctionKernel
 from stheno.random import GPPrimitive
 from stheno.spd import SPD
-from stheno.cache import Cache
 # noinspection PyUnresolvedReferences
 from tests import ok
 from . import eq, raises, ok
 
 
+def elwise_generator(k):
+    x1 = np.random.randn(10, 2)
+    x2 = np.random.randn(10, 2)
+
+    # Check `elwise`.
+    yield assert_allclose, k.elwise(x1, x2)[:, 0], np.diag(k(x1, x2))
+    yield assert_allclose, k.elwise(x1)[:, 0], np.diag(k(x1))
+
+
 def test_corner_cases():
     yield raises, RuntimeError, lambda: Kernel()(1.)
+    yield raises, NotImplementedError, lambda: Kernel().elwise(1, 1, Cache())
 
 
 def test_construction():
@@ -37,6 +46,15 @@ def test_construction():
     yield raises, RuntimeError, lambda: k(Observed(x), Observed(x))
     yield k, x, x, c
     yield raises, RuntimeError, lambda: k(Observed(x), Observed(x), c)
+
+    yield k.elwise, x
+    yield raises, RuntimeError, lambda: k.elwise(Observed(x))
+    yield k.elwise, x, c
+    yield raises, RuntimeError, lambda: k.elwise(Observed(x), c)
+    yield k.elwise, x, x
+    yield raises, RuntimeError, lambda: k.elwise(Observed(x), Observed(x))
+    yield k.elwise, x, x, c
+    yield raises, RuntimeError, lambda: k.elwise(Observed(x), Observed(x), c)
 
 
 def test_basic_arithmetic():
@@ -76,16 +94,16 @@ def test_reversal():
 
     # Test with a stationary and non-stationary kernel.
     for k in [EQ(), Linear()]:
-        yield ok, np.allclose(k(x1), reversed(k)(x1))
-        yield ok, np.allclose(k(x3), reversed(k)(x3))
-        yield ok, np.allclose(k(x1, x2), reversed(k)(x1, x2))
-        yield ok, np.allclose(k(x1, x2), reversed(k)(x2, x1).T)
+        yield assert_allclose, k(x1), reversed(k)(x1)
+        yield assert_allclose, k(x3), reversed(k)(x3)
+        yield assert_allclose, k(x1, x2), reversed(k)(x1, x2)
+        yield assert_allclose, k(x1, x2), reversed(k)(x2, x1).T
 
         # Test double reversal does the right thing.
-        yield ok, np.allclose(k(x1), reversed(reversed(k))(x1))
-        yield ok, np.allclose(k(x3), reversed(reversed(k))(x3))
-        yield ok, np.allclose(k(x1, x2), reversed(reversed(k))(x1, x2))
-        yield ok, np.allclose(k(x1, x2), reversed(reversed(k))(x2, x1).T)
+        yield assert_allclose, k(x1), reversed(reversed(k))(x1)
+        yield assert_allclose, k(x3), reversed(reversed(k))(x3)
+        yield assert_allclose, k(x1, x2), reversed(reversed(k))(x1, x2)
+        yield assert_allclose, k(x1, x2), reversed(reversed(k))(x2, x1).T
 
     # Verify that the kernel has the right properties.
     k = reversed(EQ())
@@ -102,21 +120,18 @@ def test_reversal():
     yield eq, k.period, np.inf
     yield eq, str(k), 'Reversed(Linear())'
 
-
-def test_shifting():
-    x1 = np.random.randn(10, 2)
-    x2 = np.random.randn(5, 2)
-    k = Linear()
-    yield ok, np.allclose(k.shift(5)(x1, x2), k(x1 - 5, x2 - 5))
+    # Test `elwise`.
+    for x in elwise_generator(k):
+        yield x
 
 
-def test_kernel_delta():
+def test_delta():
     k = Delta()
     x1 = np.random.randn(10, 2)
     x2 = np.random.randn(5, 2)
 
     # Test that the kernel computes.
-    yield ok, np.allclose(k(x1, x2), k(x2, x1).T)
+    yield assert_allclose, k(x1, x2), k(x2, x1).T
 
     # Verify that the kernel has the right properties.
     yield eq, k.stationary, True
@@ -128,14 +143,18 @@ def test_kernel_delta():
     yield ok, np.allclose(k(x1), np.eye(10)), 'same'
     yield ok, np.allclose(k(x1, x2), np.zeros((10, 5))), 'others'
 
+    # Test `elwise`.
+    for x in elwise_generator(k):
+        yield x
 
-def test_kernel_eq():
+
+def test_eq():
     k = EQ()
     x1 = np.random.randn(10, 2)
     x2 = np.random.randn(5, 2)
 
     # Test that the kernel computes.
-    yield ok, np.allclose(k(x1, x2), k(x2, x1).T)
+    yield assert_allclose, k(x1, x2), k(x2, x1).T
 
     # Verify that the kernel has the right properties.
     yield eq, k.stationary, True
@@ -144,14 +163,18 @@ def test_kernel_eq():
     yield eq, k.period, np.inf
     yield eq, str(k), 'EQ()'
 
+    # Test `elwise`.
+    for x in elwise_generator(k):
+        yield x
 
-def test_kernel_rq():
+
+def test_rq():
     k = RQ(1e-1)
     x1 = np.random.randn(10, 2)
     x2 = np.random.randn(5, 2)
 
     # Test that the kernel computes.
-    yield ok, np.allclose(k(x1, x2), k(x2, x1).T)
+    yield assert_allclose, k(x1, x2), k(x2, x1).T
 
     # Verify that the kernel has the right properties.
     yield eq, k.alpha, 1e-1
@@ -161,14 +184,18 @@ def test_kernel_rq():
     yield eq, k.period, np.inf
     yield eq, str(k), 'RQ(0.1)'
 
+    # Test `elwise`.
+    for x in elwise_generator(k):
+        yield x
 
-def test_kernel_exp():
+
+def test_exp():
     k = Matern12()
     x1 = np.random.randn(10, 2)
     x2 = np.random.randn(5, 2)
 
     # Test that the kernel computes.
-    yield ok, np.allclose(k(x1, x2), k(x2, x1).T)
+    yield assert_allclose, k(x1, x2), k(x2, x1).T
 
     # Verify that the kernel has the right properties.
     yield eq, k.stationary, True
@@ -177,14 +204,18 @@ def test_kernel_exp():
     yield eq, k.period, np.inf
     yield eq, str(k), 'Exp()'
 
+    # Test `elwise`.
+    for x in elwise_generator(k):
+        yield x
 
-def test_kernel_mat32():
+
+def test_mat32():
     k = Matern32()
     x1 = np.random.randn(10, 2)
     x2 = np.random.randn(5, 2)
 
     # Test that the kernel computes.
-    yield ok, np.allclose(k(x1, x2), k(x2, x1).T)
+    yield assert_allclose, k(x1, x2), k(x2, x1).T
 
     # Verify that the kernel has the right properties.
     yield eq, k.stationary, True
@@ -193,14 +224,18 @@ def test_kernel_mat32():
     yield eq, k.period, np.inf
     yield eq, str(k), 'Matern32()'
 
+    # Test `elwise`.
+    for x in elwise_generator(k):
+        yield x
 
-def test_kernel_mat52():
+
+def test_mat52():
     k = Matern52()
     x1 = np.random.randn(10, 2)
     x2 = np.random.randn(5, 2)
 
     # Test that the kernel computes.
-    yield ok, np.allclose(k(x1, x2), k(x2, x1).T)
+    yield assert_allclose, k(x1, x2), k(x2, x1).T
 
     # Verify that the kernel has the right properties.
     yield eq, k.stationary, True
@@ -209,15 +244,19 @@ def test_kernel_mat52():
     yield eq, k.period, np.inf
     yield eq, str(k), 'Matern52()'
 
+    # Test `elwise`.
+    for x in elwise_generator(k):
+        yield x
 
-def test_kernel_one():
+
+def test_one():
     k = OneKernel()
     x1 = np.random.randn(10, 2)
     x2 = np.random.randn(5, 2)
 
     # Test that the kernel computes.
-    yield ok, np.allclose(k(x1, x2), k(x2, x1).T)
-    yield ok, np.allclose(k(x1, x2), np.ones((10, 5)))
+    yield assert_allclose, k(x1, x2), k(x2, x1).T
+    yield assert_allclose, k(x1, x2), np.ones((10, 5))
 
     # Verify that the kernel has the right properties.
     yield eq, k.stationary, True
@@ -226,15 +265,19 @@ def test_kernel_one():
     yield eq, k.period, 0
     yield eq, str(k), '1'
 
+    # Test `elwise`.
+    for x in elwise_generator(k):
+        yield x
 
-def test_kernel_zero():
+
+def test_zero():
     k = ZeroKernel()
     x1 = np.random.randn(10, 2)
     x2 = np.random.randn(5, 2)
 
     # Test that the kernel computes.
-    yield ok, np.allclose(k(x1, x2), k(x2, x1).T)
-    yield ok, np.allclose(k(x1, x2), np.zeros((10, 5)))
+    yield assert_allclose, k(x1, x2), k(x2, x1).T
+    yield assert_allclose, k(x1, x2), np.zeros((10, 5))
 
     # Verify that the kernel has the right properties.
     yield eq, k.stationary, True
@@ -243,14 +286,18 @@ def test_kernel_zero():
     yield eq, k.period, 0
     yield eq, str(k), '0'
 
+    # Test `elwise`.
+    for x in elwise_generator(k):
+        yield x
 
-def test_kernel_linear():
+
+def test_linear():
     k = Linear()
     x1 = np.random.randn(10, 2)
     x2 = np.random.randn(5, 2)
 
     # Test that the kernel computes.
-    yield ok, np.allclose(k(x1, x2), k(x2, x1).T)
+    yield assert_allclose, k(x1, x2), k(x2, x1).T
 
     # Verify that the kernel has the right properties.
     yield eq, k.stationary, False
@@ -259,8 +306,12 @@ def test_kernel_linear():
     yield eq, k.period, np.inf
     yield eq, str(k), 'Linear()'
 
+    # Test `elwise`.
+    for x in elwise_generator(k):
+        yield x
 
-def test_kernel_posteriorcross():
+
+def test_posteriorcross():
     k = PosteriorCrossKernel(
         EQ(), EQ(), EQ(),
         np.random.randn(5, 2), SPD(EQ()(np.random.randn(5, 1)))
@@ -269,7 +320,7 @@ def test_kernel_posteriorcross():
     x2 = np.random.randn(5, 2)
 
     # Test that the kernel computes.
-    yield ok, np.allclose(k(x1, x2), k(x2, x1).T)
+    yield assert_allclose, k(x1, x2), k(x2, x1).T
 
     # Verify that the kernel has the right properties.
     yield eq, k.stationary, False
@@ -278,31 +329,43 @@ def test_kernel_posteriorcross():
     yield raises, RuntimeError, lambda: k.period
     yield eq, str(k), 'PosteriorCrossKernel()'
 
+    # Test `elwise`.
+    for x in elwise_generator(k):
+        yield x
+
     k = PosteriorKernel(GPPrimitive(EQ()), None, None)
     yield eq, str(k), 'PosteriorKernel()'
 
 
-def test_properties_sum():
+def test_sum():
     k1 = EQ().stretch(2)
     k2 = 3 * RQ(1e-2).stretch(5)
     k = k1 + k2
 
     yield eq, k.stationary, True
-    yield ok, np.allclose(k.length_scale, (1 * 2 + 3 * 5) / 4)
+    yield assert_allclose, k.length_scale, (1 * 2 + 3 * 5) / 4
     yield eq, k.period, np.inf
     yield eq, k.var, 4
 
-    yield ok, np.allclose((EQ() + EQ()).length_scale, 1)
-    yield ok, np.allclose((EQ().stretch(2) + EQ().stretch(2)).length_scale, 2)
+    yield assert_allclose, (EQ() + EQ()).length_scale, 1
+    yield assert_allclose, (EQ().stretch(2) + EQ().stretch(2)).length_scale, 2
+
+    # Test `elwise`.
+    for x in elwise_generator(k):
+        yield x
 
 
-def test_properties_stretch():
+def test_stretch():
     k = EQ().stretch(2)
 
     yield eq, k.stationary, True
     yield eq, k.length_scale, 2
     yield eq, k.period, np.inf
     yield eq, k.var, 1
+
+    # Test `elwise`.
+    for x in elwise_generator(k):
+        yield x
 
     k = EQ().stretch(1, 2)
 
@@ -312,13 +375,17 @@ def test_properties_stretch():
     yield eq, k.var, 1
 
 
-def test_properties_periodic():
+def test_periodic():
     k = EQ().stretch(2).periodic(3)
 
     yield eq, k.stationary, True
     yield eq, k.length_scale, 2
     yield eq, k.period, 3
     yield eq, k.var, 1
+
+    # Test `elwise`.
+    for x in elwise_generator(k):
+        yield x
 
     k = 5 * k.stretch(5)
 
@@ -328,7 +395,7 @@ def test_properties_periodic():
     yield eq, k.var, 5
 
 
-def test_properties_scaled():
+def test_scaled():
     k = 2 * EQ()
 
     yield eq, k.stationary, True
@@ -336,14 +403,22 @@ def test_properties_scaled():
     yield eq, k.period, np.inf
     yield eq, k.var, 2
 
+    # test `elwise`.
+    for x in elwise_generator(k):
+        yield x
 
-def test_properties_shifted():
+
+def test_shifted():
     k = ShiftedKernel(2 * EQ(), 5)
 
     yield eq, k.stationary, True
     yield eq, k.length_scale, 1
     yield eq, k.period, np.inf
     yield eq, k.var, 2
+
+    # test `elwise`.
+    for x in elwise_generator(k):
+        yield x
 
     k = (2 * EQ()).shift(5, 6)
 
@@ -352,8 +427,14 @@ def test_properties_shifted():
     yield eq, k.period, np.inf
     yield eq, k.var, 2
 
+    # Check computation.
+    x1 = np.random.randn(10, 2)
+    x2 = np.random.randn(5, 2)
+    k = Linear()
+    yield assert_allclose, k.shift(5)(x1, x2), k(x1 - 5, x2 - 5)
 
-def test_properties_product():
+
+def test_product():
     k = (2 * EQ().stretch(10)) * (3 * RQ(1e-2).stretch(20))
 
     yield eq, k.stationary, True
@@ -361,14 +442,22 @@ def test_properties_product():
     yield eq, k.period, np.inf
     yield eq, k.var, 6
 
+    # Test `elwise`.
+    for x in elwise_generator(k):
+        yield x
 
-def test_properties_selected():
+
+def test_selected():
     k = (2 * EQ().stretch(5)).select(0)
 
     yield eq, k.stationary, True
     yield eq, k.length_scale, 5
     yield eq, k.period, np.inf
     yield eq, k.var, 2
+
+    # Test `elwise`.
+    for x in elwise_generator(k):
+        yield x
 
     k = (2 * EQ().stretch(5)).select(2, 3)
 
@@ -405,37 +494,6 @@ def test_properties_selected():
     yield raises, RuntimeError, lambda: k.period
     yield eq, k.var, 2
 
-
-def test_properties_input_transform():
-    k = Linear().transform(lambda x, c: x - 5)
-
-    yield eq, k.stationary, False
-    yield raises, RuntimeError, lambda: k.length_scale
-    yield raises, RuntimeError, lambda: k.var
-    yield raises, RuntimeError, lambda: k.period
-
-
-def test_properties_derivative():
-    k = EQ().diff(0)
-
-    yield eq, k.stationary, False
-    yield raises, RuntimeError, lambda: k.length_scale
-    yield raises, RuntimeError, lambda: k.var
-    yield raises, RuntimeError, lambda: k.period
-
-    yield raises, RuntimeError, lambda: EQ().diff(None, None)(1)
-
-
-def test_properties_function():
-    k = FunctionKernel(lambda x: x ** 2)
-
-    yield eq, k.stationary, False
-    yield raises, RuntimeError, lambda: k.length_scale
-    yield raises, RuntimeError, lambda: k.var
-    yield raises, RuntimeError, lambda: k.period
-
-
-def test_selection():
     # Test that computation is valid.
     k1 = EQ().select(1, 2)
     k2 = EQ()
@@ -444,6 +502,18 @@ def test_selection():
 
 
 def test_input_transform():
+    k = Linear().transform(lambda x, c: x - 5)
+
+    yield eq, k.stationary, False
+    yield raises, RuntimeError, lambda: k.length_scale
+    yield raises, RuntimeError, lambda: k.var
+    yield raises, RuntimeError, lambda: k.period
+
+    # Test `elwise`.
+    for x in elwise_generator(k):
+        yield x
+
+    # Test computation of the kernel.
     k = Linear()
     x1, x2 = np.random.randn(10, 2), np.random.randn(10, 2)
 
@@ -454,7 +524,44 @@ def test_input_transform():
     yield assert_allclose, k(x1 ** 2, x2 - 5), k3(x1, x2)
 
 
+def test_function():
+    k = FunctionKernel(lambda x: B.sum(x ** 2, axis=1)[:, None])
+
+    yield eq, k.stationary, False
+    yield raises, RuntimeError, lambda: k.length_scale
+    yield raises, RuntimeError, lambda: k.var
+    yield raises, RuntimeError, lambda: k.period
+
+    # Test `elwise`.
+    for x in elwise_generator(k):
+        yield x
+
+    # Check computation of kernel.
+    k = FunctionKernel(lambda x: x)
+    x1 = np.linspace(0, 1, 100)[:, None]
+    x2 = np.linspace(0, 1, 50)[:, None]
+
+    yield assert_allclose, k(x1), x1 * x1.T
+    yield assert_allclose, k(x1, x2), x1 * x2.T
+
+    k = FunctionKernel(lambda x: x ** 2)
+
+    yield assert_allclose, k(x1), x1 ** 2 * (x1 ** 2).T
+    yield assert_allclose, k(x1, x2), (x1 ** 2) * (x2 ** 2).T
+
+
 def test_derivative():
+    # First, check properties.
+    k = EQ().diff(0)
+
+    yield eq, k.stationary, False
+    yield raises, RuntimeError, lambda: k.length_scale
+    yield raises, RuntimeError, lambda: k.var
+    yield raises, RuntimeError, lambda: k.period
+
+    yield raises, RuntimeError, lambda: EQ().diff(None, None)(1)
+
+    # Third, check computation.
     B.backend_to_tf()
     s = B.Session()
 
@@ -510,17 +617,3 @@ def test_derivative():
 
     s.close()
     B.backend_to_np()
-
-
-def test_function():
-    k = FunctionKernel(lambda x: x)
-    x1 = np.linspace(0, 1, 100)[:, None]
-    x2 = np.linspace(0, 1, 50)[:, None]
-
-    yield assert_allclose, k(x1), x1 * x1.T
-    yield assert_allclose, k(x1, x2), x1 * x2.T
-
-    k = FunctionKernel(lambda x: x ** 2)
-
-    yield assert_allclose, k(x1), x1 ** 2 * (x1 ** 2).T
-    yield assert_allclose, k(x1, x2), (x1 ** 2) * (x2 ** 2).T
