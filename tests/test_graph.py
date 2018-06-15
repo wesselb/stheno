@@ -26,7 +26,9 @@ def test_corner_cases():
     m2 = Graph()
     p1 = GP(EQ(), graph=m1)
     p2 = GP(EQ(), graph=m2)
+    x = np.random.randn(10, 2)
     yield raises, RuntimeError, lambda: p1 + p2
+    yield raises, NotImplementedError, lambda: p1 + p1(x)
     yield eq, str(GP(EQ(), graph=m1)), 'GP(EQ(), 0)'
 
 
