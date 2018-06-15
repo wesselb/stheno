@@ -38,8 +38,8 @@ Example: Simple Regression
     mean, lower, upper = f.condition(y @ x_obs, y_obs).predict(x)
 
     # Plot result.
-    plt.plot(x, f_true.squeeze(), label='True', c='tab:blue')
-    plt.scatter(x_obs, y_obs.squeeze(), label='Observations', c='tab:red')
+    plt.plot(x, f_true, label='True', c='tab:blue')
+    plt.scatter(x_obs, y_obs, label='Observations', c='tab:red')
     plt.plot(x, mean, label='Prediction', c='tab:green')
     plt.plot(x, lower, ls='--', c='tab:green')
     plt.plot(x, upper, ls='--', c='tab:green')
@@ -105,9 +105,9 @@ Example: Decomposition of Prediction
 
     # Plot results.
     def plot_prediction(x, f, pred, x_obs=None, y_obs=None):
-        plt.plot(x, f.squeeze(), label='True', c='tab:blue')
+        plt.plot(x, f, label='True', c='tab:blue')
         if x_obs is not None:
-            plt.scatter(x_obs, y_obs.squeeze(), label='Observations', c='tab:red')
+            plt.scatter(x_obs, y_obs, label='Observations', c='tab:red')
         mean, lower, upper = pred
         plt.plot(x, mean, label='Prediction', c='tab:green')
         plt.plot(x, lower, ls='--', c='tab:green')
@@ -191,8 +191,8 @@ Example: Learn a Function, Incorporating Prior Knowledge About Its Form
     mean, lower, upper = s.run(f.condition(y @ x_obs, y_obs).predict(x))
 
     # Plot result.
-    plt.plot(x, f_true.squeeze(), label='True', c='tab:blue')
-    plt.scatter(x_obs, y_obs.squeeze(), label='Observations', c='tab:red')
+    plt.plot(x, f_true, label='True', c='tab:blue')
+    plt.scatter(x_obs, y_obs, label='Observations', c='tab:red')
     plt.plot(x, mean, label='Prediction', c='tab:green')
     plt.plot(x, lower, ls='--', c='tab:green')
     plt.plot(x, upper, ls='--', c='tab:green')
@@ -289,9 +289,9 @@ Example: Multi-Ouput Regression
 
     # Plot results.
     def plot_prediction(x, f, pred, x_obs=None, y_obs=None):
-        plt.plot(x, f.squeeze(), label='True', c='tab:blue')
+        plt.plot(x, f, label='True', c='tab:blue')
         if x_obs is not None:
-            plt.scatter(x_obs, y_obs.squeeze(), label='Observations', c='tab:red')
+            plt.scatter(x_obs, y_obs, label='Observations', c='tab:red')
         mean, lower, upper = pred
         plt.plot(x, mean, label='Prediction', c='tab:green')
         plt.plot(x, lower, ls='--', c='tab:green')
@@ -354,9 +354,9 @@ Example: Approximate Integration
 
     # Plot result.
     def plot_prediction(x, f, pred, x_obs=None, y_obs=None):
-        plt.plot(x, f.squeeze(), label='True', c='tab:blue')
+        plt.plot(x, f, label='True', c='tab:blue')
         if x_obs is not None:
-            plt.scatter(x_obs, y_obs.squeeze(), label='Observations', c='tab:red')
+            plt.scatter(x_obs, y_obs, label='Observations', c='tab:red')
         mean, lower, upper = pred
         plt.plot(x, mean, label='Prediction', c='tab:green')
         plt.plot(x, lower, ls='--', c='tab:green')
@@ -430,8 +430,8 @@ Example: Bayesian Linear Regression
     print('predicted intercept', mean_intercept)
 
     # Plot result.
-    plt.plot(x, f_true.squeeze(), label='True', c='tab:blue')
-    plt.scatter(x_obs, y_obs.squeeze(), label='Observations', c='tab:red')
+    plt.plot(x, f_true, label='True', c='tab:blue')
+    plt.scatter(x_obs, y_obs, label='Observations', c='tab:red')
     plt.plot(x, mean, label='Prediction', c='tab:green')
     plt.plot(x, lower, ls='--', c='tab:green')
     plt.plot(x, upper, ls='--', c='tab:green')
@@ -539,7 +539,7 @@ Example: GPAR
 Example: A GP–RNN Model
 -----------------------
 
-.. figure:: https://raw.githubusercontent.com/wesselb/stheno/master/readme_prediction8_gp_rnn.png
+.. figure:: https://raw.githubusercontent.com/wesselb/stheno/master/readme_prediction8_gp-rnn.png
    :alt: Prediction
 
    Prediction
@@ -635,8 +635,8 @@ Example: A GP–RNN Model
 
     plt.subplot(2, 1, 1)
     plt.title('$(1 + a) \\cdot $ RNN ${}+b$')
-    plt.plot(x, f_true.squeeze(), label='True', c='tab:blue')
-    plt.scatter(x_obs, y_obs.squeeze(), label='Observations', c='tab:red')
+    plt.plot(x, f_true, label='True', c='tab:blue')
+    plt.scatter(x_obs, y_obs, label='Observations', c='tab:red')
     mean, lower, upper = s.run(f_gp_rnn.predict(x))
     plt.plot(x, mean, label='Prediction', c='tab:green')
     plt.plot(x, lower, ls='--', c='tab:green')
@@ -659,6 +659,47 @@ Example: A GP–RNN Model
     plt.plot(x, upper, ls='--', c='tab:green')
     plt.legend()
 
+    plt.show()
+
+Example: Approximate Multiplication Between GPs
+-----------------------------------------------
+
+.. figure:: https://raw.githubusercontent.com/wesselb/stheno/master/readme_prediction9_product.png
+   :alt: Prediction
+
+   Prediction
+
+.. code:: python
+
+    import matplotlib.pyplot as plt
+    import numpy as np
+
+    from stheno import GP, EQ, model
+
+    # Define points to predict at.
+    x = np.linspace(0, 10, 100)
+
+    # Construct a prior.
+    f1 = GP(EQ(), 3)
+    f2 = GP(EQ(), 3)
+
+    # Compute the approximate product.
+    f_prod = f1 * f2
+
+    # Sample two functions.
+    s1, s2 = model.sample(f1 @ x, f2 @ x)
+
+    # Predict.
+    mean, lower, upper = f_prod.condition((f1 @ x, s1), (f2 @ x, s2)).predict(x)
+
+    # Plot result.
+    plt.plot(x, s1, label='Sample 1', c='tab:red')
+    plt.plot(x, s2, label='Sample 2', c='tab:blue')
+    plt.plot(x, s1 * s2, label='True product', c='tab:orange')
+    plt.plot(x, mean, label='Approximate posterior', c='tab:green')
+    plt.plot(x, lower, ls='--', c='tab:green')
+    plt.plot(x, upper, ls='--', c='tab:green')
+    plt.legend()
     plt.show()
 
 .. |Build| image:: https://travis-ci.org/wesselb/stheno.svg?branch=master
