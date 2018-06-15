@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
-from __future__ import absolute_import
+from __future__ import absolute_import  # pragma: no cover
 
 # noinspection PyUnresolvedReferences
-from . import *
+from . import *  # pragma: no cover
 
-B.backend_to_torch()
+B.backend_to_torch()  # pragma: no cover
