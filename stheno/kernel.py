@@ -57,6 +57,12 @@ class Kernel(Type, Referentiable):
         raise RuntimeError('For kernel "{}", could not resolve '
                            'arguments "{}" and "{}".'.format(self, x, y))
 
+    @dispatch(object, object, Cache)
+    def elwise(self, x, y, cache):
+        raise NotImplementedError('Element-wise covariance construction is '
+                                  'not implemented for {}.'
+                                  ''.format(self.__class__.__name__))
+
     @dispatch(object)
     def __call__(self, x):
         return self(x, x, Cache())
@@ -132,6 +138,12 @@ class OneKernel(Kernel, OneType, Referentiable):
     def __call__(self, x, y, B):
         return B.ones((B.shape(x)[0], B.shape(y)[0]), dtype=B.dtype(x))
 
+    @dispatch(B.Numeric, B.Numeric, Cache)
+    @cache
+    @uprank
+    def elwise(self, x, y, B):
+        return B.ones((B.shape(x)[0], 1), dtype=B.dtype(x))
+
     @property
     def _stationary(self):
         return True
@@ -159,6 +171,12 @@ class ZeroKernel(Kernel, ZeroType, Referentiable):
     @uprank
     def __call__(self, x, y, B):
         return B.zeros((B.shape(x)[0], B.shape(y)[0]), dtype=B.dtype(x))
+
+    @dispatch(B.Numeric, B.Numeric, Cache)
+    @cache
+    @uprank
+    def elwise(self, x, y, B):
+        return B.zeros((B.shape(x)[0], 1), dtype=B.dtype(x))
 
     @property
     def _stationary(self):
@@ -188,6 +206,12 @@ class ScaledKernel(Kernel, ScaledType, Referentiable):
         K = self[0](x, y, B)
         return B.multiply(B.cast(self.scale, dtype=B.dtype(K)), K)
 
+    @dispatch(object, object, Cache)
+    @cache
+    def elwise(self, x, y, B):
+        K = self[0].elwise(x, y, B)
+        return B.multiply(B.cast(self.scale, dtype=B.dtype(K)), K)
+
     @property
     def _stationary(self):
         return self[0].stationary
@@ -214,6 +238,11 @@ class SumKernel(Kernel, SumType, Referentiable):
     @cache
     def __call__(self, x, y, B):
         return B.add(self[0](x, y, B), self[1](x, y, B))
+
+    @dispatch(object, object, Cache)
+    @cache
+    def elwise(self, x, y, B):
+        return B.add(self[0].elwise(x, y, B), self[1].elwise(x, y, B))
 
     @property
     def _stationary(self):
@@ -243,6 +272,11 @@ class ProductKernel(Kernel, ProductType, Referentiable):
     def __call__(self, x, y, B):
         return B.multiply(self[0](x, y, B), self[1](x, y, B))
 
+    @dispatch(object, object, Cache)
+    @cache
+    def elwise(self, x, y, B):
+        return B.multiply(self[0].elwise(x, y, B), self[1].elwise(x, y, B))
+
     @property
     def _stationary(self):
         return self[0].stationary and self[1].stationary
@@ -271,6 +305,14 @@ class StretchedKernel(Kernel, StretchedType, Referentiable):
     def __call__(self, x, y, B):
         stretches1, stretches2 = expand(self.stretches)
         return self[0](B.divide(x, stretches1), B.divide(y, stretches2), B)
+
+    @dispatch(B.Numeric, B.Numeric, Cache)
+    @cache
+    @uprank
+    def elwise(self, x, y, B):
+        stretches1, stretches2 = expand(self.stretches)
+        return self[0].elwise(B.divide(x, stretches1),
+                              B.divide(y, stretches2), B)
 
     @property
     def _stationary(self):
@@ -313,6 +355,13 @@ class ShiftedKernel(Kernel, ShiftedType, Referentiable):
         shifts1, shifts2 = expand(self.shifts)
         return self[0](B.subtract(x, shifts1), B.subtract(y, shifts2), B)
 
+    @dispatch(B.Numeric, B.Numeric, Cache)
+    @cache
+    @uprank
+    def __call__(self, x, y, B):
+        shifts1, shifts2 = expand(self.shifts)
+        return self[0].elwise(B.subtract(x, shifts1), B.subtract(y, shifts2), B)
+
     @property
     def _stationary(self):
         if len(self.shifts) == 1:
@@ -351,6 +400,15 @@ class SelectedKernel(Kernel, SelectedType, Referentiable):
         x = x if dims1 is None else B.take(x, dims1, axis=1)
         y = y if dims2 is None else B.take(y, dims2, axis=1)
         return self[0](x, y, B)
+
+    @dispatch(B.Numeric, B.Numeric, Cache)
+    @cache
+    @uprank
+    def __call__(self, x, y, B):
+        dims1, dims2 = expand(self.dims)
+        x = x if dims1 is None else B.take(x, dims1, axis=1)
+        y = y if dims2 is None else B.take(y, dims2, axis=1)
+        return self[0].elwise(x, y, B)
 
     @property
     def _stationary(self):
@@ -398,6 +456,15 @@ class InputTransformedKernel(Kernel, InputTransformedType, Referentiable):
     @cache
     @uprank
     def __call__(self, x, y, B):
+        f1, f2 = expand(self.fs)
+        x = x if f1 is None else apply_optional_arg(f1, x, B)
+        y = y if f2 is None else apply_optional_arg(f2, y, B)
+        return self[0](x, y, B)
+
+    @dispatch(object, object, Cache)
+    @cache
+    @uprank
+    def elwise(self, x, y, B):
         f1, f2 = expand(self.fs)
         x = x if f1 is None else apply_optional_arg(f1, x, B)
         y = y if f2 is None else apply_optional_arg(f2, y, B)
@@ -459,6 +526,13 @@ class EQ(Kernel, PrimitiveType, Referentiable):
     def __call__(self, x, y, B):
         return B.exp(B.multiply(B.cast(-.5, dtype=B.dtype(x)),
                                 B.pw_dists2(x, y)))
+
+    @dispatch(B.Numeric, B.Numeric, Cache)
+    @cache
+    @uprank
+    def elwise(self, x, y, B):
+        return B.exp(B.multiply(B.cast(-.5, dtype=B.dtype(x)),
+                                B.pw_dists2_elwise(x, y)))[:, None]
 
     @property
     def _stationary(self):
