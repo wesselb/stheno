@@ -81,6 +81,15 @@ class Type(Referentiable):
     def __radd__(self, other):
         return add(other, self)
 
+    def __neg__(self):
+        return -1 * self
+
+    def __sub__(self, other):
+        return self + (-other)
+
+    def __rsub__(self, other):
+        return (-self) + other
+
     def stretch(self, *stretches):
         """Stretch the element.
 
@@ -164,6 +173,10 @@ class Type(Referentiable):
 
     def __repr__(self):
         return str(self)
+
+    @property
+    def __name__(self):
+        return self.__class__.__name__
 
     def __str__(self):
         return self.__class__.__name__ + '()'
