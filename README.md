@@ -514,7 +514,7 @@ plt.show()
 
 ## Example: A GP–RNN Model
 
-![Prediction](https://raw.githubusercontent.com/wesselb/stheno/master/readme_prediction8_gp_rnn.png)
+![Prediction](https://raw.githubusercontent.com/wesselb/stheno/master/readme_prediction8_gp-rnn.png)
 
 
 ```python
