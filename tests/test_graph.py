@@ -75,8 +75,6 @@ def test_mul_other():
     p2 = 5. * p1
     p3 = p1 * 5.
 
-    yield raises, NotImplementedError, lambda: p1 * p2
-
     x = np.random.randn(5, 1)
     yield assert_allclose, 5. * p1.mean(x), p2.mean(x)
     yield assert_allclose, 5. * p1.mean(x), p3.mean(x)

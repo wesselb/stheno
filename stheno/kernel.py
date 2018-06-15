@@ -358,7 +358,7 @@ class ShiftedKernel(Kernel, ShiftedType, Referentiable):
     @dispatch(B.Numeric, B.Numeric, Cache)
     @cache
     @uprank
-    def __call__(self, x, y, B):
+    def elwise(self, x, y, B):
         shifts1, shifts2 = expand(self.shifts)
         return self[0].elwise(B.subtract(x, shifts1), B.subtract(y, shifts2), B)
 
@@ -404,7 +404,7 @@ class SelectedKernel(Kernel, SelectedType, Referentiable):
     @dispatch(B.Numeric, B.Numeric, Cache)
     @cache
     @uprank
-    def __call__(self, x, y, B):
+    def elwise(self, x, y, B):
         dims1, dims2 = expand(self.dims)
         x = x if dims1 is None else B.take(x, dims1, axis=1)
         y = y if dims2 is None else B.take(y, dims2, axis=1)
@@ -468,7 +468,7 @@ class InputTransformedKernel(Kernel, InputTransformedType, Referentiable):
         f1, f2 = expand(self.fs)
         x = x if f1 is None else apply_optional_arg(f1, x, B)
         y = y if f2 is None else apply_optional_arg(f2, y, B)
-        return self[0](x, y, B)
+        return self[0].elwise(x, y, B)
 
 
 class PeriodicKernel(Kernel, WrappedType, Referentiable):
