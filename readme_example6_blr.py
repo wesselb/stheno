@@ -30,8 +30,8 @@ print('true intercept', true_intercept)
 print('predicted intercept', mean_intercept)
 
 # Plot result.
-plt.plot(x, f_true.squeeze(), label='True', c='tab:blue')
-plt.scatter(x_obs, y_obs.squeeze(), label='Observations', c='tab:red')
+plt.plot(x, f_true, label='True', c='tab:blue')
+plt.scatter(x_obs, y_obs, label='Observations', c='tab:red')
 plt.plot(x, mean, label='Prediction', c='tab:green')
 plt.plot(x, lower, ls='--', c='tab:green')
 plt.plot(x, upper, ls='--', c='tab:green')

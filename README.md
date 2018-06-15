@@ -35,8 +35,8 @@ f_true, y_obs = model.sample(f @ x, y @ x_obs)
 mean, lower, upper = f.condition(y @ x_obs, y_obs).predict(x)
 
 # Plot result.
-plt.plot(x, f_true.squeeze(), label='True', c='tab:blue')
-plt.scatter(x_obs, y_obs.squeeze(), label='Observations', c='tab:red')
+plt.plot(x, f_true, label='True', c='tab:blue')
+plt.scatter(x_obs, y_obs, label='Observations', c='tab:red')
 plt.plot(x, mean, label='Prediction', c='tab:green')
 plt.plot(x, lower, ls='--', c='tab:green')
 plt.plot(x, upper, ls='--', c='tab:green')
@@ -98,9 +98,9 @@ pred_f = f.predict(x)
 
 # Plot results.
 def plot_prediction(x, f, pred, x_obs=None, y_obs=None):
-    plt.plot(x, f.squeeze(), label='True', c='tab:blue')
+    plt.plot(x, f, label='True', c='tab:blue')
     if x_obs is not None:
-        plt.scatter(x_obs, y_obs.squeeze(), label='Observations', c='tab:red')
+        plt.scatter(x_obs, y_obs, label='Observations', c='tab:red')
     mean, lower, upper = pred
     plt.plot(x, mean, label='Prediction', c='tab:green')
     plt.plot(x, lower, ls='--', c='tab:green')
@@ -180,8 +180,8 @@ print('u variance', s.run(u.var))
 mean, lower, upper = s.run(f.condition(y @ x_obs, y_obs).predict(x))
 
 # Plot result.
-plt.plot(x, f_true.squeeze(), label='True', c='tab:blue')
-plt.scatter(x_obs, y_obs.squeeze(), label='Observations', c='tab:red')
+plt.plot(x, f_true, label='True', c='tab:blue')
+plt.scatter(x_obs, y_obs, label='Observations', c='tab:red')
 plt.plot(x, mean, label='Prediction', c='tab:green')
 plt.plot(x, lower, ls='--', c='tab:green')
 plt.plot(x, upper, ls='--', c='tab:green')
@@ -275,9 +275,9 @@ preds = fs.predict(x)
 
 # Plot results.
 def plot_prediction(x, f, pred, x_obs=None, y_obs=None):
-    plt.plot(x, f.squeeze(), label='True', c='tab:blue')
+    plt.plot(x, f, label='True', c='tab:blue')
     if x_obs is not None:
-        plt.scatter(x_obs, y_obs.squeeze(), label='Observations', c='tab:red')
+        plt.scatter(x_obs, y_obs, label='Observations', c='tab:red')
     mean, lower, upper = pred
     plt.plot(x, mean, label='Prediction', c='tab:green')
     plt.plot(x, lower, ls='--', c='tab:green')
@@ -336,9 +336,9 @@ pred_f = dddf.predict(x)
 
 # Plot result.
 def plot_prediction(x, f, pred, x_obs=None, y_obs=None):
-    plt.plot(x, f.squeeze(), label='True', c='tab:blue')
+    plt.plot(x, f, label='True', c='tab:blue')
     if x_obs is not None:
-        plt.scatter(x_obs, y_obs.squeeze(), label='Observations', c='tab:red')
+        plt.scatter(x_obs, y_obs, label='Observations', c='tab:red')
     mean, lower, upper = pred
     plt.plot(x, mean, label='Prediction', c='tab:green')
     plt.plot(x, lower, ls='--', c='tab:green')
@@ -409,8 +409,8 @@ print('true intercept', true_intercept)
 print('predicted intercept', mean_intercept)
 
 # Plot result.
-plt.plot(x, f_true.squeeze(), label='True', c='tab:blue')
-plt.scatter(x_obs, y_obs.squeeze(), label='Observations', c='tab:red')
+plt.plot(x, f_true, label='True', c='tab:blue')
+plt.scatter(x_obs, y_obs, label='Observations', c='tab:red')
 plt.plot(x, mean, label='Prediction', c='tab:green')
 plt.plot(x, lower, ls='--', c='tab:green')
 plt.plot(x, upper, ls='--', c='tab:green')
@@ -607,8 +607,8 @@ plt.figure(figsize=(10, 6))
 
 plt.subplot(2, 1, 1)
 plt.title('$(1 + a) \\cdot $ RNN ${}+b$')
-plt.plot(x, f_true.squeeze(), label='True', c='tab:blue')
-plt.scatter(x_obs, y_obs.squeeze(), label='Observations', c='tab:red')
+plt.plot(x, f_true, label='True', c='tab:blue')
+plt.scatter(x_obs, y_obs, label='Observations', c='tab:red')
 mean, lower, upper = s.run(f_gp_rnn.predict(x))
 plt.plot(x, mean, label='Prediction', c='tab:green')
 plt.plot(x, lower, ls='--', c='tab:green')

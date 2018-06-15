@@ -34,9 +34,9 @@ pred_f = dddf.predict(x)
 
 # Plot result.
 def plot_prediction(x, f, pred, x_obs=None, y_obs=None):
-    plt.plot(x, f.squeeze(), label='True', c='tab:blue')
+    plt.plot(x, f, label='True', c='tab:blue')
     if x_obs is not None:
-        plt.scatter(x_obs, y_obs.squeeze(), label='Observations', c='tab:red')
+        plt.scatter(x_obs, y_obs, label='Observations', c='tab:red')
     mean, lower, upper = pred
     plt.plot(x, mean, label='Prediction', c='tab:green')
     plt.plot(x, lower, ls='--', c='tab:green')
