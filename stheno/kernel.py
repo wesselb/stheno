@@ -126,17 +126,13 @@ class Kernel(Type, Referentiable):
 
     @property
     def length_scale(self):
-        """Approximation to the length scale of the kernel. Returns `np.nan`
-        if the length scale is undefined or cannot be determined.
-        """
+        """Approximation of the length scale of the kernel"""
         raise RuntimeError('The length scale of "{}" could not be determined.'
                            ''.format(self.__class__.__name__))
 
     @property
     def period(self):
-        """Period of the kernel. Returns `np.nan` is the period is undefined
-        or cannot be determined.
-        """
+        """Period of the kernel"""
         raise RuntimeError('The period of "{}" could not be determined.'
                            ''.format(self.__class__.__name__))
 
@@ -584,7 +580,7 @@ class RQ(Kernel, Referentiable):
 
     Args:
         alpha (positive float): Shape of the prior over length scales.
-            determines the weight of the tails of the kernel.
+            Determines the weight of the tails of the kernel.
     """
 
     dispatch = Dispatcher(in_class=Self)

@@ -3,12 +3,401 @@
 
 |Build| |Coverage Status| |Latest Docs|
 
-Implementation of Gaussian processes in Python
-
+``stheno`` is an implementation of Gaussian process modelling in Python.
 See also `Stheno.jl <https://github.com/willtebbutt/Stheno.jl>`__.
 
-Example: Simple Regression
---------------------------
+-  `Nonlinear Regression in 20
+   Seconds <#nonlinear-regression-in-20-seconds>`__
+-  `Manual <#manual>`__
+
+   -  `Kernel and Mean Design <#kernel-and-mean-design>`__
+
+      -  `Available Kernels <#available-kernels>`__
+      -  `Available Means <#available-means>`__
+      -  `Compositional Design <#compositional-design>`__
+      -  `Properties of Kernels <#properties-of-kernels>`__
+
+   -  `Model Design <#model-design>`__
+
+      -  `Compositional Design <#compositional-design>`__
+      -  `Properties of GPs <#properties-of-gps>`__
+
+   -  `Inference <#inference>`__
+   -  `About Normals <#about-normals>`__
+   -  `NumPy, TensorFlow, or PyTorch? <#numpy-tensorflow-or-pytorch>`__
+   -  `Undiscussed Features <#undiscussed-features>`__
+
+-  `Examples <#examples>`__
+
+   -  `Simple Regression <#simple-regression>`__
+   -  `Decomposition of Prediction <#decomposition-of-prediction>`__
+   -  `Learn a Function, Incorporating Prior Knowledge About Its
+      Form <#learn-a-function-incorporating-prior-knowledge-about-its-form>`__
+   -  `Multi-Output Regression <#multi-ouput-regression>`__
+   -  `Approximate Integration <#approximate-integration>`__
+   -  `Bayesian Linear Regression <#bayesian-linear-regression>`__
+   -  `GPAR <#gpar>`__
+   -  `A GP–RNN Model <#a-gprnn-model>`__
+   -  `Approximate Multiplication Between
+      GPs <#approximate-multiplication-between-gps>`__
+
+Nonlinear Regression in 20 Seconds
+----------------------------------
+
+.. code:: python
+
+    >>> import numpy as np
+
+    >>> from stheno import GP, EQ
+
+    >>> x = np.linspace(0, 2, 10)         # Points to predict at
+
+    >>> y = x ** 2                        # Observations
+
+    >>> GP(EQ()).condition(x, y)(3).mean  # Go GP!
+    array([[8.48258669]])
+
+Moar?! Then read on!
+
+Manual
+------
+
+Kernel and Mean Design
+~~~~~~~~~~~~~~~~~~~~~~
+
+Available Kernels
+^^^^^^^^^^^^^^^^^
+
+Constants function as constant kernels. Besides that, the following
+kernels are available:
+
+-  ``EQ()``: the exponentiated quadratic:
+
+.. code:: text
+
+    k(x, x') = exp(-0.5 * (x - x')^2)
+
+-  ``RQ(alpha)``: the rational quadratic:
+
+.. code:: text
+
+    k(x, x') = (1 + (x - x')^2 / (2 * alpha))^(-alpha)
+
+-  ``Exp()`` or ``Matern12()``: the exponential kernel:
+
+.. code:: text
+
+    k(x, x') = exp(-|x - x'|)
+
+-  ``Matern32()``: the Matern–3/2 kernel:
+
+.. code:: text
+
+    k(x, x') = (1 + sqrt(3) * |x - x'|) * exp(-sqrt(3) * |x - x'|)
+
+-  ``Matern52()``: the Matern–5/2 kernel:
+
+.. code:: text
+
+    k(x, x') = (1 + sqrt(5) * |x - x'| + 5 * (x - x')^2 / 3) * exp(-sqrt(5) * |x - 
+    x'|)
+
+-  ``Delta()``: the Kronecker delta kernel:
+
+.. code:: text
+
+    k(x, x') = 1 if x = x' and 0 otherwise
+
+-  ``FunctionKernel(f)``:
+
+.. code:: text
+
+    * k(x, x') = f(x) * f(x')
+
+Adding or multiplying a ``FunctionType`` ``f`` to or with a kernel will
+automatically translate ``f`` to ``FunctionKernel(f)``.
+
+Available Means
+^^^^^^^^^^^^^^^
+
+Constants function as constant means. Besides that, the following means
+are available:
+
+-  ``FunctionMean(f)``:
+
+.. code:: text
+
+    * m(x) = f(x)
+
+Adding or multiplying a ``FunctionType`` ``f`` to or with a mean will
+automatically translate ``f`` to ``FunctionMean(f)``.
+
+Compositional Design
+^^^^^^^^^^^^^^^^^^^^
+
+-  Add and subtract *kernels and means*:
+
+.. code:: python
+
+    >>> EQ() + Exp()
+    EQ() + Exp()
+
+    >>> EQ() + EQ()
+    2 * EQ()
+
+    >>> EQ() + 1
+    EQ() + 1
+
+    >>> EQ() + 0
+    EQ()
+
+    >>> EQ() - Exp()
+    EQ() - Exp()
+
+    >>> EQ() - EQ()
+    0
+
+-  Multiply *kernels and means*:
+
+.. code:: python
+
+    >>> EQ() * Exp()
+    EQ() * Exp()
+
+    >>> 2 * EQ()
+    2 * EQ()
+
+    >>> 0 * EQ()
+    0
+
+-  Shift *kernels and means*:
+
+   -  ``k.shift(c)(x, x') = k(x - c, x' - c)``;
+   -  ``k.shift(c1, c2)(x, x') = k(x - c1, x' - c2)``.
+
+.. code:: python
+
+    >>> Linear().shift(1)
+    Linear() shift 1
+
+    >>> EQ().shift(1, 2)
+    EQ() shift (1, 2)
+
+-  Stretch *kernels and means*:
+
+   -  ``k.stretch(c)(x, x') = k(x / c, x' / c)``;
+   -  ``k.stretch(c1, c2)(x, x') = k(x / c1, x' / c2)``.
+
+.. code:: python
+
+    >>> EQ().stretch(1)
+    EQ() > 1
+
+    >>> EQ().stretch(1, 2)
+    EQ() > (1, 2)
+
+-  Select particular input dimensions of *kernels and means*:
+
+   -  ``k.select([0])(x, x') = k(x[:, 0], x')``;
+   -  ``k.select([0], [1])(x, x') = k(x[:, 0], x'[:, 1])``;
+   -  ``k.select(None, [1])(x, x') = k(x, x'[:, 1])``.
+
+.. code:: python
+
+    >>> EQ().select([0])
+    EQ() : [0]
+
+    >>> EQ().select([0], [1])
+    EQ() : ([0], [1])
+
+-  Transform the inputs of *kernels and means*:
+
+   -  ``k.transform(f)(x, x') = k(f(x), f(x'))``;
+   -  ``k.transform(f1, f2)(x, x') = k(f1(x), f2(x'))``;
+   -  ``k.transform(None, f)(x, x') = k(x, f(x'))``.
+
+.. code:: python
+
+    >>> EQ().transform(f)
+    EQ() transform f
+
+    >>> EQ().transform(f1, f2)
+    EQ() transform (f1, f2)
+
+    >>> EQ().transform(None, f)
+    EQ() transform (None, f)
+
+-  Numerically, but efficiently, take derivatives of *kernels and
+   means*. This currently only works in TensorFlow and derivatives
+   cannot be nested.
+
+   -  ``k.diff(0)(x, x') = d/d(x[:, 0]) k(x, x')``;
+   -  ``k.diff(0, 1)(x, x') = d/d(x[:, 0]) d/d(x'[:, 1]) k(x, x')``;
+   -  ``k.diff(None, 1)(x, x') = d/d(x'[:, 1]) k(x, x')``.
+
+.. code:: python
+
+    >>> EQ().diff(0)
+    d(0) EQ()
+
+    >>> EQ().diff(0, 1)
+    d(0, 1) EQ()
+
+    >>> EQ().diff(None, 1)
+    d(None, 1) EQ()
+
+-  Make *only kernels* periodic:
+   ``k.periodic(2 pi / w)(x, x') = k((sin(w * x),  cos(w * x)), (sin(w * x'), cos(w * x')))``:
+
+.. code:: python
+
+    >>> EQ().periodic(1)
+    EQ() per 1
+
+-  Reverse the arguments of *only kernels*:
+   ``reversed(k)(x, x') = k(x', x)``:
+
+.. code:: python
+
+    >>> reversed(Linear())
+    Reversed(Linear())
+
+Properties of Kernels
+^^^^^^^^^^^^^^^^^^^^^
+
+In some cases, the variance (``k.var``), length scale
+(``k.length_scale``), and period (``k.period``) can be computed. In all
+cases, the stationary (``k.stationary``) can be determined.
+
+Variance
+''''''''
+
+.. code:: python
+
+    >>> EQ().var
+    1
+
+    >>> (2 * EQ()).var
+    2
+
+Length Scale
+''''''''''''
+
+.. code:: python
+
+    >>> EQ().length_scale
+    1
+
+    >>> (EQ() + EQ().stretch(2)).length_scale
+    1.5
+
+Period
+''''''
+
+.. code:: python
+
+    >>> EQ().periodic(1).period
+    1
+
+    >>> EQ().periodic(1).stretch(2).period
+    2
+
+Stationarity
+''''''''''''
+
+.. code:: python
+
+    >>> EQ().stationary
+    True
+
+    >>> (EQ() + Linear()).stationary
+    False
+
+Model Design
+~~~~~~~~~~~~
+
+To design a model, all you need is a ``GP``, some kernels, and some
+means!
+
+.. code:: python
+
+    >>> f1 = GP(EQ(), lambda x: x ** 2)
+
+    >>> f1
+    GP(EQ(), <lambda>)
+
+    >>> f2 = GP(Linear())
+
+    >>> f_sum = f1 + f2
+
+    >>> f_sum
+    GP(EQ() + Linear(), <lambda>)
+
+Compositional Design
+^^^^^^^^^^^^^^^^^^^^
+
+Properties of GPs
+^^^^^^^^^^^^^^^^^
+
+Inference
+~~~~~~~~~
+
+About Normals
+~~~~~~~~~~~~~
+
+NumPy, TensorFlow, or PyTorch?
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Your choice!
+
+.. code:: python
+
+    from stheno import GP, EQ
+
+.. code:: python
+
+    from stheno.tf import GP, EQ
+
+.. code:: python
+
+    from stheno.torch import GP, EQ
+
+Undiscussed Features
+~~~~~~~~~~~~~~~~~~~~
+
+-  ``stheno.mokernel`` and ``stheno.momean`` offer multi-output kernels
+   and means:
+
+.. code:: python
+
+    >>> f1, f2 = GP(EQ()), GP(EQ())
+
+    >>> f = model.cross(f1, f2)
+
+    >>> f
+    GP(MultiOutputKernel(EQ(), EQ()), MultiOutputMean(0, 0))
+
+    >>> f(0).sample()
+    array([[ 1.1725799 ],
+           [-1.15642448]])
+
+-  ``stheno.eis`` offers kernels on an extended input space that allows
+   one to design kernels in an alternative, flexible way:
+
+.. code:: python
+
+    >>> p = GP(NoisyKernel(EQ(), Delta()))
+
+    >>> prediction = p.condition(Observed(x), y).predict(Latent(x))
+
+-  ``stheno.spd`` offers structured representations of positive-definite
+   matrices and efficient operations thereon.
+
+Examples
+--------
+
+Simple Regression
+~~~~~~~~~~~~~~~~~
 
 .. figure:: https://raw.githubusercontent.com/wesselb/stheno/master/readme_prediction1_simple_regression.png
    :alt: Prediction
@@ -46,8 +435,8 @@ Example: Simple Regression
     plt.legend()
     plt.show()
 
-Example: Decomposition of Prediction
-------------------------------------
+Decomposition of Prediction
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. figure:: https://raw.githubusercontent.com/wesselb/stheno/master/readme_prediction2_decomposition.png
    :alt: Prediction
@@ -139,8 +528,8 @@ Example: Decomposition of Prediction
 
     plt.show()
 
-Example: Learn a Function, Incorporating Prior Knowledge About Its Form
------------------------------------------------------------------------
+Learn a Function, Incorporating Prior Knowledge About Its Form
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. figure:: https://raw.githubusercontent.com/wesselb/stheno/master/readme_prediction3_parametric.png
    :alt: Prediction
@@ -199,8 +588,8 @@ Example: Learn a Function, Incorporating Prior Knowledge About Its Form
     plt.legend()
     plt.show()
 
-Example: Multi-Ouput Regression
--------------------------------
+Multi-Ouput Regression
+~~~~~~~~~~~~~~~~~~~~~~
 
 .. figure:: https://raw.githubusercontent.com/wesselb/stheno/master/readme_prediction4_multi-output.png
    :alt: Prediction
@@ -308,8 +697,8 @@ Example: Multi-Ouput Regression
 
     plt.show()
 
-Example: Approximate Integration
---------------------------------
+Approximate Integration
+~~~~~~~~~~~~~~~~~~~~~~~
 
 .. figure:: https://raw.githubusercontent.com/wesselb/stheno/master/readme_prediction5_integration.png
    :alt: Prediction
@@ -388,8 +777,8 @@ Example: Approximate Integration
 
     plt.show()
 
-Example: Bayesian Linear Regression
------------------------------------
+Bayesian Linear Regression
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. figure:: https://raw.githubusercontent.com/wesselb/stheno/master/readme_prediction6_blr.png
    :alt: Prediction
@@ -438,8 +827,8 @@ Example: Bayesian Linear Regression
     plt.legend()
     plt.show()
 
-Example: GPAR
--------------
+GPAR
+~~~~
 
 .. figure:: https://raw.githubusercontent.com/wesselb/stheno/master/readme_prediction7_gpar.png
    :alt: Prediction
@@ -536,8 +925,8 @@ Example: GPAR
 
     plt.show()
 
-Example: A GP–RNN Model
------------------------
+A GP–RNN Model
+~~~~~~~~~~~~~~
 
 .. figure:: https://raw.githubusercontent.com/wesselb/stheno/master/readme_prediction8_gp-rnn.png
    :alt: Prediction
@@ -661,8 +1050,8 @@ Example: A GP–RNN Model
 
     plt.show()
 
-Example: Approximate Multiplication Between GPs
------------------------------------------------
+Approximate Multiplication Between GPs
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. figure:: https://raw.githubusercontent.com/wesselb/stheno/master/readme_prediction9_product.png
    :alt: Prediction
