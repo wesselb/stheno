@@ -85,8 +85,7 @@ k(x, x') = (1 + sqrt(3) * |x - x'|) * exp(-sqrt(3) * |x - x'|)
 * `Matern52()`: the Matern–5/2 kernel:
 
 ```text
-k(x, x') = (1 + sqrt(5) * |x - x'| + 5 * (x - x')^2 / 3) * exp(-sqrt(5) * |x - 
-x'|)
+k(x, x') = (1 + sqrt(5) * |x - x'| + 5 * (x - x')^2 / 3) * exp(-sqrt(5) * |x - x'|)
 ```
 
 * `Delta()`: the Kronecker delta kernel:
