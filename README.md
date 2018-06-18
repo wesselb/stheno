@@ -332,7 +332,7 @@ currently only works in TensorFlow and derivatives cannot be nested.
     Reversed(Linear())
     ```
     
-* Extract terms and factors from sum and product respectively of _means and 
+* Extract terms and factors from sums and products respectively of _means and 
 kernels_.
     
     Example:
@@ -509,7 +509,7 @@ GP(EQ() + Linear(), <lambda>)
     GP(d(1) EQ(), 0)
     ```
     
-* Construct a finite difference estimate of a derivative of a GP.
+* Construct a finite difference estimate of the derivative of a GP.
     See `stheno.graph.Graph.diff_approx` for a description of the arguments.
     
     Example:
@@ -654,7 +654,7 @@ design kernels in an alternative, flexible way.
     >>> prediction = p.condition(Observed(x), y).predict(Latent(x))
     ```
     
-* `stheno.normal` offer an efficient implementation `Normal` of the normal 
+* `stheno.normal` offers an efficient implementation `Normal` of the normal 
 distribution, and a convenience constructor `Normal1D` for 1-dimensional normal
 distributions.
 
