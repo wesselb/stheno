@@ -28,7 +28,7 @@ PromisedGP = PromisedType()
 
 class Graph(Referentiable):
     """A GP model."""
-    dispatch = Dispatcher(in_class=Self)
+    _dispatch = Dispatcher(in_class=Self)
 
     def __init__(self):
         self.ps = []
@@ -57,9 +57,12 @@ class Graph(Referentiable):
         """Add an independent GP to the model.
 
         Args:
-            p (instance of :class:`.graph.GP`): GP object to add.
-            kernel (instance of :class:`.kernel.Kernel`): Kernel function of GP.
-            mean (instance of :class:`.mean.Mean`): Mean function of GP.
+            p (:class:`.graph.GP`): GP object to add.
+            kernel (:class:`.kernel.Kernel`): Kernel function of GP.
+            mean (:class:`.mean.Mean`): Mean function of GP.
+
+        Returns:
+            :class:`.graph.GP`: The newly added independent GP.
         """
         # Update means.
         self.means[p] = mean
@@ -70,29 +73,27 @@ class Graph(Referentiable):
         self._add_p(p)
         return p
 
-    @dispatch(object, PromisedGP)
+    @_dispatch(object, PromisedGP)
     def sum(self, other, p):
         """Sum a GP from the graph with another object.
 
         Args:
-            obj1 (other object or instance of :class:`.graph.GP`): First term
-                in the sum.
-            obj2 (other object or instance of :class:`.graph.GP`): Second term
-                in the sum.
+            obj1 (other type or :class:`.graph.GP`): First term in the sum.
+            obj2 (other type or :class:`.graph.GP`): Second term in the sum.
 
         Returns:
-            The GP corresponding to the sum.
+            :class:`.graph.GP`: The GP corresponding to the sum.
         """
         return self.sum(p, other)
 
-    @dispatch(PromisedGP, object)
+    @_dispatch(PromisedGP, object)
     def sum(self, p, other):
         kernels = self.kernels  # Careful with the closure!
         return self._update(self.means[p] + other,
                             lambda: kernels[p],
                             lambda pi: kernels[p, pi])
 
-    @dispatch(PromisedGP, PromisedGP)
+    @_dispatch(PromisedGP, PromisedGP)
     def sum(self, p1, p2):
         kernels = self.kernels  # Careful with the closure!
         return self._update(self.means[p1] + self.means[p2],
@@ -100,23 +101,23 @@ class Graph(Referentiable):
                                      kernels[p1, p2] + kernels[p2, p1]),
                             lambda pi: kernels[p1, pi] + kernels[p2, pi])
 
-    @dispatch(PromisedGP, B.Numeric)
+    @_dispatch(PromisedGP, B.Numeric)
     def mul(self, p, other):
         """Multiply a GP from the graph with another object.
 
         Args:
-            p (instance of :class:`.graph.GP`): GP in the product.
+            p (:class:`.graph.GP`): GP in the product.
             other (object): Other object in the product.
 
         Returns:
-            The GP corresponding to the product.
+            :class:`.graph.GP`: The GP corresponding to the product.
         """
         kernels = self.kernels  # Careful with the closure!
         return self._update(other * self.means[p],
                             lambda: other ** 2 * kernels[p],
                             lambda pi: other * kernels[p, pi])
 
-    @dispatch(PromisedGP, FunctionType)
+    @_dispatch(PromisedGP, FunctionType)
     def mul(self, p, f):
         kernels = self.kernels  # Careful with the closure!
 
@@ -128,7 +129,7 @@ class Graph(Referentiable):
                             (lambda pi: FunctionKernel(f, ones) *
                                         kernels[p, pi]))
 
-    @dispatch(PromisedGP, PromisedGP)
+    @_dispatch(PromisedGP, PromisedGP)
     def mul(self, p1, p2):
         # Careful with the closures!
         kernels = self.kernels
@@ -155,11 +156,11 @@ class Graph(Referentiable):
         """Shift a GP.
 
         Args:
-            p (instance of :class:`.graph.GP`): GP to shift.
+            p (:class:`.graph.GP`): GP to shift.
             shift (object): Amount to shift by.
 
         Returns:
-            The shifted GP.
+            :class:`.graph.GP`: The shifted GP.
         """
         kernels = self.kernels
         return self._update(self.means[p].shift(shift),
@@ -170,11 +171,11 @@ class Graph(Referentiable):
         """Stretch a GP.
 
         Args:
-            p (instance of :class:`.graph.GP`): GP to stretch.
+            p (:class:`.graph.GP`): GP to stretch.
             stretch (object): Extent of stretch.
 
         Returns:
-            The stretched GP.
+            :class:`.graph.GP`: The stretched GP.
         """
         kernels = self.kernels
         return self._update(self.means[p].stretch(stretch),
@@ -185,12 +186,12 @@ class Graph(Referentiable):
         """Select input dimensions.
 
         Args:
-            p (instance of :class:`.graph.GP`): GP to select input
+            p (:class:`.graph.GP`): GP to select input
                 dimensions from.
             *dims (object): Dimensions to select.
 
         Returns:
-            GP with the specific input dimensions.
+            :class:`.graph.GP`: GP with the specific input dimensions.
         """
         kernels = self.kernels
         return self._update(self.means[p].select(dims),
@@ -201,11 +202,11 @@ class Graph(Referentiable):
         """Transform the inputs of a GP.
 
         Args:
-            p (instance of :class:`.graph.GP`): GP to input transform.
+            p (:class:`.graph.GP`): GP to input transform.
             f (function): Input transform.
 
         Returns:
-            Input-transformed GP.
+            :class:`.graph.GP`: Input-transformed GP.
         """
         kernels = self.kernels
         return self._update(self.means[p].transform(f),
@@ -216,25 +217,28 @@ class Graph(Referentiable):
         """Differentiate a GP.
 
         Args:
-            p (instance of :class:`.graph.GP`): GP to differentiate.
+            p (:class:`.graph.GP`): GP to differentiate.
             dim (int, optional): Dimension of feature which to take the
                 derivative with respect to. Defaults to `0`.
 
         Returns:
-            Derivative of GP.
+            :class:`.graph.GP`: Derivative of GP.
         """
         kernels = self.kernels
         return self._update(self.means[p].diff(dim),
                             lambda: kernels[p].diff(dim),
                             lambda pi: kernels[p, pi].diff(dim, None))
 
-    @dispatch(At, B.Numeric)
+    @_dispatch(At, B.Numeric)
     def condition(self, x, y):
         """Condition the graph on data.
 
+        Can alternatively call this method with tuples `(x, y)` or lists
+        `[x, y]`.
+
         Args:
-            x (design matrix): Locations of points to condition on.
-            y (design matrix): Observations to condition on.
+            x (input): Locations of points to condition on.
+            y (tensor): Observations to condition on.
         """
         p_data, x = type_parameter(x), x.get()
         Kx = SPD(self.kernels[p_data](x))
@@ -265,7 +269,7 @@ class Graph(Referentiable):
         self.means = LazyVector()
         self.means.add_rule((None,), self.pids, build_posterior_mean)
 
-    @dispatch([{tuple, list}])
+    @_dispatch([{tuple, list}])
     def condition(self, *pairs):
         if not all([isinstance(x, At) for x, y in pairs]):
             raise ValueError('Must explicitly specify the processes which to '
@@ -283,11 +287,11 @@ class Graph(Referentiable):
         """Construct the Cartesian product of a collection of processes.
 
         Args:
-            *ps (instance of :class:`.graph.GP`): Processes to construct the
+            *ps (:class:`.graph.GP`): Processes to construct the
                 Cartesian product of.
 
         Returns:
-            The Cartesian product of `ps`.
+            :class:`.graph.GP`: The Cartesian product of `ps`.
         """
         mok = MOK(*ps)
         return self._update(MOM(*ps),
@@ -307,12 +311,15 @@ class Graph(Referentiable):
             self.prior_kernels = None
             self.prior_means = None
 
-    @dispatch([At])
+    @_dispatch([At])
     def sample(self, *xs):
         """Sample multiple processes simultaneously.
 
         Args:
-            *xs (instance of :class:`.graph.At`): Locations to sample at.
+            *xs (:class:`.graph.At`): Locations to sample at.
+
+        Returns:
+            tuple: Tuple of samples.
         """
         sample = GPPrimitive(MOK(*self.ps),
                              MOM(*self.ps))(MultiInput(*xs)).sample()
@@ -336,28 +343,28 @@ class GraphMean(Mean, Referentiable):
     """Mean that evaluates to the right mean for a GP attached to a graph.
 
     Args:
-        graph (instance of :class:`.graph.Graph`): Corresponding graph.
-        p (instance of :class:`.graph.GP`): Corresponding GP object.
+        graph (:class:`.graph.Graph`): Corresponding graph.
+        p (:class:`.graph.GP`): Corresponding GP object.
     """
-    dispatch = Dispatcher(in_class=Self)
+    _dispatch = Dispatcher(in_class=Self)
 
     def __init__(self, graph, p):
         self.p = p
         self.graph = graph
 
-    @dispatch(object)
+    @_dispatch(object)
     def __call__(self, x):
         return self.graph.means[self.p](x)
 
-    @dispatch(object, Cache)
+    @_dispatch(object, Cache)
     def __call__(self, x, cache):
         return self.graph.means[self.p](x, cache)
 
-    @dispatch(At)
+    @_dispatch(At)
     def __call__(self, x):
         return self.graph.means[type_parameter(x)](x.get())
 
-    @dispatch(At, Cache)
+    @_dispatch(At, Cache)
     def __call__(self, x, cache):
         return self.graph.means[type_parameter(x)](x.get(), cache)
 
@@ -369,97 +376,97 @@ class GraphKernel(Kernel, Referentiable):
     """Kernel that evaluates to the right kernel for a GP attached to a graph.
 
     Args:
-        graph (instance of :class:`.graph.Graph`): Corresponding graph.
-        p (instance of :class:`.graph.GP`): Corresponding GP object.
+        graph (:class:`.graph.Graph`): Corresponding graph.
+        p (:class:`.graph.GP`): Corresponding GP object.
     """
-    dispatch = Dispatcher(in_class=Self)
+    _dispatch = Dispatcher(in_class=Self)
 
     def __init__(self, graph, p):
         self.p = p
         self.graph = graph
 
-    @dispatch(object)
+    @_dispatch(object)
     def __call__(self, x):
         return self(x, x)
 
-    @dispatch.multi((object, Cache), (At, Cache))
+    @_dispatch.multi((object, Cache), (At, Cache))
     def __call__(self, x, cache):
         return self(x, x, cache)
 
-    @dispatch(object, object)
+    @_dispatch(object, object)
     def __call__(self, x, y):
         return self.graph.kernels[self.p, self.p](x, y)
 
-    @dispatch(object, object, Cache)
+    @_dispatch(object, object, Cache)
     def __call__(self, x, y, cache):
         return self.graph.kernels[self.p, self.p](x, y, cache)
 
-    @dispatch(object, At)
+    @_dispatch(object, At)
     def __call__(self, x, y):
         return self.graph.kernels[self.p, type_parameter(y)](x, y.get())
 
-    @dispatch(object, At, Cache)
+    @_dispatch(object, At, Cache)
     def __call__(self, x, y, cache):
         return self.graph.kernels[self.p, type_parameter(y)](x, y.get(), cache)
 
-    @dispatch(At, object)
+    @_dispatch(At, object)
     def __call__(self, x, y):
         return self.graph.kernels[type_parameter(x), self.p](x.get(), y)
 
-    @dispatch(At, object, Cache)
+    @_dispatch(At, object, Cache)
     def __call__(self, x, y, cache=None):
         return self.graph.kernels[type_parameter(x), self.p](x.get(), y, cache)
 
-    @dispatch(At, At)
+    @_dispatch(At, At)
     def __call__(self, x, y):
         return self.graph.kernels[type_parameter(x),
                                   type_parameter(y)](x.get(), y.get())
 
-    @dispatch(At, At, Cache)
+    @_dispatch(At, At, Cache)
     def __call__(self, x, y, cache):
         return self.graph.kernels[type_parameter(x),
                                   type_parameter(y)](x.get(), y.get(), cache)
 
-    @dispatch(object)
+    @_dispatch(object)
     def elwise(self, x):
         return self.elwise(x, x)
 
-    @dispatch.multi((object, Cache), (At, Cache))
+    @_dispatch.multi((object, Cache), (At, Cache))
     def elwise(self, x, cache):
         return self.elwise(x, x, cache)
 
-    @dispatch(object, object)
+    @_dispatch(object, object)
     def elwise(self, x, y):
         return self.graph.kernels[self.p, self.p].elwise(x, y)
 
-    @dispatch(object, object, Cache)
+    @_dispatch(object, object, Cache)
     def elwise(self, x, y, cache):
         return self.graph.kernels[self.p, self.p].elwise(x, y, cache)
 
-    @dispatch(object, At)
+    @_dispatch(object, At)
     def elwise(self, x, y):
         return self.graph.kernels[self.p, type_parameter(y)].elwise(x, y.get())
 
-    @dispatch(object, At, Cache)
+    @_dispatch(object, At, Cache)
     def elwise(self, x, y, cache):
         return self.graph.kernels[self.p,
                                   type_parameter(y)].elwise(x, y.get(), cache)
 
-    @dispatch(At, object)
+    @_dispatch(At, object)
     def elwise(self, x, y):
         return self.graph.kernels[type_parameter(x), self.p].elwise(x.get(), y)
 
-    @dispatch(At, object, Cache)
+    @_dispatch(At, object, Cache)
     def elwise(self, x, y, cache=None):
         return self.graph.kernels[type_parameter(x),
                                   self.p].elwise(x.get(), y, cache)
 
-    @dispatch(At, At)
+    @_dispatch(At, At)
     def elwise(self, x, y):
         return self.graph.kernels[type_parameter(x),
                                   type_parameter(y)].elwise(x.get(), y.get())
 
-    @dispatch(At, At, Cache)
+    @_dispatch(At, At, Cache)
     def elwise(self, x, y, cache):
         return self.graph.kernels[type_parameter(x),
                                   type_parameter(y)].elwise(x.get(),
@@ -467,18 +474,22 @@ class GraphKernel(Kernel, Referentiable):
 
     @property
     def stationary(self):
+        """Stationarity of the kernel."""
         return self.graph.kernels[self.p].stationary
 
     @property
     def var(self):
+        """Variance of the kernel."""
         return self.graph.kernels[self.p].var
 
     @property
     def length_scale(self):
+        """Approximation of the length scale of the kernel."""
         return self.graph.kernels[self.p].length_scale
 
     @property
     def period(self):
+        """Period of the kernel."""
         return self.graph.kernels[self.p].period
 
     def __str__(self):
@@ -492,15 +503,15 @@ class GP(GPPrimitive, Referentiable):
     """Gaussian process.
 
     Args:
-        kernel (instance of :class:`.kernel.Kernel`): Kernel of the
+        kernel (:class:`.kernel.Kernel`): Kernel of the
             process.
-        mean (instance of :class:`.mean.Mean`, optional): Mean function of the
+        mean (:class:`.mean.Mean`, optional): Mean function of the
             process. Defaults to zero.
-        graph (instance of :class:`.graph.Graph`, optional): Graph to attach to.
+        graph (:class:`.graph.Graph`, optional): Graph to attach to.
     """
-    dispatch = Dispatcher(in_class=Self)
+    _dispatch = Dispatcher(in_class=Self)
 
-    @dispatch([object])
+    @_dispatch([object])
     def __init__(self, kernel, mean=None, graph=model):
         # First resolve `kernel` and `mean` through `GPPrimitive`s constructor.
         GPPrimitive.__init__(self, kernel, mean)
@@ -510,7 +521,7 @@ class GP(GPPrimitive, Referentiable):
         GP.__init__(self, graph)
         graph.add_independent_gp(self, kernel, mean)
 
-    @dispatch(Graph)
+    @_dispatch(Graph)
     def __init__(self, graph):
         GPPrimitive.__init__(
             self,
@@ -519,47 +530,47 @@ class GP(GPPrimitive, Referentiable):
         )
         self.graph = graph
 
-    @dispatch(object)
+    @_dispatch(object)
     def __add__(self, other):
         return self.graph.sum(self, other)
 
-    @dispatch(Random)
+    @_dispatch(Random)
     def __add__(self, other):
         raise NotImplementedError('Cannot add a GP and a {}.'
                                   ''.format(type(other).__name__))
 
-    @dispatch(Self)
+    @_dispatch(Self)
     def __add__(self, other):
         if self.graph != other.graph:
             raise RuntimeError('Can only add GPs from the same graph.')
         return self.graph.sum(self, other)
 
-    @dispatch(object)
+    @_dispatch(object)
     def __mul__(self, other):
         return self.graph.mul(self, other)
 
-    @dispatch(Random)
+    @_dispatch(Random)
     def __mul__(self, other):
         raise NotImplementedError('Cannot multiply a GP and a {}.'
                                   ''.format(type(other).__name__))
 
-    @dispatch(Self)
+    @_dispatch(Self)
     def __mul__(self, other):
         return self.graph.mul(self, other)
 
-    @dispatch(At, B.Numeric)
+    @_dispatch(At, B.Numeric)
     def condition(self, x, y):
-        """Condition the GP """
+        """Condition the GP. See :meth:`.graph.Graph.condition`."""
         self.graph.condition(x, y)
         return self
 
     # TODO: Refactor this once type unions are fixed.
-    @dispatch.multi((B.Numeric, B.Numeric), (Input, B.Numeric))
+    @_dispatch.multi((B.Numeric, B.Numeric), (Input, B.Numeric))
     def condition(self, x, y):
         self.graph.condition(At(self)(x), y)
         return self
 
-    @dispatch([{tuple, list}])
+    @_dispatch([{tuple, list}])
     def condition(self, *pairs):
         # Set any unspecified locations to this process.
         pairs = [(x, y) if isinstance(x, At) else (At(self)(x), y)
@@ -578,18 +589,23 @@ class GP(GPPrimitive, Referentiable):
         self.graph.revert_prior()
 
     def shift(self, shift):
+        """Shift the GP. See :meth:`.graph.Graph.shift`."""
         return self.graph.shift(self, shift)
 
     def stretch(self, stretch):
+        """Stretch the GP. See :meth:`.graph.Graph.stretch`."""
         return self.graph.stretch(self, stretch)
 
     def transform(self, f):
+        """Input transform the GP. See :meth:`.graph.Graph.transform`."""
         return self.graph.transform(self, f)
 
     def select(self, *dims):
+        """Select dimensions from the input. See :meth:`.graph.Graph.select`."""
         return self.graph.select(self, *dims)
 
     def diff(self, dim=0):
+        """Differentiate the GP. See :meth:`.graph.Graph.diff`."""
         return self.graph.diff(self, dim)
 
     def diff_approx(self, deriv=1, order=5, eps=1e-8, bound=1.):
@@ -604,6 +620,9 @@ class GP(GPPrimitive, Referentiable):
             bound (float, optional): Upper bound of the absolute value of the
                 function and all its derivatives. This is used to estimate
                 the step size.
+
+        Returns:
+            Approximation of the derivative of the GP.
         """
         # Use the FDM library to figure out the coefficients.
         fdm = central_fdm(order, deriv, eps=eps, bound=bound)

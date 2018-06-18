@@ -40,14 +40,6 @@ class Random(object):
     def __truediv__(self, other):
         return Random.__div__(self, other)
 
-    def rmatmul(self, other):
-        raise NotImplementedError('Matrix multiplication not implemented for '
-                                  '{}.'.format(type(self)))
-
-    def lmatmul(self, other):
-        raise NotImplementedError('Matrix multiplication not implemented for '
-                                  '{}.'.format(type(self)))
-
 
 class RandomProcess(Random):
     """A random process."""
@@ -61,13 +53,13 @@ class Normal(RandomVector, Referentiable):
     """Normal random variable.
 
     Args:
-        var (matrix or instance of :class:`.spd.SPD`): Variance of the
+        var (tensor or :class:`.spd.SPD`): Variance of the
             distribution.
-        mean (column vector, optional): Mean of the distribution, defaults to
+        mean (tensor, optional): Mean of the distribution. Defaults to
             zero.
     """
 
-    dispatch = Dispatcher(in_class=Self)
+    _dispatch = Dispatcher(in_class=Self)
 
     def __init__(self, var, mean=None):
         self.spd = var if isinstance(var, SPD) else SPD(var)
@@ -79,18 +71,21 @@ class Normal(RandomVector, Referentiable):
 
     @property
     def var(self):
-        """Variance"""
+        """Variance."""
         return self.spd.mat
 
     def m2(self):
-        """Second moment of the distribution"""
+        """Second moment of the distribution."""
         return self.var + B.outer(self.mean)
 
     def log_pdf(self, x):
         """Compute the log-pdf.
 
         Args:
-            x (design matrix): Values to compute the log-pdf of.
+            x (input): Values to compute the log-pdf of.
+            
+        Returns:
+            list[tensor]: Log-pdf for every input in `x`.
         """
         return -(self.spd.log_det() +
                  B.cast(self.dim, dtype=self.dtype) *
@@ -98,31 +93,41 @@ class Normal(RandomVector, Referentiable):
                  self.spd.mah_dist2(uprank(x) - self.mean, sum=False)) / 2
 
     def entropy(self):
-        """Compute the entropy."""
+        """Compute the entropy.
+        
+        Returns:
+            scalar: The entropy.
+        """
         return (self.spd.log_det() +
                 B.cast(self.dim, dtype=self.dtype) *
                 B.cast(B.log_2_pi + 1, dtype=self.dtype)) / 2
 
-    @dispatch(Self)
+    @_dispatch(Self)
     def kl(self, other):
         """Compute the KL divergence with respect to another normal
         distribution.
 
         Args:
-            other (instance of :class:`.random.Normal`): Other normal.
+            other (:class:`.random.Normal`): Other normal.
+
+        Returns:
+            scalar: KL divergence.
         """
         return (self.spd.ratio(other.spd) +
                 other.spd.mah_dist2(other.mean, self.mean) -
                 B.cast(self.dim, dtype=self.dtype) +
                 other.spd.log_det() - self.spd.log_det()) / 2
 
-    @dispatch(Self)
+    @_dispatch(Self)
     def w2(self, other):
         """Compute the 2-Wasserstein distance with respect to another normal
         distribution.
 
         Args:
-            other (instance of :class:`.random.Normal`): Other normal.
+            other (:class:`.random.Normal`): Other normal.
+
+        Returns:
+            scalar: 2-Wasserstein distance.
         """
         root = SPD(B.dot(B.dot(self.spd.root(), other.var),
                          self.spd.root())).root()
@@ -137,8 +142,11 @@ class Normal(RandomVector, Referentiable):
 
         Args:
             num (int): Number of samples.
-            noise (positive float, optional): Variance of noise to add to the
-                samples.
+            noise (scalar, optional): Variance of noise to add to the
+                samples. Must be positive.
+
+        Returns:
+            tensor: Samples as rank 2 column vectors.
         """
         # Convert integer data types to floats.
         if np.issubdtype(self.dtype, np.integer):
@@ -153,24 +161,24 @@ class Normal(RandomVector, Referentiable):
             out += noise ** .5 * B.randn((self.dim, num), dtype=random_dtype)
         return out
 
-    @dispatch(object)
+    @_dispatch(object)
     def __add__(self, other):
         return Normal(self.spd, self.mean + other)
 
-    @dispatch(Random)
+    @_dispatch(Random)
     def __add__(self, other):
         raise NotImplementedError('Cannot add a Normal and a {}.'
                                   ''.format(type(other).__name__))
 
-    @dispatch(Self)
+    @_dispatch(Self)
     def __add__(self, other):
         return Normal(self.spd + other.spd, self.mean + other.mean)
 
-    @dispatch(object)
+    @_dispatch(object)
     def __mul__(self, other):
         return Normal(self.spd * other ** 2, self.mean * other)
 
-    @dispatch(Random)
+    @_dispatch(Random)
     def __mul__(self, other):
         raise NotImplementedError('Cannot multiply a Normal and a {}.'
                                   ''.format(type(other).__name__))
@@ -193,7 +201,7 @@ class Normal1D(Normal, Referentiable):
         mean (scalar or vector): Mean of the distribution, defaults to
             zero.
     """
-    dispatch = Dispatcher(in_class=Self)
+    _dispatch = Dispatcher(in_class=Self)
 
     def __init__(self, var, mean=None):
         var = B.array(var)
@@ -244,13 +252,13 @@ class GPPrimitive(RandomProcess, Referentiable):
     """Gaussian process.
 
     Args:
-        kernel (instance of :class:`.kernel.Kernel`): Kernel of the
+        kernel (:class:`.kernel.Kernel`): Kernel of the
             process.
-        mean (instance of :class:`.mean.Mean`, optional): Mean function of the
+        mean (:class:`.mean.Mean`, optional): Mean function of the
             process. Defaults to zero.
     """
 
-    dispatch = Dispatcher(in_class=Self)
+    _dispatch = Dispatcher(in_class=Self)
 
     def __init__(self, kernel, mean=None):
         # Resolve `mean`.
@@ -271,25 +279,25 @@ class GPPrimitive(RandomProcess, Referentiable):
         """Construct a finite-dimensional distribution at specified locations.
 
         Args:
-            x (design matrix): Points to construct the distribution at.
-            cache (instance of :class:`.cache.Cache`, optional): Cache.
+            x (input): Points to construct the distribution at.
+            cache (:class:`.cache.Cache`, optional): Cache.
 
         Returns:
-            Instance of :class:`gptools.normal.Normal`.
+            :class:`gptools.normal.Normal`: Finite-dimensional distribution.
         """
         cache = Cache() if cache is None else cache
         return Normal(self.kernel(x, cache), self.mean(x, cache))
 
-    @dispatch(object, object)
+    @_dispatch(object, object)
     def condition(self, x, y):
         """Condition the GP on a number of points.
 
         Args:
-            x (design matrix): Locations of the points to condition on.
-            y (design matrix): Values of the points to condition on.
+            x (input): Locations of the points to condition on.
+            y (tensor): Values of the points to condition on.
 
         Returns:
-            Instance of :class:`.random.GP`.
+            :class:`.random.GP`: Conditioned GP.
         """
         K = SPD(self.kernel(x))
         return GPPrimitive(PosteriorKernel(self, x, K),
@@ -300,53 +308,57 @@ class GPPrimitive(RandomProcess, Referentiable):
 
         Args:
             x (design matrix): Locations of the points to predict for.
-            cache (instance of :class:`.cache.Cache`, optional): Cache.
+            cache (:class:`.cache.Cache`, optional): Cache.
 
         Returns:
-            A tuple containing the predictive means and lower and upper 95%
-            central credible interval bounds.
+            tuple: A tuple containing the predictive means and lower and
+            upper 95% central credible interval bounds.
         """
         cache = Cache() if cache is None else cache
         mean = B.squeeze(self.mean(x, cache))
         std = B.squeeze(self.kernel.elwise(x, cache)) ** .5
         return mean, mean - 2 * std, mean + 2 * std
 
-    @dispatch(object)
+    @_dispatch(object)
     def __add__(self, other):
         return GPPrimitive(self.kernel, self.mean + other)
 
-    @dispatch(Random)
+    @_dispatch(Random)
     def __add__(self, other):
         raise NotImplementedError('Cannot add a GP and a {}.'
                                   ''.format(type(other).__name__))
 
-    @dispatch(Self)
+    @_dispatch(Self)
     def __add__(self, other):
         return GPPrimitive(self.kernel + other.kernel, self.mean + other.mean)
 
-    @dispatch(object)
+    @_dispatch(object)
     def __mul__(self, other):
         return GPPrimitive(other ** 2 * self.kernel, other * self.mean)
 
-    @dispatch(Random)
+    @_dispatch(Random)
     def __mul__(self, other):
         raise NotImplementedError('Cannot multiply a GP and a {}.'
                                   ''.format(type(other).__name__))
 
     @property
     def stationary(self):
+        """Stationarity of the GP."""
         return self.kernel.stationary
 
     @property
     def var(self):
+        """Variance of the GP."""
         return self.kernel.var
 
     @property
     def length_scale(self):
+        """Length scale of the GP."""
         return self.kernel.length_scale
 
     @property
     def period(self):
+        """Period of the GP."""
         return self.kernel.period
 
     def __str__(self):
@@ -356,21 +368,26 @@ class GPPrimitive(RandomProcess, Referentiable):
         return str(self)
 
     def stretch(self, stretch):
+        """Stretch the GP. See :meth:`.graph.Graph.stretch`."""
         return GPPrimitive(self.kernel.stretch(stretch),
                            self.mean.stretch(stretch))
 
     def shift(self, shift):
+        """Shift the GP. See :meth:`.graph.Graph.shift`."""
         return GPPrimitive(self.kernel.shift(shift),
                            self.mean.shift(shift))
 
     def select(self, *dims):
+        """Select dimensions from the input. See :meth:`.graph.Graph.select`."""
         return GPPrimitive(self.kernel.select(dims),
                            self.mean.select(dims))
 
     def transform(self, f):
+        """Input transform the GP. See :meth:`.graph.Graph.transform`."""
         return GPPrimitive(self.kernel.transform(f),
                            self.mean.transform(f))
 
     def diff(self, deriv=0):
+        """Differentiate the GP. See :meth:`.graph.Graph.diff`."""
         return GPPrimitive(self.kernel.diff(deriv),
                            self.mean.diff(deriv))

@@ -24,26 +24,26 @@ class Mean(Type, Referentiable):
     Means can be added and multiplied.
     """
 
-    dispatch = Dispatcher(in_class=Self)
+    _dispatch = Dispatcher(in_class=Self)
 
-    @dispatch(object, Cache)
+    @_dispatch(object, Cache)
     def __call__(self, x, cache):
         """Construct the mean for a design matrix.
 
         Args:
-            x (design matrix): Points to construct the mean at.
-            cache (instance of :class:`.cache.Cache`): Cache.
+            x (input): Points to construct the mean at.
+            cache (:class:`.cache.Cache`): Cache.
 
         Returns:
-            Mean vector.
+            tensor: Mean vector as a rank 2 column vector.
         """
         raise NotImplementedError()
 
-    @dispatch(object)
+    @_dispatch(object)
     def __call__(self, x):
         return self(x, Cache())
 
-    @dispatch(Input)
+    @_dispatch(Input)
     def __call__(self, x):
         return self(x, Cache())
 
@@ -51,9 +51,9 @@ class Mean(Type, Referentiable):
 class SumMean(Mean, SumType, Referentiable):
     """Sum of two means."""
 
-    dispatch = Dispatcher(in_class=Self)
+    _dispatch = Dispatcher(in_class=Self)
 
-    @dispatch(object, Cache)
+    @_dispatch(object, Cache)
     @cache
     def __call__(self, x, B):
         return B.add(self[0](x, B), self[1](x, B))
@@ -62,9 +62,9 @@ class SumMean(Mean, SumType, Referentiable):
 class ProductMean(Mean, ProductType, Referentiable):
     """Product of two means."""
 
-    dispatch = Dispatcher(in_class=Self)
+    _dispatch = Dispatcher(in_class=Self)
 
-    @dispatch(object, Cache)
+    @_dispatch(object, Cache)
     @cache
     def __call__(self, x, B):
         return B.multiply(self[0](x, B), self[1](x, B))
@@ -73,9 +73,9 @@ class ProductMean(Mean, ProductType, Referentiable):
 class ScaledMean(Mean, ScaledType, Referentiable):
     """Scaled mean."""
 
-    dispatch = Dispatcher(in_class=Self)
+    _dispatch = Dispatcher(in_class=Self)
 
-    @dispatch(object, Cache)
+    @_dispatch(object, Cache)
     @cache
     def __call__(self, x, B):
         return B.multiply(self.scale, self[0](x, B))
@@ -84,9 +84,9 @@ class ScaledMean(Mean, ScaledType, Referentiable):
 class StretchedMean(Mean, StretchedType, Referentiable):
     """Stretched mean."""
 
-    dispatch = Dispatcher(in_class=Self)
+    _dispatch = Dispatcher(in_class=Self)
 
-    @dispatch(object, Cache)
+    @_dispatch(object, Cache)
     @cache
     def __call__(self, x, B):
         return self[0](B.divide(x, self.stretches[0]), B)
@@ -95,9 +95,9 @@ class StretchedMean(Mean, StretchedType, Referentiable):
 class ShiftedMean(Mean, ShiftedType, Referentiable):
     """Shifted mean."""
 
-    dispatch = Dispatcher(in_class=Self)
+    _dispatch = Dispatcher(in_class=Self)
 
-    @dispatch(object, Cache)
+    @_dispatch(object, Cache)
     @cache
     def __call__(self, x, B):
         return self[0](B.subtract(x, self.shifts[0]), B)
@@ -106,9 +106,9 @@ class ShiftedMean(Mean, ShiftedType, Referentiable):
 class SelectedMean(Mean, SelectedType, Referentiable):
     """Mean with particular input dimensions selected."""
 
-    dispatch = Dispatcher(in_class=Self)
+    _dispatch = Dispatcher(in_class=Self)
 
-    @dispatch(object, Cache)
+    @_dispatch(object, Cache)
     @cache
     def __call__(self, x, B):
         return self[0](B.take(x, self.dims[0], axis=1), B)
@@ -117,9 +117,9 @@ class SelectedMean(Mean, SelectedType, Referentiable):
 class InputTransformedMean(Mean, InputTransformedType, Referentiable):
     """Input-transformed mean."""
 
-    dispatch = Dispatcher(in_class=Self)
+    _dispatch = Dispatcher(in_class=Self)
 
-    @dispatch(object, Cache)
+    @_dispatch(object, Cache)
     @cache
     def __call__(self, x, B):
         return self[0](apply_optional_arg(self.fs[0], x, B), B)
@@ -128,9 +128,9 @@ class InputTransformedMean(Mean, InputTransformedType, Referentiable):
 class OneMean(Mean, OneType, Referentiable):
     """Constant mean of `1`."""
 
-    dispatch = Dispatcher(in_class=Self)
+    _dispatch = Dispatcher(in_class=Self)
 
-    @dispatch(B.Numeric, Cache)
+    @_dispatch(B.Numeric, Cache)
     @cache
     @uprank
     def __call__(self, x, B):
@@ -140,9 +140,9 @@ class OneMean(Mean, OneType, Referentiable):
 class ZeroMean(Mean, ZeroType, Referentiable):
     """Constant mean of `0`."""
 
-    dispatch = Dispatcher(in_class=Self)
+    _dispatch = Dispatcher(in_class=Self)
 
-    @dispatch(B.Numeric, Cache)
+    @_dispatch(B.Numeric, Cache)
     @cache
     @uprank
     def __call__(self, x, B):
@@ -150,9 +150,9 @@ class ZeroMean(Mean, ZeroType, Referentiable):
 
 
 class FunctionMean(Mean, FunctionType, Referentiable):
-    dispatch = Dispatcher(in_class=Self)
+    _dispatch = Dispatcher(in_class=Self)
 
-    @dispatch(B.Numeric, Cache)
+    @_dispatch(B.Numeric, Cache)
     @cache
     @uprank
     def __call__(self, x, B):
@@ -161,9 +161,9 @@ class FunctionMean(Mean, FunctionType, Referentiable):
 
 class DerivativeMean(Mean, DerivativeType, Referentiable):
     """Derivative of mean."""
-    dispatch = Dispatcher(in_class=Self)
+    _dispatch = Dispatcher(in_class=Self)
 
-    @dispatch(B.Numeric, Cache)
+    @_dispatch(B.Numeric, Cache)
     @cache
     @uprank
     def __call__(self, x, B):
@@ -175,18 +175,18 @@ class PosteriorCrossMean(Mean, Referentiable):
     """Posterior mean.
 
     Args:
-        m_i (instance of :class:`.mean.Mean`): Mean of process corresponding to
+        m_i (:class:`.mean.Mean`): Mean of process corresponding to
             the input.
-        m_z (instance of :class:`.mean.Mean`): Mean of process corresponding to
+        m_z (:class:`.mean.Mean`): Mean of process corresponding to
             the data.
-        k_zi (instance of :class:`.kernel.Kernel`): Kernel between processes
+        k_zi (:class:`.kernel.Kernel`): Kernel between processes
             corresponding to the data and the input respectively.
-        z (matrix): Locations of data.
-        Kz (instance of :class:`.spd.SPD`): Kernel matrix of data.
-        y (matrix): Observations to condition on.
+        z (input): Locations of data.
+        Kz (:class:`.spd.SPD`): Kernel matrix of data.
+        y (tensor): Observations to condition on.
     """
 
-    dispatch = Dispatcher(in_class=Self)
+    _dispatch = Dispatcher(in_class=Self)
 
     def __init__(self, m_i, m_z, k_zi, z, Kz, y):
         self.m_i = m_i
@@ -196,7 +196,7 @@ class PosteriorCrossMean(Mean, Referentiable):
         self.Kz = Kz
         self.y = uprank(y)
 
-    @dispatch(object, Cache)
+    @_dispatch(object, Cache)
     @cache
     def __call__(self, x, B):
         diff = B.subtract(self.y, self.m_z(self.z, B))
@@ -211,13 +211,13 @@ class PosteriorMean(PosteriorCrossMean, Referentiable):
     """Posterior mean.
 
     Args:
-        gp (instance of :class:`.random.GP`): Corresponding GP.
-        z (matrix): Locations of data.
-        Kz (instance of :class:`.spd.SPD`): Kernel matrix of data.
-        y (matrix): Observations to condition on.
+        gp (:class:`.random.GP`): Corresponding GP.
+        z (input): Locations of data.
+        Kz (:class:`.spd.SPD`): Kernel matrix of data.
+        y (tensor): Observations to condition on.
     """
 
-    dispatch = Dispatcher(in_class=Self)
+    _dispatch = Dispatcher(in_class=Self)
 
     def __init__(self, gp, z, Kz, y):
         PosteriorCrossMean.__init__(self, gp.mean, gp.mean, gp.kernel, z, Kz, y)

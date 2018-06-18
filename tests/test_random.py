@@ -245,8 +245,6 @@ def test_gp_arithmetic():
     gp1 = GPPrimitive(EQ())
     gp2 = GPPrimitive(RQ(1e-1))
 
-    yield raises, NotImplementedError, lambda: gp1.lmatmul(np.eye(3))
-    yield raises, NotImplementedError, lambda: gp1.rmatmul(np.eye(3))
     yield raises, NotImplementedError, lambda: gp1 * gp2
     yield raises, NotImplementedError, lambda: gp1 + Normal(np.eye(3))
     yield ok, close((5. * gp1)(x), 5. * gp1(x)), 'mul'

@@ -23,23 +23,23 @@ class MultiOutputMean(Mean, Referentiable):
         *ps (instance of :class:`.graph.GP`): Processes that make up the
             multi-valued process.
     """
-    dispatch = Dispatcher(in_class=Self)
+    _dispatch = Dispatcher(in_class=Self)
 
     def __init__(self, *ps):
         self.means = ps[0].graph.means
         self.ps = ps
 
-    @dispatch(B.Numeric, Cache)
+    @_dispatch(B.Numeric, Cache)
     @cache
     def __call__(self, x, B):
         return self(MultiInput(*(At(p)(x) for p in self.ps)), B)
 
-    @dispatch(At, Cache)
+    @_dispatch(At, Cache)
     @cache
     def __call__(self, x, B):
         return self.means[type_parameter(x)](x.get(), B)
 
-    @dispatch(MultiInput, Cache)
+    @_dispatch(MultiInput, Cache)
     @cache
     def __call__(self, x, B):
         return B.concat([self(xi, B) for xi in x.get()], axis=0)

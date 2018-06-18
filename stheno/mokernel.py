@@ -23,35 +23,35 @@ class MultiOutputKernel(Kernel, Referentiable):
         *ps (instance of :class:`.graph.GP`): Processes that make up the
             multi-valued process.
     """
-    dispatch = Dispatcher(in_class=Self)
+    _dispatch = Dispatcher(in_class=Self)
 
     def __init__(self, *ps):
         self.kernels = ps[0].graph.kernels
         self.ps = ps
 
-    @dispatch(B.Numeric, B.Numeric, Cache)
+    @_dispatch(B.Numeric, B.Numeric, Cache)
     @cache
     def __call__(self, x, y, B):
         return self(MultiInput(*(At(p)(x) for p in self.ps)),
                     MultiInput(*(At(p)(y) for p in self.ps)), B)
 
-    @dispatch(At, At, Cache)
+    @_dispatch(At, At, Cache)
     @cache
     def __call__(self, x, y, B):
         return self.kernels[type_parameter(x),
                             type_parameter(y)](x.get(), y.get(), B)
 
-    @dispatch(MultiInput, At, Cache)
+    @_dispatch(MultiInput, At, Cache)
     @cache
     def __call__(self, x, y, B):
         return self(x, MultiInput(y), B)
 
-    @dispatch(At, MultiInput, Cache)
+    @_dispatch(At, MultiInput, Cache)
     @cache
     def __call__(self, x, y, B):
         return self(MultiInput(x), y, B)
 
-    @dispatch(MultiInput, MultiInput, Cache)
+    @_dispatch(MultiInput, MultiInput, Cache)
     @cache
     def __call__(self, x, y, B):
         return B.concat([B.concat([self(xi, yi, B)

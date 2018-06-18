@@ -17,8 +17,7 @@ also [Stheno.jl](https://github.com/willtebbutt/Stheno.jl).
     - [Model Design](#model-design)
         * [Compositional Design](#compositional-design)
         * [Properties of GPs](#properties-of-gps)
-    - [Inference](#inference)
-    - [About Normals](#about-normals)
+    - [Inference and Sampling](#inference-and-sampling)
     - [NumPy, TensorFlow, or PyTorch?](#numpy-tensorflow-or-pytorch)
     - [Undiscussed Features](#undiscussed-features)
 * [Examples](#examples)
@@ -81,7 +80,7 @@ $$ k(x, y) = \left( 1 + \sqrt{3}\|x - y\| \right)\exp(-\sqrt{3}\|x - y\|); $$
 
 $$ k(x, y) = \left(
     1 + \sqrt{5}\|x - y\| + \frac{5}{3} \|x - y\|^2
-   \right)exp(-\sqrt{3}\|x - y\|); $$
+   \right)\exp(-\sqrt{3}\|x - y\|); $$
 
 * `Delta()`, the Kronecker delta kernel:
 

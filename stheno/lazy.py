@@ -18,6 +18,9 @@ def replace_at(tup, i, val):
         tup (tuple): Tuple to replace value in.
         i (int): Index to replace value at.
         val (obj): New value.
+
+    Returns:
+        tuple: Tuple with the value replaced.
     """
     listed = list(tup)
     listed[i] = val
@@ -27,7 +30,8 @@ def replace_at(tup, i, val):
 class Rule(object):
     """A rule for an :class:`.lazy.LazyTensor`.
 
-    IMPORTANT: For performance reasons, `indices` must already be resolved!
+    Note:
+        For performance reasons, `indices` must already be resolved!
 
     Args:
         pattern (tuple): Rule pattern. Each element must be a `None` or an
@@ -49,6 +53,9 @@ class Rule(object):
 
         Args:
             key (tuple): Key.
+
+        Returns:
+            bool: Boolean indicating whether the rule applies.
         """
         # Already keep track of arguments for building.
         self._args = ()
@@ -78,30 +85,30 @@ class LazyTensor(Referentiable):
     Args:
         d (int): Rank of the tensor.
     """
-    dispatch = Dispatcher(in_class=Self)
+    _dispatch = Dispatcher(in_class=Self)
 
     def __init__(self, rank):
         self.rank = rank
         self._rules = {}
         self._store = {}
 
-    @dispatch(object)
+    @_dispatch(object)
     def _resolve_index(self, i):
         return id(i)
 
-    @dispatch(type(None))
+    @_dispatch(type(None))
     def _resolve_index(self, i):
         return None
 
-    @dispatch(int)
+    @_dispatch(int)
     def _resolve_index(self, i):
         return i
 
-    @dispatch(object)
+    @_dispatch(object)
     def _resolve_key(self, key):
         return (self._resolve_index(key),) * self.rank
 
-    @dispatch({tuple, reversed})
+    @_dispatch({tuple, reversed})
     def _resolve_key(self, key):
         return tuple(self._resolve_index(i) for i in key)
 
@@ -147,18 +154,22 @@ class LazyTensor(Referentiable):
         # Unable to build value for key.
         raise RuntimeError('Could not build value for key "{}".'.format(key))
 
-    @dispatch([object])
+    @_dispatch([object])
     def add_rule(self, pattern, indices, builder):
         """Add a building rule.
 
         See :class:`.lazy.Rule`.
 
-        IMPORTANT: For performance reasons, `indices` must already be resolved!
+        Note:
+            For performance reasons, `indices` must already be resolved!
 
         Args:
-            pattern (tuple): Pattern to match.
-            indices (set): Elements to match wildcards with.
-            builder (function): Building function.
+            pattern (tuple): Rule pattern. Each element must be a `None` or an
+                element from `indices`. A `None` represents a wildcard.
+            indices (set): Values to match wildcards with. These must already have
+                been resolved.
+            builder (function): Function that builds the element. Only the wildcard
+                elements are fed to the function.
         """
         pattern = self._resolve_key(pattern)
         # IMPORTANT: This assumes that the indices already have been resolved!

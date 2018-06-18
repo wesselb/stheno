@@ -15,7 +15,7 @@ __all__ = ['Cache']
 log_cache_call = logging.getLogger(__name__ + '.call')
 log_cache_lab = logging.getLogger(__name__ + '.lab')
 
-dispatch = Dispatcher()
+_dispatch = Dispatcher()
 
 
 class Cache(Referentiable):
@@ -23,7 +23,7 @@ class Cache(Referentiable):
 
     Caches output of calls. Also caches calls to `B.*`: call instead `cache.*`.
     """
-    dispatch = Dispatcher(in_class=Self)
+    _dispatch = Dispatcher(in_class=Self)
 
     def __init__(self):
         self._cache_call = {}
@@ -40,15 +40,15 @@ class Cache(Referentiable):
         """
         self._dump.append(objs)
 
-    @dispatch(object)
+    @_dispatch(object)
     def _resolve(self, key):
         return id(key)
 
-    @dispatch({Number, str, bool})
+    @_dispatch({Number, str, bool})
     def _resolve(self, key):
         return key
 
-    @dispatch({tuple, list})
+    @_dispatch({tuple, list})
     def _resolve(self, key):
         return tuple(self._resolve(x) for x in key)
 
@@ -144,12 +144,15 @@ def cache(f):
     return wrapped_f
 
 
-@dispatch(object, [object])
+@_dispatch(object, [object])
 def uprank(x, B=B):
-    """Ensure that the rank of `x` is two.
+    """Ensure that the rank of `x` is 2.
 
     Args:
         x (tensor): Tensor to uprank.
+
+    Returns:
+        tensor: `x` with rank at least 2.
     """
     # Simply return non-numerical inputs.
     if not isinstance(x, B.Numeric):
@@ -167,10 +170,9 @@ def uprank(x, B=B):
         return B.expand_dims(B.expand_dims(x, 0), 1)
 
 
-@dispatch(FunctionType)
+@_dispatch(FunctionType)
 def uprank(f):
-    """A decorator to ensure that the rank of the arguments is two.
-    """
+    """A decorator to ensure that the rank of the arguments is two."""
 
     def wrapped_f(self, *args):
         inputs, B = args[:-1], args[-1]

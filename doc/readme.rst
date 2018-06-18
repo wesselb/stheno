@@ -22,8 +22,7 @@ also `Stheno.jl <https://github.com/willtebbutt/Stheno.jl>`__.
       -  `Compositional Design <#compositional-design>`__
       -  `Properties of GPs <#properties-of-gps>`__
 
-   -  `Inference <#inference>`__
-   -  `About Normals <#about-normals>`__
+   -  `Inference and Sampling <#inference-and-sampling>`__
    -  `NumPy, TensorFlow, or PyTorch? <#numpy-tensorflow-or-pytorch>`__
    -  `Undiscussed Features <#undiscussed-features>`__
 
@@ -62,6 +61,9 @@ Moar?! Then read on!
 Manual
 ------
 
+*Note: `here <https://stheno.readthedocs.io/en/latest>`__ is a nicely
+rendered and more readable version of the docs.*
+
 Kernel and Mean Design
 ~~~~~~~~~~~~~~~~~~~~~~
 
@@ -93,7 +95,7 @@ kernels are available:
 
     k(x, y) = \left(
        1 + \sqrt{5}\|x - y\| + \frac{5}{3} \|x - y\|^2
-      \right)exp(-\sqrt{3}\|x - y\|); 
+      \right)\exp(-\sqrt{3}\|x - y\|); 
 
 -  ``Delta()``, the Kronecker delta kernel:
 
@@ -368,7 +370,7 @@ The basic building block of a model is a
 kernel, and optionally a mean and a *graph*. GPs can be combined into
 new GPs, and the graph is the object that keeps track of all of these
 objects. If the graph is left unspecified, new GPs are appended to a
-provided graph ``model``, which is exported by Stheno:
+provided default graph ``model``, which is exported by Stheno:
 
 .. code:: python
 

@@ -21,15 +21,16 @@ class ComponentKernel(Kernel, Referentiable):
     Uses :class:`.input.Component`.
 
     Args:
-        ks (matrix of instances :class:`.kernel.Kernel`): Kernel between the
-            various components, indexed by type parameter.
+        ks (dict[tuple[:class:`.input.Component`], :class:`.kernel.Kernel`]):
+            Kernel between the various components, indexed by tuples of type
+            parameters.
     """
-    dispatch = Dispatcher(in_class=Self)
+    _dispatch = Dispatcher(in_class=Self)
 
     def __init__(self, ks):
         self.ks = ks
 
-    @dispatch(Component, Component, Cache)
+    @_dispatch(Component, Component, Cache)
     @cache
     def __call__(self, x, y, cache):
         return self.ks[type(x), type(y)](x.get(), y.get(), cache)
@@ -46,10 +47,10 @@ class AdditiveComponentKernel(ComponentKernel, Referentiable):
     :class:`.input.Latent`.
 
     Args:
-        ks (dict of instances of :class:`.kernel.Kernel`): Kernels of the
-            components.
-        latent (list of instances of :class:`.input.Input`, optional): List of
-            input types that make up the latent process.
+        ks (dict[:class:`.input.Component`, :class:`.kernel.Kernel`]): Kernels
+            of the components, indexed by type parameters.
+        latent (list[:class:`.input.Input`], optional): List of input types
+            that make up the latent process.
     """
 
     def __init__(self, ks, latent=None):
@@ -80,22 +81,22 @@ class NoisyKernel(Kernel, Referentiable):
     Uses :class:`.input.Latent` and :class:`.input.Observed`.
 
     Args:
-        k_f (instance of :class:`.kernel.Kernel`): Kernel of the latent process.
-        k_n (instance of :class:`.kernel.Kernel`): Kernel of the noise.
+        k_f (:class:`.kernel.Kernel`): Kernel of the latent process.
+        k_n (:class:`.kernel.Kernel`): Kernel of the noise.
     """
-    dispatch = Dispatcher(in_class=Self)
+    _dispatch = Dispatcher(in_class=Self)
 
     def __init__(self, k_f, k_n):
         self.k_f = k_f
         self.k_n = k_n
         self.k_y = k_f + k_n
 
-    @dispatch({Latent, Observed}, {Latent, Observed}, Cache)
+    @_dispatch({Latent, Observed}, {Latent, Observed}, Cache)
     @cache
     def __call__(self, x, y, cache):
         return self.k_f(x.get(), y.get())
 
-    @dispatch(Observed, Observed, Cache)
+    @_dispatch(Observed, Observed, Cache)
     @cache
     def __call__(self, x, y, cache):
         return self.k_y(x.get(), y.get())
