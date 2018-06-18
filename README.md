@@ -58,47 +58,38 @@ Moar?! Then read on!
 Constants function as constant kernels. Besides that, the following kernels are 
 available:
 
-* `EQ()`: the exponentiated quadratic:
+* `EQ()`, the exponentiated quadratic:
 
-```text
-k(x, x') = exp(-0.5 * (x - x')^2)
-```
+$$ k(x, y) = \exp\left( -\frac{1}{2}\|x - y\|^2 \right); $$
 
-* `RQ(alpha)`: the rational quadratic:
+* `RQ(alpha)`, the rational quadratic:
 
-```text
-k(x, x') = (1 + (x - x')^2 / (2 * alpha))^(-alpha)
-```
+$$ k(x, y) = \left( 1 + \frac{\|x - y\|^2}{2 \alpha} \right)^{-\alpha}; $$
 
-* `Exp()` or `Matern12()`: the exponential kernel:
+* `Exp()` or `Matern12()`, the exponential kernel:
 
-```text
-k(x, x') = exp(-|x - x'|)
-```
+$$ k(x, y) = \exp\left( -\|x - y\| \right); $$
 
-* `Matern32()`: the Matern–3/2 kernel:
+* `Matern32()`, the Matern–3/2 kernel:
 
-```text
-k(x, x') = (1 + sqrt(3) * |x - x'|) * exp(-sqrt(3) * |x - x'|)
-```
+$$ k(x, y) = \left( 1 + \sqrt{3}\|x - y\| \right)\exp(-\sqrt{3}\|x - y\|); $$
 
-* `Matern52()`: the Matern–5/2 kernel:
+* `Matern52()`, the Matern–5/2 kernel:
 
-```text
-k(x, x') = (1 + sqrt(5) * |x - x'| + 5 * (x - x')^2 / 3) * exp(-sqrt(5) * |x - x'|)
-```
+$$ k(x, y) = \left(
+    1 + \sqrt{5}\|x - y\| + \frac{5}{3} \|x - y\|^2
+   \right)exp(-\sqrt{3}\|x - y\|); $$
 
-* `Delta()`: the Kronecker delta kernel:
+* `Delta()`, the Kronecker delta kernel:
 
-```text
-k(x, x') = 1 if x = x' and 0 otherwise
-```
+$$ k(x, y) = \begin{cases}
+    1 & \text{if } x = y, \\
+    0 & \text{otherwise};
+   \end{cases} $$
 
 * `FunctionKernel(f)`:
 
-```text
-* k(x, x') = f(x) * f(x')
-```
+$$ k(x, y) = f(x)f(y). $$
 
 Adding or multiplying a `FunctionType` `f` to or with a kernel will 
 automatically translate `f` to `FunctionKernel(f)`.
@@ -110,169 +101,206 @@ available:
 
 * `FunctionMean(f)`:
 
-```text
-* m(x) = f(x)
-```
+$$ m(x) = f(x). $$
 
 Adding or multiplying a `FunctionType` `f` to or with a mean will 
 automatically translate `f` to `FunctionMean(f)`.
 
 #### Compositional Design
 
-* Add and subtract _kernels and means_:
+* Add and subtract _kernels and means_.
 
-```python
->>> EQ() + Exp()
-EQ() + Exp()
+    Example:
+    
+    ```python
+    >>> EQ() + Exp()
+    EQ() + Exp()
 
->>> EQ() + EQ()
-2 * EQ()
+    >>> EQ() + EQ()
+    2 * EQ()
 
->>> EQ() + 1
-EQ() + 1
+    >>> EQ() + 1
+    EQ() + 1
 
->>> EQ() + 0
-EQ()
+    >>> EQ() + 0
+    EQ()
 
->>> EQ() - Exp()
-EQ() - Exp()
+    >>> EQ() - Exp()
+    EQ() - Exp()
 
->>> EQ() - EQ()
-0
-```
+    >>> EQ() - EQ()
+    0
+    ```
 
-* Multiply _kernels and means_:
+* Multiply _kernels and means_.
+    
+    Example:
 
-```python
->>> EQ() * Exp()
-EQ() * Exp()
+    ```python
+    >>> EQ() * Exp()
+    EQ() * Exp()
 
->>> 2 * EQ()
-2 * EQ()
+    >>> 2 * EQ()
+    2 * EQ()
 
->>> 0 * EQ()
-0
-```
+    >>> 0 * EQ()
+    0
+    ```
 
 * Shift _kernels and means_:
-    - `k.shift(c)(x, x') = k(x - c, x' - c)`;
-    - `k.shift(c1, c2)(x, x') = k(x - c1, x' - c2)`.
+
+    Definition:
     
-```python
->>> Linear().shift(1)
-Linear() shift 1
+    ```python
+    k.shift(c)(x, y) == k(x - c, y - c)
 
->>> EQ().shift(1, 2)
-EQ() shift (1, 2)
-```
-
-* Stretch _kernels and means_:
-    - `k.stretch(c)(x, x') = k(x / c, x' / c)`;
-    - `k.stretch(c1, c2)(x, x') = k(x / c1, x' / c2)`.
+    k.shift(c1, c2)(x, y) == k(x - c1, y - c2)
+    ```
     
-```python
->>> EQ().stretch(1)
-EQ() > 1
-
->>> EQ().stretch(1, 2)
-EQ() > (1, 2)
-```
-
-* Select particular input dimensions of _kernels and means_:
-    - `k.select([0])(x, x') = k(x[:, 0], x')`;
-    - `k.select([0], [1])(x, x') = k(x[:, 0], x'[:, 1])`;
-    - `k.select(None, [1])(x, x') = k(x, x'[:, 1])`.
+    Example:
     
-```python
->>> EQ().select([0])
-EQ() : [0]
+    ```python
+    >>> Linear().shift(1)
+    Linear() shift 1
 
->>> EQ().select([0], [1])
-EQ() : ([0], [1])
-```
+    >>> EQ().shift(1, 2)
+    EQ() shift (1, 2)
+    ```
 
-* Transform the inputs of _kernels and means_:
-    - `k.transform(f)(x, x') = k(f(x), f(x'))`;
-    - `k.transform(f1, f2)(x, x') = k(f1(x), f2(x'))`;
-    - `k.transform(None, f)(x, x') = k(x, f(x'))`.
+* Stretch _kernels and means_.
+
+    Definition:
     
-```python
->>> EQ().transform(f)
-EQ() transform f
+    ```python
+    k.stretch(c)(x, y) == k(x / c, y / c)
 
->>> EQ().transform(f1, f2)
-EQ() transform (f1, f2)
+    k.stretch(c1, c2)(x, y) == k(x / c1, y / c2)
+    ```
+  
+    Example:    
+    
+    ```python
+    >>> EQ().stretch(1)
+    EQ() > 1
 
->>> EQ().transform(None, f)
-EQ() transform (None, f)
-```
+    >>> EQ().stretch(1, 2)
+    EQ() > (1, 2)
+    ```
+
+* Select particular input dimensions of _kernels and means_.
+
+    Definition:
+
+    ```python
+    k.select([0])(x, y) == k(x[:, 0], y)
+
+    k.select([0], [1])(x, y) == k(x[:, 0], y[:, 1])
+
+    k.select(None, [1])(x, y) == k(x, y[:, 1])
+    ```
+
+    Example:
+
+    ```python
+    >>> EQ().select([0])
+    EQ() : [0]
+
+    >>> EQ().select([0], [1])
+    EQ() : ([0], [1])
+
+    >>> EQ().select(None, [1])
+    EQ() : (None, [1])
+    ```
+
+* Transform the inputs of _kernels and means_.
+
+    Definition:
+
+    ```python
+    k.transform(f)(x, y) == k(f(x), f(y))
+
+    k.transform(f1, f2)(x, y) == k(f1(x), f2(y))
+
+    k.transform(None, f)(x, y) == k(x, f(y))
+    ```
+        
+    Example:
+        
+    ```python
+    >>> EQ().transform(f)
+    EQ() transform f
+
+    >>> EQ().transform(f1, f2)
+    EQ() transform (f1, f2)
+
+    >>> EQ().transform(None, f)
+    EQ() transform (None, f)
+    ```
 
 * Numerically, but efficiently, take derivatives of _kernels and means_. This 
 currently only works in TensorFlow and derivatives cannot be nested.
-    - `k.diff(0)(x, x') = d/d(x[:, 0]) k(x, x')`;
-    - `k.diff(0, 1)(x, x') = d/d(x[:, 0]) d/d(x'[:, 1]) k(x, x')`;
-    - `k.diff(None, 1)(x, x') = d/d(x'[:, 1]) k(x, x')`.
-    
-```python
->>> EQ().diff(0)
-d(0) EQ()
 
->>> EQ().diff(0, 1)
-d(0, 1) EQ()
+    Definition:
 
->>> EQ().diff(None, 1)
-d(None, 1) EQ()
-```
+    ```python
+    k.diff(0)(x, y) == d/d(x[:, 0]) k(x, y)
 
-* Make _only kernels_ periodic: `k.periodic(2 pi / w)(x, x') = k((sin(w * x),
- cos(w * x)), (sin(w * x'), cos(w * x')))`:
- 
-```python
->>> EQ().periodic(1)
-EQ() per 1
-```
+    k.diff(0, 1)(x, y) == d/d(x[:, 0]) d/d(y[:, 1]) k(x, y)
 
-* Reverse the arguments of _only kernels_: `reversed(k)(x, x') = k(x', x)`:
+    k.diff(None, 1)(x, y) == d/d(y[:, 1]) k(x, y)
+    ```
+        
+    Example:
 
-```python
->>> reversed(Linear())
-Reversed(Linear())
-```
+    ```python
+    >>> EQ().diff(0)
+    d(0) EQ()
+
+    >>> EQ().diff(0, 1)
+    d(0, 1) EQ()
+
+    >>> EQ().diff(None, 1)
+    d(None, 1) EQ()
+    ```
+
+* Make _only kernels_ periodic.
+
+    Definition:
+
+    ```python
+    k.periodic(2 pi / w)(x, y) == k((sin(w * x), cos(w * x)), (sin(w * y), cos(w * y)))
+    ```
+
+    Example:
+     
+    ```python
+    >>> EQ().periodic(1)
+    EQ() per 1
+    ```
+
+* Reverse the arguments of _only kernels_.
+
+    Definition:
+
+    ```python
+    reversed(k)(x, y) == k(y, x)
+    ```
+
+    Example:
+
+    ```python
+    >>> reversed(Linear())
+    Reversed(Linear())
+    ```
 
 #### Properties of Kernels
 
-In some cases, the variance (`k.var`), length scale (`k.length_scale`), and 
-period (`k.period`) can be computed.
-In all cases, the stationary (`k.stationary`) can be determined.
+The stationarity of a kernel `k` can always be determined by querying
+`k.stationary`. In many cases, the variance `k.var`, length scale
+`k.length_scale`, and period `k.period` can also be determined.
 
-##### Variance
-```python
->>> EQ().var
-1
+Example of querying the stationarity:
 
->>> (2 * EQ()).var
-2
-```
-
-##### Length Scale
-```python
->>> EQ().length_scale
-1
-
->>> (EQ() + EQ().stretch(2)).length_scale
-1.5
-```
-
-##### Period
-```python
->>> EQ().periodic(1).period
-1
-
->>> EQ().periodic(1).stretch(2).period
-2
-```
-
-##### Stationarity
 ```python
 >>> EQ().stationary
 True
@@ -281,9 +309,50 @@ True
 False
 ```
 
+Example of querying the variance:
+
+```python
+>>> EQ().var
+1
+
+>>> (2 * EQ()).var
+2
+```
+
+Example of querying the length scale:
+
+```python
+>>> EQ().length_scale
+1
+
+>>> (EQ() + EQ().stretch(2)).length_scale
+1.5
+```
+
+Example of querying the period:
+
+```python
+>>> EQ().periodic(1).period
+1
+
+>>> EQ().periodic(1).stretch(2).period
+2
+```
+
 ### Model Design
 
-To design a model, all you need is a `GP`, some kernels, and some means!
+The basic building block of a model is a `GP(kernel, mean=0, graph=model)`, 
+which necessarily takes in a kernel, and optionally a mean and a _graph_.
+GPs can be combined into new GPs, and the graph is the object that keeps 
+track of all of these objects.
+If the graph is left unspecified, new GPs are appended to a provided default 
+graph `model`, which is exported by Stheno:
+
+```python
+from stheno import model
+```
+
+Here's an example model:
 
 ```python
 >>> f1 = GP(EQ(), lambda x: x ** 2)
@@ -299,19 +368,194 @@ GP(EQ(), <lambda>)
 GP(EQ() + Linear(), <lambda>)
 ```
 
+
 #### Compositional Design
 
+* Add and subtract GPs and other objects.
+
+    Example:
+    
+    ```python
+    >>> GP(EQ()) + GP(Exp())
+    GP(EQ() + Exp(), 0)
+
+    >>> GP(EQ()) + GP(EQ())
+    GP(2 * EQ(), 0)
+  
+    >>> GP(EQ()) + 1
+    GP(EQ(), 1)
+  
+    >>> GP(EQ()) + 0
+    GP(EQ(), 0)
+  
+    >>> GP(EQ()) + (lambda x: x ** 2)
+    GP(EQ(), <lambda>)
+
+    >>> GP(EQ(), 2) - GP(EQ(), 1)
+    GP(2 * EQ(), 1)
+    ```
+    
+* Multiply GPs by other objects.
+
+    Example:
+    
+    ```python
+    >>> 2 * GP(EQ())
+    GP(2 * EQ(), 0)
+  
+    >>> 0 * GP(EQ())
+    GP(0, 0)
+
+    >>> (lambda x: x) * GP(EQ())
+    GP(<lambda> * EQ(), 0)
+    ```
+    
+* Shift GPs.
+
+    Example:
+    
+    ```python
+    >>> GP(EQ()).shift(1)
+    GP(EQ() shift 1, 0) 
+    ```
+    
+* Stretch GPs.
+
+    Example:
+    
+    ```python
+    >>> GP(EQ()).stretch(2)
+    GP(EQ() > 2, 0)
+    ```
+    
+* Select particular input dimensions.
+
+    Example:
+    
+    ```python
+    >>> GP(EQ()).select(1, 3)
+    GP(EQ() : [1, 3], 0)
+    ```
+    
+* Transform the input.
+
+    Example:
+    
+    ```python
+    >>> GP(EQ()).transform(f)
+    GP(EQ() transform f, 0)
+    ```
+    
+* Numerically take the derivative of a GP.
+    The argument specifies which dimension to take the derivative with respect
+    to.
+    
+    Example:
+    
+    ```python
+    >>> GP(EQ()).diff(1)
+    GP(d(1) EQ(), 0)
+    ```
+    
+* Construct a finite difference estimate of a derivative of a GP.
+    See `stheno.graph.Graph.diff_approx` for a description of the arguments.
+    
+    Example:
+    
+    ```python
+    >>> GP(EQ()).diff_approx(deriv=1, order=2)
+    GP(50000000.0 * (0.5 * EQ() + 0.5 * ((-0.5 * (EQ() shift (0.0001414213562373095, 0))) shift (0, -0.0001414213562373095)) + 0.5 * ((-0.5 * (EQ() shift (0, 0.0001414213562373095))) shift (-0.0001414213562373095, 0))), 0)
+    ```
+    
+* Construct the Cartesian product of a collection of GPs.
+
+    Example:
+    
+    ```python
+    >>> model = Graph()
+
+    >>> f1, f2 = GP(EQ(), graph=model), GP(EQ(), graph=model)
+
+    >>> model.cross(f1, f2)
+    GP(MultiOutputKernel(EQ(), EQ()), MultiOutputMean(0, 0))
+    ```
 
 #### Properties of GPs
 
+Properties of kernels can be queried on GPs directly.
 
-### Inference
+Example:
 
+```python
+>>> GP(EQ()).stationary
+True
 
-### About Normals
+>>> GP(RQ(1e-1)).length_scale
+1
+```
 
+### Inference and Sampling
+
+To condition on observations, use `Graph.condition` or `GP.condition`.
+
+Definition, where `f*` are `GP`s:
+
+```python
+model.condition(f @ x, y)
+
+model.condition((f1 @ x1, y1), (f2 @ x2, y2), ...)
+
+f1_updated = f1.condition(x, y)
+
+f1_updated = f1.condition((f1 @ x1, y1), (f2 @ x2, y2), ...)
+```
+
+After conditioning, simply call a GP to construct its finite-dimensional 
+distribution:
+
+```python
+>>> f(x)
+<stheno.random.Normal at 0x10effa080>
+
+>>> f(x).mean
+array([[0.],
+       [0.],
+       [0.]])
+
+>>> f(x).var
+array([[1.        , 0.8824969 , 0.60653066],
+       [0.8824969 , 1.        , 0.8824969 ],
+       [0.60653066, 0.8824969 , 1.        ]])
+       
+>>> f(x).sample(1)
+array([[-0.47676132],
+       [-0.51696144],
+       [-0.77643117]])
+```
+
+Alternatively, use `f.predict(x)` to efficiently compute the means and 
+the marginal lower and upper 95% central credible region bounds:
+
+```python
+>>> f.predict(x)
+(array([0., 0., 0.]), array([-2., -2., -2.]), array([2., 2., 2.]))
+```
+
+Finally, `Graph.sample` can be used to get samples from multiple processes 
+jointly:
+
+```python
+>>> model.sample(f @ x, (2 * f) @ x)
+[array([[-0.35226314],
+        [-0.15521219],
+        [ 0.0752406 ]]),
+ array([[-0.70452827],
+        [-0.31042226],
+        [ 0.15048168]])]
+```
 
 ### NumPy, TensorFlow, or PyTorch?
+
 Your choice!
 
 ```python
@@ -326,35 +570,54 @@ from stheno.tf import GP, EQ
 from stheno.torch import GP, EQ
 ```
 
-
 ### Undiscussed Features
 
-* `stheno.mokernel` and `stheno.momean` offer multi-output kernels and means:
+* `stheno.mokernel` and `stheno.momean` offer multi-output kernels and means.
 
-```python
->>> f1, f2 = GP(EQ()), GP(EQ())
+    Example:
 
->>> f = model.cross(f1, f2)
+    ```python
+    >>> model = Graph()
 
->>> f
-GP(MultiOutputKernel(EQ(), EQ()), MultiOutputMean(0, 0))
+    >>> f1, f2 = GP(EQ(), graph=model), GP(EQ(), graph=model)
 
->>> f(0).sample()
-array([[ 1.1725799 ],
-       [-1.15642448]])
-```
+    >>> f = model.cross(f1, f2)
+
+    >>> f
+    GP(MultiOutputKernel(EQ(), EQ()), MultiOutputMean(0, 0))
+
+    >>> f(0).sample()
+    array([[ 1.1725799 ],
+           [-1.15642448]])
+    ```
 
 * `stheno.eis` offers kernels on an extended input space that allows one to 
-design kernels in an alternative, flexible way:
+design kernels in an alternative, flexible way.
 
-```python
->>> p = GP(NoisyKernel(EQ(), Delta()))
+    Example:
 
->>> prediction = p.condition(Observed(x), y).predict(Latent(x))
-```
+    ```python
+    >>> p = GP(NoisyKernel(EQ(), Delta()))
+
+    >>> prediction = p.condition(Observed(x), y).predict(Latent(x))
+    ```
+    
+* `stheno.normal` offer an efficient implementation `Normal` of the normal 
+distribution, and a convenience constructor `Normal1D` for 1-dimensional normal
+distributions.
 
 * `stheno.spd` offers structured representations of 
 positive-definite matrices and efficient operations thereon.
+
+* Approximate multiplication between GPs is implemented. This is an 
+experimental feature.
+
+    Example:
+    
+    ```python
+    >>> GP(EQ()) * GP(EQ())
+    GP((EQ() + (ZeroMean x ZeroMean)) * (EQ() + (ZeroMean x ZeroMean)) + (ZeroMean x ZeroMean) * (ZeroMean x ZeroMean) + -2 * (ZeroMean x ZeroMean), <lambda>)
+    ```
 
 ## Examples
 

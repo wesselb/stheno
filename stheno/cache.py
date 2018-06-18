@@ -151,7 +151,7 @@ def uprank(x, B=B):
     Args:
         x (tensor): Tensor to uprank.
     """
-    # Simply return non-numerical inputs
+    # Simply return non-numerical inputs.
     if not isinstance(x, B.Numeric):
         return x
 

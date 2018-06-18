@@ -11,7 +11,7 @@ from .cache import cache, Cache
 from .input import At, MultiInput
 from .mean import Mean
 
-__all__ = []
+__all__ = ['MultiOutputMean']
 
 log = logging.getLogger(__name__)
 

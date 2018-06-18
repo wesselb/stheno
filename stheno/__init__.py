@@ -9,7 +9,9 @@ from .input import *
 from .field import *
 from .cache import *
 from .mean import *
+from .momean import *
 from .kernel import *
+from .mokernel import *
 from .random import *
 from .eis import *
 from .lazy import *
