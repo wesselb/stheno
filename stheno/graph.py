@@ -311,18 +311,19 @@ class Graph(Referentiable):
             self.prior_kernels = None
             self.prior_means = None
 
-    @_dispatch([At])
-    def sample(self, *xs):
+    @_dispatch(int, [At])
+    def sample(self, n, *xs):
         """Sample multiple processes simultaneously.
 
         Args:
+            n (int, optional): Number of samples. Defaults to `1`.
             *xs (:class:`.graph.At`): Locations to sample at.
 
         Returns:
             tuple: Tuple of samples.
         """
         sample = GPPrimitive(MOK(*self.ps),
-                             MOM(*self.ps))(MultiInput(*xs)).sample()
+                             MOM(*self.ps))(MultiInput(*xs)).sample(n)
 
         # To unpack `x`, just keep `.get()`ing.
         def unpack(x):
@@ -337,6 +338,10 @@ class Graph(Referentiable):
             samples.append(sample[i:i + length, :])
             i += length
         return samples[0] if len(samples) == 1 else samples
+
+    @_dispatch([At])
+    def sample(self, *xs):
+        return self.sample(1, *xs)
 
 
 class GraphMean(Mean, Referentiable):
