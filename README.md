@@ -51,6 +51,9 @@ Moar?! Then read on!
 
 ## Manual
 
+_Note: [here](https://stheno.readthedocs.io/en/latest) is a nicely rendered 
+and more readable version of the docs._
+
 ### Kernel and Mean Design
 
 #### Available Kernels
