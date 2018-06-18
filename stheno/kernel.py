@@ -76,6 +76,11 @@ class Kernel(Type, Referentiable):
     def __call__(self, x, y):
         return self(x, y, Cache())
 
+    @_dispatch(Input, Input, Cache)
+    def __call__(self, x, y, cache):
+        # This should not have been reached. Attempt to unwrap.
+        return self(x.get(), y.get(), cache)
+
     @_dispatch(object, object, Cache)
     def elwise(self, x, y, cache):
         """Construct the kernel vector `x` and `y` element-wise.

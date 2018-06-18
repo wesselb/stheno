@@ -41,22 +41,24 @@ def test_construction():
     c = Cache()
 
     yield k, x
-    yield raises, RuntimeError, lambda: k(Observed(x))
     yield k, x, c
-    yield raises, RuntimeError, lambda: k(Observed(x), c)
     yield k, x, x
-    yield raises, RuntimeError, lambda: k(Observed(x), Observed(x))
     yield k, x, x, c
-    yield raises, RuntimeError, lambda: k(Observed(x), Observed(x), c)
+
+    yield k, Observed(x)
+    yield k, Observed(x), c
+    yield k, Observed(x), Observed(x)
+    yield k, Observed(x), Observed(x), c
 
     yield k.elwise, x
-    yield raises, RuntimeError, lambda: k.elwise(Observed(x))
     yield k.elwise, x, c
-    yield raises, RuntimeError, lambda: k.elwise(Observed(x), c)
     yield k.elwise, x, x
-    yield raises, RuntimeError, lambda: k.elwise(Observed(x), Observed(x))
     yield k.elwise, x, x, c
-    yield raises, RuntimeError, lambda: k.elwise(Observed(x), Observed(x), c)
+
+    yield k.elwise, Observed(x)
+    yield k.elwise, Observed(x), c
+    yield k.elwise, Observed(x), Observed(x)
+    yield k.elwise, Observed(x), Observed(x), c
 
 
 def test_basic_arithmetic():

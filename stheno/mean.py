@@ -47,6 +47,11 @@ class Mean(Type, Referentiable):
     def __call__(self, x):
         return self(x, Cache())
 
+    @_dispatch(Input, Cache)
+    def __call__(self, x, cache):
+        # This should not have been reached. Attempt to unwrap.
+        return self(x.get(), cache)
+
 
 class SumMean(Mean, SumType, Referentiable):
     """Sum of two means."""

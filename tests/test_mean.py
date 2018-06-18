@@ -30,9 +30,10 @@ def test_construction():
     c = Cache()
 
     yield m, x
-    yield raises, RuntimeError, lambda: m(Observed(x))
     yield m, x, c
-    yield raises, RuntimeError, lambda: m(Observed(x), c)
+
+    yield m, Observed(x)
+    yield m, Observed(x), c
 
 
 def test_basic_arithmetic():
