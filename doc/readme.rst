@@ -61,11 +61,50 @@ Moar?! Then read on!
 Manual
 ------
 
-*Note: `here <https://stheno.readthedocs.io/en/latest>`__ is a nicely
-rendered and more readable version of the docs.*
+Note: `here <https://stheno.readthedocs.io/en/latest>`__ is a nicely
+rendered and more readable version of the docs.
 
 Kernel and Mean Design
 ~~~~~~~~~~~~~~~~~~~~~~
+
+Inputs to kernels, means, and GPs, henceforth referred to simply as
+*inputs*, must be of one of the following three forms:
+
+-  If the input ``x`` is a *rank 0 tensor*, i.e. a scalar, then ``x``
+   refers to a single input location. For example, ``0`` simply refers
+   to the sole input location ``0``.
+
+-  If the input ``x`` is a *rank 1 tensor*, then every element of ``x``
+   is interpreted as a separate input location. For example,
+   ``np.linspace(0, 1, 10)`` generates 10 different input locations
+   ranging from ``0`` to ``1``.
+
+-  If the input ``x`` is a *rank 2 tensor*, then every *row* of ``x`` is
+   interpreted as a separate input location. In this case inputs are
+   multi-dimensional, and the columns correspond to the various inputs
+   dimensions.
+
+If ``k`` is a kernel, say ``k = EQ()``, then ``k(x, y)`` constructs the
+*kernel matrix* for all pairs of points between ``x`` and ``y``.
+``k(x)`` is shorthand for ``k (x, x)``. Furthermore, ``k.elwise(x, y)``
+constructs the *kernel vector* pairing the points in ``x`` and ``y``
+element-wise, which will be a *rank 2 column vector*.
+
+Example:
+
+.. code:: python
+
+    >>> EQ()(np.linspace(0, 1, 3))
+    array([[1.        , 0.8824969 , 0.60653066],
+           [0.8824969 , 1.        , 0.8824969 ],
+           [0.60653066, 0.8824969 , 1.        ]])
+     
+    >>> EQ().elwise(np.linspace(0, 1, 3), 0)
+    array([[1.        ],
+           [0.8824969 ],
+           [0.60653066]])
+
+Finally, mean functions output a *rank 2 column vector*.
 
 Available Kernels
 ^^^^^^^^^^^^^^^^^
@@ -75,43 +114,43 @@ kernels are available:
 
 -  ``EQ()``, the exponentiated quadratic:
 
-.. math::  k(x, y) = \exp\left( -\frac{1}{2}\|x - y\|^2 \right); 
+   .. math::  k(x, y) = \exp\left( -\frac{1}{2}\|x - y\|^2 \right); 
 
 -  ``RQ(alpha)``, the rational quadratic:
 
-.. math::  k(x, y) = \left( 1 + \frac{\|x - y\|^2}{2 \alpha} \right)^{-\alpha}; 
+   .. math::  k(x, y) = \left( 1 + \frac{\|x - y\|^2}{2 \alpha} \right)^{-\alpha}; 
 
 -  ``Exp()`` or ``Matern12()``, the exponential kernel:
 
-.. math::  k(x, y) = \exp\left( -\|x - y\| \right); 
+   .. math::  k(x, y) = \exp\left( -\|x - y\| \right); 
 
 -  ``Matern32()``, the Matern–3/2 kernel:
 
-.. math::  k(x, y) = \left( 1 + \sqrt{3}\|x - y\| \right)\exp(-\sqrt{3}\|x - y\|); 
+   .. math::  k(x, y) = \left( 1 + \sqrt{3}\|x - y\| \right)\exp(-\sqrt{3}\|x - y\|); 
 
 -  ``Matern52()``, the Matern–5/2 kernel:
 
-.. math::
+   .. math::
 
-    k(x, y) = \left(
-       1 + \sqrt{5}\|x - y\| + \frac{5}{3} \|x - y\|^2
-      \right)\exp(-\sqrt{3}\|x - y\|); 
+       k(x, y) = \left(
+          1 + \sqrt{5}\|x - y\| + \frac{5}{3} \|x - y\|^2
+         \right)\exp(-\sqrt{3}\|x - y\|); 
 
 -  ``Delta()``, the Kronecker delta kernel:
 
-.. math::
+   .. math::
 
-    k(x, y) = \begin{cases}
-       1 & \text{if } x = y, \\
-       0 & \text{otherwise};
-      \end{cases} 
+       k(x, y) = \begin{cases}
+          1 & \text{if } x = y, \\
+          0 & \text{otherwise};
+         \end{cases} 
 
 -  ``FunctionKernel(f)``:
 
-.. math::  k(x, y) = f(x)f(y). 
+   .. math::  k(x, y) = f(x)f(y). 
 
-Adding or multiplying a ``FunctionType`` ``f`` to or with a kernel will
-automatically translate ``f`` to ``FunctionKernel(f)``.
+   Adding or multiplying a ``FunctionType`` ``f`` to or with a kernel
+   will automatically translate ``f`` to ``FunctionKernel(f)``.
 
 Available Means
 ^^^^^^^^^^^^^^^
@@ -121,10 +160,10 @@ are available:
 
 -  ``FunctionMean(f)``:
 
-.. math::  m(x) = f(x). 
+   .. math::  m(x) = f(x). 
 
-Adding or multiplying a ``FunctionType`` ``f`` to or with a mean will
-automatically translate ``f`` to ``FunctionMean(f)``.
+   Adding or multiplying a ``FunctionType`` ``f`` to or with a mean will
+   automatically translate ``f`` to ``FunctionMean(f)``.
 
 Compositional Design
 ^^^^^^^^^^^^^^^^^^^^
@@ -314,6 +353,19 @@ Compositional Design
 
        >>> reversed(Linear())
        Reversed(Linear())
+
+-  Extract terms and factors from sum and product respectively of *means
+   and kernels*.
+
+   Example:
+
+   .. code:: python
+
+       >>> (EQ() + RQ(0.1) + Linear()).term(1)
+       RQ(0.1)
+
+       >>> (2 * EQ() * Linear).factor(0)
+       2
 
 Properties of Kernels
 ^^^^^^^^^^^^^^^^^^^^^
