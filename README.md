@@ -321,7 +321,7 @@ currently only works in TensorFlow and derivatives cannot be nested.
     EQ() per 1
     ```
 
-* Reverse the arguments of _kernels_, but _not mean_.
+* Reverse the arguments of _kernels_, but _not means_.
 
     Definition:
 
