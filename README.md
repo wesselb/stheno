@@ -130,7 +130,9 @@ available:
     $$ k(x, y) = f(x)f(y). $$
 
     Adding or multiplying a `FunctionType` `f` to or with a kernel will 
-    automatically translate `f` to `FunctionKernel(f)`.
+    automatically translate `f` to `FunctionKernel(f)`. For example, `f * k`
+    will translate to `FunctionKernel(f) * k`, and `f + k` will translate to
+    `FunctionKernel(f) + k`.
 
 
 #### Available Means
@@ -143,7 +145,9 @@ available:
     $$ m(x) = f(x). $$
 
     Adding or multiplying a `FunctionType` `f` to or with a mean will 
-    automatically translate `f` to `FunctionMean(f)`.
+    automatically translate `f` to `FunctionMean(f)`. For example, `f * m` will
+    translate to `FunctionMean(f) * m`, and `f + m` will translate to
+    `FunctionMean(f) + m`.
 
 #### Compositional Design
 
@@ -302,7 +306,7 @@ currently only works in TensorFlow and derivatives cannot be nested.
     d(None, 1) EQ()
     ```
 
-* Make _only kernels_ periodic.
+* Make _kernels_ periodic, but _not means_.
 
     Definition:
 
@@ -317,7 +321,7 @@ currently only works in TensorFlow and derivatives cannot be nested.
     EQ() per 1
     ```
 
-* Reverse the arguments of _only kernels_.
+* Reverse the arguments of _kernels_, but _not mean_.
 
     Definition:
 
