@@ -569,8 +569,7 @@ class GP(GPPrimitive, Referentiable):
         self.graph.condition(x, y)
         return self
 
-    # TODO: Refactor this once type unions are fixed.
-    @_dispatch.multi((B.Numeric, B.Numeric), (Input, B.Numeric))
+    @_dispatch({B.Numeric, Input}, B.Numeric)
     def condition(self, x, y):
         self.graph.condition(At(self)(x), y)
         return self
