@@ -110,13 +110,15 @@ available:
 
 * `Matern32()`, the Matern–3/2 kernel:
 
-    $$ k(x, y) = \left( 1 + \sqrt{3}\|x - y\| \right)\exp(-\sqrt{3}\|x - y\|); $$
+    $$ k(x, y) = \left(
+        1 + \sqrt{3}\|x - y\|
+        \right)\exp\left(-\sqrt{3}\|x - y\|\right); $$
 
 * `Matern52()`, the Matern–5/2 kernel:
 
     $$ k(x, y) = \left(
         1 + \sqrt{5}\|x - y\| + \frac{5}{3} \|x - y\|^2
-       \right)\exp(-\sqrt{3}\|x - y\|); $$
+       \right)\exp\left(-\sqrt{3}\|x - y\|\right); $$
 
 * `Delta()`, the Kronecker delta kernel:
 
@@ -399,7 +401,7 @@ Example of querying the period:
 
 The basic building block of a model is a `GP(kernel, mean=0, graph=model)`, 
 which necessarily takes in a kernel, and optionally a mean and a _graph_.
-GPs can be combined into new GPs, and the graph is the object that keeps 
+GPs can be combined into new GPs, and the graph is the thing that keeps 
 track of all of these objects.
 If the graph is left unspecified, new GPs are appended to a provided default 
 graph `model`, which is exported by Stheno:
