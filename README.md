@@ -237,7 +237,9 @@ available:
     Definition:
 
     ```python
-    k.select([0])(x, y) == k(x[:, 0], y)
+    k.select([0])(x, y) == k(x[:, 0], y[:, 0])
+  
+    k.select([0, 1])(x, y) == k(x[:, [0, 1]], y[:, [0, 1]])
 
     k.select([0], [1])(x, y) == k(x[:, 0], y[:, 1])
 
@@ -249,6 +251,9 @@ available:
     ```python
     >>> EQ().select([0])
     EQ() : [0]
+  
+    >>> EQ().select([0, 1])
+    EQ() : [0, 1]
 
     >>> EQ().select([0], [1])
     EQ() : ([0], [1])
