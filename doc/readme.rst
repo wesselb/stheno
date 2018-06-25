@@ -126,7 +126,11 @@ kernels are available:
 
 -  ``Matern32()``, the Matern–3/2 kernel:
 
-   .. math::  k(x, y) = \left( 1 + \sqrt{3}\|x - y\| \right)\exp(-\sqrt{3}\|x - y\|); 
+   .. math::
+
+       k(x, y) = \left(
+          1 + \sqrt{3}\|x - y\|
+          \right)\exp\left(-\sqrt{3}\|x - y\|\right); 
 
 -  ``Matern52()``, the Matern–5/2 kernel:
 
@@ -134,7 +138,7 @@ kernels are available:
 
        k(x, y) = \left(
           1 + \sqrt{5}\|x - y\| + \frac{5}{3} \|x - y\|^2
-         \right)\exp(-\sqrt{3}\|x - y\|); 
+         \right)\exp\left(-\sqrt{3}\|x - y\|\right); 
 
 -  ``Delta()``, the Kronecker delta kernel:
 
@@ -150,7 +154,9 @@ kernels are available:
    .. math::  k(x, y) = f(x)f(y). 
 
    Adding or multiplying a ``FunctionType`` ``f`` to or with a kernel
-   will automatically translate ``f`` to ``FunctionKernel(f)``.
+   will automatically translate ``f`` to ``FunctionKernel(f)``. For
+   example, ``f * k`` will translate to ``FunctionKernel(f) * k``, and
+   ``f + k`` will translate to ``FunctionKernel(f) + k``.
 
 Available Means
 ^^^^^^^^^^^^^^^
@@ -163,7 +169,9 @@ are available:
    .. math::  m(x) = f(x). 
 
    Adding or multiplying a ``FunctionType`` ``f`` to or with a mean will
-   automatically translate ``f`` to ``FunctionMean(f)``.
+   automatically translate ``f`` to ``FunctionMean(f)``. For example,
+   ``f * m`` will translate to ``FunctionMean(f) * m``, and ``f + m``
+   will translate to ``FunctionMean(f) + m``.
 
 Compositional Design
 ^^^^^^^^^^^^^^^^^^^^
@@ -253,7 +261,9 @@ Compositional Design
 
    .. code:: python
 
-       k.select([0])(x, y) == k(x[:, 0], y)
+       k.select([0])(x, y) == k(x[:, 0], y[:, 0])
+
+       k.select([0, 1])(x, y) == k(x[:, [0, 1]], y[:, [0, 1]])
 
        k.select([0], [1])(x, y) == k(x[:, 0], y[:, 1])
 
@@ -265,6 +275,9 @@ Compositional Design
 
        >>> EQ().select([0])
        EQ() : [0]
+
+       >>> EQ().select([0, 1])
+       EQ() : [0, 1]
 
        >>> EQ().select([0], [1])
        EQ() : ([0], [1])
@@ -324,7 +337,7 @@ Compositional Design
        >>> EQ().diff(None, 1)
        d(None, 1) EQ()
 
--  Make *only kernels* periodic.
+-  Make *kernels* periodic, but *not means*.
 
    Definition:
 
@@ -339,7 +352,7 @@ Compositional Design
        >>> EQ().periodic(1)
        EQ() per 1
 
--  Reverse the arguments of *only kernels*.
+-  Reverse the arguments of *kernels*, but *not means*.
 
    Definition:
 
@@ -354,8 +367,8 @@ Compositional Design
        >>> reversed(Linear())
        Reversed(Linear())
 
--  Extract terms and factors from sum and product respectively of *means
-   and kernels*.
+-  Extract terms and factors from sums and products respectively of
+   *kernels and means*.
 
    Example:
 
@@ -366,6 +379,25 @@ Compositional Design
 
        >>> (2 * EQ() * Linear).factor(0)
        2
+
+   Kernels and means "wrapping" others can be "unwrapped" by indexing
+   ``k[0]`` or ``m[0]``.
+
+   Example:
+
+   .. code:: python
+
+       >>> reversed(Linear())
+       Reversed(Linear())
+
+       >>> reversed(Linear())[0]
+       Linear()
+
+       >>> EQ().periodic(1)
+       EQ() per 1
+
+       >>> EQ().periodic(1)[0]
+       EQ()
 
 Properties of Kernels
 ^^^^^^^^^^^^^^^^^^^^^
@@ -420,7 +452,7 @@ Model Design
 The basic building block of a model is a
 ``GP(kernel, mean=0, graph=model)``, which necessarily takes in a
 kernel, and optionally a mean and a *graph*. GPs can be combined into
-new GPs, and the graph is the object that keeps track of all of these
+new GPs, and the graph is the thing that keeps track of all of these
 objects. If the graph is left unspecified, new GPs are appended to a
 provided default graph ``model``, which is exported by Stheno:
 
@@ -532,7 +564,7 @@ Compositional Design
        >>> GP(EQ()).diff(1)
        GP(d(1) EQ(), 0)
 
--  Construct a finite difference estimate of a derivative of a GP. See
+-  Construct a finite difference estimate of the derivative of a GP. See
    ``stheno.graph.Graph.diff_approx`` for a description of the
    arguments.
 
@@ -684,9 +716,9 @@ Undiscussed Features
 
        >>> prediction = p.condition(Observed(x), y).predict(Latent(x))
 
--  ``stheno.normal`` offer an efficient implementation ``Normal`` of the
-   normal distribution, and a convenience constructor ``Normal1D`` for
-   1-dimensional normal distributions.
+-  ``stheno.normal`` offers an efficient implementation ``Normal`` of
+   the normal distribution, and a convenience constructor ``Normal1D``
+   for 1-dimensional normal distributions.
 
 -  ``stheno.spd`` offers structured representations of positive-definite
    matrices and efficient operations thereon.
