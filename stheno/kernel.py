@@ -864,8 +864,8 @@ class PosteriorCrossKernel(Kernel, Referentiable):
     @cache
     def elwise(self, x, y, B):
         qf_diag = self.Kz.quadratic_form_diag(self.k_zi(self.z, x, B),
-                                              self.k_zj(self.z, y, B))[:, None]
-        return B.subtract(self.k_ij.elwise(x, y, B), qf_diag)
+                                              self.k_zj(self.z, y, B))
+        return B.subtract(self.k_ij.elwise(x, y, B), B.expand_dims(qf_diag, 1))
 
 
 class PosteriorKernel(PosteriorCrossKernel, Referentiable):
