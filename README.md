@@ -343,8 +343,8 @@ currently only works in TensorFlow and derivatives cannot be nested.
     Reversed(Linear())
     ```
     
-* Extract terms and factors from sums and products respectively of _means and 
-kernels_.
+* Extract terms and factors from sums and products respectively of _kernels and 
+means_.
     
     Example:
     
@@ -354,6 +354,25 @@ kernels_.
 
     >>> (2 * EQ() * Linear).factor(0)
     2
+    ```
+    
+    Kernels and means "wrapping" others can be "unwrapped" by indexing `k[0]`
+     or `m[0]`.
+     
+    Example:
+    
+    ```python
+    >>> reversed(Linear())
+    Reversed(Linear())
+  
+    >>> reversed(Linear())[0]
+    Linear()
+
+    >>> EQ().periodic(1)
+    EQ() per 1
+
+    >>> EQ().periodic(1)[0]
+    EQ()
     ```
 
 #### Properties of Kernels
