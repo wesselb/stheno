@@ -376,6 +376,38 @@ class GraphMean(Mean, Referentiable):
     def __str__(self):
         return str(self.graph.means[self.p])
 
+    @property
+    def num_terms(self):
+        """Number of terms"""
+        return self.graph.means[self.p].num_terms
+
+    def term(self, i):
+        """Get a specific term.
+
+        Args:
+            i (int): Index of term.
+
+        Returns:
+            :class:`.mean.Mean`: The referenced term.
+        """
+        return self.graph.means[self.p].term(i)
+
+    @property
+    def num_factors(self):
+        """Number of factors"""
+        return self.graph.means[self.p].num_factors
+
+    def factor(self, i):
+        """Get a specific factor.
+
+        Args:
+            i (int): Index of factor.
+
+        Returns:
+            :class:`.mean.Mean`: The referenced factor.
+        """
+        return self.graph.means[self.p].factor(i)
+
 
 class GraphKernel(Kernel, Referentiable):
     """Kernel that evaluates to the right kernel for a GP attached to a graph.
@@ -499,6 +531,38 @@ class GraphKernel(Kernel, Referentiable):
 
     def __str__(self):
         return str(self.graph.kernels[self.p])
+
+    @property
+    def num_terms(self):
+        """Number of terms"""
+        return self.graph.kernels[self.p].num_terms
+
+    def term(self, i):
+        """Get a specific term.
+
+        Args:
+            i (int): Index of term.
+
+        Returns:
+            :class:`.kernel.Kernel`: The referenced term.
+        """
+        return self.graph.kernels[self.p].term(i)
+
+    @property
+    def num_factors(self):
+        """Number of factors"""
+        return self.graph.kernels[self.p].num_factors
+
+    def factor(self, i):
+        """Get a specific factor.
+
+        Args:
+            i (int): Index of factor.
+
+        Returns:
+            :class:`.kernel.Kernel`: The referenced factor.
+        """
+        return self.graph.kernels[self.p].factor(i)
 
 
 model = Graph()  #: A default graph provided for convenience

@@ -143,6 +143,25 @@ def test_properties():
     yield eq, p.stationary, False, 'stationary 3'
 
 
+def test_terms_factors():
+    model = Graph()
+    p = 2 * GP(EQ() * RQ(1) + Linear(), lambda x: x, graph=model) + 3
+
+    yield eq, p.kernel.num_factors, 2
+    yield eq, str(p.kernel.factor(0)), '4'
+    yield eq, str(p.kernel.factor(1)), 'EQ() * RQ(1) + Linear()'
+    yield eq, p.kernel.factor(1).num_terms, 2
+    yield eq, str(p.kernel.factor(1).term(0)), 'EQ() * RQ(1)'
+    yield eq, str(p.kernel.factor(1).term(1)), 'Linear()'
+
+    yield eq, p.mean.num_terms, 2
+    yield eq, str(p.mean.term(0)), '2 * <lambda>'
+    yield eq, str(p.mean.term(1)), '3 * 1'
+    yield eq, p.mean.term(0).num_factors, 2
+    yield eq, str(p.mean.term(0).factor(0)), '2'
+    yield eq, str(p.mean.term(0).factor(1)), '<lambda>'
+
+
 def test_case_summation_with_itself():
     # Test summing the same GP with itself.
     model = Graph()
