@@ -1,19 +1,19 @@
 Features:
-    ☐ Sparse approximations
-    ☐ Efficient multi-output kernels: low-rank SPDs returned by multi-output kernels
+    ☐ FITC approximation
+    ☐ DTC approximation
+    ☐ ICM multi-output kernel
 
 Refactor:
     ☐ Make RQ, Exp, Matern32, and Matern52 cache friendly.
     ☐ Simply signatures in `field.py`.
 
-Documentation:
-    ☐ Improve docstrings.
-    ☐ Write documentation. @started
-        ☐ Define terminology in the docstrings: design matrix, shape, etc.
-
-
 ＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿
 Archive:
+ ✓ Efficient multi-output kernels: low-rank SPDs returned by multi-output kernels @done (18-06-26 15:39) @project(Features)
+ ✓ Write documentation. @started @done (18-06-26 15:38) @project(Documentation)
+ ✓ Sparse approximations @done (18-06-26 15:38) @project(Features)
+ ✓ Improve docstrings. @done (18-06-26 15:38) @project(Documentation)
+ ✓ Define terminology in the docstrings: design matrix, shape, etc. @done (18-06-26 15:38) @project(Documentation)
  ✓ Refactor to type union for Graph.condition once type unions are fixed. @done (18-06-19 02:10) @project(Refactor)
  ✓ Efficient diagonal computation: pairwise and element-wise @started @done (18-06-15 21:39) @project(Features)
  ✓ Write examples. @started @done (18-06-13 23:40) @project(Documentation)
