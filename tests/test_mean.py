@@ -13,8 +13,9 @@ from stheno.graph import GP, Graph
 from stheno.input import Observed
 from stheno.kernel import EQ
 from stheno.mean import FunctionMean, ZeroMean, Mean, OneMean, \
-    PosteriorCrossMean, PosteriorMean
+    PosteriorCrossMean, PosteriorMean, VariationalPosteriorCrossMean
 from stheno.cache import Cache
+from stheno.spd import SPD
 # noinspection PyUnresolvedReferences
 from . import eq, neq, lt, le, ge, gt, raises, call, ok, eprint
 
@@ -68,12 +69,38 @@ def test_basic_arithmetic():
 
 
 def test_posterior_mean():
-    pcm = PosteriorCrossMean(None, None, None, None, None, None)
+    z = np.linspace(0, 1, 10)
+    pcm = PosteriorCrossMean(
+        FunctionMean(lambda x: x),
+        FunctionMean(lambda x: x ** 2),
+        EQ(), z, SPD(2 * EQ()(z)), np.random.randn(10)
+    )
+
+    # Check name.
     yield eq, str(pcm), 'PosteriorCrossMean()'
 
+    # Check that the mean computes.
+    yield lambda: pcm(z)
+
+    # Check regular posterior kernel.
     gp = GP(EQ(), graph=Graph())
     pm = PosteriorMean(gp, None, None, None)
     yield eq, str(pm), 'PosteriorMean()'
+
+
+def test_variational_posterior_mean():
+    z = np.linspace(0, 1, 10)
+    pcm = VariationalPosteriorCrossMean(
+        FunctionMean(lambda x: x),
+        FunctionMean(lambda x: x ** 2),
+        EQ(), z, np.random.randn(10)
+    )
+
+    # Check name.
+    yield eq, str(pcm), 'VariationalPosteriorCrossMean()'
+
+    # Check that the mean computes.
+    yield lambda: pcm(z)
 
 
 def test_function_mean():

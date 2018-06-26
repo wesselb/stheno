@@ -177,7 +177,7 @@ class DerivativeMean(Mean, DerivativeType, Referentiable):
 
 
 class PosteriorCrossMean(Mean, Referentiable):
-    """Posterior mean.
+    """Posterior cross mean.
 
     Args:
         m_i (:class:`.mean.Mean`): Mean of process corresponding to
@@ -187,29 +187,26 @@ class PosteriorCrossMean(Mean, Referentiable):
         k_zi (:class:`.kernel.Kernel`): Kernel between processes
             corresponding to the data and the input respectively.
         z (input): Locations of data.
-        Kz (:class:`.spd.SPD`): Kernel matrix of data.
+        K_z (:class:`.spd.SPD`): Kernel matrix of data.
         y (tensor): Observations to condition on.
     """
 
     _dispatch = Dispatcher(in_class=Self)
 
-    def __init__(self, m_i, m_z, k_zi, z, Kz, y):
+    def __init__(self, m_i, m_z, k_zi, z, K_z, y):
         self.m_i = m_i
         self.k_zi = k_zi
         self.m_z = m_z
         self.z = z
-        self.Kz = Kz
+        self.K_z = K_z
         self.y = uprank(y)
 
     @_dispatch(object, Cache)
     @cache
     def __call__(self, x, B):
         diff = B.subtract(self.y, self.m_z(self.z, B))
-        prod = self.Kz.inv_prod(self.k_zi(self.z, x))
+        prod = self.K_z.inv_prod(self.k_zi(self.z, x))
         return B.add(self.m_i(x, B), B.matmul(prod, diff, tr_a=True))
-
-    def __str__(self):
-        return 'PosteriorCrossMean()'
 
 
 class PosteriorMean(PosteriorCrossMean, Referentiable):
@@ -218,14 +215,44 @@ class PosteriorMean(PosteriorCrossMean, Referentiable):
     Args:
         gp (:class:`.random.GP`): Corresponding GP.
         z (input): Locations of data.
-        Kz (:class:`.spd.SPD`): Kernel matrix of data.
+        K_z (:class:`.spd.SPD`): Kernel matrix of data.
         y (tensor): Observations to condition on.
     """
 
     _dispatch = Dispatcher(in_class=Self)
 
-    def __init__(self, gp, z, Kz, y):
-        PosteriorCrossMean.__init__(self, gp.mean, gp.mean, gp.kernel, z, Kz, y)
+    def __init__(self, gp, z, K_z, y):
+        PosteriorCrossMean.__init__(self, gp.mean, gp.mean, gp.kernel,
+                                    z, K_z, y)
 
-    def __str__(self):
-        return 'PosteriorMean()'
+
+class VariationalPosteriorCrossMean(Mean, Referentiable):
+    """Variational posterior cross mean.
+
+    Args:
+        m_i (:class:`.mean.Mean`): Mean of process corresponding to
+            the input.
+        m_z (:class:`.mean.Mean`): Mean of process corresponding to
+            the data.
+        k_zi (:class:`.kernel.Kernel`): Kernel between processes
+            corresponding to the data and the input respectively.
+        z (input): Locations of pseudo-points.
+        mu (tensor): Variational mean of the pseudo-points premultiplied by the
+            prior covariance of the pseudo-points.
+    """
+
+    _dispatch = Dispatcher(in_class=Self)
+
+    def __init__(self, m_i, m_z, k_zi, z, mu):
+        self.m_i = m_i
+        self.k_zi = k_zi
+        self.m_z = m_z
+        self.z = z
+        self.mu = uprank(mu)
+
+    @_dispatch(object, Cache)
+    @cache
+    def __call__(self, x, B):
+        diff = B.subtract(self.mu, self.m_z(self.z, B))
+        K_zi = self.k_zi(self.z, x)
+        return B.add(self.m_i(x, B), B.matmul(K_zi, diff, tr_a=True))
