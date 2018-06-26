@@ -315,7 +315,7 @@ def test_linear():
         yield x
 
 
-def test_posteriorcross():
+def test_posterior_crosskernel():
     k = PosteriorCrossKernel(
         EQ(), EQ(), EQ(),
         np.random.randn(5, 2), SPD(EQ()(np.random.randn(5, 1)))
@@ -341,7 +341,7 @@ def test_posteriorcross():
     yield eq, str(k), 'PosteriorKernel()'
 
 
-def test_variationalposteriorcross():
+def test_variational_posterior_crosskernel():
     k = VariationalPosteriorCrossKernel(
         EQ(), EQ(), EQ(),
         np.random.randn(5, 2),
