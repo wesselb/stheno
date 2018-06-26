@@ -4,6 +4,7 @@ from __future__ import absolute_import, division, print_function
 
 import numpy as np
 from plum import Dispatcher
+from lab import B
 
 from stheno.spd import SPD, Diagonal, UniformDiagonal
 # noinspection PyUnresolvedReferences
@@ -113,3 +114,15 @@ def test_spd_arithmetic():
     yield ok, np.allclose(5. + dense.mat, (5. + dense).mat)
     yield ok, np.allclose(5. + diag.mat, (5. + diag).mat)
     yield ok, np.allclose(5. + unif_diag.mat, (5. + unif_diag).mat)
+
+
+def test_lab_interaction():
+    diag = Diagonal(np.ones(3))
+
+    yield eq, type(B.add(diag, diag)), Diagonal
+    yield eq, type(B.add(5, diag)), SPD
+    yield eq, type(B.add(diag, 5)), SPD
+
+    yield eq, type(B.multiply(diag, diag)), Diagonal
+    yield eq, type(B.multiply(5, diag)), Diagonal
+    yield eq, type(B.multiply(diag, 5)), Diagonal

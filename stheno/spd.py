@@ -364,3 +364,31 @@ class UniformDiagonal(Diagonal, Referentiable):
     @_dispatch(Self)
     def __mul__(self, other):
         return UniformDiagonal(self.diag_scale * other.diag_scale, self._n)
+
+
+# In LAB, define addition for SPDs.
+
+@B.add.extend(SPD, object)
+def add(spd, other): return spd.__add__(other)
+
+
+@B.add.extend(object, SPD)
+def add(other, spd): return spd.__radd__(other)
+
+
+@B.add.extend(SPD, SPD)
+def add(spd1, spd2): return spd1 + spd2
+
+
+# In LAB, define multiplication for SPDs.
+
+@B.multiply.extend(SPD, object)
+def mul(spd, other): return spd.__mul__(other)
+
+
+@B.multiply.extend(object, SPD)
+def mul(other, spd): return spd.__rmul__(other)
+
+
+@B.multiply.extend(SPD, SPD)
+def mul(spd1, spd2): return spd1 * spd2
