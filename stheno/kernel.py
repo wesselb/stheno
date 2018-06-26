@@ -841,30 +841,30 @@ class PosteriorCrossKernel(Kernel, Referentiable):
         k_zj (:class:`.kernel.Kernel`): Kernel between processes
             corresponding to the data and the right input respectively.
         z (input): Locations of data.
-        Kz (:class:`.spd.SPD`): Kernel matrix of data.
+        K_z (:class:`.spd.SPD`): Kernel matrix of data.
     """
 
     _dispatch = Dispatcher(in_class=Self)
 
-    def __init__(self, k_ij, k_zi, k_zj, z, Kz):
+    def __init__(self, k_ij, k_zi, k_zj, z, K_z):
         self.k_ij = k_ij
         self.k_zi = k_zi
         self.k_zj = k_zj
         self.z = z
-        self.Kz = Kz
+        self.K_z = K_z
 
     @_dispatch(object, object, Cache)
     @cache
     def __call__(self, x, y, B):
-        qf = self.Kz.quadratic_form(self.k_zi(self.z, x, B),
-                                    self.k_zj(self.z, y, B))
+        qf = self.K_z.quadratic_form(self.k_zi(self.z, x, B),
+                                     self.k_zj(self.z, y, B))
         return B.subtract(self.k_ij(x, y, B), qf)
 
     @_dispatch(object, object, Cache)
     @cache
     def elwise(self, x, y, B):
-        qf_diag = self.Kz.quadratic_form_diag(self.k_zi(self.z, x, B),
-                                              self.k_zj(self.z, y, B))
+        qf_diag = self.K_z.quadratic_form_diag(self.k_zi(self.z, x, B),
+                                               self.k_zj(self.z, y, B))
         return B.subtract(self.k_ij.elwise(x, y, B), B.expand_dims(qf_diag, 1))
 
 
@@ -883,6 +883,51 @@ class PosteriorKernel(PosteriorCrossKernel, Referentiable):
         PosteriorCrossKernel.__init__(
             self, gp.kernel, gp.kernel, gp.kernel, z, Kz
         )
+
+
+class VariationalPosteriorCrossKernel(Kernel, Referentiable):
+    """Variational posterior cross kernel.
+
+    Args:
+        k_ij (:class:`.kernel.Kernel`): Kernel between processes
+            corresponding to the left input and the right input respectively.
+        k_zi (:class:`.kernel.Kernel`): Kernel between processes
+            corresponding to the data and the left input respectively.
+        k_zj (:class:`.kernel.Kernel`): Kernel between processes
+            corresponding to the data and the right input respectively.
+        z (input): Locations of the pseudo-points.
+        Kz (:class:`.spd.SPD`): Prior covariance of the pseudo-points.
+        A (:class:`.spd.SPD): Variational covariance of the pseudo-points
+            premultiplied and postmultiplied by `Kz`.
+    """
+
+    _dispatch = Dispatcher(in_class=Self)
+
+    def __init__(self, k_ij, k_zi, k_zj, z, K_z, A):
+        self.k_ij = k_ij
+        self.k_zi = k_zi
+        self.k_zj = k_zj
+        self.z = z
+        self.K_z = K_z
+        self.A = A
+
+    @_dispatch(object, object, Cache)
+    @cache
+    def __call__(self, x, y, B):
+        K_zi = self.k_zi(self.z, x, B)
+        K_zj = self.k_zj(self.z, y, B)
+        qf1 = self.K_z.quadratic_form(K_zi, K_zj)
+        qf2 = self.A.quadratic_form(K_zi, K_zj)
+        return B.add(B.subtract(self.k_ij(x, y, B), qf1), qf2)
+
+    @_dispatch(object, object, Cache)
+    @cache
+    def elwise(self, x, y, B):
+        K_zi = self.k_zi(self.z, x, B)
+        K_zj = self.k_zj(self.z, y, B)
+        qf1_diag = B.expand_dims(self.K_z.quadratic_form_diag(K_zi, K_zj), 1)
+        qf2_diag = B.expand_dims(self.A.quadratic_form_diag(K_zi, K_zj), 1)
+        return B.add(B.subtract(self.k_ij.elwise(x, y, B), qf1_diag), qf2_diag)
 
 
 class DerivativeKernel(Kernel, DerivativeType, Referentiable):

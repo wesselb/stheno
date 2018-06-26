@@ -10,7 +10,7 @@ from stheno.cache import Cache
 from stheno.input import Observed
 from stheno.kernel import EQ, RQ, Matern12, Matern32, Matern52, Delta, Kernel, \
     Linear, OneKernel, ZeroKernel, PosteriorCrossKernel, PosteriorKernel, \
-    ShiftedKernel, FunctionKernel
+    ShiftedKernel, FunctionKernel, VariationalPosteriorCrossKernel
 from stheno.random import GPPrimitive
 from stheno.spd import SPD
 # noinspection PyUnresolvedReferences
@@ -339,6 +339,31 @@ def test_posteriorcross():
 
     k = PosteriorKernel(GPPrimitive(EQ()), None, None)
     yield eq, str(k), 'PosteriorKernel()'
+
+
+def test_variationalposteriorcross():
+    k = VariationalPosteriorCrossKernel(
+        EQ(), EQ(), EQ(),
+        np.random.randn(5, 2),
+        2 * SPD(EQ()(np.random.randn(5, 1))),
+        SPD(EQ()(np.random.randn(5, 1)))
+    )
+    x1 = np.random.randn(10, 2)
+    x2 = np.random.randn(5, 2)
+
+    # Test that the kernel computes.
+    yield assert_allclose, k(x1, x2), k(x2, x1).T
+
+    # Verify that the kernel has the right properties.
+    yield eq, k.stationary, False
+    yield raises, RuntimeError, lambda: k.var
+    yield raises, RuntimeError, lambda: k.length_scale
+    yield raises, RuntimeError, lambda: k.period
+    yield eq, str(k), 'VariationalPosteriorCrossKernel()'
+
+    # Test `elwise`.
+    for x in elwise_generator(k):
+        yield x
 
 
 def test_sum():
