@@ -4,7 +4,7 @@ from __future__ import absolute_import, division, print_function
 
 from plum import parametric, kind
 
-__all__ = ['Input', 'Observed', 'Latent', 'Component']
+__all__ = ['Input', 'Observed', 'Latent', 'Component', 'At']
 
 
 class Input(object):
