@@ -553,7 +553,7 @@ def test_input_transform():
     yield assert_allclose, k(x1 ** 2, x2 - 5), k3(x1, x2)
 
 
-def test_function():
+def test_tensor_product():
     k = TensorProductKernel(lambda x: B.sum(x ** 2, axis=1)[:, None])
 
     yield eq, k.stationary, False
