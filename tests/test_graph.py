@@ -532,3 +532,43 @@ def test_approximate_multiplication():
     yield le, rel_err(p2(x).mean, s2), 1e-2
     model.revert_prior()
     B.epsilon = cur_epsilon
+
+
+def test_naming():
+    model = Graph()
+
+    p1 = GP(EQ(), 1, graph=model)
+    p2 = GP(EQ(), 2, graph=model)
+
+    # Test setting and getting names.
+    p1.name = 'name'
+
+    yield ok, model['name'] is p1
+    yield eq, p1.name, 'name'
+    yield eq, model[p1], 'name'
+    yield raises, KeyError, lambda: model['other_name']
+    yield raises, KeyError, lambda: model[p2]
+
+    # Check that names can not be doubly assigned.
+    def doubly_assign():
+        p2.name = 'name'
+
+    yield raises, RuntimeError, doubly_assign
+
+    # Move name to other GP.
+    p1.name = 'other_name'
+    p2.name = 'name'
+
+    # Check that everything has been properly assigned.
+    yield ok, model['name'] is p2
+    yield eq, p2.name, 'name'
+    yield eq, model[p2], 'name'
+    yield ok, model['other_name'] is p1
+    yield eq, p1.name, 'other_name'
+    yield eq, model[p1], 'other_name'
+
+    # Test giving a name to the constructor.
+    p3 = GP(EQ(), name='yet_another_name', graph=model)
+    yield ok, model['yet_another_name'] is p3
+    yield eq, p3.name, 'yet_another_name'
+    yield eq, model[p3], 'yet_another_name'
