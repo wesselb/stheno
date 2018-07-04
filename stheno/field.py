@@ -711,10 +711,6 @@ def need_parens(el, parent): return False
 
 # Generic multiplication.
 
-@_dispatch(object, Type)
-def mul(a, b): return mul(b, a)
-
-
 @_dispatch(Type, object)
 def mul(a, b):
     if b == 0:
@@ -723,6 +719,16 @@ def mul(a, b):
         return a
     else:
         return new(a, ScaledType)(a, b)
+
+
+@_dispatch(object, Type)
+def mul(a, b):
+    if a == 0:
+        return new(b, ZeroType)()
+    elif a == 1:
+        return b
+    else:
+        return new(b, ScaledType)(b, a)
 
 
 @_dispatch(Type, Function)
@@ -739,18 +745,6 @@ def mul(a, b): return new(a, ProductType)(a, b)
 
 # Generic addition.
 
-@_dispatch(object, Type)
-def add(a, b):
-    if a == 0:
-        return b
-    else:
-        return new(b, SumType)(mul(a, new(b, OneType)()), b)
-
-
-@_dispatch(Function, Type)
-def add(a, b): return add(new(b, FunctionType)(a), b)
-
-
 @_dispatch(Type, object)
 def add(a, b):
     if b == 0:
@@ -759,8 +753,20 @@ def add(a, b):
         return new(a, SumType)(a, mul(b, new(a, OneType)()))
 
 
+@_dispatch(object, Type)
+def add(a, b):
+    if a == 0:
+        return b
+    else:
+        return new(b, SumType)(mul(a, new(b, OneType)()), b)
+
+
 @_dispatch(Type, Function)
 def add(a, b): return add(a, new(a, FunctionType)(b))
+
+
+@_dispatch(Function, Type)
+def add(a, b): return add(new(b, FunctionType)(a), b)
 
 
 @_dispatch(Type, Type)
@@ -773,49 +779,28 @@ def add(a, b):
 
 # Cancel redundant zeros and ones.
 
-@_dispatch.multi((ZeroType, object),
-                (ZeroType, Function),
-                (ZeroType, Type),
-                (ZeroType, ScaledType),
-                (ZeroType, ZeroType),
-
-                (Type, OneType),
-                (ScaledType, OneType),
-                (OneType, OneType))
+@_dispatch.multi((ZeroType, object), (Type, OneType), precedence=1)
 def mul(a, b): return a
 
 
-@_dispatch.multi((object, ZeroType),
-                (Function, ZeroType),
-                (Type, ZeroType),
-                (ScaledType, ZeroType),
-
-                (OneType, Type),
-                (OneType, ScaledType))
+@_dispatch.multi((object, ZeroType), (OneType, Type), precedence=1)
 def mul(a, b): return b
 
 
-@_dispatch.multi((ZeroType, Type),
-                (ZeroType, ScaledType),
-                (ZeroType, ZeroType))
-def add(a, b): return b
+@_dispatch.multi((ZeroType, ZeroType), (OneType, OneType), precedence=1)
+def mul(a, b): return a
 
 
-@_dispatch.multi((Type, ZeroType),
-                (ScaledType, ZeroType))
+@_dispatch(Type, ZeroType, precedence=1)
 def add(a, b): return a
 
 
-@_dispatch(object, ZeroType)
-def add(a, b): return add(b, a)
+@_dispatch(ZeroType, Type, precedence=1)
+def add(a, b): return b
 
 
-@_dispatch(Function, ZeroType)
-def add(a, b): return new(b, FunctionType)(a)
-
-
-@_dispatch(ZeroType, Function)
-def add(b, a): return new(b, FunctionType)(a)
+@_dispatch(ZeroType, ZeroType, precedence=1)
+def add(a, b): return a
 
 
 @_dispatch(ZeroType, object)
@@ -826,6 +811,24 @@ def add(a, b):
         return new(a, OneType)()
     else:
         return new(a, ScaledType)(new(a, OneType)(), b)
+
+
+@_dispatch(object, ZeroType)
+def add(a, b):
+    if a == 0:
+        return b
+    elif a == 1:
+        return new(b, OneType)()
+    else:
+        return new(b, ScaledType)(new(b, OneType)(), a)
+
+
+@_dispatch(ZeroType, Function)
+def add(b, a): return new(b, FunctionType)(a)
+
+
+@_dispatch(Function, ZeroType)
+def add(a, b): return new(b, FunctionType)(a)
 
 
 # Group factors and terms if possible.
@@ -962,6 +965,6 @@ def equal(a, b): return type(a) == type(b)
 
 
 @_dispatch.multi((SumType, SumType),
-                (ProductType, ProductType))
+                 (ProductType, ProductType))
 def equal(a, b): return (equal(a[0], b[0]) and equal(a[1], b[1])) or \
                         (equal(a[0], b[1]) and equal(a[1], b[0]))
