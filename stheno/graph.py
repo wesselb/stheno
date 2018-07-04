@@ -38,6 +38,40 @@ class Graph(Referentiable):
         self.prior_kernels = None
         self.prior_means = None
 
+        # Store named GPs in both ways.
+        self.gps_by_name = {}
+        self.names_by_gp = {}
+
+    @_dispatch(str)
+    def __getitem__(self, name):
+        return self.gps_by_name[name]
+
+    @_dispatch(PromisedGP)
+    def __getitem__(self, p):
+        return self.names_by_gp[id(p)]
+
+    @_dispatch(PromisedGP, str)
+    def name(self, p, name):
+        """Name a GP.
+
+        Args:
+            p (:class:`.graph.GP`): GP to name.
+            name (str): Name. Must be unique.
+        """
+        # Delete any existing names and back-references for the GP.
+        if id(p) in self.names_by_gp:
+            del self.gps_by_name[self.names_by_gp[id(p)]]
+            del self.names_by_gp[id(p)]
+
+        # Check that name is not in use.
+        if name in self.gps_by_name:
+            raise RuntimeError('Name "{}" for "{}" already taken by "{}".'
+                               ''.format(name, p, self[name]))
+
+        # Set the name and the back-reference.
+        self.gps_by_name[name] = p
+        self.names_by_gp[id(p)] = name
+
     def _add_p(self, p):
         self.ps.append(p)
         self.pids.add(id(p))
@@ -581,7 +615,7 @@ class GP(GPPrimitive, Referentiable):
     _dispatch = Dispatcher(in_class=Self)
 
     @_dispatch([object])
-    def __init__(self, kernel, mean=None, graph=model):
+    def __init__(self, kernel, mean=None, graph=model, name=None):
         # First resolve `kernel` and `mean` through `GPPrimitive`s constructor.
         GPPrimitive.__init__(self, kernel, mean)
         kernel, mean = self.kernel, self.mean
@@ -589,6 +623,20 @@ class GP(GPPrimitive, Referentiable):
         # Then add a new `GP` to the graph.
         GP.__init__(self, graph)
         graph.add_independent_gp(self, kernel, mean)
+
+        # If a name is given, set the name.
+        if name:
+            graph.name(self, name)
+
+    @property
+    def name(self):
+        """Name of the GP."""
+        return self.graph[self]
+
+    @name.setter
+    @_dispatch(str)
+    def name(self, name):
+        self.graph.name(self, name)
 
     @_dispatch(Graph)
     def __init__(self, graph):
