@@ -5,10 +5,10 @@ Features:
 
 Refactor:
     ☐ Make RQ, Exp, Matern32, and Matern52 cache friendly.
-    ☐ Simply signatures in `field.py`.
 
 ＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿
 Archive:
+ ✓ Simply signatures in `field.py`. @done (18-07-04 16:52) @project(Refactor)
  ✓ Efficient multi-output kernels: low-rank SPDs returned by multi-output kernels @done (18-06-26 15:39) @project(Features)
  ✓ Write documentation. @started @done (18-06-26 15:38) @project(Documentation)
  ✓ Sparse approximations @done (18-06-26 15:38) @project(Features)
