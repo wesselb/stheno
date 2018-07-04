@@ -5,6 +5,7 @@ from __future__ import absolute_import, division, print_function
 import operator
 from types import FunctionType as PythonFunction
 from plum import Dispatcher, Referentiable, Self
+from lab import B
 
 from stheno.field import squeeze, mul, add, SumElement, ProductElement, \
     ScaledElement, OneElement, ZeroElement, WrappedElement, PrimitiveElement, \
@@ -12,6 +13,26 @@ from stheno.field import squeeze, mul, add, SumElement, ProductElement, \
 from .field import dispatch_field, Element, new, get_field, broadcast
 
 __all__ = []
+
+_dispatch = Dispatcher()
+
+
+@_dispatch(B.Numeric)
+def to_tensor(x):
+    """Convert object to tensor.
+
+    Args:
+        x (object): Object to convert to tensor.
+
+    Returns:
+        tensor: `x` as a tensor.
+    """
+    return x
+
+
+@_dispatch({tuple, list})
+def to_tensor(x):
+    return B.stack(x, axis=0)
 
 
 class Function(Element, Referentiable):
@@ -30,7 +51,7 @@ class Function(Element, Referentiable):
         Returns:
             :class:`.function_field.Function`: Stretched function.
         """
-        return stretch(self, *stretches)
+        return stretch(self, *(to_tensor(x) for x in stretches))
 
     def shift(self, *amounts):
         """Shift the inputs of an function by a certain amount.
@@ -41,7 +62,7 @@ class Function(Element, Referentiable):
         Returns:
             :class:`.function_field.Function`: Shifted function.
         """
-        return shift(self, *amounts)
+        return shift(self, *(to_tensor(x) for x in amounts))
 
     @_dispatch([{tuple, list, type(None)}])
     def select(self, *dims):
