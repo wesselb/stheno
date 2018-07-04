@@ -127,14 +127,14 @@ available:
         0 & \text{otherwise};
        \end{cases} $$
 
-* `FunctionKernel(f)`:
+* `TensorProductKernel(f)`:
 
     $$ k(x, y) = f(x)f(y). $$
 
     Adding or multiplying a `FunctionType` `f` to or with a kernel will 
-    automatically translate `f` to `FunctionKernel(f)`. For example, `f * k`
-    will translate to `FunctionKernel(f) * k`, and `f + k` will translate to
-    `FunctionKernel(f) + k`.
+    automatically translate `f` to `TensorProductKernel(f)`. For example,
+    `f * k` will translate to `TensorProductKernel(f) * k`, and `f + k` will 
+    translate to `TensorProductKernel(f) + k`.
 
 
 #### Available Means
@@ -142,14 +142,14 @@ available:
 Constants function as constant means. Besides that, the following means are 
 available:
 
-* `FunctionMean(f)`:
+* `TensorProductMean(f)`:
 
     $$ m(x) = f(x). $$
 
     Adding or multiplying a `FunctionType` `f` to or with a mean will 
-    automatically translate `f` to `FunctionMean(f)`. For example, `f * m` will
-    translate to `FunctionMean(f) * m`, and `f + m` will translate to
-    `FunctionMean(f) + m`.
+    automatically translate `f` to `TensorProductMean(f)`. For example,
+    `f * m` will translate to `TensorProductMean(f) * m`, and `f + m` will 
+    translate to `TensorProductMean(f) + m`.
 
 #### Compositional Design
 
