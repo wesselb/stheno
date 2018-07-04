@@ -113,9 +113,9 @@ class Graph(Referentiable):
             :class:`.graph.GP`: The GP corresponding to the product.
         """
         kernels = self.kernels  # Careful with the closure!
-        return self._update(other * self.means[p],
-                            lambda: other ** 2 * kernels[p],
-                            lambda pi: other * kernels[p, pi])
+        return self._update(self.means[p] * other,
+                            lambda: kernels[p] * other ** 2,
+                            lambda pi: kernels[p, pi] * other)
 
     @_dispatch(PromisedGP, FunctionType)
     def mul(self, p, f):
