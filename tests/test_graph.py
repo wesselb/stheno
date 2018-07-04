@@ -9,7 +9,7 @@ from lab import B
 from stheno.graph import Graph, GP
 from stheno.input import At
 from stheno.kernel import Linear, EQ, Delta, Exp, RQ
-from stheno.mean import FunctionMean
+from stheno.mean import TensorProductMean
 from stheno.cache import Cache
 # noinspection PyUnresolvedReferences,
 from . import eq, raises, ok, le, eprint, lam
@@ -73,7 +73,7 @@ def test_construction():
 
 def test_sum_other():
     model = Graph()
-    p1 = GP(EQ(), FunctionMean(lambda x: x ** 2), graph=model)
+    p1 = GP(EQ(), TensorProductMean(lambda x: x ** 2), graph=model)
     p2 = p1 + 5.
     p3 = 5. + p1
     p4 = model.sum(5., p1)
@@ -93,7 +93,7 @@ def test_sum_other():
 
 def test_mul_other():
     model = Graph()
-    p1 = GP(EQ(), FunctionMean(lambda x: x ** 2), graph=model)
+    p1 = GP(EQ(), TensorProductMean(lambda x: x ** 2), graph=model)
     p2 = 5. * p1
     p3 = p1 * 5.
 

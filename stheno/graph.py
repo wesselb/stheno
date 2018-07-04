@@ -11,7 +11,7 @@ from plum import Dispatcher, Self, Referentiable, type_parameter, PromisedType
 
 from .cache import Cache, uprank
 from .input import Input, At, MultiInput
-from .kernel import ZeroKernel, PosteriorCrossKernel, Kernel, FunctionKernel
+from .kernel import ZeroKernel, PosteriorCrossKernel, Kernel, TensorProductKernel
 from .lazy import LazyVector, LazyMatrix
 from .mean import PosteriorCrossMean, Mean
 from .mokernel import MultiOutputKernel as MOK
@@ -126,7 +126,7 @@ class Graph(Referentiable):
 
         return self._update(f * self.means[p],
                             lambda: f * kernels[p],
-                            (lambda pi: FunctionKernel(f, ones) *
+                            (lambda pi: TensorProductKernel(f, ones) *
                                         kernels[p, pi]))
 
     @_dispatch(PromisedGP, PromisedGP)
@@ -141,14 +141,14 @@ class Graph(Referentiable):
         return self._update(
             (lambda x, B: kernels[p1, p2].elwise(x, x, B)) +
             means[p1] * means[p2],
-            (lambda: (kernels[p1] + FunctionKernel(means[p1], means[p1])) *
-                     (kernels[p2] + FunctionKernel(means[p2], means[p2])) +
-                     (kernels[p1, p2] + FunctionKernel(means[p1], means[p2])) *
-                     (kernels[p2, p1] + FunctionKernel(means[p2], means[p1])) -
-                     2 * FunctionKernel(means[p1] * means[p2],
-                                        means[p1] * means[p2])),
-            (lambda pi: FunctionKernel(means[p2], ones) * kernels[p1, pi] +
-                        FunctionKernel(means[p1], ones) * kernels[p2, pi]
+            (lambda: (kernels[p1] + TensorProductKernel(means[p1], means[p1])) *
+                     (kernels[p2] + TensorProductKernel(means[p2], means[p2])) +
+                     (kernels[p1, p2] + TensorProductKernel(means[p1], means[p2])) *
+                     (kernels[p2, p1] + TensorProductKernel(means[p2], means[p1])) -
+                     2 * TensorProductKernel(means[p1] * means[p2],
+                                             means[p1] * means[p2])),
+            (lambda pi: TensorProductKernel(means[p2], ones) * kernels[p1, pi] +
+                        TensorProductKernel(means[p1], ones) * kernels[p2, pi]
              ),
         )
 

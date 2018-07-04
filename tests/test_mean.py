@@ -12,7 +12,7 @@ from plum import Dispatcher
 from stheno.graph import GP, Graph
 from stheno.input import Observed
 from stheno.kernel import EQ
-from stheno.mean import FunctionMean, ZeroMean, Mean, OneMean, \
+from stheno.mean import TensorProductMean, ZeroMean, Mean, OneMean, \
     PosteriorCrossMean, PosteriorMean, VariationalPosteriorCrossMean
 from stheno.cache import Cache
 from stheno.spd import SPD
@@ -25,7 +25,7 @@ def test_corner_cases():
 
 
 def test_construction():
-    m = FunctionMean(lambda x: x ** 2)
+    m = TensorProductMean(lambda x: x ** 2)
 
     x = np.random.randn(10, 1)
     c = Cache()
@@ -52,8 +52,8 @@ def test_basic_arithmetic():
     @dispatch(object)
     def f2(x): return np.sum(x ** 3, axis=1)[:, None]
 
-    m1 = FunctionMean(f1)
-    m2 = FunctionMean(f2)
+    m1 = TensorProductMean(f1)
+    m2 = TensorProductMean(f2)
     m3 = ZeroMean()
     x1 = np.random.randn(10, 2)
     x2 = np.random.randn()
@@ -71,8 +71,8 @@ def test_basic_arithmetic():
 def test_posterior_mean():
     z = np.linspace(0, 1, 10)
     pcm = PosteriorCrossMean(
-        FunctionMean(lambda x: x),
-        FunctionMean(lambda x: x ** 2),
+        TensorProductMean(lambda x: x),
+        TensorProductMean(lambda x: x ** 2),
         EQ(), z, SPD(2 * EQ()(z)), np.random.randn(10)
     )
 
@@ -91,8 +91,8 @@ def test_posterior_mean():
 def test_variational_posterior_mean():
     z = np.linspace(0, 1, 10)
     pcm = VariationalPosteriorCrossMean(
-        FunctionMean(lambda x: x),
-        FunctionMean(lambda x: x ** 2),
+        TensorProductMean(lambda x: x),
+        TensorProductMean(lambda x: x ** 2),
         EQ(), z, np.random.randn(10)
     )
 
@@ -117,15 +117,15 @@ def test_function_mean():
 
     def my_function(x): pass
 
-    yield eq, str(FunctionMean(my_function)), 'my_function'
+    yield eq, str(TensorProductMean(my_function)), 'my_function'
 
 
 def test_derivative():
     B.backend_to_tf()
     s = B.Session()
 
-    m = FunctionMean(lambda x: x ** 2)
-    m2 = FunctionMean(lambda x: x ** 3)
+    m = TensorProductMean(lambda x: x ** 2)
+    m2 = TensorProductMean(lambda x: x ** 3)
     x = B.array(np.random.randn(10, 1))
 
     yield assert_allclose, s.run(m.diff(0)(x)), s.run(2 * x)

@@ -2,14 +2,11 @@
 
 from __future__ import absolute_import, division, print_function
 
-import operator
-from types import FunctionType as Function
-
 from plum import Dispatcher, Referentiable, Self, NotFoundLookupError
 
 __all__ = []
 
-_dispatch = Dispatcher()
+dispatch_field = Dispatcher()
 
 
 def apply_optional_arg(f, arg1, arg2):
@@ -44,6 +41,19 @@ def squeeze(xs):
     return xs[0] if len(xs) == 1 else xs
 
 
+def get_subclasses(c):
+    """Get all subclasses of a class.
+
+    Args:
+        c (type): Class to get subclasses of.
+
+    Returns:
+        list[type]: List of subclasses of `c`.
+    """
+    return c.__subclasses__() + \
+           [x for sc in c.__subclasses__() for x in get_subclasses(sc)]
+
+
 def broadcast(op, xs, ys):
     """Perform a binary operation `op` on elements of `xs` and `ys`. If `xs` or
     `ys` has length 1, then it is repeated sufficiently many times to match the
@@ -73,14 +83,14 @@ def broadcast(op, xs, ys):
     return tuple(op(x, y) for x, y in zip(xs, ys))
 
 
-class Type(Referentiable):
+class Element(Referentiable):
     """A field over functions.
 
     Functions are also referred to as elements of the field. Elements can be
     added and multiplied.
     """
 
-    _dispatch = Dispatcher(in_class=Self)
+    dispatch_field = Dispatcher(in_class=Self)
 
     def __eq__(self, other):
         return equal(self, other)
@@ -106,71 +116,6 @@ class Type(Referentiable):
     def __rsub__(self, other):
         return add(other, -self)
 
-    def stretch(self, *stretches):
-        """Stretch the element.
-
-        Args:
-            *stretches (tensor): Per input, extent to stretch by.
-
-        Returns:
-            :class:`.field.Type`: Stretched element.
-        """
-        return stretch(self, *stretches)
-
-    def shift(self, *amounts):
-        """Shift the inputs of an element by a certain amount.
-
-        Args:
-            *amounts (tensor): Per input, amount to shift by.
-
-        Returns:
-            :class:`.field.Type`: Shifted element.
-        """
-        return shift(self, *amounts)
-
-    @_dispatch([{tuple, list, type(None)}])
-    def select(self, *dims):
-        """Select particular dimensions of the input features.
-
-        Args:
-            *dims (int, sequence, or None): Per input, dimensions to select.
-                Set to `None` to select all.
-
-        Returns:
-            :class:`.field.Type`: Element with dimensions of the input features
-            selected.
-        """
-        return select(self, *dims)
-
-    @_dispatch([object])
-    def select(self, *dims):
-        return select(self, dims)
-
-    def transform(self, *fs):
-        """Transform the inputs.
-
-        Args:
-            *fs (int or tuple): Per input, transformation. Set to `None` to
-                not perform a transformation.
-
-        Returns:
-            :class:`.field.Type`: Element with its inputs transformed.
-        """
-        return transform(self, *fs)
-
-    def diff(self, *derivs):
-        """Differentiate.
-
-        Args:
-            *derivs (int): Per input, dimension of the feature which to take
-                the derivatives with respect to. Set to `None` to not take a
-                derivative.
-
-        Returns:
-            :class:`.field.Type`: Derivative of the element.
-        """
-        return differentiate(self, *derivs)
-
     @property
     def num_terms(self):
         """Number of terms"""
@@ -183,7 +128,7 @@ class Type(Referentiable):
             i (int): Index of term.
 
         Returns:
-            :class:`.field.Type`: The referenced term.
+            :class:`.field.Element`: The referenced term.
         """
         if i == 0:
             return self
@@ -202,7 +147,7 @@ class Type(Referentiable):
             i (int): Index of factor.
 
         Returns:
-            :class:`.field.Type`: The referenced factor.
+            :class:`.field.Element`: The referenced factor.
         """
         if i == 0:
             return self
@@ -220,7 +165,7 @@ class Type(Referentiable):
         return self.__class__.__name__ + '()'
 
 
-class PrimitiveType(Type):
+class PrimitiveElement(Element):
     """A primitive.
 
     Instances of primitives should always be the same element. It therefore
@@ -228,29 +173,29 @@ class PrimitiveType(Type):
     """
 
 
-class OneType(PrimitiveType):
+class OneElement(PrimitiveElement):
     """The constant `1`."""
 
     def __str__(self):
         return '1'
 
 
-class ZeroType(PrimitiveType):
+class ZeroElement(PrimitiveElement):
     """The constant `0`."""
 
     def __str__(self):
         return '0'
 
 
-class WrappedType(Type):
+class WrappedElement(Element):
     """A wrapped element.
 
     Args:
-        t (:class:`.field.Type`): Element to wrap.
+        e (:class:`.field.Element`): Element to wrap.
     """
 
-    def __init__(self, t):
-        self.t = t
+    def __init__(self, e):
+        self.t = e
 
     def __getitem__(self, item):
         if item == 0:
@@ -258,24 +203,24 @@ class WrappedType(Type):
         else:
             raise IndexError('Index out of range.')
 
-    def display(self, t):
+    def display(self, e):
         raise NotImplementedError()
 
     def __str__(self):
         return pretty_print(self)
 
 
-class JoinType(Type):
+class JoinElement(Element):
     """Two wrapped elements.
 
     Args:
-        t1 (:class:`.field.Type`): First element to wrap.
-        t2 (:class:`.field.Type`): Second element to wrap.
+        e1 (:class:`.field.Element`): First element to wrap.
+        e2 (:class:`.field.Element`): Second element to wrap.
     """
 
-    def __init__(self, t1, t2):
-        self.t1 = t1
-        self.t2 = t2
+    def __init__(self, e1, e2):
+        self.t1 = e1
+        self.t2 = e2
 
     def __getitem__(self, item):
         if item == 0:
@@ -285,31 +230,31 @@ class JoinType(Type):
         else:
             raise IndexError('Index out of range.')
 
-    def display(self, t1, t2):
+    def display(self, e1, e2):
         raise NotImplementedError()
 
     def __str__(self):
         return pretty_print(self)
 
 
-class ScaledType(WrappedType):
+class ScaledElement(WrappedElement):
     """Scaled element.
 
     Args:
-        t (:class:`.field.Type`): Element to scale.
+        e (:class:`.field.Element`): Element to scale.
         scale (tensor): Scale.
     """
 
-    def __init__(self, t, scale):
-        WrappedType.__init__(self, t)
+    def __init__(self, e, scale):
+        WrappedElement.__init__(self, e)
         self.scale = scale
 
     @property
     def num_factors(self):
         return self[0].num_factors + 1
 
-    def display(self, t):
-        return '{} * {}'.format(self.scale, t)
+    def display(self, e):
+        return '{} * {}'.format(self.scale, e)
 
     def factor(self, i):
         if i >= self.num_factors:
@@ -318,102 +263,7 @@ class ScaledType(WrappedType):
             return self.scale if i == 0 else self[0].factor(i - 1)
 
 
-class StretchedType(WrappedType):
-    """Stretched element.
-
-    Args:
-        t (:class:`.field.Type`): Element to stretch.
-        *stretches (tensor): Extent of stretches.
-    """
-
-    def __init__(self, t, *stretches):
-        WrappedType.__init__(self, t)
-        self.stretches = stretches
-
-    def display(self, t):
-        return '{} > {}'.format(t, squeeze(self.stretches))
-
-
-class ShiftedType(WrappedType):
-    """Shifted element.
-
-    Args:
-        t (:class:`.field.Type`): Element to shift.
-        *shifts (tensor): Shift amounts.
-    """
-
-    def __init__(self, t, *shifts):
-        WrappedType.__init__(self, t)
-        self.shifts = shifts
-
-    def display(self, t):
-        return '{} shift {}'.format(t, squeeze(self.shifts))
-
-
-class SelectedType(WrappedType):
-    """Select particular dimensions of the input features.
-
-    Args:
-        t (:class:`.field.Type`): Element to wrap.
-        *dims (tensor): Dimensions to select.
-    """
-
-    def __init__(self, t, *dims):
-        WrappedType.__init__(self, t)
-        self.dims = dims
-
-    def display(self, t):
-        return '{} : {}'.format(t, squeeze(tuple(list(ds) for ds in self.dims)))
-
-
-class InputTransformedType(WrappedType):
-    """Transform the inputs for a particular element.
-
-    Args:
-        t (:class:`.field.Type`): Element to wrap.
-        *fs (tensor): Per input, the transformation. Set to `None` to not
-            do a transformation.
-    """
-
-    def __init__(self, t, *fs):
-        WrappedType.__init__(self, t)
-        self.fs = fs
-
-    def display(self, t):
-        # Safely get a function's name.
-        def name(f):
-            return 'None' if f is None else f.__name__
-
-        if len(self.fs) == 1:
-            fs = name(self.fs[0])
-        else:
-            fs = '({})'.format(', '.join(name(f) for f in self.fs))
-        return '{} transform {}'.format(t, fs)
-
-
-class DerivativeType(WrappedType):
-    """Compute the derivative with respect to the inputs of an element.
-
-    Args:
-        t (:class:`.field.Type`): Element to compute
-            the derivative of.
-        *derivs (tensor): Per input, the index of the dimension which to
-            take the derivative of. Set to `None` to not take a derivative.
-    """
-
-    def __init__(self, t, *derivs):
-        WrappedType.__init__(self, t)
-        self.derivs = derivs
-
-    def display(self, t):
-        if len(self.derivs) == 1:
-            derivs = '({})'.format(self.derivs[0])
-        else:
-            derivs = self.derivs
-        return 'd{} {}'.format(derivs, t)
-
-
-class ProductType(JoinType):
+class ProductElement(JoinElement):
     """Product of elements."""
 
     @property
@@ -428,11 +278,11 @@ class ProductType(JoinType):
         else:
             return self[1].factor(i - self[0].num_factors)
 
-    def display(self, t1, t2):
-        return '{} * {}'.format(t1, t2)
+    def display(self, e1, e2):
+        return '{} * {}'.format(e1, e2)
 
 
-class SumType(JoinType):
+class SumElement(JoinElement):
     """Sum of elements."""
 
     @property
@@ -447,167 +297,52 @@ class SumType(JoinType):
         else:
             return self[1].term(i - self[0].num_terms)
 
-    def display(self, t1, t2):
-        return '{} + {}'.format(t1, t2)
+    def display(self, e1, e2):
+        return '{} + {}'.format(e1, e2)
 
 
-class FunctionType(Type):
-    """An element built from a product of functions for each input.
-
-    Args:
-        *fs (function): Per input, a function.
-    """
-
-    def __init__(self, *fs):
-        self.fs = fs
-
-    def __str__(self):
-        if len(self.fs) == 1:
-            return self.fs[0].__name__
-        else:
-            return '({})'.format(' x '.join(f.__name__ for f in self.fs))
-
-
-@_dispatch(object, object)
+@dispatch_field(object, object)
 def mul(a, b):
     """Multiply two elements.
 
     Args:
-        a (:class:`.field.Type`): First element in product.
-        b (:class:`.field.Type`): Second element in product.
+        a (:class:`.field.Element`): First element in product.
+        b (:class:`.field.Element`): Second element in product.
 
     Returns:
-        :class:`.field.Type`: Product of the elements.
+        :class:`.field.Element`: Product of the elements.
     """
     raise NotImplementedError('Multiplication not implemented for {} and {}.'
                               ''.format(type(a).__name__, type(b).__name__))
 
 
-@_dispatch(object, object)
+@dispatch_field(object, object)
 def add(a, b):
     """Add two elements.
 
     Args:
-        a (:class:`.field.Type`): First element in summation.
-        b (:class:`.field.Type`): Second element in summation.
+        a (:class:`.field.Element`): First element in summation.
+        b (:class:`.field.Element`): Second element in summation.
 
     Returns:
-        :class:`.field.Type`: Sum of the elements.
+        :class:`.field.Element`: Sum of the elements.
     """
     raise NotImplementedError('Addition not implemented for {} and {}.'
                               ''.format(type(a).__name__, type(b).__name__))
 
 
-@_dispatch(object, [object])
-def stretch(a, *stretches):
-    """Stretch an element.
-
-    Args:
-        a (:class:`.field.Type`): Element to stretch.
-        *stretches (tensor): Per input, extent of stretches.
-
-    Returns:
-        :class:`.field.Type`: Stretched element.
-    """
-    raise NotImplementedError('Stretching not implemented for {}.'
-                              ''.format(type(a).__name__))
-
-
-@_dispatch(object, [object])
-def shift(a, *shifts):
-    """Shift an element.
-
-    Args:
-        a (:class:`.field.Type`): Element to shift.
-        *shifts (tensor): Per input, amount of shift.
-
-    Returns:
-        Shifted element.
-    """
-    raise NotImplementedError('Shifting not implemented for {}.'
-                              ''.format(type(a).__name__))
-
-
-@_dispatch(object, [object])
-def select(a, *dims):
-    """Select dimensions from the inputs.
-
-    Args:
-        a (:class:`.field.Type`): Element to wrap.
-        *dims (int): Per input, dimensions to select. Set to `None` to select
-            all.
-
-    Returns:
-        Element with particular dimensions from the inputs selected.
-    """
-    raise NotImplementedError('Selection not implemented for {}.'
-                              ''.format(type(a).__name__))
-
-
-@_dispatch(object, [object])
-def transform(a, *fs):
-    """Transform inputs.
-
-    Args:
-        a (:class:`.field.Type`): Element to wrap.
-        *fs (int): Per input, the transform. Set to `None` to not perform a
-            transform.
-
-    Returns:
-        :class:`.field.Type`: Element with its inputs transformed.
-    """
-    raise NotImplementedError('Input transforms not implemented for {}.'
-                              ''.format(type(a).__name__))
-
-
-@_dispatch(object, [object])
-def differentiate(a, *derivs):
-    """Differentiate.
-
-    Args:
-        a (:class:`.field.Type`): Element to differentiate.
-        *derivs (int): Per input, dimension of the feature which to take
-            the derivatives with respect to. Set to `None` to not take a
-            derivative.
-
-    Returns:
-        :class:`.field.Type`: Derivative of the element.
-    """
-    raise NotImplementedError('Differentiation not implemented for {}.'
-                              ''.format(type(a).__name__))
-
-
-field_types = set(Type.__subclasses__())
-field_cache = {}
-
-
+@dispatch_field(object)
 def get_field(a):
-    """Get the field type of an element.
+    """Get the field of an element.
 
     Args:
-        a (:class:`.field.Type`): Element to get field of.
+        a (:class:`.field.Element`): Element to get field of.
 
     Returns:
-        type: Field type of `a`.
+        type: Field of `a`.
     """
-    try:
-        return field_cache[type(a)]
-    except KeyError:
-        # Figure out which fields are defined.
-        fields = set(Type.__subclasses__()) - field_types
-
-        # Loop through the fields, and see to which one `a` corresponds.
-        candidates = []
-        for t in fields:
-            if isinstance(a, t):
-                candidates.append(t)
-
-        # There should only be a single candidate.
-        if len(candidates) != 1:
-            raise RuntimeError('Could not determine field type of {}.'
-                               ''.format(type(a).__name__))
-        field_cache[type(a)] = candidates[0]
-        return field_cache[type(a)]
+    raise RuntimeError('Could not determine field type of {}.'
+                       ''.format(type(a).__name__))
 
 
 new_cache = {}
@@ -617,7 +352,7 @@ def new(a, t):
     """Create a new specialised type.
 
     Args:
-        a (:class:`.field.Type`): Element to create new type for.
+        a (:class:`.field.Element`): Element to create new type for.
         t (type): Type to create.
 
     Returns:
@@ -627,7 +362,7 @@ def new(a, t):
         return new_cache[type(a), t]
     except KeyError:
         field = get_field(a)
-        candidates = list(set(field.__subclasses__()) & set(t.__subclasses__()))
+        candidates = list(set(get_subclasses(field)) & set(get_subclasses(t)))
 
         # There should only be a single candidate.
         if len(candidates) != 1:
@@ -640,12 +375,12 @@ def new(a, t):
 
 # Pretty printing with minimal parentheses.
 
-@_dispatch(Type)
+@dispatch_field(Element)
 def pretty_print(el):
     """Pretty print an element with a minimal number of parentheses.
 
     Args:
-        el (:class:`.field.Type`): Element to print.
+        el (:class:`.field.Element`): Element to print.
 
     Returns:
         str: `el` converted to string prettily.
@@ -653,17 +388,17 @@ def pretty_print(el):
     return str(el)
 
 
-@_dispatch(WrappedType)
+@dispatch_field(WrappedElement)
 def pretty_print(el):
     return el.display(pretty_print(el[0], el))
 
 
-@_dispatch(JoinType)
+@dispatch_field(JoinElement)
 def pretty_print(el):
     return el.display(pretty_print(el[0], el), pretty_print(el[1], el))
 
 
-@_dispatch(object, object)
+@dispatch_field(object, object)
 def pretty_print(el, parent):
     if need_parens(el, parent):
         return '(' + pretty_print(el) + ')'
@@ -671,13 +406,13 @@ def pretty_print(el, parent):
         return pretty_print(el)
 
 
-@_dispatch(Type, SumType)
+@dispatch_field(Element, SumElement)
 def need_parens(el, parent):
     """Check whether `el` needs parentheses when printed in `parent`.
 
     Args:
-        el (:class:`.field.Type`): Element to print.
-        parent (:class:`.field.Type`): Parent of element to print.
+        el (:class:`.field.Element`): Element to print.
+        parent (:class:`.field.Element`): Parent of element to print.
 
     Returns:
         bool: Boolean whether `el` needs parentheses.
@@ -685,286 +420,193 @@ def need_parens(el, parent):
     return False
 
 
-@_dispatch(Type, ProductType)
+@dispatch_field(Element, ProductElement)
 def need_parens(el, parent): return False
 
 
-@_dispatch({SumType, WrappedType}, ProductType)
+@dispatch_field({SumElement, WrappedElement}, ProductElement)
 def need_parens(el, parent): return True
 
 
-@_dispatch(ScaledType, ProductType)
+@dispatch_field(ScaledElement, ProductElement)
 def need_parens(el, parent): return False
 
 
-@_dispatch(Type, WrappedType)
+@dispatch_field(Element, WrappedElement)
 def need_parens(el, parent): return False
 
 
-@_dispatch({WrappedType, JoinType}, WrappedType)
+@dispatch_field({WrappedElement, JoinElement}, WrappedElement)
 def need_parens(el, parent): return True
 
 
-@_dispatch({ProductType, ScaledType}, ScaledType)
+@dispatch_field({ProductElement, ScaledElement}, ScaledElement)
 def need_parens(el, parent): return False
 
 
 # Generic multiplication.
 
-@_dispatch(Type, object)
+@dispatch_field(Element, object)
 def mul(a, b):
     if b == 0:
-        return new(a, ZeroType)()
+        return new(a, ZeroElement)()
     elif b == 1:
         return a
     else:
-        return new(a, ScaledType)(a, b)
+        return new(a, ScaledElement)(a, b)
 
 
-@_dispatch(object, Type)
+@dispatch_field(object, Element)
 def mul(a, b):
     if a == 0:
-        return new(b, ZeroType)()
+        return new(b, ZeroElement)()
     elif a == 1:
         return b
     else:
-        return new(b, ScaledType)(b, a)
+        return new(b, ScaledElement)(b, a)
 
 
-@_dispatch(Type, Function)
-def mul(a, b): return mul(a, new(a, FunctionType)(b))
-
-
-@_dispatch(Function, Type)
-def mul(a, b): return mul(new(b, FunctionType)(a), b)
-
-
-@_dispatch(Type, Type)
-def mul(a, b): return new(a, ProductType)(a, b)
+@dispatch_field(Element, Element)
+def mul(a, b): return new(a, ProductElement)(a, b)
 
 
 # Generic addition.
 
-@_dispatch(Type, object)
+@dispatch_field(Element, object)
 def add(a, b):
     if b == 0:
         return a
     else:
-        return new(a, SumType)(a, mul(b, new(a, OneType)()))
+        return new(a, SumElement)(a, mul(b, new(a, OneElement)()))
 
 
-@_dispatch(object, Type)
+@dispatch_field(object, Element)
 def add(a, b):
     if a == 0:
         return b
     else:
-        return new(b, SumType)(mul(a, new(b, OneType)()), b)
+        return new(b, SumElement)(mul(a, new(b, OneElement)()), b)
 
 
-@_dispatch(Type, Function)
-def add(a, b): return add(a, new(a, FunctionType)(b))
-
-
-@_dispatch(Function, Type)
-def add(a, b): return add(new(b, FunctionType)(a), b)
-
-
-@_dispatch(Type, Type)
+@dispatch_field(Element, Element)
 def add(a, b):
     if a == b:
         return mul(2, a)
     else:
-        return new(a, SumType)(a, b)
+        return new(a, SumElement)(a, b)
 
 
 # Cancel redundant zeros and ones.
 
-@_dispatch.multi((ZeroType, object), (Type, OneType), precedence=1)
+@dispatch_field.multi((ZeroElement, object), (Element, OneElement),
+                      precedence=2)
 def mul(a, b): return a
 
 
-@_dispatch.multi((object, ZeroType), (OneType, Type), precedence=1)
+@dispatch_field.multi((object, ZeroElement), (OneElement, Element),
+                      precedence=2)
 def mul(a, b): return b
 
 
-@_dispatch.multi((ZeroType, ZeroType), (OneType, OneType), precedence=1)
+@dispatch_field.multi((ZeroElement, ZeroElement), (OneElement, OneElement),
+                      precedence=1)
 def mul(a, b): return a
 
 
-@_dispatch(Type, ZeroType, precedence=1)
+@dispatch_field(Element, ZeroElement, precedence=2)
 def add(a, b): return a
 
 
-@_dispatch(ZeroType, Type, precedence=1)
+@dispatch_field(ZeroElement, Element, precedence=2)
 def add(a, b): return b
 
 
-@_dispatch(ZeroType, ZeroType, precedence=1)
+@dispatch_field(ZeroElement, ZeroElement, precedence=2)
 def add(a, b): return a
 
 
-@_dispatch(ZeroType, object)
+@dispatch_field(ZeroElement, object)
 def add(a, b):
     if b == 0:
         return a
     elif b == 1:
-        return new(a, OneType)()
+        return new(a, OneElement)()
     else:
-        return new(a, ScaledType)(new(a, OneType)(), b)
+        return new(a, ScaledElement)(new(a, OneElement)(), b)
 
 
-@_dispatch(object, ZeroType)
+@dispatch_field(object, ZeroElement)
 def add(a, b):
     if a == 0:
         return b
     elif a == 1:
-        return new(b, OneType)()
+        return new(b, OneElement)()
     else:
-        return new(b, ScaledType)(new(b, OneType)(), a)
-
-
-@_dispatch(ZeroType, Function)
-def add(b, a): return new(b, FunctionType)(a)
-
-
-@_dispatch(Function, ZeroType)
-def add(a, b): return new(b, FunctionType)(a)
+        return new(b, ScaledElement)(new(b, OneElement)(), a)
 
 
 # Group factors and terms if possible.
 
-@_dispatch(object, ScaledType)
-def mul(a, b): return mul(b, a)
+@dispatch_field(object, ScaledElement)
+def mul(a, b): return mul(b.scale * a, b[0])
 
 
-@_dispatch(ScaledType, object)
+@dispatch_field(ScaledElement, object)
 def mul(a, b): return mul(a.scale * b, a[0])
 
 
-@_dispatch(ScaledType, Function)
-def mul(a, b): return mul(a, new(a, FunctionType)(b))
+@dispatch_field(ScaledElement, Element)
+def mul(a, b): return mul(a.scale, mul(a[0], b))
 
 
-@_dispatch(Function, ScaledType)
-def mul(a, b): return mul(new(b, FunctionType)(a), b)
+@dispatch_field(Element, ScaledElement)
+def mul(a, b): return mul(b.scale, mul(a, b[0]))
 
 
-@_dispatch(ScaledType, Type)
-def mul(a, b): return mul(a.scale, a[0] * b)
-
-
-@_dispatch(Type, ScaledType)
-def mul(a, b): return mul(b.scale, a * b[0])
-
-
-@_dispatch(ScaledType, ScaledType)
+@dispatch_field(ScaledElement, ScaledElement)
 def mul(a, b):
     if a[0] == b[0]:
-        return new(a, ScaledType)(a[0], a.scale * b.scale)
+        return new(a, ScaledElement)(a[0], a.scale * b.scale)
     else:
-        scaled = new(a, ScaledType)(a[0], a.scale * b.scale)
-        return new(a, ProductType)(scaled, b[0])
+        scaled = new(a, ScaledElement)(a[0], a.scale * b.scale)
+        return new(a, ProductElement)(scaled, b[0])
 
 
-@_dispatch(ScaledType, Type)
+@dispatch_field(ScaledElement, Element)
 def add(a, b):
     if a[0] == b:
         return mul(a.scale + 1, b)
     else:
-        return new(a, SumType)(a, b)
+        return new(a, SumElement)(a, b)
 
 
-@_dispatch(Type, ScaledType)
+@dispatch_field(Element, ScaledElement)
 def add(a, b):
     if a == b[0]:
         return mul(b.scale + 1, a)
     else:
-        return new(a, SumType)(a, b)
+        return new(a, SumElement)(a, b)
 
 
-@_dispatch(ScaledType, ScaledType)
+@dispatch_field(ScaledElement, ScaledElement)
 def add(a, b):
     if a[0] == b[0]:
         return mul(a.scale + b.scale, a[0])
     else:
-        return new(a, SumType)(a, b)
-
-
-# Stretch:
-
-@_dispatch(Type, [object])
-def stretch(a, *stretches): return new(a, StretchedType)(a, *stretches)
-
-
-@_dispatch({ZeroType, OneType}, [object])
-def stretch(a, *stretches): return a
-
-
-@_dispatch(StretchedType, [object])
-def stretch(a, *stretches):
-    return stretch(a[0], *broadcast(operator.mul, a.stretches, stretches))
-
-
-# Shifting:
-
-@_dispatch(Type, [object])
-def shift(a, *shifts): return new(a, ShiftedType)(a, *shifts)
-
-
-@_dispatch({ZeroType, OneType}, [object])
-def shift(a, *shifts): return a
-
-
-@_dispatch(ShiftedType, [object])
-def shift(a, *shifts):
-    return shift(a[0], *broadcast(operator.add, a.shifts, shifts))
-
-
-# Selection:
-
-@_dispatch(Type, [object])
-def select(a, *dims): return new(a, SelectedType)(a, *dims)
-
-
-@_dispatch({ZeroType, OneType}, [object])
-def select(a, *dims): return a
-
-
-# Input transforms:
-
-@_dispatch(Type, [object])
-def transform(a, *fs): return new(a, InputTransformedType)(a, *fs)
-
-
-@_dispatch({ZeroType, OneType}, [object])
-def transform(a, *fs): return a
-
-
-# Differentiation:
-
-@_dispatch(Type, [object])
-def differentiate(a, *derivs): return new(a, DerivativeType)(a, *derivs)
-
-
-@_dispatch(ZeroType, [object])
-def differentiate(a, *derivs): return a
-
-
-@_dispatch(OneType, [object])
-def differentiate(a, *derivs): return new(a, ZeroType)()
+        return new(a, SumElement)(a, b)
 
 
 # Equality:
 
-@_dispatch(object, object)
+@dispatch_field(object, object)
 def equal(a, b): return False
 
 
-@_dispatch(PrimitiveType, PrimitiveType)
+@dispatch_field(PrimitiveElement, PrimitiveElement)
 def equal(a, b): return type(a) == type(b)
 
 
-@_dispatch.multi((SumType, SumType),
-                 (ProductType, ProductType))
+@dispatch_field.multi((SumElement, SumElement),
+                      (ProductElement, ProductElement))
 def equal(a, b): return (equal(a[0], b[0]) and equal(a[1], b[1])) or \
                         (equal(a[0], b[1]) and equal(a[1], b[0]))

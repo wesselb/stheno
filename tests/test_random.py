@@ -7,7 +7,7 @@ from plum import Dispatcher
 from scipy.stats import multivariate_normal
 
 from stheno.kernel import EQ, RQ, ScaledKernel
-from stheno.mean import FunctionMean, ZeroMean, ScaledMean
+from stheno.mean import TensorProductMean, ZeroMean, ScaledMean
 from stheno.random import Normal, GPPrimitive, Normal1D
 from stheno.spd import UniformDiagonal, Diagonal
 # noinspection PyUnresolvedReferences
@@ -183,7 +183,7 @@ def close(n1, n2):
 
 def test_gp_construction():
     k = EQ()
-    m = FunctionMean(lambda x: x ** 2)
+    m = TensorProductMean(lambda x: x ** 2)
 
     p = GPPrimitive(k)
     yield eq, type(p.mean), ZeroMean
@@ -192,7 +192,7 @@ def test_gp_construction():
     yield eq, type(p.mean), ScaledMean
 
     p = GPPrimitive(k, m)
-    yield eq, type(p.mean), FunctionMean
+    yield eq, type(p.mean), TensorProductMean
 
     p = GPPrimitive(5)
     yield eq, type(p.kernel), ScaledKernel
@@ -201,7 +201,7 @@ def test_gp_construction():
 def test_gp():
     # Check finite-dimensional distribution construction.
     k = EQ()
-    m = FunctionMean(lambda x: x ** 2)
+    m = TensorProductMean(lambda x: x ** 2)
     p = GPPrimitive(k, m)
     x = np.random.randn(10, 1)
 
@@ -253,14 +253,14 @@ def test_gp_arithmetic():
 
 
 def test_gp_stretching():
-    m = FunctionMean(lambda x: x ** 2)
+    m = TensorProductMean(lambda x: x ** 2)
     gp = GPPrimitive(EQ(), m)
 
     yield eq, str(gp.stretch(1)), 'GP(EQ() > 1, <lambda> > 1)'
 
 
 def test_gp_select():
-    m = FunctionMean(lambda x: x ** 2)
+    m = TensorProductMean(lambda x: x ** 2)
     gp = GPPrimitive(EQ(), m)
 
     yield eq, str(gp.select(1)), 'GP(EQ() : [1], <lambda> : [1])'
@@ -268,14 +268,14 @@ def test_gp_select():
 
 
 def test_gp_shifting():
-    m = FunctionMean(lambda x: x ** 2)
+    m = TensorProductMean(lambda x: x ** 2)
     gp = GPPrimitive(EQ(), m)
 
     yield eq, str(gp.shift(1)), 'GP(EQ(), <lambda> shift 1)'
 
 
 def test_gp_transform():
-    m = FunctionMean(lambda x: x ** 2)
+    m = TensorProductMean(lambda x: x ** 2)
     gp = GPPrimitive(EQ(), m)
 
     yield eq, str(gp.transform(lambda x, c: x)), \
@@ -283,7 +283,7 @@ def test_gp_transform():
 
 
 def test_gp_derivative():
-    m = FunctionMean(lambda x: x ** 2)
+    m = TensorProductMean(lambda x: x ** 2)
     gp = GPPrimitive(EQ(), m)
 
     yield eq, str(gp.diff(1)), 'GP(d(1) EQ(), d(1) <lambda>)'

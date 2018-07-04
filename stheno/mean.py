@@ -7,18 +7,20 @@ import logging
 from lab import B
 from plum import Dispatcher, Self, Referentiable
 
+from stheno.function_field import StretchedFunction, ShiftedFunction, \
+    SelectedFunction, InputTransformedFunction, DerivativeFunction, \
+    TensorProductFunction, Function, ZeroFunction, OneFunction, \
+    ScaledFunction, ProductFunction, SumFunction, Function
 from .cache import Cache, cache, uprank
-from .field import Type, ZeroType, OneType, ScaledType, \
-    ProductType, SumType, ShiftedType, SelectedType, InputTransformedType, \
-    StretchedType, DerivativeType, FunctionType, apply_optional_arg
+from .field import apply_optional_arg, dispatch_field
 from .input import Input
 
-__all__ = ['FunctionMean', 'DerivativeMean']
+__all__ = ['TensorProductMean', 'DerivativeMean']
 
 log = logging.getLogger(__name__)
 
 
-class Mean(Type, Referentiable):
+class Mean(Function, Referentiable):
     """Mean function.
 
     Means can be added and multiplied.
@@ -53,7 +55,12 @@ class Mean(Type, Referentiable):
         return self(x.get(), cache)
 
 
-class SumMean(Mean, SumType, Referentiable):
+# Register the field.
+@dispatch_field(Mean)
+def get_field(a): return Mean
+
+
+class SumMean(Mean, SumFunction, Referentiable):
     """Sum of two means."""
 
     _dispatch = Dispatcher(in_class=Self)
@@ -64,7 +71,7 @@ class SumMean(Mean, SumType, Referentiable):
         return B.add(self[0](x, B), self[1](x, B))
 
 
-class ProductMean(Mean, ProductType, Referentiable):
+class ProductMean(Mean, ProductFunction, Referentiable):
     """Product of two means."""
 
     _dispatch = Dispatcher(in_class=Self)
@@ -75,7 +82,7 @@ class ProductMean(Mean, ProductType, Referentiable):
         return B.multiply(self[0](x, B), self[1](x, B))
 
 
-class ScaledMean(Mean, ScaledType, Referentiable):
+class ScaledMean(Mean, ScaledFunction, Referentiable):
     """Scaled mean."""
 
     _dispatch = Dispatcher(in_class=Self)
@@ -86,7 +93,7 @@ class ScaledMean(Mean, ScaledType, Referentiable):
         return B.multiply(self.scale, self[0](x, B))
 
 
-class StretchedMean(Mean, StretchedType, Referentiable):
+class StretchedMean(Mean, StretchedFunction, Referentiable):
     """Stretched mean."""
 
     _dispatch = Dispatcher(in_class=Self)
@@ -97,7 +104,7 @@ class StretchedMean(Mean, StretchedType, Referentiable):
         return self[0](B.divide(x, self.stretches[0]), B)
 
 
-class ShiftedMean(Mean, ShiftedType, Referentiable):
+class ShiftedMean(Mean, ShiftedFunction, Referentiable):
     """Shifted mean."""
 
     _dispatch = Dispatcher(in_class=Self)
@@ -108,7 +115,7 @@ class ShiftedMean(Mean, ShiftedType, Referentiable):
         return self[0](B.subtract(x, self.shifts[0]), B)
 
 
-class SelectedMean(Mean, SelectedType, Referentiable):
+class SelectedMean(Mean, SelectedFunction, Referentiable):
     """Mean with particular input dimensions selected."""
 
     _dispatch = Dispatcher(in_class=Self)
@@ -119,7 +126,7 @@ class SelectedMean(Mean, SelectedType, Referentiable):
         return self[0](B.take(x, self.dims[0], axis=1), B)
 
 
-class InputTransformedMean(Mean, InputTransformedType, Referentiable):
+class InputTransformedMean(Mean, InputTransformedFunction, Referentiable):
     """Input-transformed mean."""
 
     _dispatch = Dispatcher(in_class=Self)
@@ -130,7 +137,7 @@ class InputTransformedMean(Mean, InputTransformedType, Referentiable):
         return self[0](apply_optional_arg(self.fs[0], x, B), B)
 
 
-class OneMean(Mean, OneType, Referentiable):
+class OneMean(Mean, OneFunction, Referentiable):
     """Constant mean of `1`."""
 
     _dispatch = Dispatcher(in_class=Self)
@@ -142,7 +149,7 @@ class OneMean(Mean, OneType, Referentiable):
         return B.ones([B.shape(x)[0], 1], dtype=B.dtype(x))
 
 
-class ZeroMean(Mean, ZeroType, Referentiable):
+class ZeroMean(Mean, ZeroFunction, Referentiable):
     """Constant mean of `0`."""
 
     _dispatch = Dispatcher(in_class=Self)
@@ -154,7 +161,7 @@ class ZeroMean(Mean, ZeroType, Referentiable):
         return B.zeros([B.shape(x)[0], 1], dtype=B.dtype(x))
 
 
-class FunctionMean(Mean, FunctionType, Referentiable):
+class TensorProductMean(Mean, TensorProductFunction, Referentiable):
     _dispatch = Dispatcher(in_class=Self)
 
     @_dispatch(B.Numeric, Cache)
@@ -164,7 +171,7 @@ class FunctionMean(Mean, FunctionType, Referentiable):
         return apply_optional_arg(self.fs[0], x, B)
 
 
-class DerivativeMean(Mean, DerivativeType, Referentiable):
+class DerivativeMean(Mean, DerivativeFunction, Referentiable):
     """Derivative of mean."""
     _dispatch = Dispatcher(in_class=Self)
 

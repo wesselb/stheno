@@ -4,18 +4,20 @@ from __future__ import absolute_import, division, print_function
 
 import operator
 
-from stheno.field import mul, add, stretch, SumType, new, get_field, shift, \
-    transform, select, broadcast, WrappedType, JoinType, differentiate, Type
+from stheno.field import mul, add, SumElement, new, get_field, broadcast, \
+    WrappedElement, JoinElement, Element
+from stheno.function_field import stretch, differentiate, shift, transform, \
+    select
 from stheno.kernel import EQ, RQ, Linear, OneKernel, ZeroKernel, Delta, \
-    FunctionKernel
-from stheno.mean import FunctionMean, ZeroMean, OneMean
+    TensorProductKernel
+from stheno.mean import TensorProductMean, ZeroMean, OneMean
 # noinspection PyUnresolvedReferences
 from tests import ok, raises
 from . import eq
 
 
 def test_corner_cases():
-    class MyField(Type):
+    class MyField(Element):
         pass
 
     yield raises, IndexError, lambda: EQ().stretch(1)[1]
@@ -28,11 +30,11 @@ def test_corner_cases():
     yield raises, RuntimeError, lambda: select(1, 1)
     yield raises, RuntimeError, lambda: shift(1, 1)
     yield raises, RuntimeError, lambda: get_field(1)
-    yield raises, RuntimeError, lambda: new(MyField(), SumType)
+    yield raises, RuntimeError, lambda: new(MyField(), SumElement)
     yield eq, repr(EQ()), str(EQ())
     yield eq, EQ().__name__, 'EQ'
-    yield raises, NotImplementedError, lambda: WrappedType(1).display(1)
-    yield raises, NotImplementedError, lambda: JoinType(1, 2).display(1, 2)
+    yield raises, NotImplementedError, lambda: WrappedElement(1).display(1)
+    yield raises, NotImplementedError, lambda: JoinElement(1, 2).display(1, 2)
 
 
 def test_broadcast():
@@ -200,7 +202,7 @@ def test_shifting():
     # Means:
     def mean(x): return x
 
-    m = FunctionMean(mean)
+    m = TensorProductMean(mean)
     yield eq, str(ZeroMean().shift(5)), '0'
     yield eq, str(m.shift(5)), 'mean shift 5'
     yield eq, str(m.shift(5).shift(5)), 'mean shift 10'
@@ -262,7 +264,7 @@ def test_function():
     yield eq, str(f + (5 + EQ())), 'f + 5 * 1 + EQ()'
 
     yield eq, str(OneKernel() * f), 'f'
-    yield eq, str(OneKernel() * FunctionKernel((lambda x, c: x), f)), \
+    yield eq, str(OneKernel() * TensorProductKernel((lambda x, c: x), f)), \
           '(<lambda> x f)'
-    yield eq, str(OneKernel() * FunctionKernel(f, (lambda x, c: x))), \
+    yield eq, str(OneKernel() * TensorProductKernel(f, (lambda x, c: x))), \
           '(f x <lambda>)'
