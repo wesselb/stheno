@@ -1104,7 +1104,7 @@ def reverse(a): return mul(reverse(a[0]), reverse(a[1]))
 
 
 @_dispatch(ScaledKernel)
-def reverse(a): return a.scale * reverse(a[0])
+def reverse(a): return mul(a.scale, reversed(a[0]))
 
 
 # Shifting:
