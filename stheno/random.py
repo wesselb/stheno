@@ -149,7 +149,7 @@ class Normal(RandomVector, Referentiable):
             tensor: Samples as rank 2 column vectors.
         """
         # Convert integer data types to floats.
-        if np.issubdtype(self.dtype, np.integer):
+        if B.issubdtype(self.dtype, np.integer):
             random_dtype = float
         else:
             random_dtype = self.dtype
