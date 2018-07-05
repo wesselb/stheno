@@ -453,6 +453,9 @@ class GraphMean(Mean, Referentiable):
         """
         return self.graph.means[self.p].factor(i)
 
+    def __getitem__(self, item):
+        return self.graph.means[self.p][item]
+
 
 class GraphKernel(Kernel, Referentiable):
     """Kernel that evaluates to the right kernel for a GP attached to a graph.
@@ -608,6 +611,9 @@ class GraphKernel(Kernel, Referentiable):
             :class:`.kernel.Kernel`: The referenced factor.
         """
         return self.graph.kernels[self.p].factor(i)
+
+    def __getitem__(self, item):
+        return self.graph.kernels[self.p][item]
 
 
 model = Graph()  #: A default graph provided for convenience

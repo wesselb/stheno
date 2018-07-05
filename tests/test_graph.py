@@ -162,6 +162,13 @@ def test_terms_factors():
     yield eq, str(p.mean.term(0).factor(1)), '<lambda>'
 
 
+def test_indexing():
+    p = 5 * GP(5 * EQ(), lambda x: x, graph=Graph())
+
+    yield eq, type(p.kernel[0]), EQ
+    yield eq, type(p.mean[0]), TensorProductMean
+
+
 def test_case_summation_with_itself():
     # Test summing the same GP with itself.
     model = Graph()
