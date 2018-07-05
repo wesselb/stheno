@@ -403,6 +403,10 @@ def test_stretch():
     yield raises, RuntimeError, lambda: k.period
     yield eq, k.var, 1
 
+    # Check passing in a list.
+    k = EQ().stretch([1, 2])
+    yield k, np.random.randn(10, 2)
+
 
 def test_periodic():
     k = EQ().stretch(2).periodic(3)
@@ -422,6 +426,10 @@ def test_periodic():
     yield eq, k.length_scale, 10
     yield eq, k.period, 15
     yield eq, k.var, 5
+
+    # Check passing in a list.
+    k = EQ().periodic([1, 2])
+    yield k, np.random.randn(10, 2)
 
 
 def test_scaled():
@@ -462,6 +470,10 @@ def test_shifted():
     k = Linear()
     yield assert_allclose, k.shift(5)(x1, x2), k(x1 - 5, x2 - 5)
 
+    # Check passing in a list.
+    k = Linear().shift([1, 2])
+    yield k, np.random.randn(10, 2)
+
 
 def test_product():
     k = (2 * EQ().stretch(10)) * (3 * RQ(1e-2).stretch(20))
@@ -495,28 +507,28 @@ def test_selected():
     yield eq, k.period, np.inf
     yield eq, k.var, 2
 
-    k = (2 * EQ().stretch(np.array([1, 2, 3]))).select(0, 2)
+    k = (2 * EQ().stretch([1, 2, 3])).select(0, 2)
 
     yield eq, k.stationary, True
     yield assert_allclose, k.length_scale, [1, 3]
     yield assert_allclose, k.period, [np.inf, np.inf]
     yield eq, k.var, 2
 
-    k = (2 * EQ().periodic(np.array([1, 2, 3]))).select(1, 2)
+    k = (2 * EQ().periodic([1, 2, 3])).select(1, 2)
 
     yield eq, k.stationary, True
     yield assert_allclose, k.length_scale, [1, 1]
     yield assert_allclose, k.period, [2, 3]
     yield eq, k.var, 2
 
-    k = (2 * EQ().stretch(np.array([1, 2, 3]))).select((0, 2), (1, 2))
+    k = (2 * EQ().stretch([1, 2, 3])).select((0, 2), (1, 2))
 
     yield eq, k.stationary, False
     yield raises, RuntimeError, lambda: k.length_scale
     yield raises, RuntimeError, lambda: k.period
     yield eq, k.var, 2
 
-    k = (2 * EQ().periodic(np.array([1, 2, 3]))).select((0, 2), (1, 2))
+    k = (2 * EQ().periodic([1, 2, 3])).select((0, 2), (1, 2))
 
     yield eq, k.stationary, False
     yield eq, k.length_scale, 1

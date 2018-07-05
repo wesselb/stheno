@@ -13,9 +13,10 @@ from stheno.function_field import StretchedFunction, ShiftedFunction, \
     SelectedFunction, InputTransformedFunction, DerivativeFunction, \
     TensorProductFunction, stretch, transform, Function, ZeroFunction, \
     OneFunction, ScaledFunction, ProductFunction, SumFunction, \
-    WrappedFunction, PrimitiveFunction, JoinFunction, shift, select
+    WrappedFunction, PrimitiveFunction, JoinFunction, shift, select, to_tensor
 from .cache import cache, Cache, uprank
-from .field import add, mul, dispatch_field, broadcast, apply_optional_arg, get_field
+from .field import add, mul, dispatch_field, broadcast, apply_optional_arg, \
+    get_field
 from .input import Input
 
 __all__ = ['Kernel', 'OneKernel', 'ZeroKernel', 'ScaledKernel', 'EQ', 'RQ',
@@ -122,7 +123,7 @@ class Kernel(Function, Referentiable):
         Returns:
             :class:`.kernel.Kernel`: Periodic version of the kernel.
         """
-        return periodicise(self, period)
+        return periodicise(self, to_tensor(period))
 
     def __reversed__(self):
         """Reverse the arguments of the kernel."""
