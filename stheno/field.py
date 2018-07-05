@@ -196,11 +196,11 @@ class WrappedElement(Element):
     """
 
     def __init__(self, e):
-        self.t = e
+        self.e = e
 
     def __getitem__(self, item):
         if item == 0:
-            return self.t
+            return self.e
         else:
             raise IndexError('Index out of range.')
 
@@ -220,14 +220,14 @@ class JoinElement(Element):
     """
 
     def __init__(self, e1, e2):
-        self.t1 = e1
-        self.t2 = e2
+        self.e1 = e1
+        self.e2 = e2
 
     def __getitem__(self, item):
         if item == 0:
-            return self.t1
+            return self.e1
         elif item == 1:
-            return self.t2
+            return self.e2
         else:
             raise IndexError('Index out of range.')
 
@@ -510,7 +510,7 @@ def mul(a, b): return b
 
 
 @dispatch_field.multi((ZeroElement, ZeroElement), (OneElement, OneElement),
-                      precedence=1)
+                      precedence=2)
 def mul(a, b): return a
 
 
