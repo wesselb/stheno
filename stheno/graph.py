@@ -11,7 +11,8 @@ from plum import Dispatcher, Self, Referentiable, type_parameter, PromisedType
 
 from .cache import Cache, uprank
 from .input import Input, At, MultiInput
-from .kernel import ZeroKernel, PosteriorCrossKernel, Kernel, TensorProductKernel
+from .kernel import ZeroKernel, PosteriorCrossKernel, Kernel, \
+    TensorProductKernel
 from .lazy import LazyVector, LazyMatrix
 from .mean import PosteriorCrossMean, Mean
 from .mokernel import MultiOutputKernel as MOK
@@ -129,6 +130,10 @@ class Graph(Referentiable):
 
     @_dispatch(PromisedGP, PromisedGP)
     def sum(self, p1, p2):
+        # Check that the GPs are on the same graph.
+        if p1.graph != p2.graph:
+            raise RuntimeError('Can only add GPs from the same graph.')
+
         kernels = self.kernels  # Careful with the closure!
         return self._update(self.means[p1] + self.means[p2],
                             (lambda: kernels[p1] + kernels[p2] +
@@ -165,6 +170,10 @@ class Graph(Referentiable):
 
     @_dispatch(PromisedGP, PromisedGP)
     def mul(self, p1, p2):
+        # Check that the GPs are on the same graph.
+        if p1.graph != p2.graph:
+            raise RuntimeError('Can only add GPs from the same graph.')
+
         # Careful with the closures!
         kernels = self.kernels
         means = self.means
@@ -177,8 +186,10 @@ class Graph(Referentiable):
             means[p1] * means[p2],
             (lambda: (kernels[p1] + TensorProductKernel(means[p1], means[p1])) *
                      (kernels[p2] + TensorProductKernel(means[p2], means[p2])) +
-                     (kernels[p1, p2] + TensorProductKernel(means[p1], means[p2])) *
-                     (kernels[p2, p1] + TensorProductKernel(means[p2], means[p1])) -
+                     (kernels[p1, p2] +
+                      TensorProductKernel(means[p1], means[p2])) *
+                     (kernels[p2, p1] +
+                      TensorProductKernel(means[p2], means[p1])) -
                      2 * TensorProductKernel(means[p1] * means[p2],
                                              means[p1] * means[p2])),
             (lambda pi: TensorProductKernel(means[p2], ones) * kernels[p1, pi] +
@@ -658,8 +669,6 @@ class GP(GPPrimitive, Referentiable):
 
     @_dispatch(Self)
     def __add__(self, other):
-        if self.graph != other.graph:
-            raise RuntimeError('Can only add GPs from the same graph.')
         return self.graph.sum(self, other)
 
     @_dispatch(object)

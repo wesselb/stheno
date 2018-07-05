@@ -533,6 +533,11 @@ def test_approximate_multiplication():
     model.revert_prior()
     B.epsilon = cur_epsilon
 
+    # Check graph check.
+    model2 = Graph()
+    p3 = GP(EQ(), graph=model2)
+    yield raises, RuntimeError, lambda: p3 * p1
+
 
 def test_naming():
     model = Graph()
