@@ -3,6 +3,7 @@
 from __future__ import absolute_import, division, print_function
 
 from plum import Dispatcher, Referentiable, Self, NotFoundLookupError
+from numbers import Number
 
 __all__ = []
 
@@ -448,9 +449,9 @@ def need_parens(el, parent): return False
 
 @dispatch_field(Element, object)
 def mul(a, b):
-    if b == 0:
+    if isinstance(b, Number) and b == 0:
         return new(a, ZeroElement)()
-    elif b == 1:
+    elif isinstance(b, Number) and b == 1:
         return a
     else:
         return new(a, ScaledElement)(a, b)
@@ -458,9 +459,9 @@ def mul(a, b):
 
 @dispatch_field(object, Element)
 def mul(a, b):
-    if a == 0:
+    if isinstance(a, Number) and a == 0:
         return new(b, ZeroElement)()
-    elif a == 1:
+    elif isinstance(a, Number) and a == 1:
         return b
     else:
         return new(b, ScaledElement)(b, a)
@@ -474,7 +475,7 @@ def mul(a, b): return new(a, ProductElement)(a, b)
 
 @dispatch_field(Element, object)
 def add(a, b):
-    if b == 0:
+    if isinstance(b, Number) and b == 0:
         return a
     else:
         return new(a, SumElement)(a, mul(b, new(a, OneElement)()))
@@ -482,7 +483,7 @@ def add(a, b):
 
 @dispatch_field(object, Element)
 def add(a, b):
-    if a == 0:
+    if isinstance(a, Number) and a == 0:
         return b
     else:
         return new(b, SumElement)(mul(a, new(b, OneElement)()), b)
@@ -527,9 +528,9 @@ def add(a, b): return a
 
 @dispatch_field(ZeroElement, object)
 def add(a, b):
-    if b == 0:
+    if isinstance(b, Number) and b == 0:
         return a
-    elif b == 1:
+    elif isinstance(b, Number) and b == 1:
         return new(a, OneElement)()
     else:
         return new(a, ScaledElement)(new(a, OneElement)(), b)
@@ -537,9 +538,9 @@ def add(a, b):
 
 @dispatch_field(object, ZeroElement)
 def add(a, b):
-    if a == 0:
+    if isinstance(a, Number) and a == 0:
         return b
-    elif a == 1:
+    elif isinstance(a, Number) and a == 1:
         return new(b, OneElement)()
     else:
         return new(b, ScaledElement)(new(b, OneElement)(), a)
