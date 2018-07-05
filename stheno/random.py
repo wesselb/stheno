@@ -78,7 +78,7 @@ class Normal(RandomVector, Referentiable):
         """Second moment of the distribution."""
         return self.var + B.outer(self.mean)
 
-    def log_pdf(self, x):
+    def logpdf(self, x):
         """Compute the log-pdf.
 
         Args:
@@ -87,7 +87,7 @@ class Normal(RandomVector, Referentiable):
         Returns:
             list[tensor]: Log-pdf for every input in `x`.
         """
-        return -(self.spd.log_det() +
+        return -(self.spd.logdet() +
                  B.cast(self.dim, dtype=self.dtype) *
                  B.cast(B.log_2_pi, dtype=self.dtype) +
                  self.spd.mah_dist2(uprank(x) - self.mean, sum=False)) / 2
@@ -98,7 +98,7 @@ class Normal(RandomVector, Referentiable):
         Returns:
             scalar: The entropy.
         """
-        return (self.spd.log_det() +
+        return (self.spd.logdet() +
                 B.cast(self.dim, dtype=self.dtype) *
                 B.cast(B.log_2_pi + 1, dtype=self.dtype)) / 2
 
@@ -116,7 +116,7 @@ class Normal(RandomVector, Referentiable):
         return (self.spd.ratio(other.spd) +
                 other.spd.mah_dist2(other.mean, self.mean) -
                 B.cast(self.dim, dtype=self.dtype) +
-                other.spd.log_det() - self.spd.log_det()) / 2
+                other.spd.logdet() - self.spd.logdet()) / 2
 
     @_dispatch(Self)
     def w2(self, other):

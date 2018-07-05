@@ -19,7 +19,7 @@ class SPD(Referentiable):
     def __init__(self, mat):
         self._mat = mat
         self._cholesky = None
-        self._log_det = None
+        self._logdet = None
         self._root = None
 
     @property
@@ -63,15 +63,15 @@ class SPD(Referentiable):
         """
         return B.matmul(self.cholesky(), a)
 
-    def log_det(self):
+    def logdet(self):
         """Compute the log-determinant.
         
         Returns:
             scalar: Log-determinant.
         """
-        if self._log_det is None:
-            self._log_det = 2 * B.sum(B.log(B.diag(self.cholesky())))
-        return self._log_det
+        if self._logdet is None:
+            self._logdet = 2 * B.sum(B.log(B.diag(self.cholesky())))
+        return self._logdet
 
     @_dispatch(object, object)
     def mah_dist2(self, a, b, sum=True):
@@ -231,7 +231,7 @@ class Diagonal(SPD, Referentiable):
     def cholesky_mul(self, a):
         return a * self.diag[:, None] ** .5
 
-    def log_det(self):
+    def logdet(self):
         return B.sum(B.log(self.diag))
 
     @_dispatch(object)
@@ -316,7 +316,7 @@ class UniformDiagonal(Diagonal, Referentiable):
     def cholesky_mul(self, a):
         return a * self.diag_scale ** .5
 
-    def log_det(self):
+    def logdet(self):
         return B.cast(self._n, dtype=self.dtype) * B.log(self.diag_scale)
 
     @_dispatch(object)

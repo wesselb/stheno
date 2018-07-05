@@ -149,14 +149,14 @@ kernels are available:
           0 & \text{otherwise};
          \end{cases} 
 
--  ``FunctionKernel(f)``:
+-  ``TensorProductKernel(f)``:
 
    .. math::  k(x, y) = f(x)f(y). 
 
    Adding or multiplying a ``FunctionType`` ``f`` to or with a kernel
-   will automatically translate ``f`` to ``FunctionKernel(f)``. For
-   example, ``f * k`` will translate to ``FunctionKernel(f) * k``, and
-   ``f + k`` will translate to ``FunctionKernel(f) + k``.
+   will automatically translate ``f`` to ``TensorProductKernel(f)``. For
+   example, ``f * k`` will translate to ``TensorProductKernel(f) * k``,
+   and ``f + k`` will translate to ``TensorProductKernel(f) + k``.
 
 Available Means
 ^^^^^^^^^^^^^^^
@@ -164,14 +164,14 @@ Available Means
 Constants function as constant means. Besides that, the following means
 are available:
 
--  ``FunctionMean(f)``:
+-  ``TensorProductMean(f)``:
 
    .. math::  m(x) = f(x). 
 
    Adding or multiplying a ``FunctionType`` ``f`` to or with a mean will
-   automatically translate ``f`` to ``FunctionMean(f)``. For example,
-   ``f * m`` will translate to ``FunctionMean(f) * m``, and ``f + m``
-   will translate to ``FunctionMean(f) + m``.
+   automatically translate ``f`` to ``TensorProductMean(f)``. For
+   example, ``f * m`` will translate to ``TensorProductMean(f) * m``,
+   and ``f + m`` will translate to ``TensorProductMean(f) + m``.
 
 Compositional Design
 ^^^^^^^^^^^^^^^^^^^^
@@ -907,7 +907,7 @@ Learn a Function, Incorporating Prior Knowledge About Its Form
     model.revert_prior()
 
     # Learn.
-    lml = y(x_obs).log_pdf(y_obs)
+    lml = y(x_obs).logpdf(y_obs)
     SOI(-lml).minimize(s)
 
     # Print the learned parameters.
@@ -1225,10 +1225,10 @@ GPAR
     y2_obs = np.sin(x_obs2) ** 2 + 0.1 * np.random.randn(*x_obs2.shape)
 
     # Learn.
-    lml1 = y1(x_obs1).log_pdf(y1_obs)
+    lml1 = y1(x_obs1).logpdf(y1_obs)
     SOI(-lml1, var_list=vs1.vars).minimize(s)
 
-    lml2 = y2(np.stack((x_obs2, y1_obs[inds2]), axis=1)).log_pdf(y2_obs)
+    lml2 = y2(np.stack((x_obs2, y1_obs[inds2]), axis=1)).logpdf(y2_obs)
     SOI(-lml2, var_list=vs2.vars).minimize(s)
 
     # Predict first output.
@@ -1332,8 +1332,8 @@ A GP–RNN Model
     y_gp_rnn = f_gp_rnn + e
 
     # Construct evidences.
-    lml_rnn = y_rnn(x_obs).log_pdf(y_obs)
-    lml_gp_rnn = y_gp_rnn(x_obs).log_pdf(y_obs)
+    lml_rnn = y_rnn(x_obs).logpdf(y_obs)
+    lml_gp_rnn = y_gp_rnn(x_obs).logpdf(y_obs)
 
     # Construct optimisers and initialise.
     opt_rnn = tf.train.AdamOptimizer(1e-2).minimize(

@@ -32,9 +32,9 @@ def test_normal():
     # Test second moment.
     yield ok, np.allclose(dist.m2(), var + mean.dot(mean.T))
 
-    # Test `log_pdf` and `entropy`.
+    # Test `logpdf` and `entropy`.
     x = np.random.randn(3, 10)
-    yield ok, np.allclose(dist.log_pdf(x), dist_sp.logpdf(x.T)), 'log pdf'
+    yield ok, np.allclose(dist.logpdf(x), dist_sp.logpdf(x.T)), 'logpdf'
     yield ok, np.allclose(dist.entropy(), dist_sp.entropy()), 'entropy'
 
     # Test KL with Monte Carlo estimate.
@@ -43,7 +43,7 @@ def test_normal():
     var2 = chol2.dot(chol2.T)
     dist2 = Normal(var2, mean2)
     samples = dist.sample(50000)
-    kl_est = np.mean(dist.log_pdf(samples)) - np.mean(dist2.log_pdf(samples))
+    kl_est = np.mean(dist.logpdf(samples)) - np.mean(dist2.logpdf(samples))
     kl = dist.kl(dist2)
     yield ok, np.abs(kl_est - kl) / np.abs(kl) < 5e-2, 'kl samples'
 
@@ -54,8 +54,8 @@ def test_normal():
     dist1 = Normal(var, mean)
     dist2 = Normal(Diagonal(var_diag), mean)
     samples = dist1.sample(100)
-    yield ok, np.allclose(dist1.log_pdf(samples),
-                          dist2.log_pdf(samples)), 'log pdf'
+    yield ok, np.allclose(dist1.logpdf(samples),
+                          dist2.logpdf(samples)), 'logpdf'
     yield ok, np.allclose(dist1.entropy(), dist2.entropy()), 'entropy'
     yield ok, np.allclose(dist1.kl(dist2), 0.), 'kl 1'
     yield ok, np.allclose(dist1.kl(dist1), 0.), 'kl 2'
@@ -73,8 +73,8 @@ def test_normal():
     dist1 = Normal(var, mean)
     dist2 = Normal(UniformDiagonal(var_diag_scale, 3), mean)
     samples = dist1.sample(100)
-    yield ok, np.allclose(dist1.log_pdf(samples),
-                          dist2.log_pdf(samples)), 'log_pdf'
+    yield ok, np.allclose(dist1.logpdf(samples),
+                          dist2.logpdf(samples)), 'logpdf'
     yield ok, np.allclose(dist1.entropy(), dist2.entropy()), 'entropy'
     yield ok, np.allclose(dist1.kl(dist2), 0.), 'kl 1'
     yield ok, np.allclose(dist1.kl(dist1), 0.), 'kl 2'

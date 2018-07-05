@@ -27,7 +27,7 @@ y_obs = s.run(y.condition(f @ x, f_true)(x_obs).sample())
 model.revert_prior()
 
 # Learn.
-lml = y(x_obs).log_pdf(y_obs)
+lml = y(x_obs).logpdf(y_obs)
 SOI(-lml).minimize(s)
 
 # Print the learned parameters.

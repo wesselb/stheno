@@ -29,7 +29,7 @@ def test_spd():
         yield ok, np.allclose(spd1.cholesky(),
                               spd2.cholesky()), 'cholesky'
         yield ok, np.allclose(spd1.root(), spd2.root()), 'roots'
-        yield ok, np.allclose(spd1.log_det(), spd2.log_det()), 'log dets'
+        yield ok, np.allclose(spd1.logdet(), spd2.logdet()), 'logdets'
         yield ok, np.allclose(spd1.mah_dist2(a), spd2.mah_dist2(a)), 'mah'
         yield ok, np.allclose(spd1.mah_dist2(a, b),
                               spd2.mah_dist2(a, b)), 'mah 2'

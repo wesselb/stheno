@@ -46,10 +46,10 @@ y1_obs = np.sin(x_obs1) + 0.1 * np.random.randn(*x_obs1.shape)
 y2_obs = np.sin(x_obs2) ** 2 + 0.1 * np.random.randn(*x_obs2.shape)
 
 # Learn.
-lml1 = y1(x_obs1).log_pdf(y1_obs)
+lml1 = y1(x_obs1).logpdf(y1_obs)
 SOI(-lml1, var_list=vs1.vars).minimize(s)
 
-lml2 = y2(np.stack((x_obs2, y1_obs[inds2]), axis=1)).log_pdf(y2_obs)
+lml2 = y2(np.stack((x_obs2, y1_obs[inds2]), axis=1)).logpdf(y2_obs)
 SOI(-lml2, var_list=vs2.vars).minimize(s)
 
 # Predict first output.

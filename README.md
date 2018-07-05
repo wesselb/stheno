@@ -861,7 +861,7 @@ y_obs = s.run(y.condition(f @ x, f_true)(x_obs).sample())
 model.revert_prior()
 
 # Learn.
-lml = y(x_obs).log_pdf(y_obs)
+lml = y(x_obs).logpdf(y_obs)
 SOI(-lml).minimize(s)
 
 # Print the learned parameters.
@@ -1163,10 +1163,10 @@ y1_obs = np.sin(x_obs1) + 0.1 * np.random.randn(*x_obs1.shape)
 y2_obs = np.sin(x_obs2) ** 2 + 0.1 * np.random.randn(*x_obs2.shape)
 
 # Learn.
-lml1 = y1(x_obs1).log_pdf(y1_obs)
+lml1 = y1(x_obs1).logpdf(y1_obs)
 SOI(-lml1, var_list=vs1.vars).minimize(s)
 
-lml2 = y2(np.stack((x_obs2, y1_obs[inds2]), axis=1)).log_pdf(y2_obs)
+lml2 = y2(np.stack((x_obs2, y1_obs[inds2]), axis=1)).logpdf(y2_obs)
 SOI(-lml2, var_list=vs2.vars).minimize(s)
 
 # Predict first output.
@@ -1266,8 +1266,8 @@ f_gp_rnn = (1 + a) * rnn + b
 y_gp_rnn = f_gp_rnn + e
 
 # Construct evidences.
-lml_rnn = y_rnn(x_obs).log_pdf(y_obs)
-lml_gp_rnn = y_gp_rnn(x_obs).log_pdf(y_obs)
+lml_rnn = y_rnn(x_obs).logpdf(y_obs)
+lml_gp_rnn = y_gp_rnn(x_obs).logpdf(y_obs)
 
 # Construct optimisers and initialise.
 opt_rnn = tf.train.AdamOptimizer(1e-2).minimize(

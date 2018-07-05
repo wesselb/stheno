@@ -55,8 +55,8 @@ f_gp_rnn = (1 + a) * rnn + b
 y_gp_rnn = f_gp_rnn + e
 
 # Construct evidences.
-lml_rnn = y_rnn(x_obs).log_pdf(y_obs)
-lml_gp_rnn = y_gp_rnn(x_obs).log_pdf(y_obs)
+lml_rnn = y_rnn(x_obs).logpdf(y_obs)
+lml_gp_rnn = y_gp_rnn(x_obs).logpdf(y_obs)
 
 # Construct optimisers and initialise.
 opt_rnn = tf.train.AdamOptimizer(1e-2).minimize(
