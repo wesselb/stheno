@@ -15,12 +15,15 @@ also `Stheno.jl <https://github.com/willtebbutt/Stheno.jl>`__.
       -  `Available Kernels <#available-kernels>`__
       -  `Available Means <#available-means>`__
       -  `Compositional Design <#compositional-design>`__
+      -  `Displaying Kernels and Means <#displaying-kernels-and-mean>`__
       -  `Properties of Kernels <#properties-of-kernels>`__
 
    -  `Model Design <#model-design>`__
 
       -  `Compositional Design <#compositional-design>`__
+      -  `Displaying GPs <#displaying-gps>`__
       -  `Properties of GPs <#properties-of-gps>`__
+      -  `Naming GPs <#naming-gps>`__
 
    -  `Inference and Sampling <#inference-and-sampling>`__
    -  `NumPy, TensorFlow, or PyTorch? <#numpy-tensorflow-or-pytorch>`__
@@ -399,6 +402,27 @@ Compositional Design
        >>> EQ().periodic(1)[0]
        EQ()
 
+Displaying Kernels and Means
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Kernels and means have a ``display`` method. The ``display`` method
+accepts a callable formatter that will be applied before any value is
+printed. This comes in handy when pretty printing kernels, or when
+kernels contain TensorFlow objects.
+
+Example:
+
+.. code:: python
+
+    >>> print((2.12345 * EQ()).display(lambda x: '{:.2f}'.format(x)))
+    2.12 * EQ(), 0
+
+    >>> tf.constant(1) * EQ()
+    Tensor("Const_1:0", shape=(), dtype=int32) * EQ()
+
+    >>> print((tf.constant(2) * EQ()).display(tf.Session().run))
+    2 * EQ()
+
 Properties of Kernels
 ^^^^^^^^^^^^^^^^^^^^^
 
@@ -588,6 +612,19 @@ Compositional Design
        >>> model.cross(f1, f2)
        GP(MultiOutputKernel(EQ(), EQ()), MultiOutputMean(0, 0))
 
+Displaying GPs
+^^^^^^^^^^^^^^
+
+Like kernels and means, GPs have a ``display`` method that accepts a
+formatter.
+
+Example:
+
+.. code:: python
+
+    >>> print(GP(2.12345 * EQ()).display(lambda x: '{:.2f}'.format(x)))
+    GP(2.12 * EQ(), 0)
+
 Properties of GPs
 ^^^^^^^^^^^^^^^^^
 
@@ -603,11 +640,35 @@ Example:
     >>> GP(RQ(1e-1)).length_scale
     1
 
+Naming GPs
+~~~~~~~~~~
+
+It is possible to give a name to GPs. Names must be strings. A graph
+then behaves like a two-way dictionary between GPs and their names.
+
+Example:
+
+.. code:: python
+
+    >>> p = GP(EQ(), name='prior')
+
+    >>> p.name
+    'prior'
+
+    >>> p.name = 'alternative_prior'
+
+    >>> model['alternative_prior']
+    GP(EQ(), 0)
+
+    >>> model[p]
+    'alternative_prior'
+
 Inference and Sampling
 ~~~~~~~~~~~~~~~~~~~~~~
 
 To condition on observations, use ``Graph.condition`` or
-``GP.condition``.
+``GP.condition``. Syntax is much like the math: compare
+``f1.condition(f2 @ x, y)`` with :math:`f_1 \,|\, f_2(x) = y`.
 
 Definition, where ``f*`` are ``GP``\ s:
 
@@ -620,6 +681,47 @@ Definition, where ``f*`` are ``GP``\ s:
     f1_updated = f1.condition(x, y)
 
     f1_updated = f1.condition((f1 @ x1, y1), (f2 @ x2, y2), ...)
+
+*Important:* both ``Graph.condition`` and ``GP.condition`` are
+*mutative*: once either is called, all further operations will be
+conditional on the given observations. If you want to undo the
+conditioning operation and revert to the state *just before the first
+conditioning operation*, use ``Graph.revert_prior`` or
+``GP.revert_prior``.
+
+Example:
+
+.. code:: python
+
+    >>> f.condition(x, y)
+
+    >>> # Anything here will be conditional on `f(x) = y`.
+
+    >>> f.revert_prior()
+
+Alternatively, or for more fine-grained constrol, use *checkpoints*.
+
+Example:
+
+.. code:: python
+
+    >>> prior = model.checkpoint()
+
+    >>> f1.condition(x, y)
+
+    >>> # Anything here will be conditional on `f1(x) = y`.
+
+    >>> conditional_on_f1 = model.checkpoint()
+
+    >>> f2.condition(x, y)
+
+    >>> # Anything here will be conditional on `f1(x) = y` and `f2(x) = y`.
+
+    >>> model.revert(conditional_on_f1)
+
+    >>> # Anything here will again be conditional on `f1(x) = y`.
+
+    >>> model.revert(prior)
 
 After conditioning, simply call a GP to construct its finite-dimensional
 distribution:

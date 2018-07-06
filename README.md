@@ -13,10 +13,13 @@ also [Stheno.jl](https://github.com/willtebbutt/Stheno.jl).
         * [Available Kernels](#available-kernels)
         * [Available Means](#available-means)
         * [Compositional Design](#compositional-design)
+        * [Displaying Kernels and Means](#displaying-kernels-and-mean)
         * [Properties of Kernels](#properties-of-kernels)
     - [Model Design](#model-design)
         * [Compositional Design](#compositional-design)
+        * [Displaying GPs](#displaying-gps)
         * [Properties of GPs](#properties-of-gps)
+        * [Naming GPs](#naming-gps)
     - [Inference and Sampling](#inference-and-sampling)
     - [NumPy, TensorFlow, or PyTorch?](#numpy-tensorflow-or-pytorch)
     - [Undiscussed Features](#undiscussed-features)
@@ -375,6 +378,25 @@ means_.
     EQ()
     ```
 
+#### Displaying Kernels and Means
+
+Kernels and means have a `display` method.
+The `display` method accepts a callable formatter that will be applied before any value is printed.
+This comes in handy when pretty printing kernels, or when kernels contain TensorFlow objects.
+
+Example:
+
+```python
+>>> print((2.12345 * EQ()).display(lambda x: '{:.2f}'.format(x)))
+2.12 * EQ(), 0
+
+>>> tf.constant(1) * EQ()
+Tensor("Const_1:0", shape=(), dtype=int32) * EQ()
+
+>>> print((tf.constant(2) * EQ()).display(tf.Session().run))
+2 * EQ()
+```
+
 #### Properties of Kernels
 
 The stationarity of a kernel `k` can always be determined by querying
@@ -562,6 +584,17 @@ GP(EQ() + Linear(), <lambda>)
     GP(MultiOutputKernel(EQ(), EQ()), MultiOutputMean(0, 0))
     ```
 
+#### Displaying GPs
+
+Like kernels and means, GPs have a `display` method that accepts a formatter.
+
+Example:
+
+```python
+>>> print(GP(2.12345 * EQ()).display(lambda x: '{:.2f}'.format(x)))
+GP(2.12 * EQ(), 0)
+```
+
 #### Properties of GPs
 
 Properties of kernels can be queried on GPs directly.
@@ -576,9 +609,34 @@ True
 1
 ```
 
+### Naming GPs
+
+It is possible to give a name to GPs.
+Names must be strings.
+A graph then behaves like a two-way dictionary between GPs and their names.
+
+Example:
+
+```python
+>>> p = GP(EQ(), name='prior')
+
+>>> p.name
+'prior'
+
+>>> p.name = 'alternative_prior'
+
+>>> model['alternative_prior']
+GP(EQ(), 0)
+
+>>> model[p]
+'alternative_prior'
+```
+
 ### Inference and Sampling
 
 To condition on observations, use `Graph.condition` or `GP.condition`.
+Syntax is much like the math:
+compare `f1.condition(f2 @ x, y)` with $f_1 \,|\, f_2(x) = y$.
 
 Definition, where `f*` are `GP`s:
 
@@ -590,6 +648,44 @@ model.condition((f1 @ x1, y1), (f2 @ x2, y2), ...)
 f1_updated = f1.condition(x, y)
 
 f1_updated = f1.condition((f1 @ x1, y1), (f2 @ x2, y2), ...)
+```
+
+_Important:_ both `Graph.condition` and `GP.condition` are _mutative_:
+once either is called, all further operations will be conditional on the given observations.
+If you want to undo the conditioning operation and revert to the state _just before the first conditioning operation_, use `Graph.revert_prior` or `GP.revert_prior`.
+
+Example:
+
+```python
+>>> f.condition(x, y)
+
+>>> # Anything here will be conditional on `f(x) = y`.
+
+>>> f.revert_prior()
+```
+
+Alternatively, or for more fine-grained constrol, use _checkpoints_.
+
+Example:
+
+```python
+>>> prior = model.checkpoint()
+
+>>> f1.condition(x, y)
+
+>>> # Anything here will be conditional on `f1(x) = y`.
+
+>>> conditional_on_f1 = model.checkpoint()
+
+>>> f2.condition(x, y)
+
+>>> # Anything here will be conditional on `f1(x) = y` and `f2(x) = y`.
+
+>>> model.revert(conditional_on_f1)
+
+>>> # Anything here will again be conditional on `f1(x) = y`.
+
+>>> model.revert(prior)
 ```
 
 After conditioning, simply call a GP to construct its finite-dimensional 
