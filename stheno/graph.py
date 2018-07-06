@@ -37,8 +37,10 @@ class Graph(Referentiable):
         self.pids = set()
         self.kernels = LazyMatrix()
         self.means = LazyVector()
-        self.prior_kernels = None
-        self.prior_means = None
+
+        # Storage for a checkpoints.
+        self.checkpoint_kernels = {}
+        self.checkpoint_means = {}
 
         # Store named GPs in both ways.
         self.gps_by_name = {}
@@ -293,9 +295,8 @@ class Graph(Referentiable):
         prior_means = self.means
 
         # Store prior if it isn't already.
-        if self.prior_kernels is None:
-            self.prior_kernels = prior_kernels
-            self.prior_means = prior_means
+        if not self.checkpoint_exists('prior'):
+            self.checkpoint('prior')
 
         def build_posterior_mean(pi):
             return PosteriorCrossMean(prior_means[pi],
@@ -348,14 +349,43 @@ class Graph(Referentiable):
         """Revert the model back to the state before any conditioning
         operations.
         """
-        if self.prior_kernels is not None:
-            # Reverts kernels and means.
-            self.kernels = self.prior_kernels
-            self.means = self.prior_means
+        if self.checkpoint_exists('prior'):
+            self.revert('prior')
 
-            # Empty storage.
-            self.prior_kernels = None
-            self.prior_means = None
+    def checkpoint(self, name, overwrite=False):
+        """Save the current state of the graph, so that it can be reverted to
+        at a later point, say after conditioning.
+
+        Args:
+            name (str): Name of checkpoint.
+            overwrite (bool, optional): Overwrite any existing checkpoints.
+                Defaults to `False`.
+        """
+        if overwrite or not self.checkpoint_exists(name):
+            self.checkpoint_kernels[name] = self.kernels
+            self.checkpoint_means[name] = self.means
+        else:
+            raise RuntimeError('Checkpoint "{}" already exists.'.format(name))
+
+    def checkpoint_exists(self, name):
+        """Check whether a checkpoint exists.
+
+        Args:
+            name (str): Name of checkpoint.
+
+        Returns:
+            bool: Boolean whether the checkpoint exists.
+        """
+        return name in self.checkpoint_kernels and name in self.checkpoint_means
+
+    def revert(self, name):
+        """Revert to a checkpoint.
+
+        Args:
+            name (str): Name of checkpoint to revert to.
+        """
+        self.kernels = self.checkpoint_kernels[name]
+        self.means = self.checkpoint_means[name]
 
     @_dispatch(int, [At])
     def sample(self, n, *xs):

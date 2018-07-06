@@ -591,3 +591,12 @@ def test_formatting():
 
     yield eq, str((2 * GP(EQ(), 1, graph=model)).display(lambda x: x ** 2)), \
           'GP(16 * EQ(), 4 * 1)'
+
+
+def test_checkpointing():
+    model = Graph()
+
+    # Check that checkpoints cannot by default be overwritten.
+    yield model.checkpoint, 'test'
+    yield raises, RuntimeError, lambda: model.checkpoint('test')
+    yield model.checkpoint, 'test', True
