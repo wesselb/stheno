@@ -12,7 +12,7 @@ from stheno.kernel import EQ, RQ, Matern12, Matern32, Matern52, Delta, Kernel, \
     Linear, OneKernel, ZeroKernel, PosteriorCrossKernel, PosteriorKernel, \
     ShiftedKernel, TensorProductKernel, VariationalPosteriorCrossKernel
 from stheno.random import GPPrimitive
-from stheno.spd import SPD
+from stheno.spd import spd
 # noinspection PyUnresolvedReferences
 from tests import ok
 from . import eq, raises, ok
@@ -318,7 +318,7 @@ def test_linear():
 def test_posterior_crosskernel():
     k = PosteriorCrossKernel(
         EQ(), EQ(), EQ(),
-        np.random.randn(5, 2), SPD(EQ()(np.random.randn(5, 1)))
+        np.random.randn(5, 2), spd(EQ()(np.random.randn(5, 1)))
     )
     x1 = np.random.randn(10, 2)
     x2 = np.random.randn(5, 2)
@@ -345,8 +345,8 @@ def test_variational_posterior_crosskernel():
     k = VariationalPosteriorCrossKernel(
         EQ(), EQ(), EQ(),
         np.random.randn(5, 2),
-        2 * SPD(EQ()(np.random.randn(5, 1))),
-        SPD(EQ()(np.random.randn(5, 1)))
+        2 * spd(EQ()(np.random.randn(5, 1))),
+        spd(EQ()(np.random.randn(5, 1)))
     )
     x1 = np.random.randn(10, 2)
     x2 = np.random.randn(5, 2)

@@ -11,7 +11,7 @@ from plum import Self, Referentiable
 from .cache import Cache, uprank
 from .kernel import PosteriorKernel, OneKernel
 from .mean import ZeroMean, PosteriorMean, OneMean
-from .spd import SPD, Dispatcher, UniformDiagonal, Diagonal
+from .spd import spd, Dispatcher, UniformDiagonal, Diagonal
 
 __all__ = ['Normal', 'GPPrimitive', 'Normal1D']
 
@@ -62,7 +62,7 @@ class Normal(RandomVector, Referentiable):
     _dispatch = Dispatcher(in_class=Self)
 
     def __init__(self, var, mean=None):
-        self.spd = var if isinstance(var, SPD) else SPD(var)
+        self.spd = spd(var)
         self.dtype = self.spd.dtype
         self.dim = self.spd.shape[0]
         if mean is None:
@@ -129,7 +129,7 @@ class Normal(RandomVector, Referentiable):
         Returns:
             scalar: 2-Wasserstein distance.
         """
-        root = SPD(B.dot(B.dot(self.spd.root(), other.var),
+        root = spd(B.dot(B.dot(self.spd.root(), other.var),
                          self.spd.root())).root()
         var_part = B.trace(self.var) + B.trace(other.var) - 2 * B.trace(root)
         mean_part = B.sum((self.mean - other.mean) ** 2)
@@ -299,7 +299,7 @@ class GPPrimitive(RandomProcess, Referentiable):
         Returns:
             :class:`.random.GP`: Conditioned GP.
         """
-        K = SPD(self.kernel(x))
+        K = spd(self.kernel(x))
         return GPPrimitive(PosteriorKernel(self, x, K),
                            PosteriorMean(self, x, K, y))
 
