@@ -4,10 +4,13 @@ from __future__ import absolute_import, division, print_function
 
 from plum import Dispatcher, Referentiable, Self, NotFoundLookupError
 from numbers import Number
+from types import FunctionType as PythonFunction
 
 __all__ = []
 
 dispatch_field = Dispatcher()
+
+Formatter = object  #: A formatter can be any object.
 
 
 def apply_optional_arg(f, arg1, arg2):
@@ -91,7 +94,7 @@ class Element(Referentiable):
     added and multiplied.
     """
 
-    dispatch_field = Dispatcher(in_class=Self)
+    _dispatch = Dispatcher(in_class=Self)
 
     def __eq__(self, other):
         return equal(self, other)
@@ -155,15 +158,37 @@ class Element(Referentiable):
         else:
             raise IndexError('Index out of range.')
 
-    def __repr__(self):
-        return str(self)
-
     @property
     def __name__(self):
         return self.__class__.__name__
 
+    def __repr__(self):
+        return self.display()
+
     def __str__(self):
-        return self.__class__.__name__ + '()'
+        return self.display()
+
+    @_dispatch(Formatter)
+    def display(self, formatter):
+        """Display the element.
+
+        Args:
+            formatter (function, optional): Function to format values.
+
+        Returns:
+            str: Element as a string.
+        """
+        # Due to multiple inheritance, we might arrive here before arriving at a
+        # method in the appropriate subclass. The only case to consider is if
+        # we're not in a leaf.
+        if isinstance(self, (JoinElement, WrappedElement)):
+            return pretty_print(self, formatter)
+        else:
+            return self.__class__.__name__ + '()'
+
+    @_dispatch()
+    def display(self):
+        return self.display(lambda x: x)
 
 
 class PrimitiveElement(Element):
@@ -174,26 +199,31 @@ class PrimitiveElement(Element):
     """
 
 
-class OneElement(PrimitiveElement):
+class OneElement(PrimitiveElement, Referentiable):
     """The constant `1`."""
+    _dispatch = Dispatcher(in_class=Self)
 
-    def __str__(self):
+    @_dispatch(Formatter)
+    def display(self, formatter):
         return '1'
 
 
-class ZeroElement(PrimitiveElement):
+class ZeroElement(PrimitiveElement, Referentiable):
     """The constant `0`."""
+    _dispatch = Dispatcher(in_class=Self)
 
-    def __str__(self):
+    @_dispatch(Formatter)
+    def display(self, formatter):
         return '0'
 
 
-class WrappedElement(Element):
+class WrappedElement(Element, Referentiable):
     """A wrapped element.
 
     Args:
         e (:class:`.field.Element`): Element to wrap.
     """
+    _dispatch = Dispatcher(in_class=Self)
 
     def __init__(self, e):
         self.e = e
@@ -204,20 +234,19 @@ class WrappedElement(Element):
         else:
             raise IndexError('Index out of range.')
 
-    def display(self, e):
+    @_dispatch(object, Formatter)
+    def display(self, e, formatter):
         raise NotImplementedError()
 
-    def __str__(self):
-        return pretty_print(self)
 
-
-class JoinElement(Element):
+class JoinElement(Element, Referentiable):
     """Two wrapped elements.
 
     Args:
         e1 (:class:`.field.Element`): First element to wrap.
         e2 (:class:`.field.Element`): Second element to wrap.
     """
+    _dispatch = Dispatcher(in_class=Self)
 
     def __init__(self, e1, e2):
         self.e1 = e1
@@ -231,20 +260,19 @@ class JoinElement(Element):
         else:
             raise IndexError('Index out of range.')
 
-    def display(self, e1, e2):
+    @_dispatch(object, object, Formatter)
+    def display(self, e1, e2, formatter):
         raise NotImplementedError()
 
-    def __str__(self):
-        return pretty_print(self)
 
-
-class ScaledElement(WrappedElement):
+class ScaledElement(WrappedElement, Referentiable):
     """Scaled element.
 
     Args:
         e (:class:`.field.Element`): Element to scale.
         scale (tensor): Scale.
     """
+    _dispatch = Dispatcher(in_class=Self)
 
     def __init__(self, e, scale):
         WrappedElement.__init__(self, e)
@@ -254,8 +282,9 @@ class ScaledElement(WrappedElement):
     def num_factors(self):
         return self[0].num_factors + 1
 
-    def display(self, e):
-        return '{} * {}'.format(self.scale, e)
+    @_dispatch(object, Formatter)
+    def display(self, e, formatter):
+        return '{} * {}'.format(formatter(self.scale), e)
 
     def factor(self, i):
         if i >= self.num_factors:
@@ -264,8 +293,9 @@ class ScaledElement(WrappedElement):
             return self.scale if i == 0 else self[0].factor(i - 1)
 
 
-class ProductElement(JoinElement):
+class ProductElement(JoinElement, Referentiable):
     """Product of elements."""
+    _dispatch = Dispatcher(in_class=Self)
 
     @property
     def num_factors(self):
@@ -279,12 +309,14 @@ class ProductElement(JoinElement):
         else:
             return self[1].factor(i - self[0].num_factors)
 
-    def display(self, e1, e2):
+    @_dispatch(object, object, Formatter)
+    def display(self, e1, e2, formatter):
         return '{} * {}'.format(e1, e2)
 
 
-class SumElement(JoinElement):
+class SumElement(JoinElement, Referentiable):
     """Sum of elements."""
+    _dispatch = Dispatcher(in_class=Self)
 
     @property
     def num_terms(self):
@@ -298,7 +330,8 @@ class SumElement(JoinElement):
         else:
             return self[1].term(i - self[0].num_terms)
 
-    def display(self, e1, e2):
+    @_dispatch(object, object, Formatter)
+    def display(self, e1, e2, formatter):
         return '{} + {}'.format(e1, e2)
 
 
@@ -376,35 +409,37 @@ def new(a, t):
 
 # Pretty printing with minimal parentheses.
 
-@dispatch_field(Element)
-def pretty_print(el):
+@dispatch_field(Element, Formatter)
+def pretty_print(el, formatter):
     """Pretty print an element with a minimal number of parentheses.
 
     Args:
         el (:class:`.field.Element`): Element to print.
+        formatter (:class:`.field.Formatter`): Formatter for values.
 
     Returns:
         str: `el` converted to string prettily.
     """
-    return str(el)
+    return el.display(formatter)
 
 
-@dispatch_field(WrappedElement)
-def pretty_print(el):
-    return el.display(pretty_print(el[0], el))
+@dispatch_field(WrappedElement, Formatter)
+def pretty_print(el, formatter):
+    return el.display(pretty_print(el[0], el, formatter), formatter)
 
 
-@dispatch_field(JoinElement)
-def pretty_print(el):
-    return el.display(pretty_print(el[0], el), pretty_print(el[1], el))
+@dispatch_field(JoinElement, Formatter)
+def pretty_print(el, formatter):
+    return el.display(pretty_print(el[0], el, formatter),
+                      pretty_print(el[1], el, formatter), formatter)
 
 
-@dispatch_field(object, object)
-def pretty_print(el, parent):
+@dispatch_field(Element, Element, Formatter)
+def pretty_print(el, parent, formatter):
     if need_parens(el, parent):
-        return '(' + pretty_print(el) + ')'
+        return '(' + pretty_print(el, formatter) + ')'
     else:
-        return pretty_print(el)
+        return pretty_print(el, formatter)
 
 
 @dispatch_field(Element, SumElement)

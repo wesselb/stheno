@@ -9,7 +9,7 @@ from lab import B
 
 from stheno.field import squeeze, mul, add, SumElement, ProductElement, \
     ScaledElement, OneElement, ZeroElement, WrappedElement, PrimitiveElement, \
-    JoinElement, Element
+    JoinElement, Element, Formatter
 from .field import dispatch_field, Element, new, get_field, broadcast
 
 __all__ = []
@@ -114,87 +114,95 @@ class Function(Element, Referentiable):
 def get_field(a): return Function
 
 
-class PrimitiveFunction(PrimitiveElement):
+class PrimitiveFunction(Function, PrimitiveElement):
     """A primitive function."""
 
 
-class OneFunction(OneElement):
+class OneFunction(Function, OneElement):
     """The constant function `1`."""
 
 
-class ZeroFunction(ZeroElement):
+class ZeroFunction(Function, ZeroElement):
     """The constant function `0`."""
 
 
-class WrappedFunction(WrappedElement):
+class WrappedFunction(Function, WrappedElement):
     """A wrapped function."""
 
 
-class JoinFunction(JoinElement):
+class JoinFunction(Function, JoinElement):
     """Two wrapped functions."""
 
 
-class SumFunction(SumElement):
+class SumFunction(Function, SumElement):
     """A sum of two functions."""
 
 
-class ScaledFunction(ScaledElement):
+class ScaledFunction(Function, ScaledElement):
     """A scaled function."""
 
 
-class ProductFunction(ProductElement):
+class ProductFunction(Function, ProductElement):
     """A product of two functions."""
 
 
-class StretchedFunction(WrappedFunction):
+class StretchedFunction(WrappedFunction, Referentiable):
     """Stretched function.
 
     Args:
         e (:class:`.function_field.Function`): Function to stretch.
         *stretches (tensor): Extent of stretches.
     """
+    _dispatch = Dispatcher(in_class=Self)
 
     def __init__(self, e, *stretches):
         WrappedFunction.__init__(self, e)
         self.stretches = stretches
 
-    def display(self, e):
-        return '{} > {}'.format(e, squeeze(self.stretches))
+    @_dispatch(object, Formatter)
+    def display(self, e, formatter):
+        stretches = tuple(formatter(s) for s in self.stretches)
+        return '{} > {}'.format(e, squeeze(stretches))
 
 
-class ShiftedFunction(WrappedFunction):
+class ShiftedFunction(WrappedFunction, Referentiable):
     """Shifted function.
 
     Args:
         e (:class:`.function_field.Function`): Function to shift.
         *shifts (tensor): Shift amounts.
     """
+    _dispatch = Dispatcher(in_class=Self)
 
     def __init__(self, e, *shifts):
         WrappedFunction.__init__(self, e)
         self.shifts = shifts
 
-    def display(self, e):
-        return '{} shift {}'.format(e, squeeze(self.shifts))
+    @_dispatch(object, Formatter)
+    def display(self, e, formatter):
+        shifts = tuple(formatter(s) for s in self.shifts)
+        return '{} shift {}'.format(e, squeeze(shifts))
 
 
-class SelectedFunction(WrappedFunction):
+class SelectedFunction(WrappedFunction, Referentiable):
     """Select particular dimensions of the input features.
 
     Args:
         e (:class:`.function_field.Function`): Function to wrap.
         *dims (tensor): Dimensions to select.
     """
+    _dispatch = Dispatcher(in_class=Self)
 
     def __init__(self, e, *dims):
         WrappedFunction.__init__(self, e)
         self.dims = dims
 
-    def display(self, e):
+    @_dispatch(object, Formatter)
+    def display(self, e, formatter):
         return '{} : {}'.format(e, squeeze(tuple(list(ds) for ds in self.dims)))
 
 
-class InputTransformedFunction(WrappedFunction):
+class InputTransformedFunction(WrappedFunction, Referentiable):
     """Transform inputs of a function.
 
     Args:
@@ -202,12 +210,14 @@ class InputTransformedFunction(WrappedFunction):
         *fs (tensor): Per input, the transformation. Set to `None` to not
             do a transformation.
     """
+    _dispatch = Dispatcher(in_class=Self)
 
     def __init__(self, e, *fs):
         WrappedFunction.__init__(self, e)
         self.fs = fs
 
-    def display(self, e):
+    @_dispatch(object, Formatter)
+    def display(self, e, formatter):
         # Safely get a function's name.
         def name(f):
             return 'None' if f is None else f.__name__
@@ -219,7 +229,7 @@ class InputTransformedFunction(WrappedFunction):
         return '{} transform {}'.format(e, fs)
 
 
-class DerivativeFunction(WrappedFunction):
+class DerivativeFunction(WrappedFunction, Referentiable):
     """Compute the derivative of a function.
 
     Args:
@@ -228,12 +238,14 @@ class DerivativeFunction(WrappedFunction):
         *derivs (tensor): Per input, the index of the dimension which to
             take the derivative of. Set to `None` to not take a derivative.
     """
+    _dispatch = Dispatcher(in_class=Self)
 
     def __init__(self, e, *derivs):
         WrappedFunction.__init__(self, e)
         self.derivs = derivs
 
-    def display(self, e):
+    @_dispatch(object, Formatter)
+    def display(self, e, formatter):
         if len(self.derivs) == 1:
             derivs = '({})'.format(self.derivs[0])
         else:
@@ -241,17 +253,19 @@ class DerivativeFunction(WrappedFunction):
         return 'd{} {}'.format(derivs, e)
 
 
-class TensorProductFunction(Function):
+class TensorProductFunction(Function, Referentiable):
     """An element built from a product of functions for each input.
 
     Args:
         *fs (function): Per input, a function.
     """
+    _dispatch = Dispatcher(in_class=Self)
 
     def __init__(self, *fs):
         self.fs = fs
 
-    def __str__(self):
+    @_dispatch(Formatter)
+    def display(self, formatter):
         if len(self.fs) == 1:
             return self.fs[0].__name__
         else:

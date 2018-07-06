@@ -13,10 +13,11 @@ from stheno.function_field import StretchedFunction, ShiftedFunction, \
     SelectedFunction, InputTransformedFunction, DerivativeFunction, \
     TensorProductFunction, stretch, transform, Function, ZeroFunction, \
     OneFunction, ScaledFunction, ProductFunction, SumFunction, \
-    WrappedFunction, PrimitiveFunction, JoinFunction, shift, select, to_tensor
+    WrappedFunction, PrimitiveFunction, JoinFunction, shift, select, \
+    to_tensor
 from .cache import cache, Cache, uprank
 from .field import add, mul, dispatch_field, broadcast, apply_optional_arg, \
-    get_field
+    get_field, Formatter
 from .input import Input
 
 __all__ = ['Kernel', 'OneKernel', 'ZeroKernel', 'ScaledKernel', 'EQ', 'RQ',
@@ -563,8 +564,9 @@ class PeriodicKernel(Kernel, WrappedFunction, Referentiable):
     def period(self):
         return self._period
 
-    def display(self, e):
-        return '{} per {}'.format(e, self._period)
+    @_dispatch(object, Formatter)
+    def display(self, e, formatter):
+        return '{} per {}'.format(e, formatter(self._period))
 
 
 class EQ(Kernel, PrimitiveFunction, Referentiable):
@@ -632,8 +634,9 @@ class RQ(Kernel, Referentiable):
     def _compute(self, dists2, B):
         return (1 + .5 * dists2 / self.alpha) ** (-self.alpha)
 
-    def __str__(self):
-        return 'RQ({})'.format(self.alpha)
+    @_dispatch(Formatter)
+    def display(self, formatter):
+        return 'RQ({})'.format(formatter(self.alpha))
 
     @property
     def _stationary(self):
@@ -1047,7 +1050,8 @@ class ReversedKernel(Kernel, WrappedFunction, Referentiable):
     def period(self):
         return self[0].period
 
-    def display(self, e):
+    @_dispatch(object, Formatter)
+    def display(self, e, formatter):
         return 'Reversed({})'.format(e)
 
 

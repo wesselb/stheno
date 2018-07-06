@@ -33,8 +33,10 @@ def test_corner_cases():
     yield raises, RuntimeError, lambda: new(MyField(), SumElement)
     yield eq, repr(EQ()), str(EQ())
     yield eq, EQ().__name__, 'EQ'
-    yield raises, NotImplementedError, lambda: WrappedElement(1).display(1)
-    yield raises, NotImplementedError, lambda: JoinElement(1, 2).display(1, 2)
+    yield raises, NotImplementedError, \
+          lambda: WrappedElement(1).display(1, lambda x: x)
+    yield raises, NotImplementedError, \
+          lambda: JoinElement(1, 2).display(1, 2, lambda x: x)
 
 
 def test_broadcast():
@@ -268,3 +270,7 @@ def test_function():
           '(<lambda> x f)'
     yield eq, str(OneKernel() * TensorProductKernel(f, (lambda x, c: x))), \
           '(f x <lambda>)'
+
+
+def test_formatting():
+    yield eq, (2 * EQ().stretch(3)).display(lambda x: x ** 2), '4 * (EQ() > 9)'

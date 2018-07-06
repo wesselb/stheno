@@ -584,3 +584,10 @@ def test_naming():
     yield ok, model['yet_another_name'] is p3
     yield eq, p3.name, 'yet_another_name'
     yield eq, model[p3], 'yet_another_name'
+
+
+def test_formatting():
+    model = Graph()
+
+    yield eq, str((2 * GP(EQ(), 1, graph=model)).display(lambda x: x ** 2)), \
+          'GP(16 * EQ(), 4 * 1)'

@@ -362,10 +362,22 @@ class GPPrimitive(RandomProcess, Referentiable):
         return self.kernel.period
 
     def __str__(self):
-        return 'GP({}, {})'.format(self.kernel, self.mean)
+        return self.display()
 
     def __repr__(self):
-        return str(self)
+        return self.display()
+
+    def display(self, formatter=lambda x: x):
+        """Display the GP.
+
+        Args:
+            formatter (function, optional): Function to format values.
+
+        Returns:
+            str: GP as a string.
+        """
+        return 'GP({}, {})'.format(self.kernel.display(formatter),
+                                   self.mean.display(formatter))
 
     def stretch(self, stretch):
         """Stretch the GP. See :meth:`.graph.Graph.stretch`."""

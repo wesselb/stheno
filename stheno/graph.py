@@ -19,6 +19,7 @@ from .mokernel import MultiOutputKernel as MOK
 from .momean import MultiOutputMean as MOM
 from .random import GPPrimitive, Random
 from .spd import SPD
+from .field import Formatter
 
 __all__ = ['GP', 'model', 'Graph']
 
@@ -418,8 +419,9 @@ class GraphMean(Mean, Referentiable):
     def __call__(self, x, cache):
         return self.graph.means[type_parameter(x)](x.get(), cache)
 
-    def __str__(self):
-        return str(self.graph.means[self.p])
+    @_dispatch(Formatter)
+    def display(self, formatter):
+        return self.graph.means[self.p].display(formatter)
 
     @property
     def num_terms(self):
@@ -577,8 +579,9 @@ class GraphKernel(Kernel, Referentiable):
         """Period of the kernel."""
         return self.graph.kernels[self.p].period
 
-    def __str__(self):
-        return str(self.graph.kernels[self.p])
+    @_dispatch(Formatter)
+    def display(self, formatter):
+        return self.graph.kernels[self.p].display(formatter)
 
     @property
     def num_terms(self):
