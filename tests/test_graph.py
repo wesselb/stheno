@@ -595,8 +595,13 @@ def test_formatting():
 
 def test_checkpointing():
     model = Graph()
+    p = GP(EQ(), graph=model)
+    x = np.linspace(0, 5, 10)
+    y = p(x).sample()
 
-    # Check that checkpoints cannot by default be overwritten.
-    yield model.checkpoint, 'test'
-    yield raises, RuntimeError, lambda: model.checkpoint('test')
-    yield model.checkpoint, 'test', True
+    checkpoint = model.checkpoint()
+    yield assert_allclose, p(x).mean, np.zeros((10, 1))
+    p.condition(x, y)
+    yield assert_allclose, p(x).mean, y
+    model.revert(checkpoint)
+    yield assert_allclose, p(x).mean, np.zeros((10, 1))
