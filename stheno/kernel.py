@@ -881,15 +881,14 @@ class PosteriorCrossKernel(Kernel, Referentiable):
     @_dispatch(object, object, Cache)
     @cache
     def __call__(self, x, y, B):
-        qf = self.K_z.quadratic_form(self.k_zi(self.z, x, B),
-                                     self.k_zj(self.z, y, B))
+        qf = B.qf(self.K_z, self.k_zi(self.z, x, B), self.k_zj(self.z, y, B))
         return B.subtract(self.k_ij(x, y, B), qf)
 
     @_dispatch(object, object, Cache)
     @cache
     def elwise(self, x, y, B):
-        qf_diag = self.K_z.quadratic_form_diag(self.k_zi(self.z, x, B),
-                                               self.k_zj(self.z, y, B))
+        qf_diag = B.qf_diag(self.K_z,
+                            self.k_zi(self.z, x, B), self.k_zj(self.z, y, B))
         return B.subtract(self.k_ij.elwise(x, y, B), B.expand_dims(qf_diag, 1))
 
 
@@ -941,8 +940,8 @@ class VariationalPosteriorCrossKernel(Kernel, Referentiable):
     def __call__(self, x, y, B):
         K_zi = self.k_zi(self.z, x, B)
         K_zj = self.k_zj(self.z, y, B)
-        qf1 = self.K_z.quadratic_form(K_zi, K_zj)
-        qf2 = self.A.quadratic_form(K_zi, K_zj)
+        qf1 = B.qf(self.K_z, K_zi, K_zj)
+        qf2 = B.qf(self.A, K_zi, K_zj)
         return B.add(B.subtract(self.k_ij(x, y, B), qf1), qf2)
 
     @_dispatch(object, object, Cache)
@@ -950,8 +949,8 @@ class VariationalPosteriorCrossKernel(Kernel, Referentiable):
     def elwise(self, x, y, B):
         K_zi = self.k_zi(self.z, x, B)
         K_zj = self.k_zj(self.z, y, B)
-        qf1_diag = B.expand_dims(self.K_z.quadratic_form_diag(K_zi, K_zj), 1)
-        qf2_diag = B.expand_dims(self.A.quadratic_form_diag(K_zi, K_zj), 1)
+        qf1_diag = B.expand_dims(B.qf_diag(self.K_z, K_zi, K_zj), 1)
+        qf2_diag = B.expand_dims(B.qf_diag(self.A, K_zi, K_zj), 1)
         return B.add(B.subtract(self.k_ij.elwise(x, y, B), qf1_diag), qf2_diag)
 
 

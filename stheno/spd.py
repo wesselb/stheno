@@ -70,58 +70,6 @@ class SPD(Element, Referentiable):
         """
         return B.sum(B.trisolve(B.cholesky(denom), B.cholesky(self)) ** 2)
 
-    @_dispatch(object)
-    def quadratic_form(self, a):
-        """Compute the quadratic form `transpose(a) inv(self.mat) b`.
-
-        Args:
-            a (tensor): `a`.
-            b (tensor, optional): `b`. Defaults to `a`.
-
-        Returns:
-            tensor: Quadratic form.
-        """
-        prod = B.trisolve(B.cholesky(self), a)
-        return B.matmul(prod, prod, tr_a=True)
-
-    @_dispatch(object, object)
-    def quadratic_form(self, a, b):
-        left = B.trisolve(B.cholesky(self), a)
-        right = B.trisolve(B.cholesky(self), b)
-        return B.matmul(left, right, tr_a=True)
-
-    @_dispatch(Self)
-    def quadratic_form(self, a):
-        return SPD(self.quadratic_form(dense(a)))
-
-    @_dispatch(Self, Self)
-    def quadratic_form(self, a, b):
-        # If the inputs are identical, call the single-argument method.
-        if a is b:
-            return self.quadratic_form(a)
-        else:
-            return self.quadratic_form(dense(a), dense(b))
-
-    @_dispatch(object)
-    def quadratic_form_diag(self, a):
-        """Compute the diagonal of `transpose(a) inv(self.mat) b`.
-
-        Args:
-            a (tensor): `a`.
-            b (tensor, optional): `b`. Defaults to `a`.
-
-        Returns:
-            tensor: Diagonal of the quadratic form.
-        """
-        prod = B.trisolve(B.cholesky(self), a)
-        return B.sum(prod ** 2, axis=0)
-
-    @_dispatch(object, object)
-    def quadratic_form_diag(self, a, b):
-        left = B.trisolve(B.cholesky(self), a)
-        right = B.trisolve(B.cholesky(self), b)
-        return B.sum(left * right, axis=0)
-
     def inv_prod(self, a):
         """Compute the product `inv(self.mat) a`.
 
@@ -167,14 +115,6 @@ class LowRank(SPD, Referentiable):
     def ratio(self, denom):
         return B.sum(self.inner * denom.inv_prod(self.inner))
 
-    @_dispatch(object, [object])
-    def quadratic_form(self, a, b=None):
-        raise RuntimeError('This matrix is singular.')
-
-    @_dispatch(object, [object])
-    def quadratic_form_diag(self, a, b=None):
-        raise RuntimeError('This matrix is singular.')
-
     def inv_prod(self, a):
         raise RuntimeError('This matrix is singular.')
 
@@ -203,24 +143,6 @@ class Diagonal(SPD, Referentiable):
     @_dispatch(Self)
     def ratio(self, denom):
         return B.sum(self.diag / denom.diag)
-
-    @_dispatch(object, object)
-    def quadratic_form(self, a, b):
-        isqrt_diag = self.diag[:, None] ** .5
-        return B.matmul(a / isqrt_diag, b / isqrt_diag, tr_a=True)
-
-    @_dispatch(object)
-    def quadratic_form(self, a):
-        iL_a = a / self.diag[:, None] ** .5
-        return B.matmul(iL_a, iL_a, tr_a=True)
-
-    @_dispatch(object, object)
-    def quadratic_form_diag(self, a, b):
-        return B.sum(a * b / self.diag[:, None], axis=0)
-
-    @_dispatch(object)
-    def quadratic_form_diag(self, a):
-        return B.sum(a ** 2 / self.diag[:, None], axis=0)
 
     def inv_prod(self, a):
         return a / self.diag[:, None]
@@ -434,6 +356,94 @@ def mah_dist2(a, diff, sum=True):
 
 @B.mah_dist2.extend(LowRank, object)
 def mah_dist2(a, diff, sum=True):
+    raise RuntimeError('Matrix is singular.')
+
+
+# Compute quadratic forms and diagonals thereof.
+
+@B.qf.extend(object, object)
+def qf(a, b):
+    """Compute the quadratic form `transpose(b) inv(a) c`.
+
+    Args:
+        a (tensor): Covariance matrix.
+        b (tensor): `b`.
+        c (tensor, optional): `c`. Defaults to `b`.
+
+    Returns:
+        :class:`.spd.SPD`: Quadratic form.
+    """
+    prod = B.trisolve(B.cholesky(a), b)
+    return spd(B.matmul(prod, prod, tr_a=True))
+
+
+@B.qf.extend(object, object, object)
+def qf(a, b, c):
+    if b is c:
+        return B.qf(a, b)
+    left = B.trisolve(B.cholesky(a), b)
+    right = B.trisolve(B.cholesky(a), c)
+    return B.matmul(left, right, tr_a=True)
+
+
+@B.qf.extend(Diagonal, object)
+def qf(a, b):
+    iL_b = b / a.diag[:, None] ** .5
+    return B.matmul(iL_b, iL_b, tr_a=True)
+
+
+@B.qf.extend(Diagonal, object, object)
+def qf(a, b, c):
+    if b is c:
+        return B.qf(a, b)
+    isqrt_diag = a.diag[:, None] ** .5
+    return B.matmul(b / isqrt_diag, c / isqrt_diag, tr_a=True)
+
+
+@B.qf.extend_multi((LowRank, object), (LowRank, object, object))
+def qf(a, b, c=None):
+    raise RuntimeError('Matrix is singular.')
+
+
+@B.qf_diag.extend(object, object)
+def qf_diag(a, b):
+    """Compute the diagonal of `transpose(b) inv(a) c`.
+
+    Args:
+        a (:class:`.spd.SPD`): Covariance matrix.
+        b (tensor): `b`.
+        c (tensor, optional): `c`. Defaults to `b`.
+
+    Returns:
+        tensor: Diagonal of the quadratic form.
+    """
+    prod = B.trisolve(B.cholesky(a), b)
+    return B.sum(prod ** 2, axis=0)
+
+
+@B.qf_diag.extend(object, object, object)
+def qf_diag(a, b, c):
+    if b is c:
+        return B.qf_diag(a, b)
+    left = B.trisolve(B.cholesky(a), b)
+    right = B.trisolve(B.cholesky(a), c)
+    return B.sum(left * right, axis=0)
+
+
+@B.qf_diag.extend(Diagonal, object)
+def qf_diag(a, b):
+    return B.sum(b ** 2 / a.diag[:, None], axis=0)
+
+
+@B.qf_diag.extend(Diagonal, object, object)
+def qf_diag(a, b, c):
+    if b is c:
+        return B.qf(a, b)
+    return B.sum(b * c / a.diag[:, None], axis=0)
+
+
+@B.qf_diag.extend_multi((LowRank, object), (LowRank, object, object))
+def qf_diag(a, b, c=None):
     raise RuntimeError('Matrix is singular.')
 
 
