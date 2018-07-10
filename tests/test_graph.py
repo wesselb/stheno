@@ -264,10 +264,10 @@ def test_shifting():
     y = p2(x).sample()
 
     yield assert_allclose, p.condition(At(p2)(x), y)(x - 5).mean, y
-    yield le, abs_err(p(x - 5).spd.diag), 1e-10
+    yield le, abs_err(B.diag(p(x - 5).spd)), 1e-10
     p.revert_prior()
     yield assert_allclose, p2.condition(At(p)(x), y)(x + 5).mean, y
-    yield le, abs_err(p2(x + 5).spd.diag), 1e-10
+    yield le, abs_err(B.diag(p2(x + 5).spd)), 1e-10
     p.revert_prior()
 
 
@@ -282,10 +282,10 @@ def test_stretching():
     y = p2(x).sample()
 
     yield assert_allclose, p.condition(At(p2)(x), y)(x / 5).mean, y
-    yield le, abs_err(p(x / 5).spd.diag), 1e-10
+    yield le, abs_err(B.diag(p(x / 5).spd)), 1e-10
     p.revert_prior()
     yield assert_allclose, p2.condition(At(p)(x), y)(x * 5).mean, y
-    yield le, abs_err(p2(x * 5).spd.diag), 1e-10
+    yield le, abs_err(B.diag(p2(x * 5).spd)), 1e-10
     p.revert_prior()
 
 
@@ -300,10 +300,10 @@ def test_input_transform():
     y = p2(x).sample()
 
     yield assert_allclose, p.condition(At(p2)(x), y)(x / 5).mean, y
-    yield le, abs_err(p(x / 5).spd.diag), 1e-10
+    yield le, abs_err(B.diag(p(x / 5).spd)), 1e-10
     p.revert_prior()
     yield assert_allclose, p2.condition(At(p)(x), y)(x * 5).mean, y
-    yield le, abs_err(p2(x * 5).spd.diag), 1e-10
+    yield le, abs_err(B.diag(p2(x * 5).spd)), 1e-10
     p.revert_prior()
 
 
@@ -320,17 +320,17 @@ def test_selection():
     y = p2(x).sample()
 
     yield assert_allclose, p.condition(At(p2)(x1), y)(x).mean, y
-    yield le, abs_err(p(x).spd.diag), 1e-10
+    yield le, abs_err(B.diag(p(x).spd)), 1e-10
     p.revert_prior()
 
     yield assert_allclose, p.condition(At(p2)(x2), y)(x).mean, y
-    yield le, abs_err(p(x).spd.diag), 1e-10
+    yield le, abs_err(B.diag(p(x).spd)), 1e-10
     p.revert_prior()
 
     yield assert_allclose, p2.condition(At(p)(x), y)(x1).mean, y
     yield assert_allclose, p2(x2).mean, y
-    yield le, abs_err(p2(x1).spd.diag), 1e-10
-    yield le, abs_err(p2(x2).spd.diag), 1e-10
+    yield le, abs_err(B.diag(p2(x1).spd)), 1e-10
+    yield le, abs_err(B.diag(p2(x2).spd)), 1e-10
     p.revert_prior()
 
 
@@ -370,7 +370,7 @@ def test_case_reflection():
     model.condition(At(p)(x), y)
     yield le, abs_err(p2(x).mean + y), 1e-5
     model.revert_prior()
-    model.condition(At(p2)(x), -y)
+    model.condition(At(p2)(x), - y)
     yield le, abs_err(p(x).mean - y), 1e-5
     model.revert_prior()
 

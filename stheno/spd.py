@@ -32,11 +32,6 @@ class SPD(Element, Referentiable):
         self._root = None
 
     @property
-    def diag(self):
-        """Diagonal of the matrix."""
-        return B.diag(self.mat)
-
-    @property
     def shape(self):
         """Shape of the matrix."""
         return B.shape(self.mat)
@@ -204,10 +199,6 @@ class LowRank(SPD, Referentiable):
         self.inner = inner
 
     @property
-    def diag(self):
-        return B.sum(self.inner ** 2, 1)
-
-    @property
     def shape(self):
         return B.shape(self.inner)[0], B.shape(self.inner)[0]
 
@@ -244,11 +235,7 @@ class Diagonal(SPD, Referentiable):
 
     def __init__(self, diag):
         SPD.__init__(self, None)
-        self._diag = diag
-
-    @property
-    def diag(self):
-        return self._diag
+        self.diag = diag
 
     @property
     def shape(self):
@@ -325,10 +312,6 @@ class Woodbury(SPD, Referentiable):
         SPD.__init__(self, None)
         self.lr_part = lr
         self.diag_part = diag
-
-    @property
-    def diag(self):
-        return self.lr_part.diag + self.diag_part.diag
 
     @property
     def shape(self):
@@ -443,6 +426,24 @@ def dtype(a):
     return B.dtype(a.lr_part)
 
 
+# Get diagonals of SPDs.
+
+@B.diag.extend(SPD)
+def diag(a): return B.diag(dense(a))
+
+
+@B.diag.extend(Diagonal)
+def diag(a): return a.diag
+
+
+@B.diag.extend(LowRank)
+def diag(a): return B.sum(a.inner ** 2, 1)
+
+
+@B.diag.extend(Woodbury)
+def diag(a): return B.diag(a.lr_part) + B.diag(a.diag_part)
+
+
 # Extend LAB to work with SPDs.
 
 B.add.extend(SPD, B.Numeric)(add)
@@ -452,10 +453,6 @@ B.add.extend(SPD, SPD)(add)
 B.multiply.extend(SPD, B.Numeric)(mul)
 B.multiply.extend(B.Numeric, SPD)(mul)
 B.multiply.extend(SPD, SPD)(mul)
-
-
-@B.diag.extend(SPD)
-def diag(a): return a.diag
 
 
 @B.transpose.extend(SPD)

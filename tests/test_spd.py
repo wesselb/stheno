@@ -24,7 +24,7 @@ def test_spd():
 
         # Compare implementations.
         yield ok, np.allclose(dense(ref), dense(spd)), 'matrices'
-        yield ok, np.allclose(ref.diag, spd.diag), 'diagonals'
+        yield ok, np.allclose(B.diag(ref), B.diag(spd)), 'diagonals'
         yield ok, ref.shape == spd.shape, 'shapes'
         yield ok, np.allclose(ref.cholesky(),
                               spd.cholesky()), 'cholesky'
