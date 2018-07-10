@@ -10,7 +10,7 @@ from lab import B
 from stheno.field import squeeze, mul, add, SumElement, ProductElement, \
     ScaledElement, OneElement, ZeroElement, WrappedElement, PrimitiveElement, \
     JoinElement, Element, Formatter
-from .field import dispatch_field, Element, new, get_field, broadcast
+from .field import Element, new, get_field, broadcast
 
 __all__ = []
 
@@ -110,7 +110,7 @@ class Function(Element, Referentiable):
 
 
 # Register the field.
-@dispatch_field(Function)
+@get_field.extend(Function)
 def get_field(a): return Function
 
 
@@ -272,7 +272,7 @@ class TensorProductFunction(Function, Referentiable):
             return '({})'.format(' x '.join(f.__name__ for f in self.fs))
 
 
-@dispatch_field(object, [object])
+@_dispatch(object, [object])
 def stretch(a, *stretches):
     """Stretch a function.
 
@@ -287,7 +287,7 @@ def stretch(a, *stretches):
                               ''.format(type(a).__name__))
 
 
-@dispatch_field(object, [object])
+@_dispatch(object, [object])
 def shift(a, *shifts):
     """Shift a function.
 
@@ -302,7 +302,7 @@ def shift(a, *shifts):
                               ''.format(type(a).__name__))
 
 
-@dispatch_field(object, [object])
+@_dispatch(object, [object])
 def select(a, *dims):
     """Select dimensions from the inputs.
 
@@ -319,7 +319,7 @@ def select(a, *dims):
                               ''.format(type(a).__name__))
 
 
-@dispatch_field(object, [object])
+@_dispatch(object, [object])
 def transform(a, *fs):
     """Transform the inputs of a function.
 
@@ -336,7 +336,7 @@ def transform(a, *fs):
                               ''.format(type(a).__name__))
 
 
-@dispatch_field(object, [object])
+@_dispatch(object, [object])
 def differentiate(a, *derivs):
     """Differentiate a function.
 
@@ -355,81 +355,81 @@ def differentiate(a, *derivs):
 
 # Handle conversion of Python functions.
 
-@dispatch_field(Element, PythonFunction, precedence=1)
+@mul.extend(Element, PythonFunction, precedence=1)
 def mul(a, b): return mul(a, new(a, TensorProductFunction)(b))
 
 
-@dispatch_field(PythonFunction, Element, precedence=1)
+@mul.extend(PythonFunction, Element, precedence=1)
 def mul(a, b): return mul(new(b, TensorProductFunction)(a), b)
 
 
-@dispatch_field(Element, PythonFunction, precedence=1)
+@add.extend(Element, PythonFunction, precedence=1)
 def add(a, b): return add(a, new(a, TensorProductFunction)(b))
 
 
-@dispatch_field(PythonFunction, Element, precedence=1)
+@add.extend(PythonFunction, Element, precedence=1)
 def add(a, b): return add(new(b, TensorProductFunction)(a), b)
 
 
 # Stretch:
 
-@dispatch_field(Element, [object])
+@_dispatch(Element, [object])
 def stretch(a, *stretches): return new(a, StretchedFunction)(a, *stretches)
 
 
-@dispatch_field({ZeroElement, OneElement}, [object])
+@_dispatch({ZeroElement, OneElement}, [object])
 def stretch(a, *stretches): return a
 
 
-@dispatch_field(StretchedFunction, [object])
+@_dispatch(StretchedFunction, [object])
 def stretch(a, *stretches):
     return stretch(a[0], *broadcast(operator.mul, a.stretches, stretches))
 
 
 # Shifting:
 
-@dispatch_field(Element, [object])
+@_dispatch(Element, [object])
 def shift(a, *shifts): return new(a, ShiftedFunction)(a, *shifts)
 
 
-@dispatch_field({ZeroElement, OneElement}, [object])
+@_dispatch({ZeroElement, OneElement}, [object])
 def shift(a, *shifts): return a
 
 
-@dispatch_field(ShiftedFunction, [object])
+@_dispatch(ShiftedFunction, [object])
 def shift(a, *shifts):
     return shift(a[0], *broadcast(operator.add, a.shifts, shifts))
 
 
 # Selection:
 
-@dispatch_field(Element, [object])
+@_dispatch(Element, [object])
 def select(a, *dims): return new(a, SelectedFunction)(a, *dims)
 
 
-@dispatch_field({ZeroElement, OneElement}, [object])
+@_dispatch({ZeroElement, OneElement}, [object])
 def select(a, *dims): return a
 
 
 # Input transforms:
 
-@dispatch_field(Element, [object])
+@_dispatch(Element, [object])
 def transform(a, *fs): return new(a, InputTransformedFunction)(a, *fs)
 
 
-@dispatch_field({ZeroElement, OneElement}, [object])
+@_dispatch({ZeroElement, OneElement}, [object])
 def transform(a, *fs): return a
 
 
 # Differentiation:
 
-@dispatch_field(Element, [object])
+@_dispatch(Element, [object])
 def differentiate(a, *derivs): return new(a, DerivativeFunction)(a, *derivs)
 
 
-@dispatch_field(ZeroElement, [object])
+@_dispatch(ZeroElement, [object])
 def differentiate(a, *derivs): return a
 
 
-@dispatch_field(OneElement, [object])
+@_dispatch(OneElement, [object])
 def differentiate(a, *derivs): return new(a, ZeroElement)()

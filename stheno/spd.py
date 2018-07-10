@@ -2,150 +2,22 @@
 
 from __future__ import print_function, division, absolute_import
 
-from lab import B
-from plum import Referentiable, Self, Dispatcher, Kind, PromisedType
-from future.utils import with_metaclass
-from .field import Element, mul, add, dispatch_field
+import logging
 
-__all__ = ['SPD', 'Diagonal', 'UniformDiagonal']
+from lab import B
+from plum import Referentiable, Self, Dispatcher
+
+from .field import Element, OneElement, ZeroElement, mul, add, get_field
+
+__all__ = ['spd', 'SPD', 'LowRank', 'Diagonal', 'UniformDiagonal', 'OneSPD',
+           'ZeroSPD', 'dense', 'Woodbury']
+
+log = logging.getLogger(__name__)
 
 _dispatch = Dispatcher()
 
 
 class SPD(Element, Referentiable):
-    """Symmetric positive-definite matrix."""
-    _dispatch = Dispatcher(in_class=Self)
-
-    @property
-    def dtype(self):
-        """Data type."""
-        raise NotImplementedError()
-
-    @property
-    def mat(self):
-        """Matrix in dense form."""
-        raise NotImplementedError()
-
-    @property
-    def diag(self):
-        """Diagonal of the matrix."""
-        return B.diag(self._mat)
-
-    @property
-    def shape(self):
-        """Shape of the matrix."""
-        return B.shape(self.mat)
-
-    def cholesky(self):
-        """Compute the Cholesky decomposition.
-
-        Returns:
-            tensor: Cholesky decomposition.
-        """
-        raise NotImplementedError()
-
-    def cholesky_mul(self, a):
-        """Multiply the Cholesky decomposition of this matrix with `a`.
-
-        Args:
-            a (tensor): Matrix to multiply with.
-
-        Returns:
-            tensor: Multiplication of the Cholesky of this matrix with `a`.
-        """
-        raise NotImplementedError()
-
-    def logdet(self):
-        """Compute the log-determinant.
-
-        Returns:
-            scalar: Log-determinant.
-        """
-        raise NotImplementedError()
-
-    @_dispatch(object, object)
-    def mah_dist2(self, a, b, sum=True):
-        """Compute the square of the Mahalanobis distance between vectors.
-
-        Args:
-            a (tensor): First matrix.
-            b (tensor, optional): Second matrix. If omitted, `a` is assumed
-                to be the differences.
-            sum (bool, optional): Compute the sum of all distances instead
-                of returning all distances.
-
-        Returns:
-            tensor: Distance or distances.
-        """
-        raise NotImplementedError()
-
-    @_dispatch(object)
-    def mah_dist2(self, diff, sum=True):
-        raise NotImplementedError()
-
-    def ratio(self, denom):
-        """Compute the ratio with respect to another positive-definite matrix.
-
-        Args:
-            denom (:class:`.spd.SPD`): Denominator in the ratio.
-
-        Returns:
-            tensor: Ratio.
-        """
-        raise NotImplementedError()
-
-    @_dispatch(object)
-    def quadratic_form(self, a):
-        """Compute the quadratic form `transpose(a) inv(self.mat) b`.
-
-        Args:
-            a (tensor): `a`.
-            b (tensor, optional): `b`. Defaults to `a`.
-
-        Returns:
-            tensor: Quadratic form.
-        """
-        raise NotImplementedError()
-
-    @_dispatch(object, object)
-    def quadratic_form(self, a, b):
-        raise NotImplementedError()
-
-    @_dispatch(object)
-    def quadratic_form_diag(self, a):
-        """Compute the diagonal of the quadratic form
-        `transpose(a) inv(self.mat) b`.
-
-        Args:
-            a (tensor): `a`.
-            b (tensor, optional): `b`. Defaults to `a`.
-
-        Returns:
-            tensor: Diagonal of quadratic form as a rank 1 tensor.
-        """
-        raise NotImplementedError()
-
-    @_dispatch(object, object)
-    def quadratic_form_diag(self, a, b):
-        raise NotImplementedError()
-
-    def inv_prod(self, a):
-        """Compute the matrix-vector product `inv(self.mat) a`.
-
-        Args:
-            a (tensor): `a`
-
-        Returns:
-            tensor: Product.
-        """
-        raise NotImplementedError()
-
-    def root(self):
-        """Compute a square root."""
-        return NotImplementedError()
-
-
-class Dense(SPD, Referentiable):
     """Symmetric positive-definite matrix.
 
     Args:
@@ -161,35 +33,69 @@ class Dense(SPD, Referentiable):
 
     @property
     def dtype(self):
+        """Data type."""
         return B.dtype(self._mat)
 
     @property
     def mat(self):
+        """Matrix in dense form."""
         return self._mat
 
     @property
     def diag(self):
-        return B.diag(self._mat)
+        """Diagonal of the matrix."""
+        return B.diag(self.mat)
 
     @property
     def shape(self):
+        """Shape of the matrix."""
         return B.shape(self.mat)
 
     def cholesky(self):
+        """Compute the Cholesky decomposition.
+
+        Returns:
+            tensor: Cholesky decomposition.
+        """
         if self._cholesky is None:
             self._cholesky = B.cholesky(B.reg(self.mat))
         return self._cholesky
 
     def cholesky_mul(self, a):
+        """Multiply the Cholesky decomposition of this matrix with `a`.
+
+        Args:
+            a (tensor): Matrix to multiply with.
+
+        Returns:
+            tensor: Multiplication of the Cholesky of this matrix with `a`.
+        """
         return B.matmul(self.cholesky(), a)
 
     def logdet(self):
+        """Compute the log-determinant.
+
+        Returns:
+            scalar: Log-determinant.
+        """
         if self._logdet is None:
             self._logdet = 2 * B.sum(B.log(B.diag(self.cholesky())))
         return self._logdet
 
     @_dispatch(object, object)
     def mah_dist2(self, a, b, sum=True):
+        """Compute the square of the Mahalanobis distance between vectors.
+
+        Args:
+            a (tensor): First matrix.
+            b (tensor, optional): Second matrix. If omitted, `a` is assumed
+                to be the differences.
+            sum (bool, optional): Compute the sum of all distances instead
+                of returning all distances.
+
+        Returns:
+            tensor: Distance or distances.
+        """
         return self.mah_dist2(a - b, sum=sum)
 
     @_dispatch(object)
@@ -197,22 +103,61 @@ class Dense(SPD, Referentiable):
         iL_diff = B.trisolve(self.cholesky(), diff)
         return B.sum(iL_diff ** 2) if sum else B.sum(iL_diff ** 2, axis=0)
 
+    @_dispatch(Self)
     def ratio(self, denom):
+        """Compute the ratio with respect to another positive-definite matrix.
+
+        Args:
+            denom (:class:`.spd.Dense`): Denominator in the ratio.
+
+        Returns:
+            tensor: Ratio.
+        """
         return B.sum(B.trisolve(denom.cholesky(), self.cholesky()) ** 2)
 
     @_dispatch(object)
     def quadratic_form(self, a):
+        """Compute the quadratic form `transpose(a) inv(self.mat) b`.
+
+        Args:
+            a (tensor): `a`.
+            b (tensor, optional): `b`. Defaults to `a`.
+
+        Returns:
+            tensor: Quadratic form.
+        """
         prod = B.trisolve(self.cholesky(), a)
-        return B.dot(prod, prod, tr_a=True)
+        return B.matmul(prod, prod, tr_a=True)
 
     @_dispatch(object, object)
     def quadratic_form(self, a, b):
         left = B.trisolve(self.cholesky(), a)
         right = B.trisolve(self.cholesky(), b)
-        return B.dot(left, right, tr_a=True)
+        return B.matmul(left, right, tr_a=True)
+
+    @_dispatch(Self)
+    def quadratic_form(self, a):
+        return SPD(self.quadratic_form(dense(a)))
+
+    @_dispatch(Self, Self)
+    def quadratic_form(self, a, b):
+        # If the inputs are identical, call the single-argument method.
+        if a is b:
+            return self.quadratic_form(a)
+        else:
+            return self.quadratic_form(dense(a), dense(b))
 
     @_dispatch(object)
     def quadratic_form_diag(self, a):
+        """Compute the diagonal of `transpose(a) inv(self.mat) b`.
+
+        Args:
+            a (tensor): `a`.
+            b (tensor, optional): `b`. Defaults to `a`.
+
+        Returns:
+            tensor: Diagonal of the quadratic form.
+        """
         prod = B.trisolve(self.cholesky(), a)
         return B.sum(prod ** 2, axis=0)
 
@@ -223,16 +168,39 @@ class Dense(SPD, Referentiable):
         return B.sum(left * right, axis=0)
 
     def inv_prod(self, a):
+        """Compute the product `inv(self.mat) a`.
+
+        Args:
+            a (tensor): `a`
+
+        Returns:
+            tensor: Product.
+        """
         return B.cholesky_solve(self.cholesky(), a)
 
     def root(self):
+        """Compute a square root."""
         if self._cholesky is None:
             vals, vecs = B.eig(B.reg(self.mat))
-            self._cholesky = B.dot(vecs * vals[None, :] ** .5, vecs, tr_b=True)
+            self._cholesky = B.matmul(vecs * vals[None, :] ** .5, vecs,
+                                      tr_b=True)
         return self._cholesky
 
 
-class LowRank(Dense, Referentiable):
+# Register field.
+@get_field.extend(SPD)
+def get_field(a): return SPD
+
+
+class OneSPD(SPD, OneElement):
+    """Dense matrix full of ones."""
+
+
+class ZeroSPD(SPD, ZeroElement):
+    """Dense matrix full of ones."""
+
+
+class LowRank(SPD, Referentiable):
     """Low-rank symmetric positive-definite matrix.
 
     Args:
@@ -242,7 +210,7 @@ class LowRank(Dense, Referentiable):
     _dispatch = Dispatcher(in_class=Self)
 
     def __init__(self, inner):
-        Dense.__init__(self, None)
+        SPD.__init__(self, None)
         self._inner = inner
 
     @property
@@ -264,8 +232,8 @@ class LowRank(Dense, Referentiable):
     def logdet(self):
         raise RuntimeError('This matrix is singular.')
 
-    @_dispatch(object)
-    def mah_dist2(self, diff, sum=True):
+    @_dispatch(object, [object])
+    def mah_dist2(self, a, b=None, sum=True):
         raise RuntimeError('This matrix is singular.')
 
     @_dispatch(SPD)
@@ -284,7 +252,7 @@ class LowRank(Dense, Referentiable):
         raise RuntimeError('This matrix is singular.')
 
 
-class Diagonal(Dense, Referentiable):
+class Diagonal(SPD, Referentiable):
     """Diagonal symmetric positive-definite matrix.
 
     Args:
@@ -293,7 +261,7 @@ class Diagonal(Dense, Referentiable):
     _dispatch = Dispatcher(in_class=Self)
 
     def __init__(self, diag):
-        Dense.__init__(self, None)
+        SPD.__init__(self, None)
         self._diag = diag
 
     @property
@@ -333,12 +301,12 @@ class Diagonal(Dense, Referentiable):
     @_dispatch(object, object)
     def quadratic_form(self, a, b):
         isqrt_diag = self.diag[:, None] ** .5
-        return B.dot(a / isqrt_diag, b / isqrt_diag, tr_a=True)
+        return B.matmul(a / isqrt_diag, b / isqrt_diag, tr_a=True)
 
     @_dispatch(object)
     def quadratic_form(self, a):
         iL_a = a / self.diag[:, None] ** .5
-        return B.dot(iL_a, iL_a, tr_a=True)
+        return B.matmul(iL_a, iL_a, tr_a=True)
 
     @_dispatch(object, object)
     def quadratic_form_diag(self, a, b):
@@ -369,74 +337,244 @@ class UniformDiagonal(Diagonal, Referentiable):
         Diagonal.__init__(self, diag)
 
 
+class Woodbury(SPD, Referentiable):
+    """Sum of a low-rank and diagonal symmetric positive-definite matrix.
+
+    Args:
+        lr (:class:`.spd.LowRank`): Low-rank part.
+        diag (:class:`.spd.Diagonal`): Diagonal part.
+    """
+    _dispatch = Dispatcher(in_class=Self)
+
+    @_dispatch(LowRank, Diagonal)
+    def __init__(self, lr, diag):
+        SPD.__init__(self, None)
+        self.lr_part = lr
+        self.diag_part = diag
+
+    @property
+    def dtype(self):
+        if self.lr_part.dtype != self.diag_part.dtype:
+            raise RuntimeError('Different data types of low-rank part and '
+                               'diagonal part.')
+        return self.lr_part.dtype
+
+    @property
+    def diag(self):
+        return self.lr_part.diag + self.diag_part.diag
+
+    @property
+    def shape(self):
+        # We cannot verify that the shapes of the low-rank part and diagonal
+        # part agree.
+        return self.lr_part.shape
+
+    @property
+    def mat(self):
+        return B.diag(self.diag)
+
+    def cholesky(self):
+        return B.diag(self.diag ** .5)
+
+    def cholesky_mul(self, a):
+        return a * self.diag[:, None] ** .5
+
+    def logdet(self):
+        raise NotImplementedError()
+
+    @_dispatch(object)
+    def mah_dist2(self, diff, sum=True):
+        raise NotImplementedError()
+
+    @_dispatch(Self)
+    def ratio(self, denom):
+        raise NotImplementedError()
+
+    @_dispatch(object, object)
+    def quadratic_form(self, a, b):
+        raise NotImplementedError()
+
+    @_dispatch(object)
+    def quadratic_form(self, a):
+        raise NotImplementedError()
+
+    @_dispatch(object, object)
+    def quadratic_form_diag(self, a, b):
+        raise NotImplementedError()
+
+    @_dispatch(object)
+    def quadratic_form_diag(self, a):
+        raise NotImplementedError()
+
+    def inv_prod(self, a):
+        raise NotImplementedError()
+
+
 @_dispatch(SPD)
 def spd(a):
-    """Type a matrix as SPD.
+    """Matrix as SPD.
 
     Args:
         a (tensor): Matrix to type.
 
     Returns:
-        :class:`.spd.SPD`: Matrix as type SPD.
+        :class:`.spd.Dense`: Matrix as SPD.
     """
     return a
 
 
 @_dispatch(B.Numeric)
 def spd(a):
-    return Dense(a)
+    return SPD(a)
 
 
-# In LAB, redirect addition addition and multiplication for SPDs.
+@_dispatch(SPD)
+def dense(a):
+    """SPD as matrix.
 
-B.add.extend(SPD, object)(add)
-B.add.extend(object, SPD)(add)
+    Args:
+        a (:class:`.spd.Dense`): SPD to unwrap.
+
+    Returns:
+        tensor: SPD as matrix.
+    """
+    return a.mat
+
+
+@_dispatch(B.Numeric)
+def dense(a):
+    return a
+
+
+# Extend LAB to work with SPDs.
+
+B.add.extend(SPD, B.Numeric)(add)
+B.add.extend(B.Numeric, SPD)(add)
 B.add.extend(SPD, SPD)(add)
 
-B.multiply.extend(SPD, object)(mul)
-B.multiply.extend(object, SPD)(mul)
+B.multiply.extend(SPD, B.Numeric)(mul)
+B.multiply.extend(B.Numeric, SPD)(mul)
 B.multiply.extend(SPD, SPD)(mul)
+
+
+@B.diag.extend(SPD)
+def diag(a): return a.diag
+
+
+@B.transpose.extend(SPD)
+def transpose(a): return B.transpose(a.mat)
+
+
+@B.dtype.extend(SPD)
+def dtype(a): return a.dtype
+
+
+@B.shape.extend(SPD)
+def shape(a): return a.shape
+
+
+@B.subtract.extend({B.Numeric, SPD}, {B.Numeric, SPD})
+def subtract(a, b): return B.add(a, -b)
+
+
+@B.divide.extend({B.Numeric, SPD}, {B.Numeric, SPD})
+def divide(a, b): return B.multiply(a, 1 / b)
+
+
+# Setup promotion and conversion of SPDs as a fallback mechanism.
+
+B.add_promotion_rule(B.Numeric, SPD, B.Numeric)
+B.convert.extend(SPD, B.Numeric)(lambda x, _: dense(x))
 
 
 # Simplify addiction and multiplication between SPDs.
 
-@dispatch_field(SPD, SPD, precedence=1)
-def mul(a, b): return Dense(a.mat * b.mat)
+@mul.extend(SPD, SPD)
+def mul(a, b): return SPD(dense(a) * dense(b))
 
 
-@dispatch_field(Diagonal, Diagonal, precedence=1)
+@mul.extend(Diagonal, Diagonal)
 def mul(a, b): return Diagonal(a.diag * b.diag)
 
 
-@dispatch_field(SPD, SPD, precedence=1)
-def add(a, b): return Dense(a.mat + b.mat)
+@mul.extend(LowRank, LowRank)
+def mul(a, b): return LowRank(a.inner * b.inner)
 
 
-@dispatch_field(Diagonal, Diagonal, precedence=1)
+@add.extend(SPD, SPD)
+def add(a, b): return SPD(dense(a) + dense(b))
+
+
+@add.extend(Diagonal, Diagonal)
 def add(a, b): return Diagonal(a.diag + b.diag)
+
+
+@add.extend(LowRank, LowRank)
+def add(a, b): return LowRank(B.concat([a.inner, b.inner], axis=1))
 
 
 # Simplify addiction and multiplication between SPDs and other objects.
 
-@dispatch_field(SPD, object)
-def mul(a, b): return Dense(a.mat * b)
+@mul.extend(SPD, B.Numeric)
+def mul(a, b): return SPD(dense(a) * b)
 
 
-@dispatch_field(object, SPD)
-def mul(a, b): return Dense(b.mat * a)
+@mul.extend(B.Numeric, SPD)
+def mul(a, b): return SPD(a * dense(b))
 
 
-@dispatch_field(Diagonal, object)
+@mul.extend(Diagonal, B.Numeric)
 def mul(a, b): return Diagonal(a.diag * b)
 
 
-@dispatch_field(object, Diagonal)
+@mul.extend(B.Numeric, Diagonal)
 def mul(a, b): return Diagonal(b.diag * a)
 
 
-@dispatch_field(SPD, object)
-def add(a, b): return Dense(a.mat + b)
+@add.extend(SPD, B.Numeric)
+def add(a, b): return SPD(dense(a) + b)
 
 
-@dispatch_field(object, SPD)
-def add(a, b): return Dense(b.mat + a)
+@add.extend(B.Numeric, SPD)
+def add(a, b): return SPD(a + dense(b))
+
+
+# Prevent creation of scaled elements; this is work for later.
+
+@add.extend(ZeroSPD, B.Numeric, precedence=2)
+def add(a, b): return b
+
+
+@add.extend(B.Numeric, ZeroSPD, precedence=2)
+def add(a, b): return a
+
+
+# Woodbury matrices:
+
+@add.extend(LowRank, Diagonal)
+def add(a, b): return Woodbury(a, b)
+
+
+@add.extend(Diagonal, LowRank)
+def add(a, b): return Woodbury(b, a)
+
+
+@add.extend(LowRank, Woodbury)
+def add(a, b): return Woodbury(a + b.lr_part, b.diag_part)
+
+
+@add.extend(Woodbury, LowRank)
+def add(a, b): return Woodbury(a.lr_part + b, a.diag_part)
+
+
+@add.extend(Diagonal, Woodbury)
+def add(a, b): return Woodbury(b.lr_part, a + b.diag_part)
+
+
+@add.extend(Woodbury, Diagonal)
+def add(a, b): return Woodbury(a.lr_part, a.diag_part + b)
+
+
+@add.extend(Woodbury, Woodbury)
+def add(a, b): return Woodbury(a.lr_part + b.lr_part,
+                               a.diag_part + b.diag_part)

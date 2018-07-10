@@ -8,7 +8,7 @@ from types import FunctionType as PythonFunction
 
 __all__ = []
 
-dispatch_field = Dispatcher()
+_dispatch = Dispatcher()
 
 Formatter = object  #: A formatter can be any object.
 
@@ -335,7 +335,7 @@ class SumElement(JoinElement, Referentiable):
         return '{} + {}'.format(e1, e2)
 
 
-@dispatch_field(object, object)
+@_dispatch(object, object)
 def mul(a, b):
     """Multiply two elements.
 
@@ -350,7 +350,7 @@ def mul(a, b):
                               ''.format(type(a).__name__, type(b).__name__))
 
 
-@dispatch_field(object, object)
+@_dispatch(object, object)
 def add(a, b):
     """Add two elements.
 
@@ -365,7 +365,7 @@ def add(a, b):
                               ''.format(type(a).__name__, type(b).__name__))
 
 
-@dispatch_field(object)
+@_dispatch(object)
 def get_field(a):
     """Get the field of an element.
 
@@ -409,7 +409,7 @@ def new(a, t):
 
 # Pretty printing with minimal parentheses.
 
-@dispatch_field(Element, Formatter)
+@_dispatch(Element, Formatter)
 def pretty_print(el, formatter):
     """Pretty print an element with a minimal number of parentheses.
 
@@ -423,18 +423,18 @@ def pretty_print(el, formatter):
     return el.display(formatter)
 
 
-@dispatch_field(WrappedElement, Formatter)
+@_dispatch(WrappedElement, Formatter)
 def pretty_print(el, formatter):
     return el.display(pretty_print(el[0], el, formatter), formatter)
 
 
-@dispatch_field(JoinElement, Formatter)
+@_dispatch(JoinElement, Formatter)
 def pretty_print(el, formatter):
     return el.display(pretty_print(el[0], el, formatter),
                       pretty_print(el[1], el, formatter), formatter)
 
 
-@dispatch_field(Element, Element, Formatter)
+@_dispatch(Element, Element, Formatter)
 def pretty_print(el, parent, formatter):
     if need_parens(el, parent):
         return '(' + pretty_print(el, formatter) + ')'
@@ -442,7 +442,7 @@ def pretty_print(el, parent, formatter):
         return pretty_print(el, formatter)
 
 
-@dispatch_field(Element, SumElement)
+@_dispatch(Element, SumElement)
 def need_parens(el, parent):
     """Check whether `el` needs parentheses when printed in `parent`.
 
@@ -456,33 +456,33 @@ def need_parens(el, parent):
     return False
 
 
-@dispatch_field(Element, ProductElement)
+@_dispatch(Element, ProductElement)
 def need_parens(el, parent): return False
 
 
-@dispatch_field({SumElement, WrappedElement}, ProductElement)
+@_dispatch({SumElement, WrappedElement}, ProductElement)
 def need_parens(el, parent): return True
 
 
-@dispatch_field(ScaledElement, ProductElement)
+@_dispatch(ScaledElement, ProductElement)
 def need_parens(el, parent): return False
 
 
-@dispatch_field(Element, WrappedElement)
+@_dispatch(Element, WrappedElement)
 def need_parens(el, parent): return False
 
 
-@dispatch_field({WrappedElement, JoinElement}, WrappedElement)
+@_dispatch({WrappedElement, JoinElement}, WrappedElement)
 def need_parens(el, parent): return True
 
 
-@dispatch_field({ProductElement, ScaledElement}, ScaledElement)
+@_dispatch({ProductElement, ScaledElement}, ScaledElement)
 def need_parens(el, parent): return False
 
 
 # Generic multiplication.
 
-@dispatch_field(Element, object)
+@_dispatch(Element, object)
 def mul(a, b):
     if isinstance(b, Number) and b == 0:
         return new(a, ZeroElement)()
@@ -492,7 +492,7 @@ def mul(a, b):
         return new(a, ScaledElement)(a, b)
 
 
-@dispatch_field(object, Element)
+@_dispatch(object, Element)
 def mul(a, b):
     if isinstance(a, Number) and a == 0:
         return new(b, ZeroElement)()
@@ -502,13 +502,13 @@ def mul(a, b):
         return new(b, ScaledElement)(b, a)
 
 
-@dispatch_field(Element, Element)
+@_dispatch(Element, Element)
 def mul(a, b): return new(a, ProductElement)(a, b)
 
 
 # Generic addition.
 
-@dispatch_field(Element, object)
+@_dispatch(Element, object)
 def add(a, b):
     if isinstance(b, Number) and b == 0:
         return a
@@ -516,7 +516,7 @@ def add(a, b):
         return new(a, SumElement)(a, mul(b, new(a, OneElement)()))
 
 
-@dispatch_field(object, Element)
+@_dispatch(object, Element)
 def add(a, b):
     if isinstance(a, Number) and a == 0:
         return b
@@ -524,7 +524,7 @@ def add(a, b):
         return new(b, SumElement)(mul(a, new(b, OneElement)()), b)
 
 
-@dispatch_field(Element, Element)
+@_dispatch(Element, Element)
 def add(a, b):
     if a == b:
         return mul(2, a)
@@ -534,34 +534,34 @@ def add(a, b):
 
 # Cancel redundant zeros and ones.
 
-@dispatch_field.multi((ZeroElement, object), (Element, OneElement),
-                      precedence=2)
+@_dispatch.multi((ZeroElement, object), (Element, OneElement),
+                 precedence=2)
 def mul(a, b): return a
 
 
-@dispatch_field.multi((object, ZeroElement), (OneElement, Element),
-                      precedence=2)
+@_dispatch.multi((object, ZeroElement), (OneElement, Element),
+                 precedence=2)
 def mul(a, b): return b
 
 
-@dispatch_field.multi((ZeroElement, ZeroElement), (OneElement, OneElement),
-                      precedence=2)
+@_dispatch.multi((ZeroElement, ZeroElement), (OneElement, OneElement),
+                 precedence=2)
 def mul(a, b): return a
 
 
-@dispatch_field(Element, ZeroElement, precedence=2)
+@_dispatch(Element, ZeroElement, precedence=2)
 def add(a, b): return a
 
 
-@dispatch_field(ZeroElement, Element, precedence=2)
+@_dispatch(ZeroElement, Element, precedence=2)
 def add(a, b): return b
 
 
-@dispatch_field(ZeroElement, ZeroElement, precedence=2)
+@_dispatch(ZeroElement, ZeroElement, precedence=2)
 def add(a, b): return a
 
 
-@dispatch_field(ZeroElement, object)
+@_dispatch(ZeroElement, object)
 def add(a, b):
     if isinstance(b, Number) and b == 0:
         return a
@@ -571,7 +571,7 @@ def add(a, b):
         return new(a, ScaledElement)(new(a, OneElement)(), b)
 
 
-@dispatch_field(object, ZeroElement)
+@_dispatch(object, ZeroElement)
 def add(a, b):
     if isinstance(a, Number) and a == 0:
         return b
@@ -583,23 +583,23 @@ def add(a, b):
 
 # Group factors and terms if possible.
 
-@dispatch_field(object, ScaledElement)
+@_dispatch(object, ScaledElement)
 def mul(a, b): return mul(b.scale * a, b[0])
 
 
-@dispatch_field(ScaledElement, object)
+@_dispatch(ScaledElement, object)
 def mul(a, b): return mul(a.scale * b, a[0])
 
 
-@dispatch_field(ScaledElement, Element)
+@_dispatch(ScaledElement, Element)
 def mul(a, b): return mul(a.scale, mul(a[0], b))
 
 
-@dispatch_field(Element, ScaledElement)
+@_dispatch(Element, ScaledElement)
 def mul(a, b): return mul(b.scale, mul(a, b[0]))
 
 
-@dispatch_field(ScaledElement, ScaledElement)
+@_dispatch(ScaledElement, ScaledElement)
 def mul(a, b):
     if a[0] == b[0]:
         return new(a, ScaledElement)(a[0], a.scale * b.scale)
@@ -608,7 +608,7 @@ def mul(a, b):
         return new(a, ProductElement)(scaled, b[0])
 
 
-@dispatch_field(ScaledElement, Element)
+@_dispatch(ScaledElement, Element)
 def add(a, b):
     if a[0] == b:
         return mul(a.scale + 1, b)
@@ -616,7 +616,7 @@ def add(a, b):
         return new(a, SumElement)(a, b)
 
 
-@dispatch_field(Element, ScaledElement)
+@_dispatch(Element, ScaledElement)
 def add(a, b):
     if a == b[0]:
         return mul(b.scale + 1, a)
@@ -624,7 +624,7 @@ def add(a, b):
         return new(a, SumElement)(a, b)
 
 
-@dispatch_field(ScaledElement, ScaledElement)
+@_dispatch(ScaledElement, ScaledElement)
 def add(a, b):
     if a[0] == b[0]:
         return mul(a.scale + b.scale, a[0])
@@ -634,15 +634,15 @@ def add(a, b):
 
 # Equality:
 
-@dispatch_field(object, object)
+@_dispatch(object, object)
 def equal(a, b): return False
 
 
-@dispatch_field(PrimitiveElement, PrimitiveElement)
+@_dispatch(PrimitiveElement, PrimitiveElement)
 def equal(a, b): return type(a) == type(b)
 
 
-@dispatch_field.multi((SumElement, SumElement),
-                      (ProductElement, ProductElement))
+@_dispatch.multi((SumElement, SumElement),
+                 (ProductElement, ProductElement))
 def equal(a, b): return (equal(a[0], b[0]) and equal(a[1], b[1])) or \
                         (equal(a[0], b[1]) and equal(a[1], b[0]))

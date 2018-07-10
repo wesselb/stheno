@@ -3,7 +3,7 @@
 from __future__ import absolute_import, division, print_function
 
 import numpy as np
-from numpy.testing import assert_allclose, assert_array_almost_equal
+from numpy.testing import assert_array_almost_equal
 from lab import B
 
 from stheno.graph import Graph, GP
@@ -12,7 +12,7 @@ from stheno.kernel import Linear, EQ, Delta, Exp, RQ
 from stheno.mean import TensorProductMean
 from stheno.cache import Cache
 # noinspection PyUnresolvedReferences,
-from . import eq, raises, ok, le, eprint, lam
+from . import eq, raises, ok, le, eprint, lam, assert_allclose
 
 
 def abs_err(x1, x2=0): return np.sum(np.abs(x1 - x2))

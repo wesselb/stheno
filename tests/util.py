@@ -4,11 +4,15 @@ from __future__ import absolute_import, division, print_function
 
 import sys
 from time import time
-from numpy.testing import assert_allclose
 
+import numpy as np
+from lab import B
 from nose.tools import assert_raises, assert_equal, assert_less, \
     assert_less_equal, assert_not_equal, assert_greater, \
     assert_greater_equal, ok_
+from plum import dispatch
+
+from stheno.spd import SPD
 
 le = assert_less_equal
 lt = assert_less
@@ -47,3 +51,23 @@ def benchmark(f, args, n=1000, get_output=False):
         out = f(*args)
     dur = (time() - start) * 1e6 / n
     return (dur, out) if get_output else out
+
+
+@dispatch(B.Numeric)
+def dense(a): return a
+
+
+@dispatch(SPD)
+def dense(a): return a.mat
+
+
+@dispatch(list)
+def dense(a): return B.array(a)
+
+
+def allclose(a, b):
+    return np.allclose(dense(a), dense(b))
+
+
+def assert_allclose(a, b):
+    np.testing.assert_allclose(dense(a), dense(b))

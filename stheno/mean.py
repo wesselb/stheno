@@ -12,7 +12,7 @@ from stheno.function_field import StretchedFunction, ShiftedFunction, \
     TensorProductFunction, Function, ZeroFunction, OneFunction, \
     ScaledFunction, ProductFunction, SumFunction, Function
 from .cache import Cache, cache, uprank
-from .field import apply_optional_arg, dispatch_field
+from .field import apply_optional_arg, get_field
 from .input import Input
 
 __all__ = ['TensorProductMean', 'DerivativeMean']
@@ -56,7 +56,7 @@ class Mean(Function, Referentiable):
 
 
 # Register the field.
-@dispatch_field(Mean)
+@get_field.extend(Mean)
 def get_field(a): return Mean
 
 

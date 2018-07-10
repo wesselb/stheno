@@ -8,7 +8,7 @@ from stheno.eis import ComponentKernel, AdditiveComponentKernel, NoisyKernel
 from stheno.input import Component, Latent, Observed
 from stheno.kernel import EQ, RQ, ZeroKernel
 # noinspection PyUnresolvedReferences
-from . import eq, neq, lt, le, ge, gt, raises, call, ok, eprint
+from . import eq, neq, lt, le, ge, gt, raises, call, ok, eprint, allclose
 
 
 def test_component_kernel():
@@ -23,10 +23,10 @@ def test_component_kernel():
         (Component(2), Component(2)): k2
     })
 
-    yield ok, np.allclose(kc(Component(1)(x)), k1(x))
-    yield ok, np.allclose(kc(Component(2)(x)), k2(x))
-    yield ok, np.allclose(kc(Component(1)(x), Component(2)(x)), kzero(x))
-    yield ok, np.allclose(kc(Component(2)(x), Component(1)(x)), kzero(x))
+    yield ok, allclose(kc(Component(1)(x)), k1(x))
+    yield ok, allclose(kc(Component(2)(x)), k2(x))
+    yield ok, allclose(kc(Component(1)(x), Component(2)(x)), kzero(x))
+    yield ok, allclose(kc(Component(2)(x), Component(1)(x)), kzero(x))
 
     yield eq, str(ComponentKernel({Component(1): EQ(),
                                    Component(2): EQ()})), \
@@ -46,23 +46,23 @@ def test_compare_noisy_kernel_and_additive_component_kernel():
     kn1 = NoisyKernel(k1, k2)
     kn2 = NoisyKernelCopy(k1, k2)
 
-    yield ok, np.allclose(kn1(Latent(x)), k1(x)), 'noisy kernel 1'
-    yield ok, np.allclose(kn1(Latent(x), Observed(x)), k1(x)), 'noisy kernel 2'
-    yield ok, np.allclose(kn1(Observed(x), Latent(x)), k1(x)), 'noisy kernel 3'
-    yield ok, np.allclose(kn1(Observed(x)), (k1 + k2)(x)), 'noisy kernel 4'
+    yield ok, allclose(kn1(Latent(x)), k1(x)), 'noisy kernel 1'
+    yield ok, allclose(kn1(Latent(x), Observed(x)), k1(x)), 'noisy kernel 2'
+    yield ok, allclose(kn1(Observed(x), Latent(x)), k1(x)), 'noisy kernel 3'
+    yield ok, allclose(kn1(Observed(x)), (k1 + k2)(x)), 'noisy kernel 4'
 
-    yield ok, np.allclose(kn2(Latent(x)), k1(x)), 'noisy copy 1'
-    yield ok, np.allclose(kn2(Latent(x), Observed(x)), k1(x)), 'noisy copy 2'
-    yield ok, np.allclose(kn2(Observed(x), Latent(x)), k1(x)), 'noisy copy 3'
-    yield ok, np.allclose(kn2(Observed(x)), (k1 + k2)(x)), 'noisy copy 4'
+    yield ok, allclose(kn2(Latent(x)), k1(x)), 'noisy copy 1'
+    yield ok, allclose(kn2(Latent(x), Observed(x)), k1(x)), 'noisy copy 2'
+    yield ok, allclose(kn2(Observed(x), Latent(x)), k1(x)), 'noisy copy 3'
+    yield ok, allclose(kn2(Observed(x)), (k1 + k2)(x)), 'noisy copy 4'
 
-    yield ok, np.allclose(kn2(Latent(x), Component('noise')(x)),
+    yield ok, allclose(kn2(Latent(x), Component('noise')(x)),
                           ZeroKernel()(x)), 'additive 1'
-    yield ok, np.allclose(kn2(Component('noise')(x), Latent(x)),
+    yield ok, allclose(kn2(Component('noise')(x), Latent(x)),
                           ZeroKernel()(x)), 'additive 2'
-    yield ok, np.allclose(kn2(Observed(x), Component('noise')(x)),
+    yield ok, allclose(kn2(Observed(x), Component('noise')(x)),
                           k2(x)), 'additive 3'
-    yield ok, np.allclose(kn2(Component('noise')(x), Observed(x)),
+    yield ok, allclose(kn2(Component('noise')(x), Observed(x)),
                           k2(x)), 'additive 4'
 
     yield eq, str(NoisyKernel(EQ(), RQ(1))), \
@@ -77,9 +77,9 @@ def test_additive_component_kernel():
 
     # Test independence components.
     x = np.random.randn(10, 2)
-    yield ok, np.allclose(k(Component('wiggly')(x), Component('noise')(x)),
+    yield ok, allclose(k(Component('wiggly')(x), Component('noise')(x)),
                           np.zeros((10, 10)))
-    yield ok, np.allclose(k(Component('noise')(x), Component('wiggly')(x)),
+    yield ok, allclose(k(Component('noise')(x), Component('wiggly')(x)),
                           np.zeros((10, 10)))
 
     # Test check.

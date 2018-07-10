@@ -4,7 +4,6 @@ from __future__ import absolute_import, division, print_function
 
 import numpy as np
 from lab import B
-from numpy.testing import assert_allclose
 
 from stheno.cache import Cache
 from stheno.input import Observed
@@ -15,7 +14,7 @@ from stheno.random import GPPrimitive
 from stheno.spd import spd
 # noinspection PyUnresolvedReferences
 from tests import ok
-from . import eq, raises, ok
+from . import eq, raises, ok, allclose, assert_allclose
 
 
 def elwise_generator(k):
@@ -23,10 +22,10 @@ def elwise_generator(k):
     x2 = np.random.randn(10, 2)
 
     # Check `elwise`.
-    yield assert_allclose, k.elwise(x1, x2)[:, 0], np.diag(k(x1, x2))
+    yield assert_allclose, k.elwise(x1, x2)[:, 0], B.diag(k(x1, x2))
     yield assert_allclose, k.elwise(x1, x2), Kernel.elwise(k, x1, x2)
-    yield assert_allclose, k.elwise(x1)[:, 0], np.diag(k(x1))
-    yield assert_allclose, k.elwise(x1)[:, 0], np.diag(k(x1))
+    yield assert_allclose, k.elwise(x1)[:, 0], B.diag(k(x1))
+    yield assert_allclose, k.elwise(x1)[:, 0], B.diag(k(x1))
     yield assert_allclose, k.elwise(x1), Kernel.elwise(k, x1)
 
 
@@ -72,23 +71,23 @@ def test_basic_arithmetic():
     xs1 = np.random.randn(10, 2), np.random.randn(20, 2)
     xs2 = np.random.randn(), np.random.randn()
 
-    yield ok, np.allclose(k6(xs1[0]), k6(xs1[0], xs1[0])), 'dispatch'
-    yield ok, np.allclose((k1 * k2)(*xs1), k1(*xs1) * k2(*xs1)), 'prod'
-    yield ok, np.allclose((k1 * k2)(*xs2), k1(*xs2) * k2(*xs2)), 'prod 2'
-    yield ok, np.allclose((k3 + k4)(*xs1), k3(*xs1) + k4(*xs1)), 'sum'
-    yield ok, np.allclose((k3 + k4)(*xs2), k3(*xs2) + k4(*xs2)), 'sum 2'
-    yield ok, np.allclose((5. * k5)(*xs1), 5. * k5(*xs1)), 'prod 3'
-    yield ok, np.allclose((5. * k5)(*xs2), 5. * k5(*xs2)), 'prod 4'
-    yield ok, np.allclose((5. + k7)(*xs1), 5. + k7(*xs1)), 'sum 3'
-    yield ok, np.allclose((5. + k7)(*xs2), 5. + k7(*xs2)), 'sum 4'
-    yield ok, np.allclose(k1.stretch(2.)(*xs1),
-                          k1(xs1[0] / 2., xs1[1] / 2.)), 'stretch'
-    yield ok, np.allclose(k1.stretch(2.)(*xs2),
-                          k1(xs2[0] / 2., xs2[1] / 2.)), 'stretch 2'
-    yield ok, np.allclose(k1.periodic(1.)(*xs1),
-                          k1.periodic(1.)(xs1[0], xs1[1] + 5.)), 'periodic'
-    yield ok, np.allclose(k1.periodic(1.)(*xs2),
-                          k1.periodic(1.)(xs2[0], xs2[1] + 5.)), 'periodic 2'
+    yield ok, allclose(k6(xs1[0]), k6(xs1[0], xs1[0])), 'dispatch'
+    yield ok, allclose((k1 * k2)(*xs1), k1(*xs1) * k2(*xs1)), 'prod'
+    yield ok, allclose((k1 * k2)(*xs2), k1(*xs2) * k2(*xs2)), 'prod 2'
+    yield ok, allclose((k3 + k4)(*xs1), k3(*xs1) + k4(*xs1)), 'sum'
+    yield ok, allclose((k3 + k4)(*xs2), k3(*xs2) + k4(*xs2)), 'sum 2'
+    yield ok, allclose((5. * k5)(*xs1), 5. * k5(*xs1)), 'prod 3'
+    yield ok, allclose((5. * k5)(*xs2), 5. * k5(*xs2)), 'prod 4'
+    yield ok, allclose((5. + k7)(*xs1), 5. + k7(*xs1)), 'sum 3'
+    yield ok, allclose((5. + k7)(*xs2), 5. + k7(*xs2)), 'sum 4'
+    yield ok, allclose(k1.stretch(2.)(*xs1),
+                       k1(xs1[0] / 2., xs1[1] / 2.)), 'stretch'
+    yield ok, allclose(k1.stretch(2.)(*xs2),
+                       k1(xs2[0] / 2., xs2[1] / 2.)), 'stretch 2'
+    yield ok, allclose(k1.periodic(1.)(*xs1),
+                       k1.periodic(1.)(xs1[0], xs1[1] + 5.)), 'periodic'
+    yield ok, allclose(k1.periodic(1.)(*xs2),
+                       k1.periodic(1.)(xs2[0], xs2[1] + 5.)), 'periodic 2'
 
 
 def test_reversal():
@@ -144,8 +143,8 @@ def test_delta():
     yield eq, k.period, np.inf
     yield eq, str(k), 'Delta()'
 
-    yield ok, np.allclose(k(x1), np.eye(10)), 'same'
-    yield ok, np.allclose(k(x1, x2), np.zeros((10, 5))), 'others'
+    yield ok, allclose(k(x1), np.eye(10)), 'same'
+    yield ok, allclose(k(x1, x2), np.zeros((10, 5))), 'others'
 
     # Test `elwise`.
     for x in elwise_generator(k):
@@ -614,20 +613,20 @@ def test_derivative():
     # Test derivative with respect to first input.
     ref = s.run(-k(x1, x2) * (x1 - B.transpose(x2)))
     yield assert_allclose, s.run(k.diff(0, None)(x1, x2)), ref
-    ref = s.run(-k(x1) * (x1 - B.transpose(x1)))
+    ref = s.run((-k(x1) * (x1 - B.transpose(x1))).mat)
     yield assert_allclose, s.run(k.diff(0, None)(x1)), ref
 
     # Test derivative with respect to second input.
     ref = s.run(-k(x1, x2) * (B.transpose(x2) - x1))
     yield assert_allclose, s.run(k.diff(None, 0)(x1, x2)), ref
-    ref = s.run(-k(x1) * (B.transpose(x1) - x1))
+    ref = s.run((-k(x1) * (B.transpose(x1) - x1)).mat)
     yield assert_allclose, s.run(k.diff(None, 0)(x1)), ref
 
     # Test derivative with respect to both inputs.
     ref = s.run(k(x1, x2) * (1 - (x1 - B.transpose(x2)) ** 2))
     yield assert_allclose, s.run(k.diff(0, 0)(x1, x2)), ref
     yield assert_allclose, s.run(k.diff(0)(x1, x2)), ref
-    ref = s.run(k(x1) * (1 - (x1 - B.transpose(x1)) ** 2))
+    ref = s.run((k(x1) * (1 - (x1 - B.transpose(x1)) ** 2)).mat)
     yield assert_allclose, s.run(k.diff(0, 0)(x1)), ref
     yield assert_allclose, s.run(k.diff(0)(x1)), ref
 

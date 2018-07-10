@@ -5,6 +5,7 @@ from __future__ import absolute_import, division, print_function
 import numpy as np
 from plum import Dispatcher
 from scipy.stats import multivariate_normal
+from lab import B
 
 from stheno.kernel import EQ, RQ, ScaledKernel
 from stheno.mean import TensorProductMean, ZeroMean, ScaledMean
@@ -20,6 +21,7 @@ def test_corner_cases():
     yield raises, NotImplementedError, lambda: (Normal(np.eye(1)) +
                                                 GPPrimitive(EQ()))
     yield eq, repr(GPPrimitive(EQ())), str(GPPrimitive(EQ()))
+
 
 def test_normal():
     mean = np.random.randn(3, 1)
@@ -219,7 +221,7 @@ def test_gp():
     sig = (upper - lower) / 4
     yield ok, np.allclose(mu[:, None], m(x + 20.)), 'mean at unknown points'
     yield ok, np.allclose(sig ** 2,
-                          np.diag(k(x + 20.))), 'variance at unknown points'
+                          B.diag(k(x + 20.))), 'variance at unknown points'
 
     # Check that conditioning is independent of order.
     x1 = np.random.randn(5, 2)

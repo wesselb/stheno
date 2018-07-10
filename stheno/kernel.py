@@ -16,15 +16,19 @@ from stheno.function_field import StretchedFunction, ShiftedFunction, \
     WrappedFunction, PrimitiveFunction, JoinFunction, shift, select, \
     to_tensor
 from .cache import cache, Cache, uprank
-from .field import add, mul, dispatch_field, broadcast, apply_optional_arg, \
-    get_field, Formatter
+from .field import add, mul, broadcast, apply_optional_arg, get_field, \
+    Formatter, need_parens
 from .input import Input
+from .spd import SPD, Diagonal, LowRank, UniformDiagonal, OneSPD, ZeroSPD, \
+    dense
 
 __all__ = ['Kernel', 'OneKernel', 'ZeroKernel', 'ScaledKernel', 'EQ', 'RQ',
            'Matern12', 'Exp', 'Matern32', 'Matern52', 'Delta', 'Linear',
            'DerivativeKernel']
 
 log = logging.getLogger(__name__)
+
+_dispatch = Dispatcher()
 
 
 def expand(xs):
@@ -58,7 +62,7 @@ class Kernel(Function, Referentiable):
             cache (:class:`.cache.Cache`, optional): Cache.
 
         Returns:
-            tensor: Kernel matrix.
+            :class:`.spd.SPD:: Kernel matrix.
         """
         raise RuntimeError('For kernel "{}", could not resolve '
                            'arguments "{}" and "{}".'.format(self, x, y))
@@ -163,7 +167,7 @@ class Kernel(Function, Referentiable):
 
 
 # Register the field.
-@dispatch_field(Kernel)
+@get_field.extend(Kernel)
 def get_field(a): return Kernel
 
 
@@ -176,7 +180,8 @@ class OneKernel(Kernel, OneFunction, Referentiable):
     @cache
     @uprank
     def __call__(self, x, y, B):
-        return B.ones((B.shape(x)[0], B.shape(y)[0]), dtype=B.dtype(x))
+        out = B.ones((B.shape(x)[0], B.shape(y)[0]), dtype=B.dtype(x))
+        return OneSPD(out) if x is y else out
 
     @_dispatch(B.Numeric, B.Numeric, Cache)
     @cache
@@ -210,7 +215,8 @@ class ZeroKernel(Kernel, ZeroFunction, Referentiable):
     @cache
     @uprank
     def __call__(self, x, y, B):
-        return B.zeros((B.shape(x)[0], B.shape(y)[0]), dtype=B.dtype(x))
+        out = B.zeros((B.shape(x)[0], B.shape(y)[0]), dtype=B.dtype(x))
+        return ZeroSPD(out) if x is y else out
 
     @_dispatch(B.Numeric, B.Numeric, Cache)
     @cache
@@ -578,7 +584,8 @@ class EQ(Kernel, PrimitiveFunction, Referentiable):
     @cache
     @uprank
     def __call__(self, x, y, B):
-        return self._compute(B.pw_dists2(x, y), B)
+        out = self._compute(B.pw_dists2(x, y), B)
+        return SPD(out) if x is y else out
 
     @_dispatch(B.Numeric, B.Numeric, Cache)
     @cache
@@ -623,7 +630,8 @@ class RQ(Kernel, Referentiable):
     @cache
     @uprank
     def __call__(self, x, y, B):
-        return self._compute(B.pw_dists2(x, y), B)
+        out = self._compute(B.pw_dists2(x, y), B)
+        return SPD(out) if x is y else out
 
     @_dispatch(B.Numeric, B.Numeric, Cache)
     @cache
@@ -664,7 +672,8 @@ class Exp(Kernel, PrimitiveFunction, Referentiable):
     @cache
     @uprank
     def __call__(self, x, y, B):
-        return B.exp(-B.pw_dists(x, y))
+        out = B.exp(-B.pw_dists(x, y))
+        return SPD(out) if x is y else out
 
     @_dispatch(B.Numeric, B.Numeric, Cache)
     @cache
@@ -701,7 +710,8 @@ class Matern32(Kernel, PrimitiveFunction, Referentiable):
     @cache
     @uprank
     def __call__(self, x, y, B):
-        return self._compute(B.pw_dists(x, y), B)
+        out = self._compute(B.pw_dists(x, y), B)
+        return SPD(out) if x is y else out
 
     @_dispatch(B.Numeric, B.Numeric, Cache)
     @cache
@@ -739,7 +749,8 @@ class Matern52(Kernel, PrimitiveFunction, Referentiable):
     @cache
     @uprank
     def __call__(self, x, y, B):
-        return self._compute(B.pw_dists(x, y), B)
+        out = self._compute(B.pw_dists(x, y), B)
+        return SPD(out) if x is y else out
 
     @_dispatch(B.Numeric, B.Numeric, Cache)
     @cache
@@ -786,7 +797,11 @@ class Delta(Kernel, PrimitiveFunction, Referentiable):
     @cache
     @uprank
     def __call__(self, x, y, B):
-        return self._compute(B.pw_dists2(x, y), B)
+        if x is y:
+            return UniformDiagonal(B.cast(1, dtype=B.dtype(x)),
+                                   B.shape(x)[0])
+        else:
+            return self._compute(B.pw_dists2(x, y), B)
 
     @_dispatch(B.Numeric, B.Numeric, Cache)
     @cache
@@ -823,7 +838,7 @@ class Linear(Kernel, PrimitiveFunction, Referentiable):
     @cache
     @uprank
     def __call__(self, x, y, B):
-        return B.matmul(x, y, tr_b=True)
+        return LowRank(x) if x is y else B.matmul(x, y, tr_b=True)
 
     @_dispatch(B.Numeric, B.Numeric, Cache)
     @cache
@@ -955,8 +970,10 @@ class DerivativeKernel(Kernel, DerivativeFunction, Referentiable):
         if i is not None and j is not None:
             z = B.concat([x[:, i], y[:, j]], axis=0)
             n = B.shape(x)[0]
-            K = k(B.concat([x[:, :i], z[:n, None], x[:, i + 1:]], axis=1),
-                  B.concat([y[:, :j], z[n:, None], y[:, j + 1:]], axis=1)),
+            K = dense(
+                k(B.concat([x[:, :i], z[:n, None], x[:, i + 1:]], axis=1),
+                  B.concat([y[:, :j], z[n:, None], y[:, j + 1:]], axis=1))
+            )
             return B.hessians(K, [z])[0][:n, n:]
 
         # Derivative with respect to `x`.
@@ -966,7 +983,9 @@ class DerivativeKernel(Kernel, DerivativeFunction, Referentiable):
             xis = [B.identity(xi, cache_id=n) for n in range(B.shape_int(y)[0])]
 
             def f(z):
-                return k(B.concat([x[:, :i], z[0], x[:, i + 1:]], axis=1), z[1])
+                return dense(
+                    k(B.concat([x[:, :i], z[0], x[:, i + 1:]], axis=1), z[1])
+                )
 
             res = B.map_fn(f, (B.stack(xis, axis=0), y[:, None, :]),
                            dtype=B.dtype(x))
@@ -979,7 +998,9 @@ class DerivativeKernel(Kernel, DerivativeFunction, Referentiable):
             yjs = [B.identity(yj, cache_id=n) for n in range(B.shape_int(x)[0])]
 
             def f(z):
-                return k(z[0], B.concat([y[:, :j], z[1], y[:, j + 1:]], axis=1))
+                return dense(
+                    k(z[0], B.concat([y[:, :j], z[1], y[:, j + 1:]], axis=1))
+                )
 
             res = B.map_fn(f, (x[:, None, :], B.stack(yjs, axis=0)),
                            dtype=B.dtype(x))
@@ -1005,8 +1026,11 @@ class TensorProductKernel(Kernel, TensorProductFunction, Referentiable):
     @uprank
     def __call__(self, x, y, B):
         f1, f2 = expand(self.fs)
-        return B.multiply(apply_optional_arg(f1, x, B),
-                          B.transpose(apply_optional_arg(f2, y, B)))
+        if x is y and f1 is f2:
+            return LowRank(apply_optional_arg(f1, x, B))
+        else:
+            return B.multiply(apply_optional_arg(f1, x, B),
+                              B.transpose(apply_optional_arg(f2, y, B)))
 
     @_dispatch(B.Numeric, B.Numeric, Cache)
     @cache
@@ -1055,72 +1079,72 @@ class ReversedKernel(Kernel, WrappedFunction, Referentiable):
         return 'Reversed({})'.format(e)
 
 
-@dispatch_field.multi((Function, ReversedKernel),
-                      ({WrappedFunction, JoinFunction}, ReversedKernel))
+@need_parens.extend_multi((Function, ReversedKernel),
+                          ({WrappedFunction, JoinFunction}, ReversedKernel))
 def need_parens(el, parent): return False
 
 
-@dispatch_field(ReversedKernel, ProductFunction)
+@need_parens.extend(ReversedKernel, ProductFunction)
 def need_parens(el, parent): return False
 
 
 # Periodicise kernels.
 
-@dispatch_field(Kernel, object)
+@_dispatch(Kernel, object)
 def periodicise(a, b): return PeriodicKernel(a, b)
 
 
-@dispatch_field(ZeroKernel, object)
+@_dispatch(ZeroKernel, object)
 def periodicise(a, b): return a
 
 
 # Reverse kernels.
 
-@dispatch_field(Kernel)
+@_dispatch(Kernel)
 def reverse(a): return a if a.stationary else ReversedKernel(a)
 
 
-@dispatch_field(ReversedKernel)
+@_dispatch(ReversedKernel)
 def reverse(a): return a[0]
 
 
-@dispatch_field.multi((ZeroKernel,), (OneKernel,))
+@_dispatch.multi((ZeroKernel,), (OneKernel,))
 def reverse(a): return a
 
 
-@dispatch_field(ShiftedKernel)
+@_dispatch(ShiftedKernel)
 def reverse(a): return shift(reversed(a[0]), *reversed(a.shifts))
 
 
-@dispatch_field(StretchedKernel)
+@_dispatch(StretchedKernel)
 def reverse(a): return stretch(reversed(a[0]), *reversed(a.stretches))
 
 
-@dispatch_field(InputTransformedKernel)
+@_dispatch(InputTransformedKernel)
 def reverse(a): return transform(reversed(a[0]), *reversed(a.fs))
 
 
-@dispatch_field(SelectedKernel)
+@_dispatch(SelectedKernel)
 def reverse(a): return select(reversed(a[0]), *reversed(a.dims))
 
 
 # Propagate reversal.
 
-@dispatch_field(SumKernel)
+@_dispatch(SumKernel)
 def reverse(a): return add(reverse(a[0]), reverse(a[1]))
 
 
-@dispatch_field(ProductKernel)
+@_dispatch(ProductKernel)
 def reverse(a): return mul(reverse(a[0]), reverse(a[1]))
 
 
-@dispatch_field(ScaledKernel)
+@_dispatch(ScaledKernel)
 def reverse(a): return mul(a.scale, reversed(a[0]))
 
 
 # Make shifting synergise with reversal.
 
-@dispatch_field(Kernel, [object])
+@shift.extend(Kernel, [object])
 def shift(a, *shifts):
     if a.stationary and len(shifts) == 1:
         return a
@@ -1128,10 +1152,10 @@ def shift(a, *shifts):
         return ShiftedKernel(a, *shifts)
 
 
-@dispatch_field(ZeroKernel, [object])
+@shift.extend(ZeroKernel, [object])
 def shift(a, *shifts): return a
 
 
-@dispatch_field(ShiftedKernel, [object])
+@shift.extend(ShiftedKernel, [object])
 def shift(a, *shifts):
     return shift(a[0], *broadcast(operator.add, a.shifts, shifts))

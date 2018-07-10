@@ -3,8 +3,7 @@
 from __future__ import absolute_import, division, print_function
 
 import numpy as np
-from numpy.testing import assert_approx_equal, assert_array_almost_equal, \
-    assert_allclose
+from numpy.testing import assert_approx_equal, assert_array_almost_equal
 
 from stheno import Cache, EQ, Kernel
 from stheno.kernel import ZeroKernel, OneKernel, Linear, EQ
@@ -12,8 +11,10 @@ from stheno.mean import ZeroMean, OneMean
 from stheno.input import Component
 from stheno.cache import Cache, uprank
 from stheno.random import GPPrimitive
+from stheno.spd import dense
 # noinspection PyUnresolvedReferences
-from . import eq, neq, ok, raises, benchmark, le, eprint
+from . import eq, neq, ok, raises, benchmark, le, eprint, assert_allclose, \
+    allclose
 
 
 def test_lab_cache():
@@ -33,15 +34,15 @@ def test_ones_zeros():
 
     # Test that ones and zeros are cached and that all signatures work.
     k = ZeroKernel()
-    yield eq, id(k(np.random.randn(10, 10), c)), \
-          id(k(np.random.randn(10, 10), c))
+    yield eq, id(dense(k(np.random.randn(10, 10), c))), \
+          id(dense(k(np.random.randn(10, 10), c)))
     yield neq, id(k(np.random.randn(10, 10), c)), \
           id(k(np.random.randn(5, 10), c))
     yield eq, id(k(1, c)), id(k(1, c))
 
     k = OneKernel()
-    yield eq, id(k(np.random.randn(10, 10), c)), \
-          id(k(np.random.randn(10, 10), c))
+    yield eq, id(dense(k(np.random.randn(10, 10), c))), \
+          id(dense(k(np.random.randn(10, 10), c)))
     yield neq, id(k(np.random.randn(10, 10), c)), \
           id(k(np.random.randn(5, 10), c))
     yield eq, id(k(1, c)), id(k(1, c))
@@ -54,7 +55,7 @@ def test_ones_zeros():
           id(m(np.random.randn(5, 10), c))
     yield eq, id(m(1, c)), id(m(1, c))
 
-    m = OneKernel()
+    m = OneMean()
     yield eq, id(m(np.random.randn(10, 10), c)), \
           id(m(np.random.randn(10, 10), c))
     yield neq, id(m(np.random.randn(10, 10), c)), \
