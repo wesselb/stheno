@@ -3,13 +3,14 @@
 from __future__ import absolute_import, division, print_function
 
 import numpy as np
+from lab import B
 from numpy.testing import assert_approx_equal, assert_array_almost_equal
 
-from stheno import Cache, EQ, Kernel
-from stheno.kernel import ZeroKernel, OneKernel, Linear, EQ
-from stheno.mean import ZeroMean, OneMean
-from stheno.input import Component
+from stheno import Kernel
 from stheno.cache import Cache, uprank
+from stheno.input import Component
+from stheno.kernel import ZeroKernel, OneKernel, EQ
+from stheno.mean import ZeroMean, OneMean
 from stheno.random import GPPrimitive
 from stheno.spd import dense
 # noinspection PyUnresolvedReferences
@@ -71,26 +72,26 @@ def test_uprank():
 
     k = OneKernel()
 
-    yield eq, k(0, 0).shape, (1, 1)
-    yield eq, k(0, np.ones(5)).shape, (1, 5)
-    yield eq, k(0, np.ones((5, 2))).shape, (1, 5)
+    yield eq, B.shape(k(0, 0)), (1, 1)
+    yield eq, B.shape(k(0, np.ones(5))), (1, 5)
+    yield eq, B.shape(k(0, np.ones((5, 2)))), (1, 5)
 
-    yield eq, k(np.ones(5), 0).shape, (5, 1)
-    yield eq, k(np.ones(5), np.ones(5)).shape, (5, 5)
-    yield eq, k(np.ones(5), np.ones((5, 2))).shape, (5, 5)
+    yield eq, B.shape(k(np.ones(5), 0)), (5, 1)
+    yield eq, B.shape(k(np.ones(5), np.ones(5))), (5, 5)
+    yield eq, B.shape(k(np.ones(5), np.ones((5, 2)))), (5, 5)
 
-    yield eq, k(np.ones((5, 2)), 0).shape, (5, 1)
-    yield eq, k(np.ones((5, 2)), np.ones(5)).shape, (5, 5)
-    yield eq, k(np.ones((5, 2)), np.ones((5, 2))).shape, (5, 5)
+    yield eq, B.shape(k(np.ones((5, 2)), 0)), (5, 1)
+    yield eq, B.shape(k(np.ones((5, 2)), np.ones(5))), (5, 5)
+    yield eq, B.shape(k(np.ones((5, 2)), np.ones((5, 2)))), (5, 5)
 
     yield raises, ValueError, lambda: k(0, np.ones((5, 2, 1)))
     yield raises, ValueError, lambda: k(np.ones((5, 2, 1)))
 
     m = OneMean()
 
-    yield eq, m(0).shape, (1, 1)
-    yield eq, m(np.ones(5)).shape, (5, 1)
-    yield eq, m(np.ones((5, 2))).shape, (5, 1)
+    yield eq, B.shape(m(0)), (1, 1)
+    yield eq, B.shape(m(np.ones(5))), (5, 1)
+    yield eq, B.shape(m(np.ones((5, 2)))), (5, 1)
 
     p = GPPrimitive(EQ())
     x = np.linspace(0, 10, 10)

@@ -31,11 +31,6 @@ class SPD(Element, Referentiable):
         self._logdet = None
         self._root = None
 
-    @property
-    def shape(self):
-        """Shape of the matrix."""
-        return B.shape(self.mat)
-
     def cholesky(self):
         """Compute the Cholesky decomposition.
 
@@ -198,10 +193,6 @@ class LowRank(SPD, Referentiable):
         SPD.__init__(self, None)
         self.inner = inner
 
-    @property
-    def shape(self):
-        return B.shape(self.inner)[0], B.shape(self.inner)[0]
-
     def logdet(self):
         raise RuntimeError('This matrix is singular.')
 
@@ -236,10 +227,6 @@ class Diagonal(SPD, Referentiable):
     def __init__(self, diag):
         SPD.__init__(self, None)
         self.diag = diag
-
-    @property
-    def shape(self):
-        return B.shape(self.diag)[0], B.shape(self.diag)[0]
 
     def cholesky(self):
         return B.diag(self.diag ** .5)
@@ -312,12 +299,6 @@ class Woodbury(SPD, Referentiable):
         SPD.__init__(self, None)
         self.lr_part = lr
         self.diag_part = diag
-
-    @property
-    def shape(self):
-        # We cannot verify that the shapes of the low-rank part and diagonal
-        # part agree.
-        return self.lr_part.shape
 
     def cholesky(self):
         return B.diag(self.diag ** .5)
@@ -444,6 +425,24 @@ def diag(a): return B.sum(a.inner ** 2, 1)
 def diag(a): return B.diag(a.lr_part) + B.diag(a.diag_part)
 
 
+# Get shapes of SPDs.
+
+@B.shape.extend(SPD)
+def shape(a): return B.shape(dense(a))
+
+
+@B.shape.extend(Diagonal)
+def shape(a): return B.shape(a.diag)[0], B.shape(a.diag)[0]
+
+
+@B.shape.extend(LowRank)
+def shape(a): return B.shape(a.inner)[0], B.shape(a.inner)[0]
+
+
+@B.shape.extend(Woodbury)
+def shape(a): return B.shape(a.lr_part)
+
+
 # Extend LAB to work with SPDs.
 
 B.add.extend(SPD, B.Numeric)(add)
@@ -457,10 +456,6 @@ B.multiply.extend(SPD, SPD)(mul)
 
 @B.transpose.extend(SPD)
 def transpose(a): return a
-
-
-@B.shape.extend(SPD)
-def shape(a): return a.shape
 
 
 @B.subtract.extend({B.Numeric, SPD}, {B.Numeric, SPD})

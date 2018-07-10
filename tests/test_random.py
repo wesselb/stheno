@@ -108,33 +108,33 @@ def test_normal_1d():
     # Test broadcasting.
     d = Normal1D(1, 0)
     yield eq, type(d.spd), UniformDiagonal
-    yield eq, d.spd.shape, (1, 1)
-    yield eq, d.mean.shape, (1, 1)
+    yield eq, B.shape(d.spd), (1, 1)
+    yield eq, B.shape(d.mean), (1, 1)
 
     d = Normal1D(1, [0, 0, 0])
     yield eq, type(d.spd), UniformDiagonal
-    yield eq, d.spd.shape, (3, 3)
-    yield eq, d.mean.shape, (3, 1)
+    yield eq, B.shape(d.spd), (3, 3)
+    yield eq, B.shape(d.mean), (3, 1)
 
     d = Normal1D([1, 2, 3], 0)
     yield eq, type(d.spd), Diagonal
-    yield eq, d.spd.shape, (3, 3)
-    yield eq, d.mean.shape, (3, 1)
+    yield eq, B.shape(d.spd), (3, 3)
+    yield eq, B.shape(d.mean), (3, 1)
 
     d = Normal1D([1, 2, 3], [0, 0, 0])
     yield eq, type(d.spd), Diagonal
-    yield eq, d.spd.shape, (3, 3)
-    yield eq, d.mean.shape, (3, 1)
+    yield eq, B.shape(d.spd), (3, 3)
+    yield eq, B.shape(d.mean), (3, 1)
 
     d = Normal1D(1)
     yield eq, type(d.spd), UniformDiagonal
-    yield eq, d.spd.shape, (1, 1)
-    yield eq, d.mean.shape, (1, 1)
+    yield eq, B.shape(d.spd), (1, 1)
+    yield eq, B.shape(d.mean), (1, 1)
 
     d = Normal1D([1, 2, 3])
     yield eq, type(d.spd), Diagonal
-    yield eq, d.spd.shape, (3, 3)
-    yield eq, d.mean.shape, (3, 1)
+    yield eq, B.shape(d.spd), (3, 3)
+    yield eq, B.shape(d.mean), (3, 1)
 
     yield raises, ValueError, lambda: Normal1D(np.eye(3))
     yield raises, ValueError, lambda: Normal1D(np.eye(3), 0)
