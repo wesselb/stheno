@@ -58,27 +58,6 @@ class SPD(Element, Referentiable):
             self._root = B.matmul(vecs * vals[None, :] ** .5, vecs, tr_b=True)
         return self._root
 
-    @_dispatch(object, object)
-    def mah_dist2(self, a, b, sum=True):
-        """Compute the square of the Mahalanobis distance between vectors.
-
-        Args:
-            a (tensor): First matrix.
-            b (tensor, optional): Second matrix. If omitted, `a` is assumed
-                to be the differences.
-            sum (bool, optional): Compute the sum of all distances instead
-                of returning all distances.
-
-        Returns:
-            tensor: Distance or distances.
-        """
-        return self.mah_dist2(a - b, sum=sum)
-
-    @_dispatch(object)
-    def mah_dist2(self, diff, sum=True):
-        iL_diff = B.trisolve(B.cholesky(self), diff)
-        return B.sum(iL_diff ** 2) if sum else B.sum(iL_diff ** 2, axis=0)
-
     @_dispatch(Self)
     def ratio(self, denom):
         """Compute the ratio with respect to another positive-definite matrix.
@@ -184,10 +163,6 @@ class LowRank(SPD, Referentiable):
     def logdet(self):
         raise RuntimeError('This matrix is singular.')
 
-    @_dispatch(object, [object])
-    def mah_dist2(self, a, b=None, sum=True):
-        raise RuntimeError('This matrix is singular.')
-
     @_dispatch(SPD)
     def ratio(self, denom):
         return B.sum(self.inner * denom.inv_prod(self.inner))
@@ -224,11 +199,6 @@ class Diagonal(SPD, Referentiable):
 
     def root(self):
         return B.cholesky(self)
-
-    @_dispatch(object)
-    def mah_dist2(self, diff, sum=True):
-        iL_diff = diff / self.diag[:, None] ** .5
-        return B.sum(iL_diff ** 2) if sum else B.sum(iL_diff ** 2, axis=0)
 
     @_dispatch(Self)
     def ratio(self, denom):
@@ -428,6 +398,43 @@ def shape(a): return B.shape(a.inner)[0], B.shape(a.inner)[0]
 
 @B.shape.extend(Woodbury)
 def shape(a): return B.shape(a.lr_part)
+
+
+# Compute Mahalanobis distances.
+
+@B.mah_dist2.extend(SPD, object, object)
+def mah_dist2(a, b, c, sum=True):
+    """Compute the square of the Mahalanobis distance.
+
+    Args:
+        a (:class:`.spd.SPD`): Covariance matrix.
+        b (tensor): First matrix in distance.
+        c (tensor, optional): Second matrix in distance. If omitted, `b` is
+            assumed to be the differences.
+        sum (bool, optional): Compute the sum of all distances instead
+            of returning all distances. Defaults to `True`.
+
+    Returns:
+        tensor: Distance or distances.
+    """
+    return B.mah_dist2(a, b - c, sum=sum)
+
+
+@B.mah_dist2.extend(SPD, object)
+def mah_dist2(a, diff, sum=True):
+    iL_diff = B.trisolve(B.cholesky(a), diff)
+    return B.sum(iL_diff ** 2) if sum else B.sum(iL_diff ** 2, axis=0)
+
+
+@B.mah_dist2.extend(Diagonal, object)
+def mah_dist2(a, diff, sum=True):
+    iL_diff = diff / a.diag[:, None] ** .5
+    return B.sum(iL_diff ** 2) if sum else B.sum(iL_diff ** 2, axis=0)
+
+
+@B.mah_dist2.extend(LowRank, object)
+def mah_dist2(a, diff, sum=True):
+    raise RuntimeError('Matrix is singular.')
 
 
 # Extend LAB to work with SPDs.

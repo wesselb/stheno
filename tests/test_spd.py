@@ -33,9 +33,10 @@ def test_spd():
         yield ok, np.allclose(ref.ratio(dummy), spd.ratio(dummy)), 'ratio'
 
         if invertible:
-            yield ok, np.allclose(ref.mah_dist2(a), spd.mah_dist2(a)), 'mah'
-            yield ok, np.allclose(ref.mah_dist2(a, b),
-                                  spd.mah_dist2(a, b)), 'mah 2'
+            yield ok, np.allclose(B.mah_dist2(ref, a),
+                                  B.mah_dist2(spd, a)), 'mah'
+            yield ok, np.allclose(B.mah_dist2(ref, a, b),
+                                  B.mah_dist2(spd, a, b)), 'mah'
             yield ok, np.allclose(ref.quadratic_form(a),
                                   spd.quadratic_form(a)), 'qf'
             yield ok, np.allclose(ref.quadratic_form(a, b),
@@ -51,8 +52,8 @@ def test_spd():
             yield ok, np.allclose(ref.inv_prod(A), spd.inv_prod(A)), 'inv prod'
             yield ok, np.allclose(B.logdet(ref), B.logdet(spd)), 'logdets'
         else:
-            yield raises, RuntimeError, lambda: spd.mah_dist2(a)
-            yield raises, RuntimeError, lambda: spd.mah_dist2(a, a)
+            yield raises, RuntimeError, lambda: B.mah_dist2(spd, a)
+            yield raises, RuntimeError, lambda: B.mah_dist2(spd, a, a)
             yield raises, RuntimeError, lambda: spd.quadratic_form(a)
             yield raises, RuntimeError, lambda: spd.quadratic_form(a, a)
             yield raises, RuntimeError, lambda: spd.quadratic_form_diag(a)

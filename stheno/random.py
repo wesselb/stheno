@@ -90,7 +90,7 @@ class Normal(RandomVector, Referentiable):
         return -(B.logdet(self.spd) +
                  B.cast(self.dim, dtype=self.dtype) *
                  B.cast(B.log_2_pi, dtype=self.dtype) +
-                 self.spd.mah_dist2(uprank(x) - self.mean, sum=False)) / 2
+                 B.mah_dist2(self.spd, uprank(x) - self.mean, sum=False)) / 2
 
     def entropy(self):
         """Compute the entropy.
@@ -114,7 +114,7 @@ class Normal(RandomVector, Referentiable):
             scalar: KL divergence.
         """
         return (self.spd.ratio(other.spd) +
-                other.spd.mah_dist2(other.mean, self.mean) -
+                B.mah_dist2(other.spd, other.mean, self.mean) -
                 B.cast(self.dim, dtype=self.dtype) +
                 B.logdet(other.spd) - B.logdet(self.spd)) / 2
 
