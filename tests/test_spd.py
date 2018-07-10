@@ -30,7 +30,7 @@ def test_spd():
         yield ok, allclose(B.root(ref), B.root(spd)), 'roots'
         yield ok, allclose(B.cholesky_mul(ref, A),
                            B.cholesky_mul(spd, A)), 'chol mul'
-        yield ok, allclose(ref.ratio(dummy), spd.ratio(dummy)), 'ratio'
+        yield ok, allclose(B.ratio(ref, dummy), B.ratio(spd, dummy)), 'ratio'
 
         if invertible:
             yield ok, allclose(B.mah_dist2(ref, a), B.mah_dist2(spd, a)), 'mah'
@@ -41,10 +41,10 @@ def test_spd():
             yield ok, allclose(B.qf_diag(ref, a), B.qf_diag(spd, a)), 'qf diag'
             yield ok, allclose(B.qf_diag(ref, a, b),
                                B.qf_diag(spd, a, b)), 'qf diag 2'
-            yield ok, allclose(ref.ratio(ref), spd.ratio(ref)), 'ratio 2'
-            yield ok, allclose(ref.ratio(ref), spd.ratio(spd)), 'ratio 3'
-            yield ok, allclose(ref.ratio(spd), spd.ratio(ref)), 'ratio 4'
-            yield ok, allclose(ref.ratio(spd), spd.ratio(spd)), 'ratio 5'
+            yield ok, allclose(B.ratio(ref, ref), B.ratio(spd, ref)), 'ratio 2'
+            yield ok, allclose(B.ratio(ref, ref), B.ratio(spd, spd)), 'ratio 3'
+            yield ok, allclose(B.ratio(ref, spd), B.ratio(spd, ref)), 'ratio 4'
+            yield ok, allclose(B.ratio(ref, spd), B.ratio(spd, spd)), 'ratio 5'
             yield ok, allclose(ref.inv_prod(A), spd.inv_prod(A)), 'inv prod'
             yield ok, allclose(B.logdet(ref), B.logdet(spd)), 'logdets'
         else:

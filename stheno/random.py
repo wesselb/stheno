@@ -113,7 +113,7 @@ class Normal(RandomVector, Referentiable):
         Returns:
             scalar: KL divergence.
         """
-        return (self.spd.ratio(other.spd) +
+        return (B.ratio(self.spd, other.spd) +
                 B.mah_dist2(other.spd, other.mean, self.mean) -
                 B.cast(self.dim, dtype=self.dtype) +
                 B.logdet(other.spd) - B.logdet(self.spd)) / 2

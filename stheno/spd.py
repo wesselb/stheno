@@ -58,18 +58,6 @@ class SPD(Element, Referentiable):
             self._root = B.matmul(vecs * vals[None, :] ** .5, vecs, tr_b=True)
         return self._root
 
-    @_dispatch(Self)
-    def ratio(self, denom):
-        """Compute the ratio with respect to another positive-definite matrix.
-
-        Args:
-            denom (:class:`.spd.SPD`): Denominator in the ratio.
-
-        Returns:
-            tensor: Ratio.
-        """
-        return B.sum(B.trisolve(B.cholesky(denom), B.cholesky(self)) ** 2)
-
     def inv_prod(self, a):
         """Compute the product `inv(self.mat) a`.
 
@@ -111,10 +99,6 @@ class LowRank(SPD, Referentiable):
     def logdet(self):
         raise RuntimeError('This matrix is singular.')
 
-    @_dispatch(SPD)
-    def ratio(self, denom):
-        return B.sum(self.inner * denom.inv_prod(self.inner))
-
     def inv_prod(self, a):
         raise RuntimeError('This matrix is singular.')
 
@@ -139,10 +123,6 @@ class Diagonal(SPD, Referentiable):
 
     def root(self):
         return B.cholesky(self)
-
-    @_dispatch(Self)
-    def ratio(self, denom):
-        return B.sum(self.diag / denom.diag)
 
     def inv_prod(self, a):
         return a / self.diag[:, None]
@@ -304,24 +284,6 @@ def logdet(a): return a.logdet()
 def root(a): return a.root()
 
 
-# Get shapes of SPDs.
-
-@B.shape.extend(SPD)
-def shape(a): return B.shape(dense(a))
-
-
-@B.shape.extend(Diagonal)
-def shape(a): return B.shape(a.diag)[0], B.shape(a.diag)[0]
-
-
-@B.shape.extend(LowRank)
-def shape(a): return B.shape(a.inner)[0], B.shape(a.inner)[0]
-
-
-@B.shape.extend(Woodbury)
-def shape(a): return B.shape(a.lr_part)
-
-
 # Compute Mahalanobis distances.
 
 @B.mah_dist2.extend(SPD, object, object)
@@ -447,6 +409,32 @@ def qf_diag(a, b, c=None):
     raise RuntimeError('Matrix is singular.')
 
 
+# Compute ratio's between SPDs.
+
+@B.ratio.extend(object, object)
+def ratio(a, b):
+    """Compute the ratio between two positive-definite matrices.
+
+    Args:
+        a (tensor): Numerator.
+        b (tensor): Denominator.
+
+    Returns:
+        tensor: Ratio.
+    """
+    return B.mah_dist2(b, B.cholesky(a), sum=True)
+
+
+@B.ratio.extend(LowRank, SPD)
+def ratio(a, b):
+    return B.mah_dist2(b, a.inner, sum=True)
+
+
+@B.ratio.extend(Diagonal, Diagonal)
+def ratio(a, b):
+    return B.sum(a.diag / b.diag)
+
+
 # Extend LAB to work with SPDs.
 
 B.add.extend(SPD, B.Numeric)(add)
@@ -468,6 +456,24 @@ def subtract(a, b): return B.add(a, -b)
 
 @B.divide.extend({B.Numeric, SPD}, {B.Numeric, SPD})
 def divide(a, b): return B.multiply(a, 1 / b)
+
+
+# Get shapes of SPDs.
+
+@B.shape.extend(SPD)
+def shape(a): return B.shape(dense(a))
+
+
+@B.shape.extend(Diagonal)
+def shape(a): return B.shape(a.diag)[0], B.shape(a.diag)[0]
+
+
+@B.shape.extend(LowRank)
+def shape(a): return B.shape(a.inner)[0], B.shape(a.inner)[0]
+
+
+@B.shape.extend(Woodbury)
+def shape(a): return B.shape(a.lr_part)
 
 
 # Setup promotion and conversion of SPDs as a fallback mechanism.
