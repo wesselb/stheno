@@ -26,7 +26,7 @@ class SPD(Element, Referentiable):
     _dispatch = Dispatcher(in_class=Self)
 
     def __init__(self, mat):
-        self._mat = mat
+        self.mat = mat
         self._cholesky = None
         self._logdet = None
         self._root = None
@@ -34,12 +34,7 @@ class SPD(Element, Referentiable):
     @property
     def dtype(self):
         """Data type."""
-        return B.dtype(self._mat)
-
-    @property
-    def mat(self):
-        """Matrix in dense form."""
-        return self._mat
+        return B.dtype(self.mat)
 
     @property
     def diag(self):
@@ -58,7 +53,7 @@ class SPD(Element, Referentiable):
             tensor: Cholesky decomposition.
         """
         if self._cholesky is None:
-            self._cholesky = B.cholesky(B.reg(self.mat))
+            self._cholesky = B.cholesky(B.reg(dense(self)))
         return self._cholesky
 
     def cholesky_mul(self, a):
@@ -108,7 +103,7 @@ class SPD(Element, Referentiable):
         """Compute the ratio with respect to another positive-definite matrix.
 
         Args:
-            denom (:class:`.spd.Dense`): Denominator in the ratio.
+            denom (:class:`.spd.SPD`): Denominator in the ratio.
 
         Returns:
             tensor: Ratio.
@@ -211,23 +206,19 @@ class LowRank(SPD, Referentiable):
 
     def __init__(self, inner):
         SPD.__init__(self, None)
-        self._inner = inner
+        self.inner = inner
 
     @property
     def dtype(self):
-        return B.dtype(self._inner)
+        return B.dtype(self.inner)
 
     @property
     def diag(self):
-        return B.sum(self._inner ** 2, 1)
+        return B.sum(self.inner ** 2, 1)
 
     @property
     def shape(self):
-        return B.shape(self._inner)[0], B.shape(self._inner)[0]
-
-    @property
-    def mat(self):
-        return B.matmul(self._inner, self._inner, tr_b=True)
+        return B.shape(self.inner)[0], B.shape(self.inner)[0]
 
     def logdet(self):
         raise RuntimeError('This matrix is singular.')
@@ -238,7 +229,7 @@ class LowRank(SPD, Referentiable):
 
     @_dispatch(SPD)
     def ratio(self, denom):
-        return B.sum(self._inner * denom.inv_prod(self._inner))
+        return B.sum(self.inner * denom.inv_prod(self.inner))
 
     @_dispatch(object, [object])
     def quadratic_form(self, a, b=None):
@@ -275,10 +266,6 @@ class Diagonal(SPD, Referentiable):
     @property
     def shape(self):
         return B.shape(self.diag)[0], B.shape(self.diag)[0]
-
-    @property
-    def mat(self):
-        return B.diag(self.diag)
 
     def cholesky(self):
         return B.diag(self.diag ** .5)
@@ -369,10 +356,6 @@ class Woodbury(SPD, Referentiable):
         # part agree.
         return self.lr_part.shape
 
-    @property
-    def mat(self):
-        return B.diag(self.diag)
-
     def cholesky(self):
         return B.diag(self.diag ** .5)
 
@@ -410,6 +393,8 @@ class Woodbury(SPD, Referentiable):
         raise NotImplementedError()
 
 
+# Conversion between SPDs and dense matrices:
+
 @_dispatch(SPD)
 def spd(a):
     """Matrix as SPD.
@@ -418,14 +403,13 @@ def spd(a):
         a (tensor): Matrix to type.
 
     Returns:
-        :class:`.spd.Dense`: Matrix as SPD.
+        :class:`.spd.SPD`: Matrix as SPD.
     """
     return a
 
 
 @_dispatch(B.Numeric)
-def spd(a):
-    return SPD(a)
+def spd(a): return SPD(a)
 
 
 @_dispatch(SPD)
@@ -433,7 +417,7 @@ def dense(a):
     """SPD as matrix.
 
     Args:
-        a (:class:`.spd.Dense`): SPD to unwrap.
+        a (:class:`.spd.SPD`): SPD to unwrap.
 
     Returns:
         tensor: SPD as matrix.
@@ -441,9 +425,20 @@ def dense(a):
     return a.mat
 
 
+@_dispatch(Diagonal)
+def dense(a): return B.diag(a.diag)
+
+
+@_dispatch(LowRank)
+def dense(a): return B.matmul(a.inner, a.inner, tr_b=True)
+
+
+@_dispatch(Woodbury)
+def dense(a): return dense(a.lr_part) + dense(a.diag_part)
+
+
 @_dispatch(B.Numeric)
-def dense(a):
-    return a
+def dense(a): return a
 
 
 # Extend LAB to work with SPDs.
@@ -462,7 +457,7 @@ def diag(a): return a.diag
 
 
 @B.transpose.extend(SPD)
-def transpose(a): return B.transpose(a.mat)
+def transpose(a): return a
 
 
 @B.dtype.extend(SPD)

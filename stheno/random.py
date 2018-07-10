@@ -11,7 +11,7 @@ from plum import Self, Referentiable
 from .cache import Cache, uprank
 from .kernel import PosteriorKernel, OneKernel
 from .mean import ZeroMean, PosteriorMean, OneMean
-from .spd import spd, Dispatcher, UniformDiagonal, Diagonal
+from .spd import spd, Dispatcher, UniformDiagonal, Diagonal, dense
 
 __all__ = ['Normal', 'GPPrimitive', 'Normal1D']
 
@@ -72,7 +72,7 @@ class Normal(RandomVector, Referentiable):
     @property
     def var(self):
         """Variance."""
-        return self.spd.mat
+        return dense(self.spd)
 
     def m2(self):
         """Second moment of the distribution."""

@@ -6,7 +6,7 @@ import numpy as np
 from plum import Dispatcher
 from lab import B
 
-from stheno.spd import SPD, Diagonal, UniformDiagonal, LowRank
+from stheno.spd import SPD, Diagonal, UniformDiagonal, LowRank, dense
 # noinspection PyUnresolvedReferences
 from . import eq, neq, lt, le, ge, gt, raises, call, ok, eprint
 
@@ -23,7 +23,7 @@ def test_spd():
         A = np.random.randn(3, 3)
 
         # Compare implementations.
-        yield ok, np.allclose(ref.mat, spd.mat), 'matrices'
+        yield ok, np.allclose(dense(ref), dense(spd)), 'matrices'
         yield ok, np.allclose(ref.diag, spd.diag), 'diagonals'
         yield ok, ref.shape == spd.shape, 'shapes'
         yield ok, np.allclose(ref.cholesky(),
@@ -84,34 +84,34 @@ def test_spd():
 
 
 def test_spd_arithmetic():
-    dense = SPD(np.eye(3))
+    spd = SPD(np.eye(3))
     diag = Diagonal(np.ones(3))
 
-    yield eq, type(dense + dense), SPD
-    yield eq, type(dense + diag), SPD
-    yield eq, type(diag + dense), SPD
+    yield eq, type(spd + spd), SPD
+    yield eq, type(spd + diag), SPD
+    yield eq, type(diag + spd), SPD
     yield eq, type(diag + diag), Diagonal
 
-    yield ok, np.allclose(dense.mat + diag.mat, (dense + diag).mat)
+    yield ok, np.allclose(dense(spd) + dense(diag), dense(spd + diag))
 
-    yield eq, type(dense * dense), SPD
-    yield eq, type(dense * diag), SPD
-    yield eq, type(diag * dense), SPD
+    yield eq, type(spd * spd), SPD
+    yield eq, type(spd * diag), SPD
+    yield eq, type(diag * spd), SPD
     yield eq, type(diag * diag), Diagonal
 
-    yield ok, np.allclose(dense.mat * diag.mat, (dense * diag).mat)
+    yield ok, np.allclose(dense(spd) * dense(diag), dense(spd * diag))
 
-    yield eq, type(5 * dense), SPD
+    yield eq, type(5 * spd), SPD
     yield eq, type(5 * diag), Diagonal
 
-    yield ok, np.allclose(5 * dense.mat, (5 * dense).mat)
-    yield ok, np.allclose(5 * diag.mat, (5 * diag).mat)
+    yield ok, np.allclose(5 * dense(spd), dense(5 * spd))
+    yield ok, np.allclose(5 * dense(diag), dense(5 * diag))
 
-    yield eq, type(5 + dense), SPD
+    yield eq, type(5 + spd), SPD
     yield eq, type(5 + diag), SPD
 
-    yield ok, np.allclose(5 + dense.mat, (5 + dense).mat)
-    yield ok, np.allclose(5 + diag.mat, (5 + diag).mat)
+    yield ok, np.allclose(5 + dense(spd), dense(5 + spd))
+    yield ok, np.allclose(5 + dense(diag), dense(5 + diag))
 
 
 def test_lab_interaction():

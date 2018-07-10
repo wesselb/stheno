@@ -11,7 +11,7 @@ from stheno.kernel import EQ, RQ, Matern12, Matern32, Matern52, Delta, Kernel, \
     Linear, OneKernel, ZeroKernel, PosteriorCrossKernel, PosteriorKernel, \
     ShiftedKernel, TensorProductKernel, VariationalPosteriorCrossKernel
 from stheno.random import GPPrimitive
-from stheno.spd import spd
+from stheno.spd import spd, dense
 # noinspection PyUnresolvedReferences
 from tests import ok
 from . import eq, raises, ok, allclose, assert_allclose
@@ -613,20 +613,20 @@ def test_derivative():
     # Test derivative with respect to first input.
     ref = s.run(-k(x1, x2) * (x1 - B.transpose(x2)))
     yield assert_allclose, s.run(k.diff(0, None)(x1, x2)), ref
-    ref = s.run((-k(x1) * (x1 - B.transpose(x1))).mat)
+    ref = s.run(dense(-k(x1) * (x1 - B.transpose(x1))))
     yield assert_allclose, s.run(k.diff(0, None)(x1)), ref
 
     # Test derivative with respect to second input.
     ref = s.run(-k(x1, x2) * (B.transpose(x2) - x1))
     yield assert_allclose, s.run(k.diff(None, 0)(x1, x2)), ref
-    ref = s.run((-k(x1) * (B.transpose(x1) - x1)).mat)
+    ref = s.run(dense(-k(x1) * (B.transpose(x1) - x1)))
     yield assert_allclose, s.run(k.diff(None, 0)(x1)), ref
 
     # Test derivative with respect to both inputs.
     ref = s.run(k(x1, x2) * (1 - (x1 - B.transpose(x2)) ** 2))
     yield assert_allclose, s.run(k.diff(0, 0)(x1, x2)), ref
     yield assert_allclose, s.run(k.diff(0)(x1, x2)), ref
-    ref = s.run((k(x1) * (1 - (x1 - B.transpose(x1)) ** 2)).mat)
+    ref = s.run(dense(k(x1) * (1 - (x1 - B.transpose(x1)) ** 2)))
     yield assert_allclose, s.run(k.diff(0, 0)(x1)), ref
     yield assert_allclose, s.run(k.diff(0)(x1)), ref
 
