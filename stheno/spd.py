@@ -58,17 +58,6 @@ class SPD(Element, Referentiable):
             self._root = B.matmul(vecs * vals[None, :] ** .5, vecs, tr_b=True)
         return self._root
 
-    def inv_prod(self, a):
-        """Compute the product `inv(self.mat) a`.
-
-        Args:
-            a (tensor): `a`
-
-        Returns:
-            tensor: Product.
-        """
-        return B.cholesky_solve(B.cholesky(self), a)
-
 
 # Register field.
 @get_field.extend(SPD)
@@ -81,26 +70,6 @@ class OneSPD(SPD, OneElement):
 
 class ZeroSPD(SPD, ZeroElement):
     """Dense matrix full of ones."""
-
-
-class LowRank(SPD, Referentiable):
-    """Low-rank symmetric positive-definite matrix.
-
-    Args:
-        inner (tensor): The matrix such that `inner * inner'` equals this
-        matrix.
-    """
-    _dispatch = Dispatcher(in_class=Self)
-
-    def __init__(self, inner):
-        SPD.__init__(self, None)
-        self.inner = inner
-
-    def logdet(self):
-        raise RuntimeError('This matrix is singular.')
-
-    def inv_prod(self, a):
-        raise RuntimeError('This matrix is singular.')
 
 
 class Diagonal(SPD, Referentiable):
@@ -124,9 +93,6 @@ class Diagonal(SPD, Referentiable):
     def root(self):
         return B.cholesky(self)
 
-    def inv_prod(self, a):
-        return a / self.diag[:, None]
-
 
 class UniformDiagonal(Diagonal, Referentiable):
     """Uniformly diagonal symmetric positive-definite matrix.
@@ -140,6 +106,23 @@ class UniformDiagonal(Diagonal, Referentiable):
     def __init__(self, diag_scale, n):
         diag = diag_scale * B.ones([n], dtype=B.dtype(diag_scale))
         Diagonal.__init__(self, diag)
+
+
+class LowRank(SPD, Referentiable):
+    """Low-rank symmetric positive-definite matrix.
+
+    Args:
+        inner (tensor): The matrix such that `inner * inner'` equals this
+        matrix.
+    """
+    _dispatch = Dispatcher(in_class=Self)
+
+    def __init__(self, inner):
+        SPD.__init__(self, None)
+        self.inner = inner
+
+    def logdet(self):
+        raise RuntimeError('This matrix is singular.')
 
 
 class Woodbury(SPD, Referentiable):
@@ -270,6 +253,32 @@ def cholesky_mul(a, b):
 
 @B.cholesky_mul.extend(Diagonal, object)
 def cholesky_mul(a, b): return b * a.diag[:, None] ** .5
+
+
+# Compute products with inverses of SPDs.
+
+@B.inv_prod.extend(object, object)
+def inv_prod(a, b):
+    """Compute `inv(a) b`.
+
+    Args:
+        a (tensor): Matrix to invert.
+        b (tensor): Matrix to multiply with.
+
+    Returns:
+        tensor: Product.
+    """
+    return B.cholesky_solve(B.cholesky(a), b)
+
+
+@B.inv_prod.extend(Diagonal, object)
+def inv_prod(a, b):
+    return b / a.diag[:, None]
+
+
+@B.inv_prod.extend(LowRank, object)
+def inv_prod(a, b):
+    raise RuntimeError('Matrix is singular.')
 
 
 # Compute the log-determinant of SPDs.

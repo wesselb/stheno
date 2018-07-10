@@ -45,7 +45,8 @@ def test_spd():
             yield ok, allclose(B.ratio(ref, ref), B.ratio(spd, spd)), 'ratio 3'
             yield ok, allclose(B.ratio(ref, spd), B.ratio(spd, ref)), 'ratio 4'
             yield ok, allclose(B.ratio(ref, spd), B.ratio(spd, spd)), 'ratio 5'
-            yield ok, allclose(ref.inv_prod(A), spd.inv_prod(A)), 'inv prod'
+            yield ok, allclose(B.inv_prod(ref, A),
+                               B.inv_prod(spd, A)), 'inv_prod'
             yield ok, allclose(B.logdet(ref), B.logdet(spd)), 'logdets'
         else:
             yield raises, RuntimeError, lambda: B.mah_dist2(spd, a)
@@ -54,7 +55,7 @@ def test_spd():
             yield raises, RuntimeError, lambda: B.qf(spd, a, a)
             yield raises, RuntimeError, lambda: B.qf_diag(spd, a)
             yield raises, RuntimeError, lambda: B.qf_diag(spd, a, a)
-            yield raises, RuntimeError, lambda: spd.inv_prod(A)
+            yield raises, RuntimeError, lambda: B.inv_prod(spd, A)
             yield raises, RuntimeError, lambda: B.logdet(spd)
 
     # Compare Dense and diagonal implementation.
