@@ -63,7 +63,7 @@ class Normal(RandomVector, Referentiable):
 
     def __init__(self, var, mean=None):
         self.spd = spd(var)
-        self.dtype = self.spd.dtype
+        self.dtype = B.dtype(self.spd)
         self.dim = self.spd.shape[0]
         if mean is None:
             mean = B.zeros([self.dim, 1], dtype=self.dtype)

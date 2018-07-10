@@ -32,11 +32,6 @@ class SPD(Element, Referentiable):
         self._root = None
 
     @property
-    def dtype(self):
-        """Data type."""
-        return B.dtype(self.mat)
-
-    @property
     def diag(self):
         """Diagonal of the matrix."""
         return B.diag(self.mat)
@@ -209,10 +204,6 @@ class LowRank(SPD, Referentiable):
         self.inner = inner
 
     @property
-    def dtype(self):
-        return B.dtype(self.inner)
-
-    @property
     def diag(self):
         return B.sum(self.inner ** 2, 1)
 
@@ -254,10 +245,6 @@ class Diagonal(SPD, Referentiable):
     def __init__(self, diag):
         SPD.__init__(self, None)
         self._diag = diag
-
-    @property
-    def dtype(self):
-        return B.dtype(self._diag)
 
     @property
     def diag(self):
@@ -338,13 +325,6 @@ class Woodbury(SPD, Referentiable):
         SPD.__init__(self, None)
         self.lr_part = lr
         self.diag_part = diag
-
-    @property
-    def dtype(self):
-        if self.lr_part.dtype != self.diag_part.dtype:
-            raise RuntimeError('Different data types of low-rank part and '
-                               'diagonal part.')
-        return self.lr_part.dtype
 
     @property
     def diag(self):
@@ -441,6 +421,28 @@ def dense(a): return dense(a.lr_part) + dense(a.diag_part)
 def dense(a): return a
 
 
+# Get data type of SPDs.
+
+@B.dtype.extend(SPD)
+def dtype(a): return B.dtype(dense(a))
+
+
+@B.dtype.extend(Diagonal)
+def dtype(a): return B.dtype(a.diag)
+
+
+@B.dtype.extend(LowRank)
+def dtype(a): return B.dtype(a.inner)
+
+
+@B.dtype.extend(Woodbury)
+def dtype(a):
+    if B.dtype(a.lr_part) != B.dtype(a.diag_part):
+        raise RuntimeError('Data types of low-rank part and diagonal part are '
+                           'different.')
+    return B.dtype(a.lr_part)
+
+
 # Extend LAB to work with SPDs.
 
 B.add.extend(SPD, B.Numeric)(add)
@@ -458,10 +460,6 @@ def diag(a): return a.diag
 
 @B.transpose.extend(SPD)
 def transpose(a): return a
-
-
-@B.dtype.extend(SPD)
-def dtype(a): return a.dtype
 
 
 @B.shape.extend(SPD)
