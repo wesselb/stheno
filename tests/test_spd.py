@@ -26,11 +26,10 @@ def test_spd():
         yield ok, np.allclose(dense(ref), dense(spd)), 'matrices'
         yield ok, np.allclose(B.diag(ref), B.diag(spd)), 'diagonals'
         yield ok, B.shape(ref) == B.shape(spd), 'shapes'
-        yield ok, np.allclose(ref.cholesky(),
-                              spd.cholesky()), 'cholesky'
-        yield ok, np.allclose(ref.root(), spd.root()), 'roots'
-        yield ok, np.allclose(ref.cholesky_mul(A),
-                              spd.cholesky_mul(A)), 'chol mul'
+        yield ok, np.allclose(B.cholesky(ref), B.cholesky(spd)), 'cholesky'
+        yield ok, np.allclose(B.root(ref), B.root(spd)), 'roots'
+        yield ok, np.allclose(B.cholesky_mul(ref, A),
+                              B.cholesky_mul(spd, A)), 'chol mul'
         yield ok, np.allclose(ref.ratio(dummy), spd.ratio(dummy)), 'ratio'
 
         if invertible:
@@ -50,7 +49,7 @@ def test_spd():
             yield ok, np.allclose(ref.ratio(spd), spd.ratio(ref)), 'ratio 4'
             yield ok, np.allclose(ref.ratio(spd), spd.ratio(spd)), 'ratio 5'
             yield ok, np.allclose(ref.inv_prod(A), spd.inv_prod(A)), 'inv prod'
-            yield ok, np.allclose(ref.logdet(), spd.logdet()), 'logdets'
+            yield ok, np.allclose(B.logdet(ref), B.logdet(spd)), 'logdets'
         else:
             yield raises, RuntimeError, lambda: spd.mah_dist2(a)
             yield raises, RuntimeError, lambda: spd.mah_dist2(a, a)
@@ -59,7 +58,7 @@ def test_spd():
             yield raises, RuntimeError, lambda: spd.quadratic_form_diag(a)
             yield raises, RuntimeError, lambda: spd.quadratic_form_diag(a, a)
             yield raises, RuntimeError, lambda: spd.inv_prod(A)
-            yield raises, RuntimeError, lambda: spd.logdet()
+            yield raises, RuntimeError, lambda: B.logdet(spd)
 
     # Compare Dense and diagonal implementation.
     a = np.diag(np.random.randn(3) ** 2)

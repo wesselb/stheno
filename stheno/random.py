@@ -87,7 +87,7 @@ class Normal(RandomVector, Referentiable):
         Returns:
             list[tensor]: Log-pdf for every input in `x`.
         """
-        return -(self.spd.logdet() +
+        return -(B.logdet(self.spd) +
                  B.cast(self.dim, dtype=self.dtype) *
                  B.cast(B.log_2_pi, dtype=self.dtype) +
                  self.spd.mah_dist2(uprank(x) - self.mean, sum=False)) / 2
@@ -98,7 +98,7 @@ class Normal(RandomVector, Referentiable):
         Returns:
             scalar: The entropy.
         """
-        return (self.spd.logdet() +
+        return (B.logdet(self.spd) +
                 B.cast(self.dim, dtype=self.dtype) *
                 B.cast(B.log_2_pi + 1, dtype=self.dtype)) / 2
 
@@ -116,7 +116,7 @@ class Normal(RandomVector, Referentiable):
         return (self.spd.ratio(other.spd) +
                 other.spd.mah_dist2(other.mean, self.mean) -
                 B.cast(self.dim, dtype=self.dtype) +
-                other.spd.logdet() - self.spd.logdet()) / 2
+                B.logdet(other.spd) - B.logdet(self.spd)) / 2
 
     @_dispatch(Self)
     def w2(self, other):
@@ -129,8 +129,8 @@ class Normal(RandomVector, Referentiable):
         Returns:
             scalar: 2-Wasserstein distance.
         """
-        root = spd(B.dot(B.dot(self.spd.root(), other.var),
-                         self.spd.root())).root()
+        root = B.root(spd(B.dot(B.dot(B.root(self.spd), other.var),
+                                B.root(self.spd))))
         var_part = B.trace(self.var) + B.trace(other.var) - 2 * B.trace(root)
         mean_part = B.sum((self.mean - other.mean) ** 2)
         # The sum of `mean_part` and `var_par` should be positive, but this
@@ -156,7 +156,7 @@ class Normal(RandomVector, Referentiable):
 
         # Perform sampling operation.
         e = B.randn((self.dim, num), dtype=random_dtype)
-        out = self.spd.cholesky_mul(e) + self.mean
+        out = B.cholesky_mul(self.spd, e) + self.mean
         if noise is not None:
             out += noise ** .5 * B.randn((self.dim, num), dtype=random_dtype)
         return out

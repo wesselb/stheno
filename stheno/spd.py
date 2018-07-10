@@ -41,17 +41,6 @@ class SPD(Element, Referentiable):
             self._cholesky = B.cholesky(B.reg(dense(self)))
         return self._cholesky
 
-    def cholesky_mul(self, a):
-        """Multiply the Cholesky decomposition of this matrix with `a`.
-
-        Args:
-            a (tensor): Matrix to multiply with.
-
-        Returns:
-            tensor: Multiplication of the Cholesky of this matrix with `a`.
-        """
-        return B.matmul(self.cholesky(), a)
-
     def logdet(self):
         """Compute the log-determinant.
 
@@ -59,8 +48,15 @@ class SPD(Element, Referentiable):
             scalar: Log-determinant.
         """
         if self._logdet is None:
-            self._logdet = 2 * B.sum(B.log(B.diag(self.cholesky())))
+            self._logdet = 2 * B.sum(B.log(B.diag(B.cholesky(self))))
         return self._logdet
+
+    def root(self):
+        """Compute a square root."""
+        if self._root is None:
+            vals, vecs = B.eig(B.reg(dense(self)))
+            self._root = B.matmul(vecs * vals[None, :] ** .5, vecs, tr_b=True)
+        return self._root
 
     @_dispatch(object, object)
     def mah_dist2(self, a, b, sum=True):
@@ -80,7 +76,7 @@ class SPD(Element, Referentiable):
 
     @_dispatch(object)
     def mah_dist2(self, diff, sum=True):
-        iL_diff = B.trisolve(self.cholesky(), diff)
+        iL_diff = B.trisolve(B.cholesky(self), diff)
         return B.sum(iL_diff ** 2) if sum else B.sum(iL_diff ** 2, axis=0)
 
     @_dispatch(Self)
@@ -93,7 +89,7 @@ class SPD(Element, Referentiable):
         Returns:
             tensor: Ratio.
         """
-        return B.sum(B.trisolve(denom.cholesky(), self.cholesky()) ** 2)
+        return B.sum(B.trisolve(B.cholesky(denom), B.cholesky(self)) ** 2)
 
     @_dispatch(object)
     def quadratic_form(self, a):
@@ -106,13 +102,13 @@ class SPD(Element, Referentiable):
         Returns:
             tensor: Quadratic form.
         """
-        prod = B.trisolve(self.cholesky(), a)
+        prod = B.trisolve(B.cholesky(self), a)
         return B.matmul(prod, prod, tr_a=True)
 
     @_dispatch(object, object)
     def quadratic_form(self, a, b):
-        left = B.trisolve(self.cholesky(), a)
-        right = B.trisolve(self.cholesky(), b)
+        left = B.trisolve(B.cholesky(self), a)
+        right = B.trisolve(B.cholesky(self), b)
         return B.matmul(left, right, tr_a=True)
 
     @_dispatch(Self)
@@ -138,13 +134,13 @@ class SPD(Element, Referentiable):
         Returns:
             tensor: Diagonal of the quadratic form.
         """
-        prod = B.trisolve(self.cholesky(), a)
+        prod = B.trisolve(B.cholesky(self), a)
         return B.sum(prod ** 2, axis=0)
 
     @_dispatch(object, object)
     def quadratic_form_diag(self, a, b):
-        left = B.trisolve(self.cholesky(), a)
-        right = B.trisolve(self.cholesky(), b)
+        left = B.trisolve(B.cholesky(self), a)
+        right = B.trisolve(B.cholesky(self), b)
         return B.sum(left * right, axis=0)
 
     def inv_prod(self, a):
@@ -156,15 +152,7 @@ class SPD(Element, Referentiable):
         Returns:
             tensor: Product.
         """
-        return B.cholesky_solve(self.cholesky(), a)
-
-    def root(self):
-        """Compute a square root."""
-        if self._cholesky is None:
-            vals, vecs = B.eig(B.reg(self.mat))
-            self._cholesky = B.matmul(vecs * vals[None, :] ** .5, vecs,
-                                      tr_b=True)
-        return self._cholesky
+        return B.cholesky_solve(B.cholesky(self), a)
 
 
 # Register field.
@@ -231,11 +219,11 @@ class Diagonal(SPD, Referentiable):
     def cholesky(self):
         return B.diag(self.diag ** .5)
 
-    def cholesky_mul(self, a):
-        return a * self.diag[:, None] ** .5
-
     def logdet(self):
         return B.sum(B.log(self.diag))
+
+    def root(self):
+        return B.cholesky(self)
 
     @_dispatch(object)
     def mah_dist2(self, diff, sum=True):
@@ -267,9 +255,6 @@ class Diagonal(SPD, Referentiable):
     def inv_prod(self, a):
         return a / self.diag[:, None]
 
-    def root(self):
-        return self.cholesky()
-
 
 class UniformDiagonal(Diagonal, Referentiable):
     """Uniformly diagonal symmetric positive-definite matrix.
@@ -299,42 +284,6 @@ class Woodbury(SPD, Referentiable):
         SPD.__init__(self, None)
         self.lr_part = lr
         self.diag_part = diag
-
-    def cholesky(self):
-        return B.diag(self.diag ** .5)
-
-    def cholesky_mul(self, a):
-        return a * self.diag[:, None] ** .5
-
-    def logdet(self):
-        raise NotImplementedError()
-
-    @_dispatch(object)
-    def mah_dist2(self, diff, sum=True):
-        raise NotImplementedError()
-
-    @_dispatch(Self)
-    def ratio(self, denom):
-        raise NotImplementedError()
-
-    @_dispatch(object, object)
-    def quadratic_form(self, a, b):
-        raise NotImplementedError()
-
-    @_dispatch(object)
-    def quadratic_form(self, a):
-        raise NotImplementedError()
-
-    @_dispatch(object, object)
-    def quadratic_form_diag(self, a, b):
-        raise NotImplementedError()
-
-    @_dispatch(object)
-    def quadratic_form_diag(self, a):
-        raise NotImplementedError()
-
-    def inv_prod(self, a):
-        raise NotImplementedError()
 
 
 # Conversion between SPDs and dense matrices:
@@ -423,6 +372,44 @@ def diag(a): return B.sum(a.inner ** 2, 1)
 
 @B.diag.extend(Woodbury)
 def diag(a): return B.diag(a.lr_part) + B.diag(a.diag_part)
+
+
+# Choleksy decompose SPDs.
+
+@B.cholesky.extend(SPD)
+def cholesky(a): return a.cholesky()
+
+
+# Multiply Cholesky decompositions of SPDs.
+
+@B.cholesky_mul.extend(SPD, object)
+def cholesky_mul(a, b):
+    """Multiply the Cholesky decomposition of `a` with `b`.
+
+    Args:
+        a (:class:`.spd.SPD`): Matrix to compute Cholesky decomposition of.
+        b (tensor): Matrix to multiply with.
+
+    Returns:
+        tensor: Multiplication of the Cholesky of `a` with `b`.
+    """
+    return B.matmul(B.cholesky(a), b)
+
+
+@B.cholesky_mul.extend(Diagonal, object)
+def cholesky_mul(a, b): return b * a.diag[:, None] ** .5
+
+
+# Compute the log-determinant of SPDs.
+
+@B.logdet.extend(SPD)
+def logdet(a): return a.logdet()
+
+
+# Compute roots of SPDs.
+
+@B.root.extend(SPD)
+def root(a): return a.root()
 
 
 # Get shapes of SPDs.
