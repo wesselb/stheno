@@ -4,12 +4,13 @@ from __future__ import absolute_import, division, print_function
 
 import operator
 from types import FunctionType as PythonFunction
-from plum import Dispatcher, Referentiable, Self
-from lab import B
 
+from lab import B
+from plum import Dispatcher, Referentiable, Self
 from stheno.field import squeeze, mul, add, SumElement, ProductElement, \
     ScaledElement, OneElement, ZeroElement, WrappedElement, PrimitiveElement, \
-    JoinElement, Element, Formatter
+    JoinElement, Formatter
+
 from .field import Element, new, get_field, broadcast
 
 __all__ = []
@@ -283,7 +284,7 @@ def stretch(a, *stretches):
     Returns:
         :class:`.function_field.Function`: Stretched function.
     """
-    raise NotImplementedError('Stretching not implemented for {}.'
+    raise NotImplementedError('Stretching not implemented for "{}".'
                               ''.format(type(a).__name__))
 
 
@@ -298,7 +299,7 @@ def shift(a, *shifts):
     Returns:
         :class:`.function_field.Function`: Shifted element.
     """
-    raise NotImplementedError('Shifting not implemented for {}.'
+    raise NotImplementedError('Shifting not implemented for "{}".'
                               ''.format(type(a).__name__))
 
 
@@ -315,7 +316,7 @@ def select(a, *dims):
         :class:`.function_field.Function`: Function with particular dimensions
             from the inputs selected.
     """
-    raise NotImplementedError('Selection not implemented for {}.'
+    raise NotImplementedError('Selection not implemented for "{}".'
                               ''.format(type(a).__name__))
 
 
@@ -332,7 +333,7 @@ def transform(a, *fs):
         :class:`.function_field.Function`: Function with its inputs
             transformed.
     """
-    raise NotImplementedError('Input transforms not implemented for {}.'
+    raise NotImplementedError('Input transforms not implemented for "{}".'
                               ''.format(type(a).__name__))
 
 
@@ -349,25 +350,25 @@ def differentiate(a, *derivs):
     Returns:
         :class:`.function_field.Function`: Derivative of the function.
     """
-    raise NotImplementedError('Differentiation not implemented for {}.'
+    raise NotImplementedError('Differentiation not implemented for "{}".'
                               ''.format(type(a).__name__))
 
 
 # Handle conversion of Python functions.
 
-@mul.extend(Element, PythonFunction, precedence=1)
+@mul.extend(Element, PythonFunction, precedence=10)
 def mul(a, b): return mul(a, new(a, TensorProductFunction)(b))
 
 
-@mul.extend(PythonFunction, Element, precedence=1)
+@mul.extend(PythonFunction, Element, precedence=10)
 def mul(a, b): return mul(new(b, TensorProductFunction)(a), b)
 
 
-@add.extend(Element, PythonFunction, precedence=1)
+@add.extend(Element, PythonFunction, precedence=10)
 def add(a, b): return add(a, new(a, TensorProductFunction)(b))
 
 
-@add.extend(PythonFunction, Element, precedence=1)
+@add.extend(PythonFunction, Element, precedence=10)
 def add(a, b): return add(new(b, TensorProductFunction)(a), b)
 
 

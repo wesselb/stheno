@@ -2,9 +2,9 @@
 
 from __future__ import absolute_import, division, print_function
 
-from plum import Dispatcher, Referentiable, Self, NotFoundLookupError
 from numbers import Number
-from types import FunctionType as PythonFunction
+
+from plum import Dispatcher, Referentiable, Self, NotFoundLookupError
 
 __all__ = []
 
@@ -346,8 +346,8 @@ def mul(a, b):
     Returns:
         :class:`.field.Element`: Product of the elements.
     """
-    raise NotImplementedError('Multiplication not implemented for {} and {}.'
-                              ''.format(type(a).__name__, type(b).__name__))
+    raise NotImplementedError('Multiplication not implemented for "{}" and '
+                              '"{}"'.format(type(a).__name__, type(b).__name__))
 
 
 @_dispatch(object, object)
@@ -361,7 +361,7 @@ def add(a, b):
     Returns:
         :class:`.field.Element`: Sum of the elements.
     """
-    raise NotImplementedError('Addition not implemented for {} and {}.'
+    raise NotImplementedError('Addition not implemented for "{}" and "{}".'
                               ''.format(type(a).__name__, type(b).__name__))
 
 
@@ -375,7 +375,7 @@ def get_field(a):
     Returns:
         type: Field of `a`.
     """
-    raise RuntimeError('Could not determine field type of {}.'
+    raise RuntimeError('Could not determine field type of "{}".'
                        ''.format(type(a).__name__))
 
 
@@ -400,7 +400,7 @@ def new(a, t):
 
         # There should only be a single candidate.
         if len(candidates) != 1:
-            raise RuntimeError('Could not determine {} for field {}.'
+            raise RuntimeError('Could not determine "{}" for field "{}".'
                                ''.format(t.__name__, field.__name__))
 
         new_cache[type(a), t] = candidates[0]
@@ -534,51 +534,56 @@ def add(a, b):
 
 # Cancel redundant zeros and ones.
 
-@_dispatch.multi((ZeroElement, object), (Element, OneElement),
-                 precedence=2)
+@_dispatch(ZeroElement, object, precedence=20)
 def mul(a, b): return a
 
 
-@_dispatch.multi((object, ZeroElement), (OneElement, Element),
-                 precedence=2)
+@_dispatch(object, ZeroElement, precedence=20)
 def mul(a, b): return b
 
 
-@_dispatch.multi((ZeroElement, ZeroElement), (OneElement, OneElement),
-                 precedence=2)
+@_dispatch(ZeroElement, ZeroElement, precedence=20)
 def mul(a, b): return a
 
 
-@_dispatch(Element, ZeroElement, precedence=2)
-def add(a, b): return a
+@_dispatch(OneElement, Element, precedence=10)
+def mul(a, b): return b
 
 
-@_dispatch(ZeroElement, Element, precedence=2)
-def add(a, b): return b
+@_dispatch(Element, OneElement, precedence=10)
+def mul(a, b): return a
 
 
-@_dispatch(ZeroElement, ZeroElement, precedence=2)
-def add(a, b): return a
+@_dispatch(OneElement, OneElement, precedence=10)
+def mul(a, b): return a
 
 
-@_dispatch(ZeroElement, object)
+@_dispatch(ZeroElement, object, precedence=20)
 def add(a, b):
     if isinstance(b, Number) and b == 0:
         return a
-    elif isinstance(b, Number) and b == 1:
-        return new(a, OneElement)()
     else:
-        return new(a, ScaledElement)(new(a, OneElement)(), b)
+        return mul(new(a, OneElement)(), b)
 
 
-@_dispatch(object, ZeroElement)
+@_dispatch(object, ZeroElement, precedence=20)
 def add(a, b):
     if isinstance(a, Number) and a == 0:
         return b
-    elif isinstance(a, Number) and a == 1:
-        return new(b, OneElement)()
     else:
-        return new(b, ScaledElement)(new(b, OneElement)(), a)
+        return mul(a, new(b, OneElement)())
+
+
+@_dispatch(ZeroElement, ZeroElement, precedence=20)
+def add(a, b): return a
+
+
+@_dispatch(Element, ZeroElement, precedence=10)
+def add(a, b): return a
+
+
+@_dispatch(ZeroElement, Element, precedence=10)
+def add(a, b): return b
 
 
 # Group factors and terms if possible.
