@@ -251,20 +251,30 @@ class Woodbury(Dense, Referentiable):
         Dense.__init__(self, None)
         self.lr_part = lr
         self.diag_part = diag
+
+        # Store stuff related to the Schur complement.
         self._schur_complement = None
+        self._schur_left = None
+        self._schur_right = None
 
     def schur_complement(self):
         if self._schur_complement is None:
-            left = self.lr_part.left * self.lr_part.scales[None, :]
-            right = self.lr_part.right
+            # Construct the complement
+            scales_root = self.lr_part.scales[None, :] ** .5
+            self._schur_left = self.lr_part.left * scales_root
+            self._schur_right = self.lr_part.right * scales_root
 
-            prod = B.matmul(B.matmul(left, B.inverse(self.diag_part),
-                                     tr_a=True), right)
-            self._schur_complement = B.eye(B.shape(left)[1]) + prod
-        return Dense(self._schur_complement)
+            prod = B.trimatmul(self._schur_left,
+                               B.inverse(self.diag_part),
+                               self._schur_right, tr_a=True)
+            self._schur_complement = \
+                Dense(B.diag(1 / self.lr_part.scales) + prod)
+
+        return self._schur_complement, self._schur_left, self._schur_right
 
     def logdet(self):
-        return B.logdet(self.schur_complement()) + B.logdet(self.diag_part)
+        schur, left, right = self.schur_complement()
+        return B.logdet(schur) + B.logdet(self.diag_part)
 
 
 # Conversion between `Matrix`s and dense matrices:
@@ -392,6 +402,70 @@ def matmul(a, b, tr_a=False, tr_b=False):
     return Diagonal(B.diag(a) * B.diag(b))
 
 
+@B.matmul.extend(Diagonal, LowRank)
+def matmul(a, b, tr_a=False, tr_b=False):
+    b = B.transpose(b) if tr_b else b
+    return LowRank(left=B.diag(a)[:, None] * b.left,
+                   right=b.right,
+                   scales=b.scales)
+
+
+@B.matmul.extend(LowRank, Diagonal)
+def matmul(a, b, tr_a=False, tr_b=False):
+    a = B.transpose(a) if tr_a else a
+    return LowRank(left=a.left,
+                   right=a.right * B.diag(b)[:, None],
+                   scales=a.scales)
+
+
+@B.matmul.extend(LowRank, LowRank)
+def matmul(a, b, tr_a=False, tr_b=False):
+    a = B.transpose(a) if tr_a else a
+    b = B.transpose(b) if tr_b else b
+    inner = B.matmul(a.right, b.left, tr_a=True)
+    U, S, V = B.svd(inner)
+    left = B.matmul(a.left * a.scales[None, :], U)
+    right = B.matmul(b.right * b.scales[None, :], V)
+    return LowRank(left=left, right=right, scales=S)
+
+
+@B.matmul.extend({B.Numeric, Dense}, Woodbury, precedence=1)
+def matmul(a, b, tr_a=False, tr_b=False):
+    return add(B.matmul(a, b.lr_part, tr_a=tr_a, tr_b=tr_b),
+               B.matmul(a, b.diag_part, tr_a=tr_a, tr_b=tr_b))
+
+
+@B.matmul.extend(Woodbury, {B.Numeric, Dense}, precedence=1)
+def matmul(a, b, tr_a=False, tr_b=False):
+    return add(B.matmul(a.lr_part, b, tr_a=tr_a, tr_b=tr_b),
+               B.matmul(a.diag_part, b, tr_a=tr_a, tr_b=tr_b))
+
+
+@B.matmul.extend(Woodbury, Woodbury, precedence=1)
+def matmul(a, b, tr_a=False, tr_b=False):
+    return add(add(B.matmul(a.lr_part, b.lr_part, tr_a=tr_a, tr_b=tr_b),
+                   B.matmul(a.lr_part, b.diag_part, tr_a=tr_a, tr_b=tr_b)),
+               add(B.matmul(a.diag_part, b.lr_part, tr_a=tr_a, tr_b=tr_b),
+                   B.matmul(a.diag_part, b.diag_part, tr_a=tr_a, tr_b=tr_b)))
+
+
+@B.trimatmul.extend(object, object, object)
+def trimatmul(a, b, c, tr_a=True, tr_b=False, tr_c=False):
+    return B.matmul(B.matmul(a, b, tr_a=tr_a, tr_b=tr_b), c, tr_b=tr_c)
+
+
+@B.trimatmul.extend(LowRank, LowRank, LowRank)
+def trimatmul(a, b, c, tr_a=True, tr_b=False, tr_c=False):
+    a = B.transpose(a) if tr_a else a
+    b = B.transpose(b) if tr_b else b
+    c = B.transpose(c) if tr_c else c
+    left_block = B.matmul(a.right, b.left, tr_a=True)
+    right_block = B.matmul(c.left, b.right, tr_a=True)
+    left = B.matmul(a.left * a.scales[None, :], left_block)
+    right = B.matmul(c.right * c.scales[None, :], right_block)
+    return LowRank(left=left, right=right, scales=b.scales)
+
+
 # Some efficient inverses.
 
 @B.inverse.extend(Diagonal)
@@ -425,6 +499,11 @@ def inv_prod(a, b):
 
 
 # Compute the log-determinant of `Matrix`s.
+
+
+@B.logdet.extend(B.Numeric)
+def logdet(a): return B.logdet(matrix(a))
+
 
 @B.logdet.extend(Dense)
 def logdet(a): return a.logdet()
@@ -480,6 +559,35 @@ def qf(a, b, c):
 @B.qf.extend_multi((LowRank, object), (LowRank, object, object))
 def qf(a, b, c=None):
     raise RuntimeError('Matrix is singular.')
+
+
+@B.qf.extend(Woodbury, object)
+def qf(a, b):
+    return B.qf(a, b, b)
+
+
+@B.qf.extend(Woodbury, object, object)
+def qf(a, b, c):
+    # Compute the inverse of the diagonal part.
+    diag_inv = B.inverse(a.diag_part)
+
+    # Compute the full part.
+    full_part = B.trimatmul(b, diag_inv, c, tr_a=True)
+
+    # Cholesky decompose the inner, low-rank part.
+    schur, schur_left, schur_right = a.schur_complement()
+    chol = B.cholesky(schur)
+
+    # Compute the components of the low-rank part.
+    left = B.transpose(B.trisolve(chol, B.transpose(schur_right)))
+    right = B.transpose(B.trisolve(chol, B.transpose(schur_left)))
+
+    # Construct the low-rank part and multiply.
+    lr = B.trimatmul(diag_inv, LowRank(left, right), diag_inv)
+    lr_part = B.trimatmul(b, lr, c, tr_a=True)
+
+    # Return difference to complete the Woodbury matrix identity.
+    return full_part - lr_part
 
 
 @B.qf_diag.extend(object, object)
@@ -551,6 +659,20 @@ def ratio(a, b):
     return B.sum(a.diag / b.diag)
 
 
+# Transpose `Matrix`s.
+
+@B.transpose.extend(Dense)
+def transpose(a): return matrix(B.transpose(dense(a)))
+
+
+@B.transpose.extend(Diagonal)
+def transpose(a): return a
+
+
+@B.transpose.extend(LowRank)
+def transpose(a): return LowRank(left=a.right, right=a.left, scales=a.scales)
+
+
 # Extend LAB to work with `Matrix`s.
 
 B.add.extend(Dense, object)(add)
@@ -560,10 +682,6 @@ B.add.extend(Dense, Dense)(add)
 B.multiply.extend(Dense, object)(mul)
 B.multiply.extend(object, Dense)(mul)
 B.multiply.extend(Dense, Dense)(mul)
-
-
-@B.transpose.extend(Dense)
-def transpose(a): return matrix(B.transpose(dense(a)))
 
 
 @B.subtract.extend(object, object)

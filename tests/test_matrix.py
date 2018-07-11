@@ -26,6 +26,7 @@ def compare(spd1, spd2, spd1_singular=False, spd2_singular=False):
     # Compare implementations.
     yield ok, allclose(dense(spd1), dense(spd2)), 'matrices'
     yield ok, allclose(B.diag(spd1), B.diag(spd2)), 'diagonals'
+    yield ok, allclose(B.transpose(spd1), B.transpose(spd2)), 'transposition'
     yield ok, B.shape(spd1) == B.shape(spd2), 'shapes'
     yield ok, allclose(B.cholesky(spd1), B.cholesky(spd2)), 'cholesky'
     yield ok, allclose(B.root(spd1), B.root(spd2)), 'roots'
