@@ -32,9 +32,6 @@ def compare(spd1, spd2, spd1_singular=False, spd2_singular=False):
     yield ok, allclose(B.ratio(spd1, dummy), B.ratio(spd2, dummy)), 'ratio'
 
     if not spd1_singular and not spd2_singular:
-        yield ok, allclose(B.mah_dist2(spd1, a), B.mah_dist2(spd2, a)), 'mah'
-        yield ok, allclose(B.mah_dist2(spd1, a, b),
-                           B.mah_dist2(spd2, a, b)), 'mah'
         yield ok, allclose(B.qf(spd1, a), B.qf(spd2, a)), 'qf'
         yield ok, allclose(B.qf(spd1, a, b), B.qf(spd2, a, b)), 'qf 2'
         yield ok, allclose(B.qf_diag(spd1, a), B.qf_diag(spd2, a)), 'qf diag'
@@ -49,8 +46,6 @@ def compare(spd1, spd2, spd1_singular=False, spd2_singular=False):
 
     for singular, spd in [(spd1_singular, spd1), (spd2_singular, spd2)]:
         if singular:
-            yield raises, RuntimeError, lambda: B.mah_dist2(spd, a)
-            yield raises, RuntimeError, lambda: B.mah_dist2(spd, a, a)
             yield raises, RuntimeError, lambda: B.qf(spd, a)
             yield raises, RuntimeError, lambda: B.qf(spd, a, a)
             yield raises, RuntimeError, lambda: B.qf_diag(spd, a)

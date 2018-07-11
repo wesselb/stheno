@@ -416,43 +416,6 @@ def logdet(a): return a.logdet()
 def root(a): return a.root()
 
 
-# Compute Mahalanobis distances.
-
-@B.mah_dist2.extend(Dense, object, object)
-def mah_dist2(a, b, c, sum=True):
-    """Compute the square of the Mahalanobis distance.
-
-    Args:
-        a (:class:`.matrix.Dense`): Covariance matrix.
-        b (tensor): First matrix in distance.
-        c (tensor, optional): Second matrix in distance. If omitted, `b` is
-            assumed to be the differences.
-        sum (bool, optional): Compute the sum of all distances instead
-            of returning all distances. Defaults to `True`.
-
-    Returns:
-        tensor: Distance or distances.
-    """
-    return B.mah_dist2(a, b - c, sum=sum)
-
-
-@B.mah_dist2.extend(Dense, object)
-def mah_dist2(a, diff, sum=True):
-    iL_diff = B.trisolve(B.cholesky(a), diff)
-    return B.sum(iL_diff ** 2) if sum else B.sum(iL_diff ** 2, axis=0)
-
-
-@B.mah_dist2.extend(Diagonal, object)
-def mah_dist2(a, diff, sum=True):
-    iL_diff = diff / a.diag[:, None] ** .5
-    return B.sum(iL_diff ** 2) if sum else B.sum(iL_diff ** 2, axis=0)
-
-
-@B.mah_dist2.extend(LowRank, object)
-def mah_dist2(a, diff, sum=True):
-    raise RuntimeError('Matrix is singular.')
-
-
 # Compute quadratic forms and diagonals thereof.
 
 @B.qf.extend(object, object)
@@ -554,13 +517,13 @@ def ratio(a, b):
     Returns:
         tensor: Ratio.
     """
-    return B.mah_dist2(b, B.cholesky(a), sum=True)
+    return B.sum(B.qf_diag(b, B.cholesky(a)))
 
 
 @B.ratio.extend(LowRank, Dense)
 def ratio(a, b):
     # TODO: Check that `b` is indeed PSD.
-    return B.mah_dist2(b, a.left * a.scales[None, :] ** .5, sum=True)
+    return B.sum(B.qf_diag(b, a.left * a.scales[None, :] ** .5))
 
 
 @B.ratio.extend(Diagonal, Diagonal)
