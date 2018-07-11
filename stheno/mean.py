@@ -194,7 +194,7 @@ class PosteriorCrossMean(Mean, Referentiable):
         k_zi (:class:`.kernel.Kernel`): Kernel between processes
             corresponding to the data and the input respectively.
         z (input): Locations of data.
-        K_z (:class:`.spd.SPD`): Kernel matrix of data.
+        K_z (:class:`.matrix.Dense`): Kernel matrix of data.
         y (tensor): Observations to condition on.
     """
 
@@ -222,7 +222,7 @@ class PosteriorMean(PosteriorCrossMean, Referentiable):
     Args:
         gp (:class:`.random.GP`): Corresponding GP.
         z (input): Locations of data.
-        K_z (:class:`.spd.SPD`): Kernel matrix of data.
+        K_z (:class:`.matrix.Dense`): Kernel matrix of data.
         y (tensor): Observations to condition on.
     """
 

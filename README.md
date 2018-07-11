@@ -784,8 +784,8 @@ design kernels in an alternative, flexible way.
 distribution, and a convenience constructor `Normal1D` for 1-dimensional normal
 distributions.
 
-* `stheno.spd` offers structured representations of 
-positive-definite matrices and efficient operations thereon.
+* `stheno.matrix` offers structured representations of matrices and efficient
+operations thereon.
 
 * Approximate multiplication between GPs is implemented. This is an 
 experimental feature.

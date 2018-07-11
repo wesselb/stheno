@@ -62,7 +62,7 @@ class Kernel(Function, Referentiable):
             cache (:class:`.cache.Cache`, optional): Cache.
 
         Returns:
-            :class:`.spd.SPD:: Kernel matrix.
+            :class:`.matrix.Dense:: Kernel matrix.
         """
         raise RuntimeError('For kernel "{}", could not resolve '
                            'arguments "{}" and "{}".'.format(self, x, y))
@@ -868,7 +868,7 @@ class PosteriorCrossKernel(Kernel, Referentiable):
         k_zj (:class:`.kernel.Kernel`): Kernel between processes
             corresponding to the data and the right input respectively.
         z (input): Locations of data.
-        K_z (:class:`.spd.SPD`): Kernel matrix of data.
+        K_z (:class:`.matrix.Dense`): Kernel matrix of data.
     """
 
     _dispatch = Dispatcher(in_class=Self)
@@ -900,7 +900,7 @@ class PosteriorKernel(PosteriorCrossKernel, Referentiable):
     Args:
         gp (:class:`.random.GP`): Prior GP.
         z (input): Locations of data.
-        Kz (:class:`.spd.SPD`): Kernel matrix of data.
+        Kz (:class:`.matrix.Dense`): Kernel matrix of data.
     """
 
     _dispatch = Dispatcher(in_class=Self)
@@ -922,8 +922,8 @@ class VariationalPosteriorCrossKernel(Kernel, Referentiable):
         k_zj (:class:`.kernel.Kernel`): Kernel between processes
             corresponding to the data and the right input respectively.
         z (input): Locations of the pseudo-points.
-        Kz (:class:`.spd.SPD`): Prior covariance of the pseudo-points.
-        A (:class:`.spd.SPD): Variational covariance of the pseudo-points
+        Kz (:class:`.matrix.Dense`): Prior covariance of the pseudo-points.
+        A (:class:`.matrix.Dense): Variational covariance of the pseudo-points
             premultiplied and postmultiplied by `Kz`.
     """
 

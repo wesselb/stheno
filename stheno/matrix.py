@@ -667,8 +667,8 @@ def add(a, b): return LowRank(left=B.concat([a.left, b.left], axis=1),
                               scales=B.concat([a.scales, b.scales], axis=0))
 
 
-# Simplify addiction and multiplication between `Matrix`s and other objects.
-
+# Simplify addiction and multiplication between `Matrix`s and other objects. We
+# immediately resolve scaled elements.
 
 @mul.extend(object, Dense)
 def mul(a, b): return mul(b, a)
@@ -685,8 +685,6 @@ def add(a, b): return add(b, a)
 @add.extend(Dense, object)
 def add(a, b): return add(a, mul(One(a), b))
 
-
-# Immediately resolve scaled elements.
 
 @mul.extend(object, One)
 def mul(a, b): return mul(b, a)
@@ -750,7 +748,8 @@ def add(a, b): return Woodbury(a.lr_part + b.lr_part,
                                a.diag_part + b.diag_part)
 
 
-# Expand out multiplication with Woodbury matrices.
+# Expand out multiplication with Woodbury matrices. Higher precedence is used to
+# have this happen immediately.
 
 @mul.extend(Dense, Woodbury, precedence=1)
 def mul(a, b): return add(mul(a, b.lr_part), mul(a, b.diag_part))

@@ -53,7 +53,7 @@ class Normal(RandomVector, Referentiable):
     """Normal random variable.
 
     Args:
-        var (tensor or :class:`.spd.SPD`): Variance of the
+        var (tensor or :class:`.matrix.Dense`): Variance of the
             distribution.
         mean (tensor, optional): Mean of the distribution. Defaults to
             zero.
