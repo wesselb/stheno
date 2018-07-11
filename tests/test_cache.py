@@ -12,7 +12,7 @@ from stheno.input import Component
 from stheno.kernel import ZeroKernel, OneKernel, EQ
 from stheno.mean import ZeroMean, OneMean
 from stheno.random import GPPrimitive
-from stheno.spd import dense
+from stheno.matrix import dense
 # noinspection PyUnresolvedReferences
 from . import eq, neq, ok, raises, benchmark, le, eprint, assert_allclose, \
     allclose

@@ -18,7 +18,7 @@ from .mean import PosteriorCrossMean, Mean
 from .mokernel import MultiOutputKernel as MOK
 from .momean import MultiOutputMean as MOM
 from .random import GPPrimitive, Random
-from .spd import spd
+from .matrix import matrix
 from .field import Formatter
 
 __all__ = ['GP', 'model', 'Graph']
@@ -289,7 +289,7 @@ class Graph(Referentiable):
             y (tensor): Observations to condition on.
         """
         p_data, x = type_parameter(x), x.get()
-        Kx = spd(self.kernels[p_data](x))
+        Kx = matrix(self.kernels[p_data](x))
 
         prior_kernels = self.kernels
         prior_means = self.means

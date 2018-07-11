@@ -3,15 +3,14 @@
 from __future__ import absolute_import, division, print_function
 
 import numpy as np
-from numpy.testing import assert_allclose
 
 from stheno.mokernel import MultiOutputKernel
 from stheno.graph import Graph, GP
 from stheno.input import At, MultiInput
 from stheno.kernel import EQ
-from stheno.spd import dense
+from stheno.matrix import dense
 # noinspection PyUnresolvedReferences
-from . import eq, neq, lt, le, ge, gt, raises, call, ok, eprint
+from . import eq, neq, lt, le, ge, gt, raises, call, ok, eprint, assert_allclose
 
 
 def test_mokernel():

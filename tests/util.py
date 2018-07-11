@@ -12,7 +12,7 @@ from nose.tools import assert_raises, assert_equal, assert_less, \
     assert_greater_equal, ok_
 from plum import dispatch
 
-from stheno.spd import SPD, dense as dense_spd
+from stheno.matrix import Dense, dense as dense_spd
 
 le = assert_less_equal
 lt = assert_less
@@ -60,7 +60,7 @@ def benchmark(f, args, n=1000, get_output=False):
 def dense(a): return a
 
 
-@dispatch(SPD)
+@dispatch(Dense)
 def dense(a): return dense_spd(a)
 
 

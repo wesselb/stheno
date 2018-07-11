@@ -4,7 +4,7 @@ from __future__ import absolute_import
 
 from lab import B
 
-from .spd import *
+from .matrix import *
 from .input import *
 from .field import *
 from .cache import *

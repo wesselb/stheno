@@ -19,7 +19,7 @@ from .cache import cache, Cache, uprank
 from .field import add, mul, broadcast, apply_optional_arg, get_field, \
     Formatter, need_parens
 from .input import Input
-from .spd import SPD, Diagonal, LowRank, UniformlyDiagonal, OneSPD, ZeroSPD, \
+from .matrix import Dense, Diagonal, LowRank, UniformlyDiagonal, One, Zero, \
     dense
 
 __all__ = ['Kernel', 'OneKernel', 'ZeroKernel', 'ScaledKernel', 'EQ', 'RQ',
@@ -181,9 +181,9 @@ class OneKernel(Kernel, OneFunction, Referentiable):
     @uprank
     def __call__(self, x, y, B):
         if x is y:
-            return OneSPD(B.dtype(x), B.shape(x)[0])
+            return One(B.dtype(x), B.shape(x)[0])
         else:
-            return B.ones([B.shape(x)[0], B.shape(y)[0]], dtype=B.dtype(x))
+            return One(B.dtype(x), B.shape(x)[0], B.shape(y)[0])
 
     @_dispatch(B.Numeric, B.Numeric, Cache)
     @cache
@@ -218,9 +218,9 @@ class ZeroKernel(Kernel, ZeroFunction, Referentiable):
     @uprank
     def __call__(self, x, y, B):
         if x is y:
-            return ZeroSPD(B.dtype(x), B.shape(x)[0])
+            return Zero(B.dtype(x), B.shape(x)[0])
         else:
-            return B.zeros([B.shape(x)[0], B.shape(y)[0]], dtype=B.dtype(x))
+            return Zero(B.dtype(x), B.shape(x)[0], B.shape(y)[0])
 
     @_dispatch(B.Numeric, B.Numeric, Cache)
     @cache
@@ -588,8 +588,7 @@ class EQ(Kernel, PrimitiveFunction, Referentiable):
     @cache
     @uprank
     def __call__(self, x, y, B):
-        out = self._compute(B.pw_dists2(x, y), B)
-        return SPD(out) if x is y else out
+        return Dense(self._compute(B.pw_dists2(x, y), B))
 
     @_dispatch(B.Numeric, B.Numeric, Cache)
     @cache
@@ -634,8 +633,7 @@ class RQ(Kernel, Referentiable):
     @cache
     @uprank
     def __call__(self, x, y, B):
-        out = self._compute(B.pw_dists2(x, y), B)
-        return SPD(out) if x is y else out
+        return Dense(self._compute(B.pw_dists2(x, y), B))
 
     @_dispatch(B.Numeric, B.Numeric, Cache)
     @cache
@@ -676,8 +674,7 @@ class Exp(Kernel, PrimitiveFunction, Referentiable):
     @cache
     @uprank
     def __call__(self, x, y, B):
-        out = B.exp(-B.pw_dists(x, y))
-        return SPD(out) if x is y else out
+        return Dense(B.exp(-B.pw_dists(x, y)))
 
     @_dispatch(B.Numeric, B.Numeric, Cache)
     @cache
@@ -714,8 +711,7 @@ class Matern32(Kernel, PrimitiveFunction, Referentiable):
     @cache
     @uprank
     def __call__(self, x, y, B):
-        out = self._compute(B.pw_dists(x, y), B)
-        return SPD(out) if x is y else out
+        return Dense(self._compute(B.pw_dists(x, y), B))
 
     @_dispatch(B.Numeric, B.Numeric, Cache)
     @cache
@@ -753,8 +749,7 @@ class Matern52(Kernel, PrimitiveFunction, Referentiable):
     @cache
     @uprank
     def __call__(self, x, y, B):
-        out = self._compute(B.pw_dists(x, y), B)
-        return SPD(out) if x is y else out
+        return Dense(self._compute(B.pw_dists(x, y), B))
 
     @_dispatch(B.Numeric, B.Numeric, Cache)
     @cache
@@ -805,7 +800,7 @@ class Delta(Kernel, PrimitiveFunction, Referentiable):
             return UniformlyDiagonal(B.cast(1, dtype=B.dtype(x)),
                                      B.shape(x)[0])
         else:
-            return self._compute(B.pw_dists2(x, y), B)
+            return Dense(self._compute(B.pw_dists2(x, y), B))
 
     @_dispatch(B.Numeric, B.Numeric, Cache)
     @cache
@@ -842,7 +837,10 @@ class Linear(Kernel, PrimitiveFunction, Referentiable):
     @cache
     @uprank
     def __call__(self, x, y, B):
-        return LowRank(x) if x is y else B.matmul(x, y, tr_b=True)
+        if x is y:
+            return LowRank(left=x)
+        else:
+            return LowRank(left=x, right=y)
 
     @_dispatch(B.Numeric, B.Numeric, Cache)
     @cache
@@ -973,11 +971,11 @@ class DerivativeKernel(Kernel, DerivativeFunction, Referentiable):
         if i is not None and j is not None:
             z = B.concat([x[:, i], y[:, j]], axis=0)
             n = B.shape(x)[0]
-            K = dense(
-                k(B.concat([x[:, :i], z[:n, None], x[:, i + 1:]], axis=1),
-                  B.concat([y[:, :j], z[n:, None], y[:, j + 1:]], axis=1))
-            )
-            return B.hessians(K, [z])[0][:n, n:]
+            K = dense(k(B.concat([x[:, :i], z[:n, None], x[:, i + 1:]],
+                                 axis=1),
+                        B.concat([y[:, :j], z[n:, None], y[:, j + 1:]],
+                                 axis=1)))
+            return Dense(B.hessians(K, [z])[0][:n, n:])
 
         # Derivative with respect to `x`.
         elif i is not None and j is None:
@@ -986,13 +984,12 @@ class DerivativeKernel(Kernel, DerivativeFunction, Referentiable):
             xis = [B.identity(xi, cache_id=n) for n in range(B.shape_int(y)[0])]
 
             def f(z):
-                return dense(
-                    k(B.concat([x[:, :i], z[0], x[:, i + 1:]], axis=1), z[1])
-                )
+                return dense(k(B.concat([x[:, :i], z[0], x[:, i + 1:]],
+                                        axis=1), z[1]))
 
             res = B.map_fn(f, (B.stack(xis, axis=0), y[:, None, :]),
                            dtype=B.dtype(x))
-            return B.concat(B.gradients(B.sum(res, axis=0), xis), axis=1)
+            return Dense(B.concat(B.gradients(B.sum(res, axis=0), xis), axis=1))
 
         # Derivative with respect to `y`.
         elif i is None and j is not None:
@@ -1008,7 +1005,7 @@ class DerivativeKernel(Kernel, DerivativeFunction, Referentiable):
             res = B.map_fn(f, (x[:, None, :], B.stack(yjs, axis=0)),
                            dtype=B.dtype(x))
             dKt = B.concat(B.gradients(B.sum(res, axis=0), yjs), axis=1)
-            return B.transpose(dKt)
+            return Dense(B.transpose(dKt))
 
         else:
             raise RuntimeError('No derivative specified.')
@@ -1030,10 +1027,10 @@ class TensorProductKernel(Kernel, TensorProductFunction, Referentiable):
     def __call__(self, x, y, B):
         f1, f2 = expand(self.fs)
         if x is y and f1 is f2:
-            return LowRank(apply_optional_arg(f1, x, B))
+            return LowRank(left=apply_optional_arg(f1, x, B))
         else:
-            return B.multiply(apply_optional_arg(f1, x, B),
-                              B.transpose(apply_optional_arg(f2, y, B)))
+            return LowRank(left=apply_optional_arg(f1, x, B),
+                           right=apply_optional_arg(f2, y, B))
 
     @_dispatch(B.Numeric, B.Numeric, Cache)
     @cache

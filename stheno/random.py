@@ -11,7 +11,7 @@ from plum import Self, Referentiable
 from .cache import Cache, uprank
 from .kernel import PosteriorKernel, OneKernel
 from .mean import ZeroMean, PosteriorMean, OneMean
-from .spd import spd, Dispatcher, UniformlyDiagonal, Diagonal, dense
+from .matrix import matrix, Dispatcher, UniformlyDiagonal, Diagonal, dense
 
 __all__ = ['Normal', 'GPPrimitive', 'Normal1D']
 
@@ -62,7 +62,7 @@ class Normal(RandomVector, Referentiable):
     _dispatch = Dispatcher(in_class=Self)
 
     def __init__(self, var, mean=None):
-        self.spd = spd(var)
+        self.spd = matrix(var)
         self.dtype = B.dtype(self.spd)
         self.dim = B.shape(self.spd)[0]
         if mean is None:
@@ -129,8 +129,8 @@ class Normal(RandomVector, Referentiable):
         Returns:
             scalar: 2-Wasserstein distance.
         """
-        root = B.root(spd(B.dot(B.dot(B.root(self.spd), other.var),
-                                B.root(self.spd))))
+        root = B.root(matrix(B.dot(B.dot(B.root(self.spd), other.var),
+                                   B.root(self.spd))))
         var_part = B.trace(self.var) + B.trace(other.var) - 2 * B.trace(root)
         mean_part = B.sum((self.mean - other.mean) ** 2)
         # The sum of `mean_part` and `var_par` should be positive, but this
@@ -299,7 +299,7 @@ class GPPrimitive(RandomProcess, Referentiable):
         Returns:
             :class:`.random.GP`: Conditioned GP.
         """
-        K = spd(self.kernel(x))
+        K = matrix(self.kernel(x))
         return GPPrimitive(PosteriorKernel(self, x, K),
                            PosteriorMean(self, x, K, y))
 

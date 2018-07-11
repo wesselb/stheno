@@ -12,15 +12,15 @@ from plum import Referentiable, Self, Dispatcher
 from .field import Element, OneElement, ZeroElement, mul, add, get_field, \
     ScaledElement
 
-__all__ = ['spd', 'SPD', 'LowRank', 'Diagonal', 'UniformlyDiagonal', 'OneSPD',
-           'ZeroSPD', 'dense', 'Woodbury']
+__all__ = ['matrix', 'Dense', 'LowRank', 'Diagonal', 'UniformlyDiagonal', 'One',
+           'Zero', 'dense', 'Woodbury']
 
 log = logging.getLogger(__name__)
 
 _dispatch = Dispatcher()
 
 
-class SPD(Element, Referentiable):
+class Dense(Element, Referentiable):
     """Symmetric positive-definite matrix.
 
     Args:
@@ -64,13 +64,17 @@ class SPD(Element, Referentiable):
     def __neg__(self):
         return mul(B.cast(-1, dtype=B.dtype(self)), self)
 
+    @property
+    def T(self):
+        return B.transpose(self)
+
 
 # Register field.
-@get_field.extend(SPD)
-def get_field(a): return SPD
+@get_field.extend(Dense)
+def get_field(a): return Dense
 
 
-class Diagonal(SPD, Referentiable):
+class Diagonal(Dense, Referentiable):
     """Diagonal symmetric positive-definite matrix.
 
     Args:
@@ -79,7 +83,7 @@ class Diagonal(SPD, Referentiable):
     _dispatch = Dispatcher(in_class=Self)
 
     def __init__(self, diag):
-        SPD.__init__(self, None)
+        Dense.__init__(self, None)
         self.diag = diag
 
     def cholesky(self):
@@ -106,139 +110,177 @@ class UniformlyDiagonal(Diagonal, Referentiable):
         Diagonal.__init__(self, diag)
 
 
-class LowRank(SPD, Referentiable):
+class LowRank(Dense, Referentiable):
     """Low-rank symmetric positive-definite matrix.
 
-    The low-rank matrix is constructed via `vecs diag(vals) transpose(vecs)`.
+    The low-rank matrix is constructed via `left diag(scales) transpose(right)`.
 
     Args:
-        vecs (tensor): `vecs`.
-        vals (tensor, optional): `vals`. Defaults to ones.
+        left (tensor): Left part of the matrix.
+        right (tensor, optional): Right part of the matrix. Defaults to `left`.
+        scales (tensor, optional): Scaling of the outer products. Defaults to
+            ones.
     """
     _dispatch = Dispatcher(in_class=Self)
 
-    def __init__(self, vecs, vals=None):
-        SPD.__init__(self, None)
-        self._vecs = vecs
-        self._vals = vals
+    def __init__(self, left, right=None, scales=None):
+        Dense.__init__(self, None)
+        self._left = left
+        self._right = left if right is None else right
+        self._scales = scales
 
     @property
-    def vals(self):
-        if self._vals is None:
-            self._vals = B.ones([B.shape_int(self.vecs)[1]],
-                                dtype=B.dtype(self.vecs))
-        return self._vals
+    def scales(self):
+        if self._scales is None:
+            self._scales = B.ones([B.shape_int(self.left)[1]],
+                                  dtype=B.dtype(self.left))
+        return self._scales
 
     @property
-    def vecs(self):
-        return self._vecs
+    def left(self):
+        return self._left
+
+    @property
+    def right(self):
+        return self._right
 
     def logdet(self):
         raise RuntimeError('This matrix is singular.')
 
 
-class ConstantSPD(LowRank, Referentiable):
+class Constant(LowRank, Referentiable):
     """Constant symmetric positive-definite matrix.
 
     Args:
         constant (tensor): Constant of the matrix.
-        size (int): Size of the matrix.
+        num_rows (int): Number of rows.
+        num_cols (int, optional): Number of columns. Defaults to the number of
+            rows.
     """
     _dispatch = Dispatcher(in_class=Self)
 
-    @_dispatch(object, object)
-    def __init__(self, constant, size):
+    @_dispatch(object, object, [object])
+    def __init__(self, constant, num_rows, num_cols=None):
         LowRank.__init__(self, None)
         self.constant = constant
-        self.size = size
+        self.num_rows = num_rows
+        self.num_cols = num_cols
 
-    @_dispatch(object, SPD)
+    @_dispatch(object, {Dense, B.Numeric})
     def __init__(self, constant, reference):
-        ConstantSPD.__init__(self, constant, B.shape(reference)[0])
+        shape = B.shape(reference)
+        Constant.__init__(self, constant, shape[0], shape[1])
 
     @property
-    def vals(self):
-        if self._vals is None:
-            self._vals = B.expand_dims(self.constant, axis=0)
-        return self._vals
+    def scales(self):
+        if self._scales is None:
+            self._scales = B.expand_dims(self.constant, axis=0)
+        return self._scales
 
     @property
-    def vecs(self):
-        if self._vecs is None:
-            self._vecs = B.ones([self.size, 1], dtype=B.dtype(self.constant))
-        return self._vecs
+    def left(self):
+        if self._left is None:
+            self._left = B.ones([self.num_rows, 1],
+                                dtype=B.dtype(self.constant))
+        return self._left
+
+    @property
+    def right(self):
+        if self.num_cols is None:
+            return self.left
+        else:
+            if self._right is None:
+                self._right = B.ones([self.num_cols, 1],
+                                     dtype=B.dtype(self.constant))
+            return self._right
 
 
-class OneSPD(ConstantSPD, OneElement, Referentiable):
-    """Dense matrix full of ones."""
+class One(Constant, OneElement, Referentiable):
+    """Dense matrix full of ones.
+
+    Args:
+        dtype (dtype): Data type.
+        num_rows (int): Number of rows.
+        num_cols (int, optional): Number of columns. Defaults to the number of
+            rows.
+    """
     _dispatch = Dispatcher(in_class=Self)
 
-    @_dispatch(B.DType, object)
-    def __init__(self, dtype, size):
-        ConstantSPD.__init__(self, B.cast(1, dtype=dtype), size)
+    @_dispatch(B.DType, object, [object])
+    def __init__(self, dtype, num_rows, num_cols=None):
+        Constant.__init__(self, B.cast(1, dtype=dtype), num_rows, num_cols)
 
-    @_dispatch(SPD)
+    @_dispatch({Dense, B.Numeric})
     def __init__(self, reference):
-        OneSPD.__init__(self, B.dtype(reference), B.shape(reference)[0])
+        shape = B.shape(reference)
+        One.__init__(self, B.dtype(reference), shape[0], shape[1])
 
 
-class ZeroSPD(ConstantSPD, ZeroElement, Referentiable):
-    """Dense matrix full of ones."""
+class Zero(Constant, ZeroElement, Referentiable):
+    """Dense matrix full of zeros.
+
+    Args:
+        dtype (dtype): Data type.
+        num_rows (int): Number of rows.
+        num_cols (int, optional): Number of columns. Defaults to the number of
+            rows.
+    """
     _dispatch = Dispatcher(in_class=Self)
 
-    @_dispatch(B.DType, object)
-    def __init__(self, dtype, size):
-        ConstantSPD.__init__(self, B.cast(0, dtype=dtype), size)
+    @_dispatch(B.DType, object, [object])
+    def __init__(self, dtype, num_rows, num_cols=None):
+        Constant.__init__(self, B.cast(0, dtype=dtype), num_rows, num_cols)
 
-    @_dispatch(SPD)
+    @_dispatch({Dense, B.Numeric})
     def __init__(self, reference):
-        ZeroSPD.__init__(self, B.dtype(reference), B.shape(reference)[0])
+        shape = B.shape(reference)
+        Zero.__init__(self, B.dtype(reference), shape[0], shape[1])
 
 
-class Woodbury(SPD, Referentiable):
+class Woodbury(Dense, Referentiable):
     """Sum of a low-rank and diagonal symmetric positive-definite matrix.
 
     Args:
-        lr (:class:`.spd.LowRank`): Low-rank part.
-        diag (:class:`.spd.Diagonal`): Diagonal part.
+        lr (:class:`.matrix.LowRank`): Low-rank part.
+        diag (:class:`.matrix.Diagonal`): Diagonal part.
     """
     _dispatch = Dispatcher(in_class=Self)
 
     @_dispatch(LowRank, Diagonal)
     def __init__(self, lr, diag):
-        SPD.__init__(self, None)
+        Dense.__init__(self, None)
         self.lr_part = lr
         self.diag_part = diag
 
 
-# Conversion between SPDs and dense matrices:
+# Conversion between `Matrix`s and dense matrices:
 
-@_dispatch(SPD)
-def spd(a):
-    """Matrix as SPD.
+@_dispatch(Dense)
+def matrix(a):
+    """Matrix as `Matrix`.
 
     Args:
         a (tensor): Matrix to type.
 
     Returns:
-        :class:`.spd.SPD`: Matrix as SPD.
+        :class:`.matrix.Dense`: Matrix as `Matrix`.
     """
     return a
 
 
 @_dispatch(B.Numeric)
-def spd(a): return SPD(a)
+def matrix(a): return Dense(a)
 
 
-@_dispatch(SPD)
+@_dispatch(Dense)
 def dense(a):
-    """SPD as matrix.
+    """`Matrix` as matrix.
 
     Args:
-        a (:class:`.spd.SPD`): SPD to unwrap.
+        a (:class:`.matrix.Dense`): `Matrix` to unwrap.
 
     Returns:
-        tensor: SPD as matrix.
+        tensor: `Matrix` as matrix.
     """
     return a.mat
 
@@ -248,11 +290,11 @@ def dense(a): return B.diag(a.diag)
 
 
 @_dispatch(LowRank)
-def dense(a): return B.matmul(a.vecs * a.vals[None, :], a.vecs, tr_b=True)
+def dense(a): return B.matmul(a.left * a.scales[None, :], a.right, tr_b=True)
 
 
-@_dispatch(ConstantSPD)
-def dense(a): return a.constant * B.ones([a.size, a.size], dtype=B.dtype(a))
+@_dispatch(Constant)
+def dense(a): return a.constant * B.ones(B.shape(a), dtype=B.dtype(a))
 
 
 @_dispatch(Woodbury)
@@ -263,9 +305,9 @@ def dense(a): return dense(a.lr_part) + dense(a.diag_part)
 def dense(a): return a
 
 
-# Get data type of SPDs.
+# Get data type of `Matrix`s.
 
-@B.dtype.extend(SPD)
+@B.dtype.extend(Dense)
 def dtype(a): return B.dtype(dense(a))
 
 
@@ -274,24 +316,20 @@ def dtype(a): return B.dtype(a.diag)
 
 
 @B.dtype.extend(LowRank)
-def dtype(a): return B.dtype(a.vecs)
+def dtype(a): return B.dtype(a.left)
 
 
-@B.dtype.extend(ConstantSPD)
+@B.dtype.extend(Constant)
 def dtype(a): return B.dtype(a.constant)
 
 
 @B.dtype.extend(Woodbury)
-def dtype(a):
-    if B.dtype(a.lr_part) != B.dtype(a.diag_part):
-        raise RuntimeError('Data types of low-rank part and diagonal part are '
-                           'different.')
-    return B.dtype(a.lr_part)
+def dtype(a): return B.dtype(a.lr_part)
 
 
-# Get diagonals of SPDs.
+# Get diagonals of `Matrix`s.
 
-@B.diag.extend(SPD)
+@B.diag.extend(Dense)
 def diag(a): return B.diag(dense(a))
 
 
@@ -300,31 +338,35 @@ def diag(a): return a.diag
 
 
 @B.diag.extend(LowRank)
-def diag(a): return B.sum(a.vecs ** 2 * a.vals[None, :], 1)
+def diag(a):
+    # TODO: Correctly handle shape here.
+    return B.sum(a.left * a.right * a.scales[None, :], 1)
 
 
-@B.diag.extend(ConstantSPD)
-def diag(a): return a.constant * B.ones([a.size], dtype=B.dtype(a))
+@B.diag.extend(Constant)
+def diag(a):
+    # TODO: Correctly handle shape here.
+    return a.constant * B.ones([a.num_rows], dtype=B.dtype(a))
 
 
 @B.diag.extend(Woodbury)
 def diag(a): return B.diag(a.lr_part) + B.diag(a.diag_part)
 
 
-# Cholesky decompose SPDs.
+# Cholesky decompose `Matrix`s.
 
-@B.cholesky.extend(SPD)
+@B.cholesky.extend(Dense)
 def cholesky(a): return a.cholesky()
 
 
-# Multiply Cholesky decompositions of SPDs.
+# Multiply Cholesky decompositions of `Matrix`s.
 
-@B.cholesky_mul.extend(SPD, object)
+@B.cholesky_mul.extend(Dense, object)
 def cholesky_mul(a, b):
     """Multiply the Cholesky decomposition of `a` with `b`.
 
     Args:
-        a (:class:`.spd.SPD`): Matrix to compute Cholesky decomposition of.
+        a (:class:`.matrix.Dense`): Matrix to compute Cholesky decomposition of.
         b (tensor): Matrix to multiply with.
 
     Returns:
@@ -337,7 +379,7 @@ def cholesky_mul(a, b):
 def cholesky_mul(a, b): return b * a.diag[:, None] ** .5
 
 
-# Compute products with inverses of SPDs.
+# Compute products with inverses of `Matrix`s.
 
 @B.inv_prod.extend(object, object)
 def inv_prod(a, b):
@@ -363,26 +405,26 @@ def inv_prod(a, b):
     raise RuntimeError('Matrix is singular.')
 
 
-# Compute the log-determinant of SPDs.
+# Compute the log-determinant of `Matrix`s.
 
-@B.logdet.extend(SPD)
+@B.logdet.extend(Dense)
 def logdet(a): return a.logdet()
 
 
-# Compute roots of SPDs.
+# Compute roots of `Matrix`s.
 
-@B.root.extend(SPD)
+@B.root.extend(Dense)
 def root(a): return a.root()
 
 
 # Compute Mahalanobis distances.
 
-@B.mah_dist2.extend(SPD, object, object)
+@B.mah_dist2.extend(Dense, object, object)
 def mah_dist2(a, b, c, sum=True):
     """Compute the square of the Mahalanobis distance.
 
     Args:
-        a (:class:`.spd.SPD`): Covariance matrix.
+        a (:class:`.matrix.Dense`): Covariance matrix.
         b (tensor): First matrix in distance.
         c (tensor, optional): Second matrix in distance. If omitted, `b` is
             assumed to be the differences.
@@ -395,7 +437,7 @@ def mah_dist2(a, b, c, sum=True):
     return B.mah_dist2(a, b - c, sum=sum)
 
 
-@B.mah_dist2.extend(SPD, object)
+@B.mah_dist2.extend(Dense, object)
 def mah_dist2(a, diff, sum=True):
     iL_diff = B.trisolve(B.cholesky(a), diff)
     return B.sum(iL_diff ** 2) if sum else B.sum(iL_diff ** 2, axis=0)
@@ -424,10 +466,10 @@ def qf(a, b):
         c (tensor, optional): `c`. Defaults to `b`.
 
     Returns:
-        :class:`.spd.SPD`: Quadratic form.
+        :class:`.matrix.Dense`: Quadratic form.
     """
     prod = B.trisolve(B.cholesky(a), b)
-    return spd(B.matmul(prod, prod, tr_a=True))
+    return matrix(B.matmul(prod, prod, tr_a=True))
 
 
 @B.qf.extend(object, object, object)
@@ -463,7 +505,7 @@ def qf_diag(a, b):
     """Compute the diagonal of `transpose(b) inv(a) c`.
 
     Args:
-        a (:class:`.spd.SPD`): Covariance matrix.
+        a (:class:`.matrix.Dense`): Covariance matrix.
         b (tensor): `b`.
         c (tensor, optional): `c`. Defaults to `b`.
 
@@ -500,7 +542,7 @@ def qf_diag(a, b, c=None):
     raise RuntimeError('Matrix is singular.')
 
 
-# Compute ratio's between SPDs.
+# Compute ratios between `Matrix`s.
 
 @B.ratio.extend(object, object)
 def ratio(a, b):
@@ -516,9 +558,10 @@ def ratio(a, b):
     return B.mah_dist2(b, B.cholesky(a), sum=True)
 
 
-@B.ratio.extend(LowRank, SPD)
+@B.ratio.extend(LowRank, Dense)
 def ratio(a, b):
-    return B.mah_dist2(b, a.vecs * a.vals[None, :] ** .5, sum=True)
+    # TODO: Check that `b` is indeed PSD.
+    return B.mah_dist2(b, a.left * a.scales[None, :] ** .5, sum=True)
 
 
 @B.ratio.extend(Diagonal, Diagonal)
@@ -526,19 +569,19 @@ def ratio(a, b):
     return B.sum(a.diag / b.diag)
 
 
-# Extend LAB to work with SPDs.
+# Extend LAB to work with `Matrix`s.
 
-B.add.extend(SPD, object)(add)
-B.add.extend(object, SPD)(add)
-B.add.extend(SPD, SPD)(add)
+B.add.extend(Dense, object)(add)
+B.add.extend(object, Dense)(add)
+B.add.extend(Dense, Dense)(add)
 
-B.multiply.extend(SPD, object)(mul)
-B.multiply.extend(object, SPD)(mul)
-B.multiply.extend(SPD, SPD)(mul)
+B.multiply.extend(Dense, object)(mul)
+B.multiply.extend(object, Dense)(mul)
+B.multiply.extend(Dense, Dense)(mul)
 
 
-@B.transpose.extend(SPD)
-def transpose(a): return a
+@B.transpose.extend(Dense)
+def transpose(a): return matrix(B.transpose(dense(a)))
 
 
 @B.subtract.extend(object, object)
@@ -549,9 +592,9 @@ def subtract(a, b): return B.add(a, -b)
 def divide(a, b): return B.multiply(a, 1 / b)
 
 
-# Get shapes of SPDs.
+# Get shapes of `Matrix`s.
 
-@B.shape.extend(SPD)
+@B.shape.extend(Dense)
 def shape(a): return B.shape(dense(a))
 
 
@@ -560,34 +603,36 @@ def shape(a): return B.shape(a.diag)[0], B.shape(a.diag)[0]
 
 
 @B.shape.extend(LowRank)
-def shape(a): return B.shape(a.vecs)[0], B.shape(a.vecs)[0]
+def shape(a): return B.shape(a.left)[0], B.shape(a.right)[0]
 
 
-@B.shape.extend(ConstantSPD)
-def shape(a): return a.size, a.size
+@B.shape.extend(Constant)
+def shape(a):
+    cols = a.num_rows if a.num_cols is None else a.num_cols
+    return a.num_rows, cols
 
 
 @B.shape.extend(Woodbury)
 def shape(a): return B.shape(a.lr_part)
 
 
-# Setup promotion and conversion of SPDs as a fallback mechanism.
+# Setup promotion and conversion of `Matrix`s as a fallback mechanism.
 
-B.add_promotion_rule(B.Numeric, SPD, B.Numeric)
-B.convert.extend(SPD, B.Numeric)(lambda x, _: dense(x))
-
-
-# Simplify addiction and multiplication between SPDs.
-
-@mul.extend(SPD, SPD)
-def mul(a, b): return SPD(dense(a) * dense(b))
+B.add_promotion_rule(B.Numeric, Dense, B.Numeric)
+B.convert.extend(Dense, B.Numeric)(lambda x, _: dense(x))
 
 
-@mul.extend(SPD, Diagonal)
+# Simplify addiction and multiplication between `Matrix`s.
+
+@mul.extend(Dense, Dense)
+def mul(a, b): return Dense(dense(a) * dense(b))
+
+
+@mul.extend(Dense, Diagonal)
 def mul(a, b): return Diagonal(B.diag(a) * b.diag)
 
 
-@mul.extend(Diagonal, SPD)
+@mul.extend(Diagonal, Dense)
 def mul(a, b): return Diagonal(a.diag * B.diag(b))
 
 
@@ -597,21 +642,20 @@ def mul(a, b): return Diagonal(a.diag * b.diag)
 
 @mul.extend(LowRank, LowRank)
 def mul(a, b):
-    # Compute vectors of output.
-    a_vecs = B.unstack(a.vecs, axis=1)
-    b_vecs = B.unstack(b.vecs, axis=1)
-    out_vecs = [a_vec * b_vec for a_vec, b_vec in product(a_vecs, b_vecs)]
+    def cartesian_mul(xs, ys):
+        return [x * y for x, y in product(xs, ys)]
 
-    # Compute values of outputs.
-    a_vals = B.unstack(a.vals, axis=0)
-    b_vals = B.unstack(b.vals, axis=0)
-    out_vals = [a_val * b_val for a_val, b_val in product(a_vals, b_vals)]
+    left = B.stack(cartesian_mul(B.unstack(a.left, axis=1),
+                                 B.unstack(b.left, axis=1)), axis=1)
+    right = B.stack(cartesian_mul(B.unstack(a.right, axis=1),
+                                  B.unstack(b.right, axis=1)), axis=1)
+    scales = B.stack(cartesian_mul(B.unstack(a.scales, axis=0),
+                                   B.unstack(b.scales, axis=0)), axis=0)
+    return LowRank(left=left, right=right, scales=scales)
 
-    return LowRank(B.stack(out_vecs, axis=1), B.stack(out_vals, axis=0))
 
-
-@add.extend(SPD, SPD)
-def add(a, b): return SPD(dense(a) + dense(b))
+@add.extend(Dense, Dense)
+def add(a, b): return Dense(dense(a) + dense(b))
 
 
 @add.extend(Diagonal, Diagonal)
@@ -619,59 +663,60 @@ def add(a, b): return Diagonal(a.diag + b.diag)
 
 
 @add.extend(LowRank, LowRank)
-def add(a, b): return LowRank(B.concat([a.vecs, b.vecs], axis=1),
-                              B.concat([a.vals, b.vals], axis=0))
+def add(a, b): return LowRank(left=B.concat([a.left, b.left], axis=1),
+                              right=B.concat([a.right, b.right], axis=1),
+                              scales=B.concat([a.scales, b.scales], axis=0))
 
 
-# Simplify addiction and multiplication between SPDs and other objects.
+# Simplify addiction and multiplication between `Matrix`s and other objects.
 
 
-@mul.extend(object, SPD)
+@mul.extend(object, Dense)
 def mul(a, b): return mul(b, a)
 
 
-@mul.extend(SPD, object)
-def mul(a, b): return mul(a, mul(OneSPD(a), b))
+@mul.extend(Dense, object)
+def mul(a, b): return mul(a, mul(One(a), b))
 
 
-@add.extend(object, SPD)
+@add.extend(object, Dense)
 def add(a, b): return add(b, a)
 
 
-@add.extend(SPD, object)
-def add(a, b): return add(a, mul(OneSPD(a), b))
+@add.extend(Dense, object)
+def add(a, b): return add(a, mul(One(a), b))
 
 
 # Immediately resolve scaled elements.
 
-@mul.extend(object, OneSPD)
+@mul.extend(object, One)
 def mul(a, b): return mul(b, a)
 
 
-@mul.extend(OneSPD, object)
+@mul.extend(One, object)
 def mul(a, b):
     if B.rank(b) == 0:
         if isinstance(b, Number) and b == 0:
-            return ZeroSPD(a)
+            return Zero(a)
         elif isinstance(b, Number) and b == 1:
             return a
         else:
-            return ConstantSPD(b, a)
+            return Constant(b, a)
     else:
-        return spd(dense(a) * b)
+        return matrix(dense(a) * b)
 
 
 # Take over construction of ones: construction requires arguments.
 
-@add.extend(object, ZeroSPD)
+@add.extend(object, Zero)
 def add(a, b): return add(b, a)
 
 
-@add.extend(ZeroSPD, object)
-def add(a, b): return mul(b, OneSPD(a))
+@add.extend(Zero, object)
+def add(a, b): return mul(b, One(a))
 
 
-@add.extend(ZeroSPD, ZeroSPD)
+@add.extend(Zero, Zero)
 def add(a, b): return a
 
 
@@ -708,11 +753,11 @@ def add(a, b): return Woodbury(a.lr_part + b.lr_part,
 
 # Expand out multiplication with Woodbury matrices.
 
-@mul.extend(SPD, Woodbury, precedence=1)
+@mul.extend(Dense, Woodbury, precedence=1)
 def mul(a, b): return add(mul(a, b.lr_part), mul(a, b.diag_part))
 
 
-@mul.extend(Woodbury, SPD, precedence=1)
+@mul.extend(Woodbury, Dense, precedence=1)
 def mul(a, b): return add(mul(a.lr_part, b), mul(a.diag_part, b))
 
 

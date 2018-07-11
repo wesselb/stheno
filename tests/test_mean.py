@@ -15,7 +15,7 @@ from stheno.kernel import EQ
 from stheno.mean import TensorProductMean, ZeroMean, Mean, OneMean, \
     PosteriorCrossMean, PosteriorMean, VariationalPosteriorCrossMean
 from stheno.cache import Cache
-from stheno.spd import spd
+from stheno.matrix import matrix
 # noinspection PyUnresolvedReferences
 from . import eq, neq, lt, le, ge, gt, raises, call, ok, eprint
 
@@ -73,7 +73,7 @@ def test_posterior_mean():
     pcm = PosteriorCrossMean(
         TensorProductMean(lambda x: x),
         TensorProductMean(lambda x: x ** 2),
-        EQ(), z, spd(2 * EQ()(z)), np.random.randn(10)
+        EQ(), z, matrix(2 * EQ()(z)), np.random.randn(10)
     )
 
     # Check name.

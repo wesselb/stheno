@@ -11,7 +11,7 @@ from stheno.kernel import EQ, RQ, Matern12, Matern32, Matern52, Delta, Kernel, \
     Linear, OneKernel, ZeroKernel, PosteriorCrossKernel, PosteriorKernel, \
     ShiftedKernel, TensorProductKernel, VariationalPosteriorCrossKernel
 from stheno.random import GPPrimitive
-from stheno.spd import spd, dense
+from stheno.matrix import matrix, dense
 # noinspection PyUnresolvedReferences
 from tests import ok
 from . import eq, raises, ok, allclose, assert_allclose
@@ -317,7 +317,7 @@ def test_linear():
 def test_posterior_crosskernel():
     k = PosteriorCrossKernel(
         EQ(), EQ(), EQ(),
-        np.random.randn(5, 2), spd(EQ()(np.random.randn(5, 1)))
+        np.random.randn(5, 2), matrix(EQ()(np.random.randn(5, 1)))
     )
     x1 = np.random.randn(10, 2)
     x2 = np.random.randn(5, 2)
@@ -344,8 +344,8 @@ def test_variational_posterior_crosskernel():
     k = VariationalPosteriorCrossKernel(
         EQ(), EQ(), EQ(),
         np.random.randn(5, 2),
-        2 * spd(EQ()(np.random.randn(5, 1))),
-        spd(EQ()(np.random.randn(5, 1)))
+        2 * matrix(EQ()(np.random.randn(5, 1))),
+        matrix(EQ()(np.random.randn(5, 1)))
     )
     x1 = np.random.randn(10, 2)
     x2 = np.random.randn(5, 2)
@@ -612,23 +612,23 @@ def test_derivative():
 
     # Test derivative with respect to first input.
     ref = s.run(-dense(k(x1, x2)) * (x1 - B.transpose(x2)))
-    yield assert_allclose, s.run(k.diff(0, None)(x1, x2)), ref
+    yield assert_allclose, s.run(dense(k.diff(0, None)(x1, x2))), ref
     ref = s.run(-dense(k(x1)) * (x1 - B.transpose(x1)))
-    yield assert_allclose, s.run(k.diff(0, None)(x1)), ref
+    yield assert_allclose, s.run(dense(k.diff(0, None)(x1))), ref
 
     # Test derivative with respect to second input.
     ref = s.run(-dense(k(x1, x2)) * (B.transpose(x2) - x1))
-    yield assert_allclose, s.run(k.diff(None, 0)(x1, x2)), ref
+    yield assert_allclose, s.run(dense(k.diff(None, 0)(x1, x2))), ref
     ref = s.run(-dense(k(x1)) * (B.transpose(x1) - x1))
-    yield assert_allclose, s.run(k.diff(None, 0)(x1)), ref
+    yield assert_allclose, s.run(dense(k.diff(None, 0)(x1))), ref
 
     # Test derivative with respect to both inputs.
     ref = s.run(dense(k(x1, x2)) * (1 - (x1 - B.transpose(x2)) ** 2))
-    yield assert_allclose, s.run(k.diff(0, 0)(x1, x2)), ref
-    yield assert_allclose, s.run(k.diff(0)(x1, x2)), ref
+    yield assert_allclose, s.run(dense(k.diff(0, 0)(x1, x2))), ref
+    yield assert_allclose, s.run(dense(k.diff(0)(x1, x2))), ref
     ref = s.run(dense(k(x1)) * (1 - (x1 - B.transpose(x1)) ** 2))
-    yield assert_allclose, s.run(k.diff(0, 0)(x1)), ref
-    yield assert_allclose, s.run(k.diff(0)(x1)), ref
+    yield assert_allclose, s.run(dense(k.diff(0, 0)(x1))), ref
+    yield assert_allclose, s.run(dense(k.diff(0)(x1))), ref
 
     # Test derivative of kernel Linear.
     k = Linear()
@@ -637,23 +637,23 @@ def test_derivative():
 
     # Test derivative with respect to first input.
     ref = s.run(B.ones((10, 5), dtype=np.float64) * B.transpose(x2))
-    yield assert_allclose, s.run(k.diff(0, None)(x1, x2)), ref
+    yield assert_allclose, s.run(dense(k.diff(0, None)(x1, x2))), ref
     ref = s.run(B.ones((10, 10), dtype=np.float64) * B.transpose(x1))
-    yield assert_allclose, s.run(k.diff(0, None)(x1)), ref
+    yield assert_allclose, s.run(dense(k.diff(0, None)(x1))), ref
 
     # Test derivative with respect to second input.
     ref = s.run(B.ones((10, 5), dtype=np.float64) * x1)
-    yield assert_allclose, s.run(k.diff(None, 0)(x1, x2)), ref
+    yield assert_allclose, s.run(dense(k.diff(None, 0)(x1, x2))), ref
     ref = s.run(B.ones((10, 10), dtype=np.float64) * x1)
-    yield assert_allclose, s.run(k.diff(None, 0)(x1)), ref
+    yield assert_allclose, s.run(dense(k.diff(None, 0)(x1))), ref
 
     # Test derivative with respect to both inputs.
     ref = s.run(B.ones((10, 5), dtype=np.float64))
-    yield assert_allclose, s.run(k.diff(0, 0)(x1, x2)), ref
-    yield assert_allclose, s.run(k.diff(0)(x1, x2)), ref
+    yield assert_allclose, s.run(dense(k.diff(0, 0)(x1, x2))), ref
+    yield assert_allclose, s.run(dense(k.diff(0)(x1, x2))), ref
     ref = s.run(B.ones((10, 10), dtype=np.float64))
-    yield assert_allclose, s.run(k.diff(0, 0)(x1)), ref
-    yield assert_allclose, s.run(k.diff(0)(x1)), ref
+    yield assert_allclose, s.run(dense(k.diff(0, 0)(x1))), ref
+    yield assert_allclose, s.run(dense(k.diff(0)(x1))), ref
 
     s.close()
     B.backend_to_np()

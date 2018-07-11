@@ -10,7 +10,7 @@ from plum import Dispatcher, Self, Referentiable, type_parameter
 from .cache import cache, Cache
 from .input import At, MultiInput
 from .kernel import Kernel
-from .spd import dense
+from .matrix import dense, Dense
 
 __all__ = ['MultiOutputKernel']
 
@@ -65,9 +65,9 @@ class MultiOutputKernel(Kernel, Referentiable):
     @_dispatch(MultiInput, MultiInput, Cache)
     @cache
     def __call__(self, x, y, B):
-        return B.concat([B.concat([dense(self(xi, yi, B))
-                                   for yi in y.get()], axis=1)
-                         for xi in x.get()], axis=0)
+        return Dense(B.concat([B.concat([dense(self(xi, yi, B))
+                                         for yi in y.get()], axis=1)
+                               for xi in x.get()], axis=0))
 
     def __str__(self):
         ks = [str(self.kernels[p]) for p in self.ps]

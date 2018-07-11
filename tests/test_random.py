@@ -10,7 +10,7 @@ from lab import B
 from stheno.kernel import EQ, RQ, ScaledKernel
 from stheno.mean import TensorProductMean, ZeroMean, ScaledMean
 from stheno.random import Normal, GPPrimitive, Normal1D
-from stheno.spd import UniformlyDiagonal, Diagonal
+from stheno.matrix import UniformlyDiagonal, Diagonal
 # noinspection PyUnresolvedReferences
 from . import eq, neq, lt, le, ge, gt, raises, call, ok, eprint
 
