@@ -10,7 +10,7 @@ from lab import B
 from stheno.kernel import EQ, RQ, ScaledKernel
 from stheno.mean import TensorProductMean, ZeroMean, ScaledMean
 from stheno.random import Normal, GPPrimitive, Normal1D
-from stheno.spd import UniformDiagonal, Diagonal
+from stheno.spd import UniformlyDiagonal, Diagonal
 # noinspection PyUnresolvedReferences
 from . import eq, neq, lt, le, ge, gt, raises, call, ok, eprint
 
@@ -73,7 +73,7 @@ def test_normal():
     var_diag_scale = np.random.randn() ** 2
     var = np.eye(3) * var_diag_scale
     dist1 = Normal(var, mean)
-    dist2 = Normal(UniformDiagonal(var_diag_scale, 3), mean)
+    dist2 = Normal(UniformlyDiagonal(var_diag_scale, 3), mean)
     samples = dist1.sample(100)
     yield ok, np.allclose(dist1.logpdf(samples),
                           dist2.logpdf(samples)), 'logpdf'
@@ -98,7 +98,7 @@ def test_normal():
     yield le, np.abs(np.std(dist.sample(1000, noise=2)) ** 2 - 5), 5e-2, \
           'diag 2'
 
-    dist = Normal(UniformDiagonal(3, 200))
+    dist = Normal(UniformlyDiagonal(3, 200))
     yield le, np.abs(np.std(dist.sample(1000)) ** 2 - 3), 5e-2, 'unif'
     yield le, np.abs(np.std(dist.sample(1000, noise=2)) ** 2 - 5), 5e-2, \
           'unif 2'
@@ -107,12 +107,12 @@ def test_normal():
 def test_normal_1d():
     # Test broadcasting.
     d = Normal1D(1, 0)
-    yield eq, type(d.spd), UniformDiagonal
+    yield eq, type(d.spd), UniformlyDiagonal
     yield eq, B.shape(d.spd), (1, 1)
     yield eq, B.shape(d.mean), (1, 1)
 
     d = Normal1D(1, [0, 0, 0])
-    yield eq, type(d.spd), UniformDiagonal
+    yield eq, type(d.spd), UniformlyDiagonal
     yield eq, B.shape(d.spd), (3, 3)
     yield eq, B.shape(d.mean), (3, 1)
 
@@ -127,7 +127,7 @@ def test_normal_1d():
     yield eq, B.shape(d.mean), (3, 1)
 
     d = Normal1D(1)
-    yield eq, type(d.spd), UniformDiagonal
+    yield eq, type(d.spd), UniformlyDiagonal
     yield eq, B.shape(d.spd), (1, 1)
     yield eq, B.shape(d.mean), (1, 1)
 

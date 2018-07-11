@@ -21,7 +21,10 @@ neq = assert_not_equal
 ge = assert_greater_equal
 gt = assert_greater
 raises = assert_raises
-ok = ok_
+
+
+def ok(result, *args):
+    return ok_(result)
 
 
 def call(f, method, args=(), res=True):

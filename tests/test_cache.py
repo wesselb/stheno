@@ -33,20 +33,8 @@ def test_lab_cache():
 def test_ones_zeros():
     c = Cache()
 
-    # Test that ones and zeros are cached and that all signatures work.
-    k = ZeroKernel()
-    yield eq, id(dense(k(np.random.randn(10, 10), c))), \
-          id(dense(k(np.random.randn(10, 10), c)))
-    yield neq, id(k(np.random.randn(10, 10), c)), \
-          id(k(np.random.randn(5, 10), c))
-    yield eq, id(k(1, c)), id(k(1, c))
-
-    k = OneKernel()
-    yield eq, id(dense(k(np.random.randn(10, 10), c))), \
-          id(dense(k(np.random.randn(10, 10), c)))
-    yield neq, id(k(np.random.randn(10, 10), c)), \
-          id(k(np.random.randn(5, 10), c))
-    yield eq, id(k(1, c)), id(k(1, c))
+    # Nothing to check for kernels:  ones and zeros are represented in a
+    # structured way.
 
     # Test that ones and zeros are cached and that all signatures work.
     m = ZeroMean()

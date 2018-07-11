@@ -437,13 +437,9 @@ def test_case_blr():
     f = slope * (lambda x: x) + intercept
     y = f + 1e-2 * GP(Delta(), graph=model)
 
-    # Sample true slope and intercept.
-    true_slope = slope(0).sample()
-    true_intercept = intercept.condition(At(slope)(0), true_slope)(0).sample()
-
-    # Sample observations.
-    y_obs = y.condition(At(intercept)(0), true_intercept)(x).sample()
-    model.revert_prior()
+    # Sample observations, true slope, and intercept.
+    y_obs, true_slope, true_intercept = \
+        model.sample(At(y)(x), At(slope)(0), At(intercept)(0))
 
     # Predict.
     model.condition(At(y)(x), y_obs)

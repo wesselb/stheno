@@ -19,7 +19,7 @@ from .cache import cache, Cache, uprank
 from .field import add, mul, broadcast, apply_optional_arg, get_field, \
     Formatter, need_parens
 from .input import Input
-from .spd import SPD, Diagonal, LowRank, UniformDiagonal, OneSPD, ZeroSPD, \
+from .spd import SPD, Diagonal, LowRank, UniformlyDiagonal, OneSPD, ZeroSPD, \
     dense
 
 __all__ = ['Kernel', 'OneKernel', 'ZeroKernel', 'ScaledKernel', 'EQ', 'RQ',
@@ -180,14 +180,16 @@ class OneKernel(Kernel, OneFunction, Referentiable):
     @cache
     @uprank
     def __call__(self, x, y, B):
-        out = B.ones((B.shape(x)[0], B.shape(y)[0]), dtype=B.dtype(x))
-        return OneSPD(out) if x is y else out
+        if x is y:
+            return OneSPD(B.dtype(x), B.shape(x)[0])
+        else:
+            return B.ones([B.shape(x)[0], B.shape(y)[0]], dtype=B.dtype(x))
 
     @_dispatch(B.Numeric, B.Numeric, Cache)
     @cache
     @uprank
     def elwise(self, x, y, B):
-        return B.ones((B.shape(x)[0], 1), dtype=B.dtype(x))
+        return B.ones([B.shape(x)[0], 1], dtype=B.dtype(x))
 
     @property
     def _stationary(self):
@@ -215,14 +217,16 @@ class ZeroKernel(Kernel, ZeroFunction, Referentiable):
     @cache
     @uprank
     def __call__(self, x, y, B):
-        out = B.zeros((B.shape(x)[0], B.shape(y)[0]), dtype=B.dtype(x))
-        return ZeroSPD(out) if x is y else out
+        if x is y:
+            return ZeroSPD(B.dtype(x), B.shape(x)[0])
+        else:
+            return B.zeros([B.shape(x)[0], B.shape(y)[0]], dtype=B.dtype(x))
 
     @_dispatch(B.Numeric, B.Numeric, Cache)
     @cache
     @uprank
     def elwise(self, x, y, B):
-        return B.zeros((B.shape(x)[0], 1), dtype=B.dtype(x))
+        return B.zeros([B.shape(x)[0], 1], dtype=B.dtype(x))
 
     @property
     def _stationary(self):
@@ -798,8 +802,8 @@ class Delta(Kernel, PrimitiveFunction, Referentiable):
     @uprank
     def __call__(self, x, y, B):
         if x is y:
-            return UniformDiagonal(B.cast(1, dtype=B.dtype(x)),
-                                   B.shape(x)[0])
+            return UniformlyDiagonal(B.cast(1, dtype=B.dtype(x)),
+                                     B.shape(x)[0])
         else:
             return self._compute(B.pw_dists2(x, y), B)
 

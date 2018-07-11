@@ -611,22 +611,22 @@ def test_derivative():
     x2 = B.array(np.random.randn(5, 1))
 
     # Test derivative with respect to first input.
-    ref = s.run(-k(x1, x2) * (x1 - B.transpose(x2)))
+    ref = s.run(-dense(k(x1, x2)) * (x1 - B.transpose(x2)))
     yield assert_allclose, s.run(k.diff(0, None)(x1, x2)), ref
-    ref = s.run(dense(-k(x1) * (x1 - B.transpose(x1))))
+    ref = s.run(-dense(k(x1)) * (x1 - B.transpose(x1)))
     yield assert_allclose, s.run(k.diff(0, None)(x1)), ref
 
     # Test derivative with respect to second input.
-    ref = s.run(-k(x1, x2) * (B.transpose(x2) - x1))
+    ref = s.run(-dense(k(x1, x2)) * (B.transpose(x2) - x1))
     yield assert_allclose, s.run(k.diff(None, 0)(x1, x2)), ref
-    ref = s.run(dense(-k(x1) * (B.transpose(x1) - x1)))
+    ref = s.run(-dense(k(x1)) * (B.transpose(x1) - x1))
     yield assert_allclose, s.run(k.diff(None, 0)(x1)), ref
 
     # Test derivative with respect to both inputs.
-    ref = s.run(k(x1, x2) * (1 - (x1 - B.transpose(x2)) ** 2))
+    ref = s.run(dense(k(x1, x2)) * (1 - (x1 - B.transpose(x2)) ** 2))
     yield assert_allclose, s.run(k.diff(0, 0)(x1, x2)), ref
     yield assert_allclose, s.run(k.diff(0)(x1, x2)), ref
-    ref = s.run(dense(k(x1) * (1 - (x1 - B.transpose(x1)) ** 2)))
+    ref = s.run(dense(k(x1)) * (1 - (x1 - B.transpose(x1)) ** 2))
     yield assert_allclose, s.run(k.diff(0, 0)(x1)), ref
     yield assert_allclose, s.run(k.diff(0)(x1)), ref
 

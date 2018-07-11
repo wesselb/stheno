@@ -3,13 +3,16 @@
 from __future__ import print_function, division, absolute_import
 
 import logging
+from itertools import product
+from numbers import Number
 
 from lab import B
 from plum import Referentiable, Self, Dispatcher
 
-from .field import Element, OneElement, ZeroElement, mul, add, get_field
+from .field import Element, OneElement, ZeroElement, mul, add, get_field, \
+    ScaledElement
 
-__all__ = ['spd', 'SPD', 'LowRank', 'Diagonal', 'UniformDiagonal', 'OneSPD',
+__all__ = ['spd', 'SPD', 'LowRank', 'Diagonal', 'UniformlyDiagonal', 'OneSPD',
            'ZeroSPD', 'dense', 'Woodbury']
 
 log = logging.getLogger(__name__)
@@ -58,18 +61,13 @@ class SPD(Element, Referentiable):
             self._root = B.matmul(vecs * vals[None, :] ** .5, vecs, tr_b=True)
         return self._root
 
+    def __neg__(self):
+        return mul(B.cast(-1, dtype=B.dtype(self)), self)
+
 
 # Register field.
 @get_field.extend(SPD)
 def get_field(a): return SPD
-
-
-class OneSPD(SPD, OneElement):
-    """Dense matrix full of ones."""
-
-
-class ZeroSPD(SPD, ZeroElement):
-    """Dense matrix full of ones."""
 
 
 class Diagonal(SPD, Referentiable):
@@ -94,7 +92,7 @@ class Diagonal(SPD, Referentiable):
         return B.cholesky(self)
 
 
-class UniformDiagonal(Diagonal, Referentiable):
+class UniformlyDiagonal(Diagonal, Referentiable):
     """Uniformly diagonal symmetric positive-definite matrix.
 
     Args:
@@ -111,18 +109,88 @@ class UniformDiagonal(Diagonal, Referentiable):
 class LowRank(SPD, Referentiable):
     """Low-rank symmetric positive-definite matrix.
 
+    The low-rank matrix is constructed via `vecs diag(vals) transpose(vecs)`.
+
     Args:
-        inner (tensor): The matrix such that `inner * inner'` equals this
-        matrix.
+        vecs (tensor): `vecs`.
+        vals (tensor, optional): `vals`. Defaults to ones.
     """
     _dispatch = Dispatcher(in_class=Self)
 
-    def __init__(self, inner):
+    def __init__(self, vecs, vals=None):
         SPD.__init__(self, None)
-        self.inner = inner
+        self._vecs = vecs
+        self._vals = vals
+
+    @property
+    def vals(self):
+        if self._vals is None:
+            self._vals = B.ones([B.shape(self.vecs)[1]],
+                                dtype=B.dtype(self.vecs))
+        return self._vals
+
+    @property
+    def vecs(self):
+        return self._vecs
 
     def logdet(self):
         raise RuntimeError('This matrix is singular.')
+
+
+class ConstantSPD(LowRank, Referentiable):
+    """Constant symmetric positive-definite matrix.
+
+    Args:
+        constant (tensor): Constant of the matrix.
+        size (int): Size of the matrix.
+    """
+    _dispatch = Dispatcher(in_class=Self)
+
+    @_dispatch(object, object)
+    def __init__(self, constant, size):
+        LowRank.__init__(self, None)
+        self.constant = constant
+        self.size = size
+
+    @_dispatch(object, SPD)
+    def __init__(self, constant, reference):
+        ConstantSPD.__init__(self, constant, B.shape(reference)[0])
+
+    @property
+    def vals(self):
+        return B.expand_dims(self.constant, axis=0)
+
+    @property
+    def vecs(self):
+        if self._vecs is None:
+            self._vecs = B.ones([self.size, 1], dtype=B.dtype(self.constant))
+        return self._vecs
+
+
+class OneSPD(ConstantSPD, OneElement, Referentiable):
+    """Dense matrix full of ones."""
+    _dispatch = Dispatcher(in_class=Self)
+
+    @_dispatch(B.DType, object)
+    def __init__(self, dtype, size):
+        ConstantSPD.__init__(self, B.cast(1, dtype=dtype), size)
+
+    @_dispatch(SPD)
+    def __init__(self, reference):
+        OneSPD.__init__(self, B.dtype(reference), B.shape(reference)[0])
+
+
+class ZeroSPD(ConstantSPD, ZeroElement, Referentiable):
+    """Dense matrix full of ones."""
+    _dispatch = Dispatcher(in_class=Self)
+
+    @_dispatch(B.DType, object)
+    def __init__(self, dtype, size):
+        ConstantSPD.__init__(self, B.cast(0, dtype=dtype), size)
+
+    @_dispatch(SPD)
+    def __init__(self, reference):
+        ZeroSPD.__init__(self, B.dtype(reference), B.shape(reference)[0])
 
 
 class Woodbury(SPD, Referentiable):
@@ -173,12 +241,20 @@ def dense(a):
     return a.mat
 
 
+# @_dispatch(ScaledSPD)
+# def dense(a): return a.scale * dense(a[0])
+
+
 @_dispatch(Diagonal)
 def dense(a): return B.diag(a.diag)
 
 
 @_dispatch(LowRank)
-def dense(a): return B.matmul(a.inner, a.inner, tr_b=True)
+def dense(a): return B.matmul(a.vecs * a.vals[None, :], a.vecs, tr_b=True)
+
+
+@_dispatch(ConstantSPD)
+def dense(a): return a.constant * B.ones([a.size, a.size], dtype=B.dtype(a))
 
 
 @_dispatch(Woodbury)
@@ -200,7 +276,11 @@ def dtype(a): return B.dtype(a.diag)
 
 
 @B.dtype.extend(LowRank)
-def dtype(a): return B.dtype(a.inner)
+def dtype(a): return B.dtype(a.vecs)
+
+
+@B.dtype.extend(ConstantSPD)
+def dtype(a): return B.dtype(a.constant)
 
 
 @B.dtype.extend(Woodbury)
@@ -222,14 +302,18 @@ def diag(a): return a.diag
 
 
 @B.diag.extend(LowRank)
-def diag(a): return B.sum(a.inner ** 2, 1)
+def diag(a): return B.sum(a.vecs ** 2 * a.vals[None, :], 1)
+
+
+@B.diag.extend(ConstantSPD)
+def diag(a): return a.constant * B.ones([a.size], dtype=B.dtype(a))
 
 
 @B.diag.extend(Woodbury)
 def diag(a): return B.diag(a.lr_part) + B.diag(a.diag_part)
 
 
-# Choleksy decompose SPDs.
+# Cholesky decompose SPDs.
 
 @B.cholesky.extend(SPD)
 def cholesky(a): return a.cholesky()
@@ -436,7 +520,7 @@ def ratio(a, b):
 
 @B.ratio.extend(LowRank, SPD)
 def ratio(a, b):
-    return B.mah_dist2(b, a.inner, sum=True)
+    return B.mah_dist2(b, a.vecs * a.vals[None, :] ** .5, sum=True)
 
 
 @B.ratio.extend(Diagonal, Diagonal)
@@ -446,12 +530,12 @@ def ratio(a, b):
 
 # Extend LAB to work with SPDs.
 
-B.add.extend(SPD, B.Numeric)(add)
-B.add.extend(B.Numeric, SPD)(add)
+B.add.extend(SPD, object)(add)
+B.add.extend(object, SPD)(add)
 B.add.extend(SPD, SPD)(add)
 
-B.multiply.extend(SPD, B.Numeric)(mul)
-B.multiply.extend(B.Numeric, SPD)(mul)
+B.multiply.extend(SPD, object)(mul)
+B.multiply.extend(object, SPD)(mul)
 B.multiply.extend(SPD, SPD)(mul)
 
 
@@ -459,11 +543,11 @@ B.multiply.extend(SPD, SPD)(mul)
 def transpose(a): return a
 
 
-@B.subtract.extend({B.Numeric, SPD}, {B.Numeric, SPD})
+@B.subtract.extend(object, object)
 def subtract(a, b): return B.add(a, -b)
 
 
-@B.divide.extend({B.Numeric, SPD}, {B.Numeric, SPD})
+@B.divide.extend(object, object)
 def divide(a, b): return B.multiply(a, 1 / b)
 
 
@@ -478,7 +562,11 @@ def shape(a): return B.shape(a.diag)[0], B.shape(a.diag)[0]
 
 
 @B.shape.extend(LowRank)
-def shape(a): return B.shape(a.inner)[0], B.shape(a.inner)[0]
+def shape(a): return B.shape(a.vecs)[0], B.shape(a.vecs)[0]
+
+
+@B.shape.extend(ConstantSPD)
+def shape(a): return a.size, a.size
 
 
 @B.shape.extend(Woodbury)
@@ -497,12 +585,31 @@ B.convert.extend(SPD, B.Numeric)(lambda x, _: dense(x))
 def mul(a, b): return SPD(dense(a) * dense(b))
 
 
+@mul.extend(SPD, Diagonal)
+def mul(a, b): return Diagonal(B.diag(a) * b.diag)
+
+
+@mul.extend(Diagonal, SPD)
+def mul(a, b): return Diagonal(a.diag * B.diag(b))
+
+
 @mul.extend(Diagonal, Diagonal)
 def mul(a, b): return Diagonal(a.diag * b.diag)
 
 
 @mul.extend(LowRank, LowRank)
-def mul(a, b): return LowRank(a.inner * b.inner)
+def mul(a, b):
+    # Compute vectors of output.
+    a_vecs = B.unstack(a.vecs, axis=1)
+    b_vecs = B.unstack(b.vecs, axis=1)
+    out_vecs = [a_vec * b_vec for a_vec, b_vec in product(a_vecs, b_vecs)]
+
+    # Compute values of outputs.
+    a_vals = B.unstack(a.vals, axis=0)
+    b_vals = B.unstack(b.vals, axis=0)
+    out_vals = [a_val * b_val for a_val, b_val in product(a_vals, b_vals)]
+
+    return LowRank(B.stack(out_vecs, axis=1), B.stack(out_vals, axis=0))
 
 
 @add.extend(SPD, SPD)
@@ -514,42 +621,59 @@ def add(a, b): return Diagonal(a.diag + b.diag)
 
 
 @add.extend(LowRank, LowRank)
-def add(a, b): return LowRank(B.concat([a.inner, b.inner], axis=1))
+def add(a, b): return LowRank(B.concat([a.vecs, b.vecs], axis=1),
+                              B.concat([a.vals, b.vals], axis=0))
 
 
 # Simplify addiction and multiplication between SPDs and other objects.
 
-@mul.extend(SPD, B.Numeric)
-def mul(a, b): return SPD(dense(a) * b)
+
+@mul.extend(object, SPD)
+def mul(a, b): return mul(b, a)
 
 
-@mul.extend(B.Numeric, SPD)
-def mul(a, b): return SPD(a * dense(b))
+@mul.extend(SPD, object)
+def mul(a, b): return mul(a, mul(OneSPD(a), b))
 
 
-@mul.extend(Diagonal, B.Numeric)
-def mul(a, b): return Diagonal(a.diag * b)
+@add.extend(object, SPD)
+def add(a, b): return add(b, a)
 
 
-@mul.extend(B.Numeric, Diagonal)
-def mul(a, b): return Diagonal(b.diag * a)
+@add.extend(SPD, object)
+def add(a, b): return add(a, mul(OneSPD(a), b))
 
 
-@add.extend(SPD, B.Numeric)
-def add(a, b): return SPD(dense(a) + b)
+# Immediately resolve scaled elements.
+
+@mul.extend(object, OneSPD)
+def mul(a, b): return mul(b, a)
 
 
-@add.extend(B.Numeric, SPD)
-def add(a, b): return SPD(a + dense(b))
+@mul.extend(OneSPD, object)
+def mul(a, b):
+    if B.rank(b) == 0:
+        if isinstance(b, Number) and b == 0:
+            return ZeroSPD(a)
+        elif isinstance(b, Number) and b == 1:
+            return a
+        else:
+            return ConstantSPD(b, a)
+    else:
+        return spd(dense(a) * b)
 
 
-# Prevent creation of scaled elements; this is work for later.
+# Take over construction of ones: construction requires arguments.
 
-@add.extend(ZeroSPD, B.Numeric, precedence=2)
-def add(a, b): return b
+@add.extend(object, ZeroSPD)
+def add(a, b): return add(b, a)
 
 
-@add.extend(B.Numeric, ZeroSPD, precedence=2)
+@add.extend(ZeroSPD, object)
+def add(a, b): return mul(b, OneSPD(a))
+
+
+@add.extend(ZeroSPD, ZeroSPD)
 def add(a, b): return a
 
 
@@ -582,3 +706,20 @@ def add(a, b): return Woodbury(a.lr_part, a.diag_part + b)
 @add.extend(Woodbury, Woodbury)
 def add(a, b): return Woodbury(a.lr_part + b.lr_part,
                                a.diag_part + b.diag_part)
+
+
+# Expand out multiplication with Woodbury matrices.
+
+@mul.extend(SPD, Woodbury, precedence=1)
+def mul(a, b): return add(mul(a, b.lr_part), mul(a, b.diag_part))
+
+
+@mul.extend(Woodbury, SPD, precedence=1)
+def mul(a, b): return add(mul(a.lr_part, b), mul(a.diag_part, b))
+
+
+@mul.extend(Woodbury, Woodbury, precedence=1)
+def mul(a, b): return add(add(mul(a.lr_part, b.lr_part),
+                              mul(a.lr_part, b.diag_part)),
+                          add(mul(a.diag_part, b.lr_part),
+                              mul(a.diag_part, b.diag_part)))

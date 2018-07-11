@@ -11,7 +11,7 @@ from plum import Self, Referentiable
 from .cache import Cache, uprank
 from .kernel import PosteriorKernel, OneKernel
 from .mean import ZeroMean, PosteriorMean, OneMean
-from .spd import spd, Dispatcher, UniformDiagonal, Diagonal, dense
+from .spd import spd, Dispatcher, UniformlyDiagonal, Diagonal, dense
 
 __all__ = ['Normal', 'GPPrimitive', 'Normal1D']
 
@@ -225,10 +225,10 @@ class Normal1D(Normal, Referentiable):
             elif B.rank(var) == 0:
                 if B.rank(mean) == 0:
                     mean = mean * B.ones([1, 1], dtype=B.dtype(var))
-                    var = UniformDiagonal(var, 1)
+                    var = UniformlyDiagonal(var, 1)
                 elif B.rank(mean) == 1:
                     mean = mean[:, None]
-                    var = UniformDiagonal(var, B.shape(mean)[0])
+                    var = UniformlyDiagonal(var, B.shape(mean)[0])
                 else:
                     raise ValueError('Invalid rank {} of mean.'
                                      ''.format(B.rank(mean)))
@@ -238,7 +238,7 @@ class Normal1D(Normal, Referentiable):
                                  ''.format(B.rank(var)))
         else:
             if B.rank(var) == 0:
-                var = UniformDiagonal(var, 1)
+                var = UniformlyDiagonal(var, 1)
             elif B.rank(var) == 1:
                 var = Diagonal(var)
             else:
