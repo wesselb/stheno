@@ -156,7 +156,7 @@ class Normal(RandomVector, Referentiable):
 
         # Perform sampling operation.
         e = B.randn((self.dim, num), dtype=random_dtype)
-        out = B.cholesky_mul(self.spd, e) + self.mean
+        out = B.matmul(B.cholesky(self.spd), e) + self.mean
         if noise is not None:
             out += noise ** .5 * B.randn((self.dim, num), dtype=random_dtype)
         return out

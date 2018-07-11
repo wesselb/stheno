@@ -29,8 +29,6 @@ def compare(spd1, spd2, spd1_singular=False, spd2_singular=False):
     yield ok, B.shape(spd1) == B.shape(spd2), 'shapes'
     yield ok, allclose(B.cholesky(spd1), B.cholesky(spd2)), 'cholesky'
     yield ok, allclose(B.root(spd1), B.root(spd2)), 'roots'
-    yield ok, allclose(B.cholesky_mul(spd1, A),
-                       B.cholesky_mul(spd2, A)), 'chol mul'
     yield ok, allclose(B.ratio(spd1, dummy), B.ratio(spd2, dummy)), 'ratio'
 
     if not spd1_singular and not spd2_singular:
@@ -61,7 +59,7 @@ def compare(spd1, spd2, spd1_singular=False, spd2_singular=False):
             yield raises, RuntimeError, lambda: B.logdet(spd)
 
 
-def test_spd():
+def test_matrix():
     # Compare dense and diagonal.
     a = np.diag(np.random.randn(3) ** 2)
     for x in compare(Dense(a), Diagonal(np.diag(a))):
@@ -120,8 +118,8 @@ def test_spd():
         yield x
 
 
-def test_basic_spd_arithmetic():
-    # Generate a bunch of SPDs.
+def test_basic_matrix_arithmetic():
+    # Generate a bunch of matrices.
     spd = Dense(np.eye(3))
     diag = Diagonal(np.random.randn(3) ** 2)
     lr = LowRank(np.random.randn(3, 2))

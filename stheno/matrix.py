@@ -87,7 +87,7 @@ class Diagonal(Dense, Referentiable):
         self.diag = diag
 
     def cholesky(self):
-        return B.diag(self.diag ** .5)
+        return Diagonal(self.diag ** .5)
 
     def logdet(self):
         return B.sum(B.log(self.diag))
@@ -359,24 +359,23 @@ def diag(a): return B.diag(a.lr_part) + B.diag(a.diag_part)
 def cholesky(a): return a.cholesky()
 
 
-# Multiply Cholesky decompositions of `Matrix`s.
+# Some efficient matrix multiplications.
 
-@B.cholesky_mul.extend(Dense, object)
-def cholesky_mul(a, b):
-    """Multiply the Cholesky decomposition of `a` with `b`.
-
-    Args:
-        a (:class:`.matrix.Dense`): Matrix to compute Cholesky decomposition of.
-        b (tensor): Matrix to multiply with.
-
-    Returns:
-        tensor: Multiplication of the Cholesky of `a` with `b`.
-    """
-    return B.matmul(B.cholesky(a), b)
+@B.matmul.extend(Diagonal, {B.Numeric, Dense})
+def matmul(a, b, tr_a=False, tr_b=False):
+    b = B.transpose(b) if tr_b else b
+    return B.diag(a)[:, None] * dense(b)
 
 
-@B.cholesky_mul.extend(Diagonal, object)
-def cholesky_mul(a, b): return b * a.diag[:, None] ** .5
+@B.matmul.extend({B.Numeric, Dense}, Diagonal)
+def matmul(a, b, tr_a=False, tr_b=False):
+    a = B.transpose(a) if tr_a else a
+    return dense(a) * B.diag(b)[None, :]
+
+
+@B.matmul.extend(Diagonal, Diagonal)
+def matmul(a, b, tr_a=False, tr_b=False):
+    return Diagonal(B.diag(a) * B.diag(b))
 
 
 # Compute products with inverses of `Matrix`s.
