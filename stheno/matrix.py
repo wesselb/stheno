@@ -251,6 +251,20 @@ class Woodbury(Dense, Referentiable):
         Dense.__init__(self, None)
         self.lr_part = lr
         self.diag_part = diag
+        self._schur_complement = None
+
+    def schur_complement(self):
+        if self._schur_complement is None:
+            left = self.lr_part.left * self.lr_part.scales[None, :]
+            right = self.lr_part.right
+
+            prod = B.matmul(B.matmul(left, B.inverse(self.diag_part),
+                                     tr_a=True), right)
+            self._schur_complement = B.eye(B.shape(left)[1]) + prod
+        return Dense(self._schur_complement)
+
+    def logdet(self):
+        return B.logdet(self.schur_complement()) + B.logdet(self.diag_part)
 
 
 # Conversion between `Matrix`s and dense matrices:
@@ -376,6 +390,12 @@ def matmul(a, b, tr_a=False, tr_b=False):
 @B.matmul.extend(Diagonal, Diagonal)
 def matmul(a, b, tr_a=False, tr_b=False):
     return Diagonal(B.diag(a) * B.diag(b))
+
+
+# Some efficient inverses.
+
+@B.inverse.extend(Diagonal)
+def inverse(a): return Diagonal(1 / B.diag(a))
 
 
 # Compute products with inverses of `Matrix`s.
