@@ -125,7 +125,7 @@ class LowRank(SPD, Referentiable):
     @property
     def vals(self):
         if self._vals is None:
-            self._vals = B.ones([B.shape(self.vecs)[1]],
+            self._vals = B.ones([B.shape_int(self.vecs)[1]],
                                 dtype=B.dtype(self.vecs))
         return self._vals
 
@@ -158,7 +158,9 @@ class ConstantSPD(LowRank, Referentiable):
 
     @property
     def vals(self):
-        return B.expand_dims(self.constant, axis=0)
+        if self._vals is None:
+            self._vals = B.expand_dims(self.constant, axis=0)
+        return self._vals
 
     @property
     def vecs(self):
@@ -239,10 +241,6 @@ def dense(a):
         tensor: SPD as matrix.
     """
     return a.mat
-
-
-# @_dispatch(ScaledSPD)
-# def dense(a): return a.scale * dense(a[0])
 
 
 @_dispatch(Diagonal)
