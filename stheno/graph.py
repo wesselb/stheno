@@ -10,16 +10,16 @@ from lab import B
 from plum import Dispatcher, Self, Referentiable, type_parameter, PromisedType
 
 from .cache import Cache, uprank
+from .field import Formatter
 from .input import Input, At, MultiInput
 from .kernel import ZeroKernel, PosteriorCrossKernel, Kernel, \
     TensorProductKernel
 from .lazy import LazyVector, LazyMatrix
+from .matrix import matrix
 from .mean import PosteriorCrossMean, Mean
 from .mokernel import MultiOutputKernel as MOK
 from .momean import MultiOutputMean as MOM
 from .random import GPPrimitive, Random
-from .matrix import matrix
-from .field import Formatter
 
 __all__ = ['GP', 'model', 'Graph']
 
