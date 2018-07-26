@@ -6,11 +6,11 @@ import logging
 
 from lab import B
 from plum import Dispatcher, Self, Referentiable
-
 from stheno.function_field import StretchedFunction, ShiftedFunction, \
     SelectedFunction, InputTransformedFunction, DerivativeFunction, \
-    TensorProductFunction, Function, ZeroFunction, OneFunction, \
+    TensorProductFunction, ZeroFunction, OneFunction, \
     ScaledFunction, ProductFunction, SumFunction, Function
+
 from .cache import Cache, cache, uprank
 from .field import apply_optional_arg, get_field
 from .input import Input
