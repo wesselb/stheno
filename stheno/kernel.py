@@ -24,7 +24,7 @@ from .matrix import Dense, Diagonal, LowRank, UniformlyDiagonal, One, Zero, \
 
 __all__ = ['Kernel', 'OneKernel', 'ZeroKernel', 'ScaledKernel', 'EQ', 'RQ',
            'Matern12', 'Exp', 'Matern32', 'Matern52', 'Delta', 'Linear',
-           'DerivativeKernel']
+           'DerivativeKernel', 'DecayingKernel']
 
 log = logging.getLogger(__name__)
 
@@ -847,6 +847,50 @@ class Linear(Kernel, PrimitiveFunction, Referentiable):
     @uprank
     def elwise(self, x, y, B):
         return B.expand_dims(B.sum(B.multiply(x, y), axis=1), 1)
+
+    @property
+    def _stationary(self):
+        return False
+
+    @property
+    def period(self):
+        return np.inf
+
+
+class DecayingKernel(Kernel, Referentiable):
+    """Decaying kernel.
+
+    Args:
+        alpha (tensor): Shape of the gamma distribution governing the
+            distribution of decaying exponentials.
+        beta (tensor): Rate of the gamma distribution governing the
+            distribution of decaying exponentials.
+    """
+
+    _dispatch = Dispatcher(in_class=Self)
+
+    def __init__(self, alpha, beta):
+        self.alpha = alpha
+        self.beta = beta
+
+    @_dispatch(B.Numeric, B.Numeric, Cache)
+    @cache
+    @uprank
+    def __call__(self, x, y, B):
+        return B.divide(self._compute_beta_raised(B),
+                        B.pw_sums(x + self.beta, y) ** self.alpha)
+
+    @_dispatch(B.Numeric, B.Numeric, Cache)
+    @cache
+    @uprank
+    def elwise(self, x, y, B):
+        return B.divide(self._compute_beta_raised(B),
+                        B.ew_sums(x + self.beta, y) ** self.alpha)
+
+    def _compute_beta_raised(self, B):
+        beta_norm = B.sqrt(B.maximum(B.sum(self.beta ** 2),
+                                     B.cast(1e-30, dtype=B.dtype(self.beta))))
+        return beta_norm ** self.alpha
 
     @property
     def _stationary(self):
