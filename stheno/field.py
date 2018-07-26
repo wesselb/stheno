@@ -355,8 +355,8 @@ def add(a, b):
     """Add two elements.
 
     Args:
-        a (:class:`.field.Element`): First element in summation.
-        b (:class:`.field.Element`): Second element in summation.
+        a (:class:`.field.Element`): First element in addition.
+        b (:class:`.field.Element`): Second element in addition.
 
     Returns:
         :class:`.field.Element`: Sum of the elements.
