@@ -838,9 +838,9 @@ class Linear(Kernel, PrimitiveFunction, Referentiable):
     @uprank
     def __call__(self, x, y, B):
         if x is y:
-            return LowRank(left=x)
+            return LowRank(left=x, psd=True)
         else:
-            return LowRank(left=x, right=y)
+            return LowRank(left=x, right=y, psd=True)
 
     @_dispatch(B.Numeric, B.Numeric, Cache)
     @cache
@@ -891,6 +891,11 @@ class DecayingKernel(Kernel, Referentiable):
         beta_norm = B.sqrt(B.maximum(B.sum(self.beta ** 2),
                                      B.cast(1e-30, dtype=B.dtype(self.beta))))
         return beta_norm ** self.alpha
+
+    @_dispatch(Formatter)
+    def display(self, formatter):
+        return 'DecayingKernel({}, {})'.format(formatter(self.alpha),
+                                               formatter(self.beta))
 
     @property
     def _stationary(self):
