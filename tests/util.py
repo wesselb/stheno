@@ -63,9 +63,8 @@ def dense(a): return _dense(a)
 def dense(a): return B.array(a)
 
 
-def allclose(a, b, desc=None):
-    np.testing.assert_allclose(dense(a), dense(b), atol=1e-9)
+def allclose(a, b, desc=None): return np.allclose(dense(a), dense(b), atol=1e-9)
 
 
 def assert_allclose(a, b, desc=None):
-    np.testing.assert_allclose(dense(a), dense(b))
+    np.testing.assert_allclose(dense(a), dense(b), atol=1e-9)
