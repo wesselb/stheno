@@ -16,3 +16,4 @@ cover
 *.swp
 local_todo.todo
 scripts
+run_readme_examples.sh
