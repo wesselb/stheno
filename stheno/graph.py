@@ -171,35 +171,6 @@ class Graph(Referentiable):
                             (lambda pi: TensorProductKernel(f, ones) *
                                         kernels[p, pi]))
 
-    @_dispatch(PromisedGP, PromisedGP)
-    def mul(self, p1, p2):
-        # Check that the GPs are on the same graph.
-        if p1.graph != p2.graph:
-            raise RuntimeError('Can only add GPs from the same graph.')
-
-        # Careful with the closures!
-        kernels = self.kernels
-        means = self.means
-
-        def ones(x):
-            return B.ones([B.shape(x)[0], 1], dtype=B.dtype(x))
-
-        return self._update(
-            (lambda x, B: kernels[p1, p2].elwise(x, x, B)) +
-            means[p1] * means[p2],
-            (lambda: (kernels[p1] + TensorProductKernel(means[p1], means[p1])) *
-                     (kernels[p2] + TensorProductKernel(means[p2], means[p2])) +
-                     (kernels[p1, p2] +
-                      TensorProductKernel(means[p1], means[p2])) *
-                     (kernels[p2, p1] +
-                      TensorProductKernel(means[p2], means[p1])) -
-                     2 * TensorProductKernel(means[p1] * means[p2],
-                                             means[p1] * means[p2])),
-            (lambda pi: TensorProductKernel(means[p2], ones) * kernels[p1, pi] +
-                        TensorProductKernel(means[p1], ones) * kernels[p2, pi]
-             ),
-        )
-
     def shift(self, p, shift):
         """Shift a GP.
 
@@ -707,7 +678,17 @@ class GP(GPPrimitive, Referentiable):
 
     @_dispatch(Self)
     def __mul__(self, other):
-        return self.graph.mul(self, other)
+        # Careful with the closure!
+        self_mean, other_mean = self.graph.means[self], self.graph.means[other]
+        return (lambda x, B: self_mean(x, B)) * other + \
+               self * (lambda x, B: other_mean(x, B)) + \
+               GP(kernel=self.graph.kernels[self] *
+                         self.graph.kernels[other] +
+                         self.graph.kernels[self, other] *
+                         self.graph.kernels[other, self],
+                  mean=-self.graph.means[self] *
+                       self.graph.means[other],
+                  graph=self.graph)
 
     @_dispatch(At, B.Numeric)
     def condition(self, x, y):
