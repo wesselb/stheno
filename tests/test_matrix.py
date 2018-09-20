@@ -219,7 +219,7 @@ def test_matmul():
     yield compare_matmul, dense_wide, diag_tall.T, 'dense w x diag t'
     yield compare_matmul, dense_wide, diag_wide.T, 'dense w x diag w'
 
-    # Test `B.matmul` with tree matrices simultaneously.
+    # Test `B.matmul` with three matrices simultaneously.
     yield allclose, \
           B.matmul(dense_tall, dense_square, dense_wide, tr_c=True), \
           dense(dense_tall).dot(dense(dense_square)).dot(dense(dense_wide).T)
