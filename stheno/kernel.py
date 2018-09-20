@@ -854,27 +854,30 @@ class Delta(Kernel, PrimitiveFunction, Referentiable):
     def elwise(self, x, y, B):
         x, y = x.get(), y.get()
         if x is y:
-            return B.ones([B.shape(x)[0], 1], dtype=B.dtype(x))
+            return One(B.dtype(x), (B.shape(x)[0], 1))
         else:
-            return B.zeros([B.shape(x)[0], 1], dtype=B.dtype(x))
+            return Zero(B.dtype(x), (B.shape(x)[0], 1))
 
     @_dispatch(Unique, object, Cache)
     @cache
     @uprank
     def elwise(self, x, y, B):
-        return B.zeros([B.shape(x.get())[0], 1], dtype=B.dtype(x.get()))
+        return Zero(B.dtype(x.get()), (B.shape(x.get())[0], 1))
 
     @_dispatch(object, Unique, Cache)
     @cache
     @uprank
     def elwise(self, x, y, B):
-        return B.zeros([B.shape(y.get())[0], 1], dtype=B.dtype(y.get()))
+        return Zero(B.dtype(x.get()), (B.shape(x.get())[0], 1))
 
     @_dispatch(B.Numeric, B.Numeric, Cache)
     @cache
     @uprank
     def elwise(self, x, y, B):
-        return self._compute(B.ew_dists2(x, y), B)
+        if x is y:
+            return One(B.dtype(x), (B.shape(x)[0], 1))
+        else:
+            return self._compute(B.ew_dists2(x, y), B)
 
     def _eye(self, x, B):
         return UniformlyDiagonal(B.cast(1, dtype=B.dtype(x)), B.shape(x)[0])
