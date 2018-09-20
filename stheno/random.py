@@ -62,17 +62,13 @@ class Normal(RandomVector, Referentiable):
     _dispatch = Dispatcher(in_class=Self)
 
     def __init__(self, var, mean=None):
-        self.spd = matrix(var)
-        self.dtype = B.dtype(self.spd)
-        self.dim = B.shape(self.spd)[0]
+        self.var = matrix(var)
+        self.dtype = B.dtype(self.var)
+        self.dim = B.shape(self.var)[0]
         if mean is None:
-            mean = B.zeros([self.dim, 1], dtype=self.dtype)
-        self.mean = mean
-
-    @property
-    def var(self):
-        """Variance."""
-        return dense(self.spd)
+            self.mean = B.zeros([self.dim, 1], dtype=self.dtype)
+        else:
+            self.mean = dense(mean)  # Not useful to retain struture here.
 
     def m2(self):
         """Second moment of the distribution."""
@@ -87,10 +83,10 @@ class Normal(RandomVector, Referentiable):
         Returns:
             list[tensor]: Log-pdf for every input in `x`.
         """
-        return -(B.logdet(self.spd) +
+        return -(B.logdet(self.var) +
                  B.cast(self.dim, dtype=self.dtype) *
                  B.cast(B.log_2_pi, dtype=self.dtype) +
-                 B.qf_diag(self.spd, uprank(x) - self.mean)) / 2
+                 B.qf_diag(self.var, uprank(x) - self.mean)) / 2
 
     def entropy(self):
         """Compute the entropy.
@@ -98,7 +94,7 @@ class Normal(RandomVector, Referentiable):
         Returns:
             scalar: The entropy.
         """
-        return (B.logdet(self.spd) +
+        return (B.logdet(self.var) +
                 B.cast(self.dim, dtype=self.dtype) *
                 B.cast(B.log_2_pi + 1, dtype=self.dtype)) / 2
 
@@ -113,10 +109,10 @@ class Normal(RandomVector, Referentiable):
         Returns:
             scalar: KL divergence.
         """
-        return (B.ratio(self.spd, other.spd) +
-                B.qf_diag(other.spd, other.mean - self.mean)[0] -
+        return (B.ratio(self.var, other.var) +
+                B.qf_diag(other.var, other.mean - self.mean)[0] -
                 B.cast(self.dim, dtype=self.dtype) +
-                B.logdet(other.spd) - B.logdet(self.spd)) / 2
+                B.logdet(other.var) - B.logdet(self.var)) / 2
 
     @_dispatch(Self)
     def w2(self, other):
@@ -129,8 +125,7 @@ class Normal(RandomVector, Referentiable):
         Returns:
             scalar: 2-Wasserstein distance.
         """
-        root = B.root(matrix(B.dot(B.dot(B.root(self.spd), other.var),
-                                   B.root(self.spd))))
+        root = B.root(B.matmul(B.root(self.var), other.var, B.root(self.var)))
         var_part = B.trace(self.var) + B.trace(other.var) - 2 * B.trace(root)
         mean_part = B.sum((self.mean - other.mean) ** 2)
         # The sum of `mean_part` and `var_par` should be positive, but this
@@ -156,14 +151,14 @@ class Normal(RandomVector, Referentiable):
 
         # Perform sampling operation.
         e = B.randn((self.dim, num), dtype=random_dtype)
-        out = B.matmul(B.cholesky(self.spd), e) + self.mean
+        out = B.matmul(B.cholesky(self.var), e) + self.mean
         if noise is not None:
             out += noise ** .5 * B.randn((self.dim, num), dtype=random_dtype)
         return out
 
     @_dispatch(object)
     def __add__(self, other):
-        return Normal(self.spd, self.mean + other)
+        return Normal(self.var, self.mean + other)
 
     @_dispatch(Random)
     def __add__(self, other):
@@ -172,11 +167,11 @@ class Normal(RandomVector, Referentiable):
 
     @_dispatch(Self)
     def __add__(self, other):
-        return Normal(self.spd + other.spd, self.mean + other.mean)
+        return Normal(self.var + other.var, self.mean + other.mean)
 
     @_dispatch(object)
     def __mul__(self, other):
-        return Normal(self.spd * other ** 2, self.mean * other)
+        return Normal(self.var * other ** 2, self.mean * other)
 
     @_dispatch(Random)
     def __mul__(self, other):
