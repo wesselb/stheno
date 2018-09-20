@@ -484,9 +484,9 @@ def need_parens(el, parent): return False
 
 @_dispatch(Element, object)
 def mul(a, b):
-    if isinstance(b, Number) and b == 0:
+    if b is 0:
         return new(a, ZeroElement)()
-    elif isinstance(b, Number) and b == 1:
+    elif b is 1:
         return a
     else:
         return new(a, ScaledElement)(a, b)
@@ -494,9 +494,9 @@ def mul(a, b):
 
 @_dispatch(object, Element)
 def mul(a, b):
-    if isinstance(a, Number) and a == 0:
+    if a is 0:
         return new(b, ZeroElement)()
-    elif isinstance(a, Number) and a == 1:
+    elif a is 1:
         return b
     else:
         return new(b, ScaledElement)(b, a)
@@ -510,7 +510,7 @@ def mul(a, b): return new(a, ProductElement)(a, b)
 
 @_dispatch(Element, object)
 def add(a, b):
-    if isinstance(b, Number) and b == 0:
+    if b is 0:
         return a
     else:
         return new(a, SumElement)(a, mul(b, new(a, OneElement)()))
@@ -518,7 +518,7 @@ def add(a, b):
 
 @_dispatch(object, Element)
 def add(a, b):
-    if isinstance(a, Number) and a == 0:
+    if a is 0:
         return b
     else:
         return new(b, SumElement)(mul(a, new(b, OneElement)()), b)
@@ -560,7 +560,7 @@ def mul(a, b): return a
 
 @_dispatch(ZeroElement, object, precedence=20)
 def add(a, b):
-    if isinstance(b, Number) and b == 0:
+    if b is 0:
         return a
     else:
         return mul(new(a, OneElement)(), b)
@@ -568,7 +568,7 @@ def add(a, b):
 
 @_dispatch(object, ZeroElement, precedence=20)
 def add(a, b):
-    if isinstance(a, Number) and a == 0:
+    if a is 0:
         return b
     else:
         return mul(a, new(b, OneElement)())

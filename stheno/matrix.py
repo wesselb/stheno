@@ -1044,9 +1044,9 @@ def mul(a, b): return mul(b, a)
 @mul.extend(One, object)
 def mul(a, b):
     if B.rank(b) == 0:
-        if isinstance(b, Number) and b == 0:
+        if b is 0:
             return Zero(a)
-        elif isinstance(b, Number) and b == 1:
+        elif b is 1:
             return a
         else:
             return Constant(b, a)
