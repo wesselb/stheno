@@ -315,8 +315,8 @@ class GPPrimitive(RandomProcess, Referentiable):
             upper 95% central credible interval bounds.
         """
         cache = Cache() if cache is None else cache
-        mean = B.squeeze(self.mean(x, cache))
-        std = B.squeeze(self.kernel.elwise(x, cache)) ** .5
+        mean = B.squeeze(dense(self.mean(x, cache)))
+        std = B.squeeze(dense(self.kernel.elwise(x, cache))) ** .5
         return mean, mean - 2 * std, mean + 2 * std
 
     @_dispatch(object)
