@@ -3,14 +3,12 @@
 from __future__ import print_function, division, absolute_import
 
 import logging
-from itertools import product
 from numbers import Number
 
 from lab import B
 from plum import Referentiable, Self, Dispatcher
 
-from .field import Element, OneElement, ZeroElement, mul, add, get_field, \
-    ScaledElement
+from .field import Element, OneElement, ZeroElement, mul, add, get_field
 
 __all__ = ['matrix', 'Dense', 'LowRank', 'Diagonal', 'UniformlyDiagonal', 'One',
            'Zero', 'dense', 'Woodbury', 'Shape', 'Constant']
