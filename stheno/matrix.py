@@ -103,6 +103,7 @@ class Dense(Element, Referentiable):
         self.cholesky = None
         self.logdet = None
         self.root = None
+        self.inverse = None
 
     def __neg__(self):
         return mul(B.cast(-1, dtype=B.dtype(self)), self)
@@ -114,7 +115,7 @@ class Dense(Element, Referentiable):
         return B.divide(self, other)
 
     def __getitem__(self, item):
-        return self.mat[item]
+        return dense(self)[item]
 
     @property
     def T(self):
@@ -274,7 +275,7 @@ class Woodbury(Dense, Referentiable):
 def eye_from(a): return Shape(B.shape(a)).eye(a)
 
 
-# Conversion between `Matrix`s and dense matrices:
+# Conversion between matrices and dense matrices:
 
 @_dispatch(Dense)
 def matrix(a):
@@ -284,7 +285,7 @@ def matrix(a):
         a (tensor): Matrix to type.
 
     Returns:
-        :class:`.matrix.Dense`: Matrix as `Matrix`.
+        :class:`.matrix.Dense`: Matrix as `Dense`.
     """
     return a
 
@@ -295,13 +296,13 @@ def matrix(a): return Dense(a)
 
 @_dispatch(Dense)
 def dense(a):
-    """`Matrix` as matrix.
+    """`Dense` as matrix.
 
     Args:
-        a (:class:`.matrix.Dense`): `Matrix` to unwrap.
+        a (:class:`.matrix.Dense`): `Dense` to unwrap.
 
     Returns:
-        tensor: `Matrix` as matrix.
+        tensor: `Dense` as matrix.
     """
     return a.mat
 
@@ -322,7 +323,7 @@ def dense(a): return B.matmul(a.left, a.middle, a.right, tr_c=True)
 def dense(a): return dense(a.lr) + dense(a.diag)
 
 
-# Get data type of `Matrix`s.
+# Get data type of matrices.
 
 @B.dtype.extend(Dense)
 def dtype(a): return B.dtype(dense(a))
@@ -344,7 +345,62 @@ def dtype(a): return B.dtype(a.constant)
 def dtype(a): return B.dtype(a.lr)
 
 
-# Get diagonals of `Matrix`s.
+# Sum over matrices.
+
+@B.sum.extend(Dense, [object])
+def sum(a, axis=None): return B.sum(dense(a), axis=axis)
+
+
+@B.sum.extend(Diagonal, [object])
+def sum(a, axis=None):
+    # Construct full diagonal.
+    rows, cols = B.shape(a)
+    full_diag = B.concat([B.diag(a),
+                          B.zeros([B.maximum(rows, cols) -
+                                   B.minimum(rows, cols)], dtype=B.dtype(a))],
+                         axis=0)
+
+    # Efficiently handle a number of common cases.
+    if axis is None:
+        return B.sum(B.diag(a))
+    elif axis is 0:
+        return full_diag[:cols]
+    elif axis is 1:
+        return full_diag[:rows]
+    else:
+        # Fall back to generic implementation.
+        return B.sum.invoke(Dense)(a, axis=axis)
+
+
+@B.sum.extend(LowRank, [object])
+def sum(a, axis=None):
+    # Efficiently handle a number of common cases.
+    if axis is None:
+        left = B.expand_dims(B.sum(a.left, axis=0), axis=0)
+        right = B.expand_dims(B.sum(a.right, axis=0), axis=1)
+        return B.matmul(left, a.middle, right)[0, 0]
+    elif axis is 0:
+        left = B.expand_dims(B.sum(a.left, axis=0), axis=0)
+        return B.matmul(left, a.middle, a.right, tr_c=True)[0, :]
+    elif axis is 1:
+        right = B.expand_dims(B.sum(a.right, axis=0), axis=1)
+        return B.matmul(a.left, a.middle, right)[:, 0]
+    else:
+        # Fall back to generic implementation.
+        return B.sum.invoke(Dense)(a, axis=axis)
+
+
+@B.sum.extend(Woodbury, [object])
+def sum(a, axis=None): return B.sum(a.lr, axis=axis) + B.sum(a.diag, axis=axis)
+
+
+# Take traces of matrices.
+
+@B.trace.extend(Dense)
+def trace(a): return B.trace(dense(a))
+
+
+# Get diagonals of matrices.
 
 @B.diag.extend(Dense)
 def diag(a): return B.diag(dense(a))
@@ -374,7 +430,7 @@ def diag(a): return a.constant * B.ones([a.shape.diag_len], dtype=B.dtype(a))
 def diag(a): return B.diag(a.lr) + B.diag(a.diag)
 
 
-# Cholesky decompose `Matrix`s.
+# Cholesky decompose matrices.
 
 @B.cholesky.extend(Dense)
 def cholesky(a):
@@ -512,8 +568,10 @@ def matmul(a, b, tr_a=False, tr_b=False):
 def inverse(a):
     # Assume that `a` is PD.
     a = matrix(a)
-    inv_prod = B.trisolve(B.cholesky(a), B.eye_from(a))
-    return B.matmul(inv_prod, inv_prod, tr_a=True)
+    if a.inverse is None:
+        inv_prod = B.trisolve(B.cholesky(a), B.eye_from(a))
+        a.inverse = B.matmul(inv_prod, inv_prod, tr_a=True)
+    return a.inverse
 
 
 @B.inverse.extend(Diagonal)
@@ -536,7 +594,7 @@ def inverse(a):
 def inverse(a): raise RuntimeError('Matrix is singular.')
 
 
-# Compute the log-determinant of `Matrix`s.
+# Compute the log-determinant of matrices.
 
 @B.logdet.extend({B.Numeric, Dense})
 def logdet(a):
@@ -561,7 +619,7 @@ def logdet(a):
 def logdet(a): raise RuntimeError('Matrix is singular.')
 
 
-# Compute roots of `Matrix`s.
+# Compute roots of matrices.
 
 @B.root.extend({B.Numeric, Dense})
 def root(a):
@@ -731,7 +789,11 @@ def qf_diag(a, b, c):
 def qf_diag(a, b): return B.qf_diag(a, b, b)
 
 
-@B.qf_diag.extend({Diagonal, Woodbury}, object, object)
+@B.qf_diag.extend(Woodbury, object, object)
+def qf_diag(a, b, c): return B.diag(B.qf(a, b, c))
+
+
+@B.qf_diag.extend(Diagonal, object, object)
 def qf_diag(a, b, c): return B.sum(B.matmul(B.inverse(a), b) * c, axis=0)
 
 
@@ -739,7 +801,7 @@ def qf_diag(a, b, c): return B.sum(B.matmul(B.inverse(a), b) * c, axis=0)
 def qf_diag(a, b, c=None): raise RuntimeError('Matrix is singular.')
 
 
-# Compute ratios between `Matrix`s.
+# Compute ratios between matrices.
 
 @B.ratio.extend(object, object)
 def ratio(a, b):
@@ -763,7 +825,7 @@ def ratio(a, b): return B.sum(B.qf_diag(b, a.right, B.matmul(a.left, a.middle)))
 def ratio(a, b): return B.sum(a.diag / b.diag)
 
 
-# Transpose `Matrix`s.
+# Transpose matrices.
 
 @B.transpose.extend(Dense)
 def transpose(a): return matrix(B.transpose(dense(a)))
@@ -788,7 +850,7 @@ def transpose(a): return Woodbury(lr=B.transpose(a.lr),
                                   diag=B.transpose(a.diag))
 
 
-# Extend LAB to the field of `Matrix`s.
+# Extend LAB to the field of matrices.
 
 B.add.extend(Dense, object)(add)
 B.add.extend(object, Dense)(add)
@@ -807,7 +869,7 @@ def subtract(a, b): return B.add(a, -b)
 def divide(a, b): return B.multiply(a, 1 / b)
 
 
-# Get shapes of `Matrix`s.
+# Get shapes of matrices.
 
 @B.shape.extend(Dense)
 def shape(a): return B.shape(dense(a))
@@ -827,13 +889,13 @@ def shape(a): return B.shape(a.left)[0], B.shape(a.right)[0]
 def shape(a): return B.shape(a.lr)
 
 
-# Setup promotion and conversion of `Matrix`s as a fallback mechanism.
+# Setup promotion and conversion of matrices as a fallback mechanism.
 
 B.add_promotion_rule(B.Numeric, Dense, B.Numeric)
 B.convert.extend(Dense, B.Numeric)(lambda x, _: dense(x))
 
 
-# Simplify addiction and multiplication between `Matrix`s.
+# Simplify addiction and multiplication between matrices.
 
 @mul.extend(Dense, Dense)
 def mul(a, b): return Dense(dense(a) * dense(b))
@@ -956,7 +1018,7 @@ def mul(a, b): return Diagonal(B.diag(a) * b.constant, B.shape(a))
 def mul(a, b): return mul(b, a)
 
 
-# Simplify addiction and multiplication between `Matrix`s and other objects. We
+# Simplify addiction and multiplication between matrices and other objects. We
 # immediately resolve scaled elements.
 
 @mul.extend(object, Dense)

@@ -2,14 +2,11 @@
 
 from __future__ import absolute_import, division, print_function
 
-from itertools import product
-
-import logging
 import numpy as np
 from lab import B
-from stheno.matrix import Dense, Diagonal, UniformlyDiagonal, LowRank, dense, \
-    One, Zero, Woodbury, Constant, matrix
 
+from stheno.matrix import Dense, Diagonal, LowRank, dense, \
+    Woodbury, Constant, matrix
 # noinspection PyUnresolvedReferences
 from . import eq, neq, lt, le, ge, gt, raises, call, ok, eprint, allclose, \
     assert_allclose
@@ -118,6 +115,26 @@ def test_dtype():
     # Test `Woodbury`.
     yield eq, B.dtype(Woodbury(lr_int, diag_int)), int
     yield eq, B.dtype(Woodbury(lr_float, diag_float)), float
+
+
+def test_sum():
+    a = Dense(np.random.randn(10, 20))
+    yield assert_allclose, B.sum(a, axis=0), np.sum(dense(a), axis=0)
+
+    for x in [Diagonal(np.array([1, 2, 3]), shape=(3, 5)),
+              LowRank(left=np.random.randn(5, 3),
+                      right=np.random.randn(10, 3),
+                      middle=np.random.randn(3, 3))]:
+        yield assert_allclose, B.sum(x), np.sum(dense(x))
+        yield assert_allclose, B.sum(x, axis=0), np.sum(dense(x), axis=0)
+        yield assert_allclose, B.sum(x, axis=1), np.sum(dense(x), axis=1)
+        yield assert_allclose, B.sum(x, axis=(0, 1)), np.sum(dense(x),
+                                                             axis=(0, 1))
+
+
+def test_trace():
+    a = np.random.randn(10, 10)
+    yield assert_allclose, B.trace(Dense(a)), np.trace(a)
 
 
 def test_diag():
@@ -326,26 +343,26 @@ def test_schur():
 
 
 def test_qf():
-    a = np.random.randn(5, 5)
-    a = Dense(a.dot(a.T))
+    # Generate some test inputs.
     b, c = np.random.randn(5, 3), np.random.randn(5, 3)
 
-    # Test `Dense`.
-    yield assert_allclose, B.qf(a, b), np.linalg.solve(dense(a), b).T.dot(b)
-    yield assert_allclose, B.qf(a, b, c), np.linalg.solve(dense(a), b).T.dot(c)
-    yield assert_allclose, B.qf_diag(a, b), \
-          np.diag(np.linalg.solve(dense(a), b).T.dot(b))
-    yield assert_allclose, B.qf_diag(a, b, c), \
-          np.diag(np.linalg.solve(dense(a), b).T.dot(c))
-
-    # Test `Diagonal` (and `Woodbury`).
+    # Generate some matrices to test.
+    a = np.random.randn(5, 5)
+    a = Dense(a.dot(a.T))
     d = Diagonal(B.diag(a))
-    yield assert_allclose, B.qf(d, b), np.linalg.solve(dense(d), b).T.dot(b)
-    yield assert_allclose, B.qf(d, b, c), np.linalg.solve(dense(d), b).T.dot(c)
-    yield assert_allclose, B.qf_diag(d, b), \
-          np.diag(np.linalg.solve(dense(d), b).T.dot(b))
-    yield assert_allclose, B.qf_diag(d, b, c), \
-          np.diag(np.linalg.solve(dense(d), b).T.dot(c))
+    e = np.random.randn(2, 2)
+    wb = d + LowRank(left=np.random.randn(5, 2),
+                     middle=e.dot(e.T))
+
+    for x in [a, d, wb]:
+        yield assert_allclose, B.qf(x, b), \
+              np.linalg.solve(dense(x), b).T.dot(b)
+        yield assert_allclose, B.qf(x, b, c), \
+              np.linalg.solve(dense(x), b).T.dot(c)
+        yield assert_allclose, B.qf_diag(x, b), \
+              np.diag(np.linalg.solve(dense(x), b).T.dot(b))
+        yield assert_allclose, B.qf_diag(x, b, c), \
+              np.diag(np.linalg.solve(dense(x), b).T.dot(c))
 
     # Test `LowRank`.
     lr = LowRank(np.random.randn(5, 3))
