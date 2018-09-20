@@ -12,7 +12,7 @@ from nose.tools import assert_raises, assert_equal, assert_less, \
     assert_greater_equal, ok_
 from plum import dispatch
 
-from stheno.matrix import Dense, dense as dense_spd
+from stheno.matrix import Dense, dense as _dense
 
 le = assert_less_equal
 lt = assert_less
@@ -21,22 +21,17 @@ neq = assert_not_equal
 ge = assert_greater_equal
 gt = assert_greater
 raises = assert_raises
-
-
-def ok(result, *args):
-    return ok_(result)
+ok = ok_
 
 
 def call(f, method, args=(), res=True):
     assert_equal(getattr(f, method)(*args), res)
 
 
-def lam(f, args=()):
-    ok_(f(*args))
+def lam(f, args=()): ok_(f(*args), 'Lambda returned False.')
 
 
-def eprint(*args, **kw_args):
-    print(*args, file=sys.stderr, **kw_args)
+def eprint(*args, **kw_args): print(*args, file=sys.stderr, **kw_args)
 
 
 def benchmark(f, args, n=1000, get_output=False):
@@ -61,16 +56,16 @@ def dense(a): return a
 
 
 @dispatch(Dense)
-def dense(a): return dense_spd(a)
+def dense(a): return _dense(a)
 
 
 @dispatch(list)
 def dense(a): return B.array(a)
 
 
-def allclose(a, b):
-    return np.allclose(dense(a), dense(b))
+def allclose(a, b, desc=None):
+    np.testing.assert_allclose(dense(a), dense(b), atol=1e-9)
 
 
-def assert_allclose(a, b):
+def assert_allclose(a, b, desc=None):
     np.testing.assert_allclose(dense(a), dense(b))

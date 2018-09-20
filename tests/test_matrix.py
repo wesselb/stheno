@@ -4,245 +4,412 @@ from __future__ import absolute_import, division, print_function
 
 from itertools import product
 
+import logging
 import numpy as np
 from lab import B
 from stheno.matrix import Dense, Diagonal, UniformlyDiagonal, LowRank, dense, \
-    One, Zero, Woodbury, Constant
+    One, Zero, Woodbury, Constant, matrix
 
 # noinspection PyUnresolvedReferences
 from . import eq, neq, lt, le, ge, gt, raises, call, ok, eprint, allclose
 
 
-def compare(spd1, spd2, spd1_singular=False, spd2_singular=False):
-    # Create a dummy.
-    a = np.random.randn(*B.shape(spd1))
-    dummy = Dense(a.dot(a.T))
+def test_dense_methods():
+    a = Dense(np.random.randn(10, 5))
 
-    # Create some random matrices.
-    a = np.random.randn(B.shape(spd1)[0], 10)
-    b = np.random.randn(B.shape(spd1)[0], 10)
-    A = np.random.randn(*B.shape(spd1))
+    yield allclose, dense(a.T), dense(a).T
+    yield allclose, dense(-a), -dense(a)
+    yield allclose, dense(a[5]), dense(a)[5]
 
-    # Compare implementations.
-    yield ok, allclose(dense(spd1), dense(spd2)), 'matrices'
-    yield ok, allclose(B.diag(spd1), B.diag(spd2)), 'diagonals'
-    yield ok, allclose(B.transpose(spd1), B.transpose(spd2)), 'transposition'
-    yield ok, B.shape(spd1) == B.shape(spd2), 'shapes'
-    yield ok, allclose(B.cholesky(spd1), B.cholesky(spd2)), 'cholesky'
-    yield ok, allclose(B.root(spd1), B.root(spd2)), 'roots'
-    yield ok, allclose(B.ratio(spd1, dummy), B.ratio(spd2, dummy)), 'ratio'
 
-    if not spd1_singular and not spd2_singular:
-        yield ok, allclose(B.qf(spd1, a), B.qf(spd2, a)), 'qf'
-        yield ok, allclose(B.qf(spd1, a, b), B.qf(spd2, a, b)), 'qf 2'
-        yield ok, allclose(B.qf_diag(spd1, a), B.qf_diag(spd2, a)), 'qf diag'
-        yield ok, allclose(B.qf_diag(spd1, a, b),
-                           B.qf_diag(spd2, a, b)), 'qf diag 2'
-        yield ok, allclose(B.ratio(spd1, spd1), B.ratio(spd2, spd1)), 'ratio 2'
-        yield ok, allclose(B.ratio(spd1, spd1), B.ratio(spd2, spd2)), 'ratio 3'
-        yield ok, allclose(B.ratio(spd1, spd2), B.ratio(spd2, spd1)), 'ratio 4'
-        yield ok, allclose(B.ratio(spd1, spd2), B.ratio(spd2, spd2)), 'ratio 5'
-        yield ok, allclose(B.inv_prod(spd1, A), B.inv_prod(spd2, A)), 'inv prod'
-        yield ok, allclose(B.logdet(spd1), B.logdet(spd2)), 'logdets'
-
-    for singular, spd in [(spd1_singular, spd1), (spd2_singular, spd2)]:
-        if singular:
-            yield raises, RuntimeError, lambda: B.qf(spd, a)
-            yield raises, RuntimeError, lambda: B.qf(spd, a, a)
-            yield raises, RuntimeError, lambda: B.qf_diag(spd, a)
-            yield raises, RuntimeError, lambda: B.qf_diag(spd, a, a)
-            yield raises, RuntimeError, lambda: B.inv_prod(spd, A)
-            yield raises, RuntimeError, lambda: B.logdet(spd)
+def test_eye_form():
+    a = Dense(np.random.randn(5, 10))
+    yield allclose, dense(B.eye_from(a)), np.eye(5, 10)
+    yield allclose, dense(B.eye_from(a.T)), np.eye(10, 5)
 
 
 def test_matrix():
-    # Compare dense and diagonal.
-    a = np.diag(np.random.randn(3) ** 2)
-    for x in compare(Dense(a), Diagonal(np.diag(a))):
-        yield x
-
-    # Compare dense and uniformly diagonal.
-    a = np.random.randn() ** 2
-    for x in compare(Dense(np.eye(3) * a), UniformlyDiagonal(a, 3)):
-        yield x
-
-    # Compare dense and low-rank.
-    a = np.random.randn(3, 2)
-    for x in compare(Dense(a.dot(a.T)), LowRank(a), spd2_singular=True):
-        yield x
-
-    # Compare dense and Woodbury.
-    a = np.random.randn(3, 2)
-    b = np.random.randn(3) ** 2
-    for x in compare(Dense(a.dot(a.T) + np.diag(b)), LowRank(a) + Diagonal(b)):
-        yield x
-
-    # Compare diagonal and uniformly diagonal.
-    a = np.random.randn() ** 2
-    for x in compare(Diagonal(np.ones(3) * a), UniformlyDiagonal(a, 3)):
-        yield x
-
-    # Compare diagonal and low-rank.
-    a = np.diag(np.random.randn(3))
-    for x in compare(Diagonal(np.diag(a ** 2)), LowRank(a), spd2_singular=True):
-        yield x
-
-    # Compare diagonal and Woodbury.
-    a = np.diag(np.random.randn(3))
-    b = np.random.randn(3) ** 2
-    for x in compare(Diagonal(np.diag(a) ** 2 + b),
-                     LowRank(a) + Diagonal(b)):
-        yield x
-
-    # Compare uniformly diagonal and low-rank.
-    a = np.eye(3) * np.random.randn()
-    for x in compare(UniformlyDiagonal(a[0, 0] ** 2, 3), LowRank(a),
-                     spd2_singular=True):
-        yield x
-
-    # Compare uniformly diagonal and Woodbury.
-    a = np.eye(3) * np.random.randn()
-    b = np.ones(3) * np.random.randn() ** 2
-    for x in compare(UniformlyDiagonal(a[0, 0] ** 2 + b[0], 3),
-                     LowRank(a) + Diagonal(b)):
-        yield x
-
-    # Compare low-rank and Woodbury.
-    a = np.random.randn(3, 2)
-    b = np.zeros(3)
-    for x in compare(LowRank(a), LowRank(a) + Diagonal(b), spd1_singular=True):
-        yield x
+    a = np.random.randn(5, 3)
+    yield eq, type(matrix(a)), Dense
+    yield allclose, matrix(a).mat, a
+    yield eq, type(matrix(matrix(a))), Dense
+    yield allclose, matrix(matrix(a)).mat, a
 
 
-def test_basic_matrix_arithmetic():
-    # Generate a bunch of matrices.
-    spd = Dense(np.eye(3))
-    diag = Diagonal(np.random.randn(3) ** 2)
-    lr = LowRank(np.random.randn(3, 2))
-    woodbury = Woodbury(LowRank(np.random.randn(3, 2)),
-                        Diagonal(np.random.randn(3) ** 2))
-    one = One(spd)
-    zero = Zero(spd)
-    scalar = 5
+def test_dense():
+    a = np.random.randn(5, 3)
+    yield allclose, dense(Dense(a)), a
+    yield allclose, dense(a), a
 
-    # Put them in a list.
-    spds = [spd, diag, lr, woodbury, one, zero, scalar]
+    # Extensively test Diagonal.
+    yield allclose, \
+          dense(Diagonal([1, 2])), \
+          np.array([[1, 0],
+                    [0, 2]])
+    yield allclose, \
+          dense(Diagonal([1, 2], 3)), \
+          np.array([[1, 0, 0],
+                    [0, 2, 0],
+                    [0, 0, 0]])
+    yield allclose, \
+          dense(Diagonal([1, 2], 1)), \
+          np.array([[1]])
+    yield allclose, \
+          dense(Diagonal([1, 2], (3, 3))), \
+          np.array([[1, 0, 0],
+                    [0, 2, 0],
+                    [0, 0, 0]])
+    yield allclose, \
+          dense(Diagonal([1, 2], (2, 3))), \
+          np.array([[1, 0, 0],
+                    [0, 2, 0]])
+    yield allclose, \
+          dense(Diagonal([1, 2], (3, 2))), \
+          np.array([[1, 0],
+                    [0, 2],
+                    [0, 0]])
+    yield allclose, \
+          dense(Diagonal([1, 2], (1, 3))), \
+          np.array([[1, 0, 0]])
+    yield allclose, \
+          dense(Diagonal([1, 2], (3, 1))), \
+          np.array([[1],
+                    [0],
+                    [0]])
 
-    # Verify that the right types are generated by addition.
-    yield eq, type(spd + spd), Dense, 'add spd spd'
-    yield eq, type(spd + diag), Dense, 'add spd diag'
-    yield eq, type(spd + lr), Dense, 'add spd lr'
-    yield eq, type(spd + woodbury), Dense, 'add spd Woodbury'
-    yield eq, type(spd + one), Dense, 'add spd one'
-    yield eq, type(spd + zero), Dense, 'add spd zero'
-    yield eq, type(spd + scalar), Dense, 'add spd scalar'
+    # Test low-rank matrices.
+    left = np.random.randn(5, 3)
+    right = np.random.randn(10, 3)
+    middle = np.random.randn(3, 3)
+    lr = LowRank(left=left, right=right, middle=middle)
+    yield allclose, dense(lr), left.dot(middle).dot(right.T)
 
-    yield eq, type(diag + spd), Dense, 'add diag spd'
-    yield eq, type(diag + diag), Diagonal, 'add diag diag'
-    yield eq, type(diag + lr), Woodbury, 'add diag lr'
-    yield eq, type(diag + woodbury), Woodbury, 'add diag Woodbury'
-    yield eq, type(diag + one), Woodbury, 'add diag one'
-    yield eq, type(diag + zero), Diagonal, 'add diag zero'
-    yield eq, type(diag + scalar), Woodbury, 'add diag scalar'
+    # Test Woodbury matrices.
+    diag = Diagonal([1, 2, 3, 4], (5, 10))
+    wb = Woodbury(lr, diag)
+    yield allclose, dense(wb), dense(diag) + dense(lr)
 
-    yield eq, type(lr + spd), Dense, 'add lr spd'
-    yield eq, type(lr + diag), Woodbury, 'add lr diag'
-    yield eq, type(lr + lr), LowRank, 'add lr lr'
-    yield eq, type(lr + woodbury), Woodbury, 'add lr Woodbury'
-    yield eq, type(lr + one), LowRank, 'add lr one'
-    yield eq, type(lr + zero), LowRank, 'add lr zero'
-    yield eq, type(lr + scalar), LowRank, 'add lr scalar'
 
-    yield eq, type(woodbury + spd), Dense, 'add Woodbury spd'
-    yield eq, type(woodbury + diag), Woodbury, 'add Woodbury diag'
-    yield eq, type(woodbury + lr), Woodbury, 'add Woodbury lr'
-    yield eq, type(woodbury + woodbury), Woodbury, 'add Woodbury Woodbury'
-    yield eq, type(woodbury + one), Woodbury, 'add Woodbury one'
-    yield eq, type(woodbury + zero), Woodbury, 'add Woodbury zero'
-    yield eq, type(woodbury + scalar), Woodbury, 'add Woodbury scalar'
+def test_dtype():
+    # Test `Dense`.
+    yield eq, B.dtype(Dense(np.array([[1]]))), int
+    yield eq, B.dtype(Dense(np.array([[1.0]]))), float
 
-    yield eq, type(one + spd), Dense, 'add one spd'
-    yield eq, type(one + diag), Woodbury, 'add one diag'
-    yield eq, type(one + lr), LowRank, 'add one lr'
-    yield eq, type(one + woodbury), Woodbury, 'add one Woodbury'
-    yield eq, type(one + one), LowRank, 'add one one'
-    yield eq, type(one + zero), One, 'add one zero'
-    yield eq, type(one + scalar), LowRank, 'add one scalar'
+    # Test `Diagonal`.
+    diag_int = Diagonal(np.array([1]))
+    diag_float = Diagonal(np.array([1.0]))
+    yield eq, B.dtype(diag_int), int
+    yield eq, B.dtype(diag_float), float
 
-    yield eq, type(zero + spd), Dense, 'add zero spd'
-    yield eq, type(zero + diag), Diagonal, 'add zero diag'
-    yield eq, type(zero + lr), LowRank, 'add zero lr'
-    yield eq, type(zero + woodbury), Woodbury, 'add zero Woodbury'
-    yield eq, type(zero + one), One, 'add zero one'
-    yield eq, type(zero + zero), Zero, 'add zero zero'
-    yield eq, type(zero + scalar), Constant, 'add zero scalar'
+    # Test `LowRank`.
+    lr_int = LowRank(left=np.array([[1]]),
+                     right=np.array([[2]]),
+                     middle=np.array([[3]]))
+    lr_float = LowRank(left=np.array([[1.0]]),
+                       right=np.array([[2.0]]),
+                       middle=np.array([[3.0]]))
+    yield eq, B.dtype(lr_int), int
+    yield eq, B.dtype(lr_float), float
 
-    yield eq, type(scalar + spd), Dense, 'add scalar spd'
-    yield eq, type(scalar + diag), Woodbury, 'add scalar diag'
-    yield eq, type(scalar + lr), LowRank, 'add scalar lr'
-    yield eq, type(scalar + woodbury), Woodbury, 'add scalar Woodbury'
-    yield eq, type(scalar + one), LowRank, 'add scalar one'
-    yield eq, type(scalar + zero), Constant, 'add scalar zero'
-    yield eq, type(scalar + scalar), int, 'add scalar scalar'
+    # Test `Constant`.
+    yield eq, B.dtype(Constant(1, shape=1)), int
+    yield eq, B.dtype(Constant(1.0, shape=1)), float
 
-    # Verify that the right types are generated by multiplication.
-    yield eq, type(spd * spd), Dense, 'mul spd spd'
-    yield eq, type(spd * diag), Diagonal, 'mul spd diag'
-    yield eq, type(spd * lr), Dense, 'mul spd lr'
-    yield eq, type(spd * woodbury), Dense, 'mul spd Woodbury'
-    yield eq, type(spd * one), Dense, 'mul spd one'
-    yield eq, type(spd * zero), Zero, 'mul spd zero'
-    yield eq, type(spd * scalar), Dense, 'mul spd scalar'
+    # Test `Woodbury`.
+    yield eq, B.dtype(Woodbury(lr_int, diag_int)), int
+    yield eq, B.dtype(Woodbury(lr_float, diag_float)), float
 
-    yield eq, type(diag * spd), Diagonal, 'mul diag spd'
-    yield eq, type(diag * diag), Diagonal, 'mul diag diag'
-    yield eq, type(diag * lr), Diagonal, 'mul diag lr'
-    yield eq, type(diag * woodbury), Diagonal, 'mul diag Woodbury'
-    yield eq, type(diag * one), Diagonal, 'mul diag one'
-    yield eq, type(diag * zero), Zero, 'mul diag zero'
-    yield eq, type(diag * scalar), Diagonal, 'mul diag scalar'
 
-    yield eq, type(lr * spd), Dense, 'mul lr spd'
-    yield eq, type(lr * diag), Diagonal, 'mul lr diag'
-    yield eq, type(lr * lr), LowRank, 'mul lr lr'
-    yield eq, type(lr * woodbury), Woodbury, 'mul lr Woodbury'
-    yield eq, type(lr * one), LowRank, 'mul lr one'
-    yield eq, type(lr * zero), Zero, 'mul lr zero'
-    yield eq, type(lr * scalar), LowRank, 'mul lr scalar'
+def test_diag():
+    # Test `Dense`.
+    a = np.random.randn(5, 3)
+    yield allclose, B.diag(Dense(a)), np.diag(a)
 
-    yield eq, type(woodbury * spd), Dense, 'mul Woodbury spd'
-    yield eq, type(woodbury * diag), Diagonal, 'mul Woodbury diag'
-    yield eq, type(woodbury * lr), Woodbury, 'mul Woodbury lr'
-    yield eq, type(woodbury * woodbury), Woodbury, 'mul Woodbury Woodbury'
-    yield eq, type(woodbury * one), Woodbury, 'mul Woodbury one'
-    yield eq, type(woodbury * zero), Zero, 'mul Woodbury zero'
-    yield eq, type(woodbury * scalar), Woodbury, 'mul Woodbury scalar'
+    # Test `Diagonal`.
+    yield allclose, B.diag(Diagonal([1, 2, 3])), [1, 2, 3]
+    yield allclose, B.diag(Diagonal([1, 2, 3], 2)), [1, 2]
+    yield allclose, B.diag(Diagonal([1, 2, 3], 4)), [1, 2, 3, 0]
 
-    yield eq, type(one * spd), Dense, 'mul one spd'
-    yield eq, type(one * diag), Diagonal, 'mul one diag'
-    yield eq, type(one * lr), LowRank, 'mul one lr'
-    yield eq, type(one * woodbury), Woodbury, 'mul one Woodbury'
-    yield eq, type(one * one), One, 'mul one one'
-    yield eq, type(one * zero), Zero, 'mul one zero'
-    yield eq, type(one * scalar), Constant, 'mul one scalar'
+    # Test `LowRank`.
+    b = np.random.randn(10, 3)
+    yield allclose, B.diag(LowRank(left=a, right=a)), np.diag(a.dot(a.T))
+    yield allclose, B.diag(LowRank(left=a, right=b)), np.diag(a.dot(b.T))
+    yield allclose, B.diag(LowRank(left=b, right=b)), np.diag(b.dot(b.T))
 
-    yield eq, type(zero * spd), Zero, 'mul zero spd'
-    yield eq, type(zero * diag), Zero, 'mul zero diag'
-    yield eq, type(zero * lr), Zero, 'mul zero lr'
-    yield eq, type(zero * woodbury), Zero, 'mul zero Woodbury'
-    yield eq, type(zero * one), Zero, 'mul zero one'
-    yield eq, type(zero * zero), Zero, 'mul zero zero'
-    yield eq, type(zero * scalar), Zero, 'mul zero scalar'
+    # Test `Constant`.
+    yield allclose, B.diag(Constant(1, shape=(3, 5))), np.ones(3)
 
-    yield eq, type(scalar * spd), Dense, 'mul scalar spd'
-    yield eq, type(scalar * diag), Diagonal, 'mul scalar diag'
-    yield eq, type(scalar * lr), LowRank, 'mul scalar lr'
-    yield eq, type(scalar * woodbury), Woodbury, 'mul scalar Woodbury'
-    yield eq, type(scalar * one), Constant, 'mul scalar one'
-    yield eq, type(scalar * zero), Zero, 'mul scalar zero'
-    yield eq, type(scalar * scalar), int, 'mul scalar scalar'
+    # Test `Woodbury`.
+    yield allclose, B.diag(Woodbury(LowRank(left=a, right=b),
+                                    Diagonal([1, 2, 3], shape=(5, 10)))), \
+          np.diag(a.dot(b.T) + np.concatenate((np.diag([1, 2, 3, 0, 0]),
+                                               np.zeros((5, 5))), axis=1))
 
-    # Check that the algebra is correct by comparing the dense matrices.
-    for x, y in product(spds, spds):
-        yield ok, allclose(dense(x) * dense(y), dense(x * y)), 'mul', x, y
-        yield ok, allclose(dense(x) + dense(y), dense(x + y)), 'add', x, y
+
+def test_cholesky():
+    a = np.random.randn(5, 5)
+    a = a.T.dot(a)
+
+    # Test `Dense`.
+    yield allclose, np.linalg.cholesky(a), B.cholesky(a)
+
+    # Test `Diagonal`.
+    d = Diagonal(np.diag(a))
+    yield allclose, np.linalg.cholesky(dense(d)), B.cholesky(d)
+    yield raises, RuntimeError, lambda: B.cholesky(Diagonal([1], shape=(2, 1)))
+
+
+def test_matmul():
+    diag_square = Diagonal([1, 2], 3)
+    diag_tall = Diagonal([3, 4], (5, 3))
+    diag_wide = Diagonal([5, 6], (2, 3))
+
+    dense_square = Dense(np.random.randn(3, 3))
+    dense_tall = Dense(np.random.randn(5, 3))
+    dense_wide = Dense(np.random.randn(2, 3))
+
+    lr = LowRank(left=np.random.randn(5, 2),
+                 right=np.random.randn(3, 2),
+                 middle=np.random.randn(2, 2))
+
+    def compare_matmul(a, b, desc=None):
+        allclose(B.matmul(a, b), B.matmul(dense(a), dense(b)))
+
+    # Test `Dense`.
+    yield compare_matmul, dense_wide, dense_tall.T, 'dense w x dense t'
+
+    # Test `LowRank`.
+    yield compare_matmul, lr, dense_tall.T, 'lr x dense t'
+    yield compare_matmul, dense_wide, lr.T, 'dense w x lr'
+    yield compare_matmul, lr, diag_tall.T, 'lr x diag t'
+    yield compare_matmul, diag_wide, lr.T, 'diag w x lr'
+    yield compare_matmul, lr, lr.T, 'lr x lr'
+    yield compare_matmul, lr.T, lr, 'lr x lr (2)'
+
+    # Test `Diagonal`.
+    #   Test multiplication between diagonal matrices.
+    yield compare_matmul, diag_square, diag_square.T, 'diag s x diag s'
+    yield compare_matmul, diag_tall, diag_square.T, 'diag t x diag s'
+    yield compare_matmul, diag_wide, diag_square.T, 'diag w x diag s'
+    yield compare_matmul, diag_square, diag_tall.T, 'diag s x diag t'
+    yield compare_matmul, diag_tall, diag_tall.T, 'diag t x diag t'
+    yield compare_matmul, diag_wide, diag_tall.T, 'diag w x diag t'
+    yield compare_matmul, diag_square, diag_wide.T, 'diag s x diag w'
+    yield compare_matmul, diag_tall, diag_wide.T, 'diag t x diag w'
+    yield compare_matmul, diag_wide, diag_wide.T, 'diag w x diag w'
+
+    #   Test multiplication between diagonal and dense matrices.
+    yield compare_matmul, diag_square, dense_square.T, 'diag s x dense s'
+    yield compare_matmul, diag_square, dense_tall.T, 'diag s x dense t'
+    yield compare_matmul, diag_square, dense_wide.T, 'diag s x dense w'
+    yield compare_matmul, diag_tall, dense_square.T, 'diag t x dense s'
+    yield compare_matmul, diag_tall, dense_tall.T, 'diag t x dense t'
+    yield compare_matmul, diag_tall, dense_wide.T, 'diag t x dense w'
+    yield compare_matmul, diag_wide, dense_square.T, 'diag w x dense s'
+    yield compare_matmul, diag_wide, dense_tall.T, 'diag w x dense t'
+    yield compare_matmul, diag_wide, dense_wide.T, 'diag w x dense w'
+
+    yield compare_matmul, dense_square, diag_square.T, 'dense s x diag s'
+    yield compare_matmul, dense_square, diag_tall.T, 'dense s x diag t'
+    yield compare_matmul, dense_square, diag_wide.T, 'dense s x diag w'
+    yield compare_matmul, dense_tall, diag_square.T, 'dense t x diag s'
+    yield compare_matmul, dense_tall, diag_tall.T, 'dense t x diag t'
+    yield compare_matmul, dense_tall, diag_wide.T, 'dense t x diag w'
+    yield compare_matmul, dense_wide, diag_square.T, 'dense w x diag s'
+    yield compare_matmul, dense_wide, diag_tall.T, 'dense w x diag t'
+    yield compare_matmul, dense_wide, diag_wide.T, 'dense w x diag w'
+
+    # Test `B.matmul` with tree matrices simultaneously.
+    yield allclose, \
+          B.matmul(dense_tall, dense_square, dense_wide, tr_c=True), \
+          dense(dense_tall).dot(dense(dense_square)).dot(dense(dense_wide).T)
+
+    # Test `Woodbury`.
+    wb = lr + dense_tall
+    yield compare_matmul, wb, dense_square.T, 'wb x dense s'
+    yield compare_matmul, dense_square, wb.T, 'dense s x wb'
+    yield compare_matmul, wb, wb.T, 'wb x wb'
+    yield compare_matmul, wb.T, wb, 'wb x wb (2)'
+
+
+def test_inverse_and_logdet():
+    # Test `Dense`.
+    a = np.random.randn(5, 5)
+    a = Dense(a.dot(a.T))
+    yield allclose, B.matmul(a, B.inverse(a)), np.eye(5)
+    yield allclose, B.matmul(B.inverse(a), a), np.eye(5)
+    yield allclose, B.logdet(a), np.log(np.linalg.det(dense(a)))
+
+    # Test `Diagonal`.
+    d = Diagonal([1, 2, 3, 4, 5])
+    yield allclose, B.matmul(d, B.inverse(d)), np.eye(5)
+    yield allclose, B.matmul(B.inverse(d), d), np.eye(5)
+    yield allclose, B.logdet(d), np.log(np.linalg.det(dense(d)))
+    yield eq, B.shape(B.inverse(Diagonal([1, 2], shape=(2, 4)))), (4, 2)
+
+    # Test `Woodbury`.
+    a = np.random.randn(5, 3)
+    b = np.random.randn(3, 3)
+    wb = d + LowRank(left=a, right=a, middle=b.dot(b.T))
+    yield allclose, B.matmul(wb, B.inverse(wb)), np.eye(5)
+    yield allclose, B.matmul(B.inverse(wb), wb), np.eye(5)
+    yield allclose, B.logdet(wb), np.log(np.linalg.det(dense(wb)))
+
+    # Test `LowRank`.
+    yield raises, RuntimeError, lambda: B.inverse(wb.lr)
+    yield raises, RuntimeError, lambda: B.logdet(wb.lr)
+
+
+def test_root():
+    # Test `Dense`.
+    a = np.random.randn(5, 5)
+    a = Dense(a.dot(a.T))
+    yield allclose, a, B.matmul(B.root(a), B.root(a))
+
+    # Test `Diagonal`.
+    d = Diagonal(np.array([1, 2, 3, 4, 5]))
+    yield allclose, d, B.matmul(B.root(d), B.root(d))
+
+
+def test_schur():
+    # Test `Dense`.
+    a = np.random.randn(5, 10)
+    b = np.random.randn(3, 5)
+    c = np.random.randn(3, 3)
+    d = np.random.randn(3, 10)
+    c = c.dot(c.T)
+
+    yield allclose, B.schur(a, b, c, d), \
+          a - np.linalg.solve(c.T, b).T.dot(d), 'np np np np'
+
+    # Test `Woodbury`.
+    #   The inverse of the Woodbury matrix already properly tests the method for
+    #   Woodbury matrices.
+    c = np.random.randn(2, 2)
+    c = Diagonal(np.array([1, 2, 3])) + \
+        LowRank(left=np.random.randn(3, 2), middle=c.dot(c.T))
+    yield allclose, B.schur(a, b, c, d), \
+          a - np.linalg.solve(dense(c).T, b).T.dot(d), 'np np wb np'
+
+    #   Test all combinations of `Woodbury`, `LowRank`, and `Diagonal`.
+    a = np.random.randn(2, 2)
+    a = Diagonal(np.array([4, 5, 6, 7, 8]), shape=(5, 10)) + \
+        LowRank(left=np.random.randn(5, 2),
+                right=np.random.randn(10, 2),
+                middle=a.dot(a.T))
+
+    b = np.random.randn(2, 2)
+    b = Diagonal(np.array([9, 10, 11]), shape=(3, 5)) + \
+        LowRank(left=c.lr.left,
+                right=a.lr.left,
+                middle=b.dot(b.T))
+
+    d = np.random.randn(2, 2)
+    d = Diagonal(np.array([12, 13, 14]), shape=(3, 10)) + \
+        LowRank(left=c.lr.right,
+                right=a.lr.right,
+                middle=d.dot(d.T))
+
+    #     Loop over all combinations. Some of them should be efficient and
+    #     representation preserving; all of them should be correct.
+    for ai in [a, a.lr, a.diag]:
+        for bi in [b, b.lr, b.diag]:
+            for ci in [c, c.diag]:
+                for di in [d, d.lr, d.diag]:
+                    yield allclose, B.schur(ai, bi, ci, di), \
+                          dense(ai) - \
+                          np.linalg.solve(dense(ci).T,
+                                          dense(bi)).T.dot(dense(di)), \
+                          '{} {} {} {}'.format(ai, bi, ci, di)
+
+
+def test_qf():
+    a = np.random.randn(5, 5)
+    a = Dense(a.dot(a.T))
+    b, c = np.random.randn(5, 3), np.random.randn(5, 3)
+
+    # Test `Dense`.
+    yield allclose, B.qf(a, b), np.linalg.solve(dense(a), b).T.dot(b)
+    yield allclose, B.qf(a, b, c), np.linalg.solve(dense(a), b).T.dot(c)
+    yield allclose, B.qf_diag(a, b), \
+          np.diag(np.linalg.solve(dense(a), b).T.dot(b))
+    yield allclose, B.qf_diag(a, b, c), \
+          np.diag(np.linalg.solve(dense(a), b).T.dot(c))
+
+    # Test `Diagonal` (and `Woodbury`).
+    d = Diagonal(B.diag(a))
+    yield allclose, B.qf(d, b), np.linalg.solve(dense(d), b).T.dot(b)
+    yield allclose, B.qf(d, b, c), np.linalg.solve(dense(d), b).T.dot(c)
+    yield allclose, B.qf_diag(d, b), \
+          np.diag(np.linalg.solve(dense(d), b).T.dot(b))
+    yield allclose, B.qf_diag(d, b, c), \
+          np.diag(np.linalg.solve(dense(d), b).T.dot(c))
+
+    # Test `LowRank`.
+    lr = LowRank(np.random.randn(5, 3))
+    yield raises, RuntimeError, lambda: B.qf(lr, b)
+    yield raises, RuntimeError, lambda: B.qf(lr, b, c)
+    yield raises, RuntimeError, lambda: B.qf_diag(lr, b)
+    yield raises, RuntimeError, lambda: B.qf_diag(lr, b, c)
+
+
+def test_ratio():
+    a, b = np.random.randn(5, 5), np.random.randn(5, 5)
+    a, b = Dense(a.dot(a.T)), Dense(b.dot(b.T))
+    d, e = Diagonal(B.diag(a)), Diagonal(B.diag(b))
+    c = np.random.randn(3, 3)
+    lr = LowRank(left=np.random.randn(5, 3), middle=c.dot(c.T))
+
+    yield allclose, B.ratio(a, b), \
+          np.trace(np.linalg.solve(dense(b), dense(a)))
+    yield allclose, B.ratio(lr, b), \
+          np.trace(np.linalg.solve(dense(b), dense(lr)))
+    yield allclose, B.ratio(d, e), \
+          np.trace(np.linalg.solve(dense(e), dense(d)))
+
+
+def test_transposition():
+    def compare_transposition(a):
+        allclose(B.transpose(a), dense(a).T)
+
+    d = Diagonal([1, 2, 3], shape=(5, 10))
+    lr = LowRank(left=np.random.randn(5, 3), right=np.random.randn(10, 3))
+
+    yield compare_transposition, Dense(np.random.randn(5, 5))
+    yield compare_transposition, d
+    yield compare_transposition, lr
+    yield compare_transposition, d + lr
+    yield compare_transposition, Constant(5, shape=(4, 2))
+
+
+def test_arithmetic_and_shapes():
+    a = Dense(np.random.randn(4, 3))
+    d = Diagonal(np.array([1, 2, 3]), shape=(4, 3))
+    lr = LowRank(left=np.random.randn(4, 2),
+                 right=np.random.randn(3, 2),
+                 middle=np.random.randn(2, 2))
+    wb = d + lr
+
+    # Check basic operations for all types: interaction with scalars.
+    for m in [a, d, lr, wb]:
+        yield allclose, 5 * m, 5 * dense(m)
+        yield allclose, m * 5, dense(m) * 5
+        yield allclose, 5 + m, 5 + dense(m)
+        yield allclose, m + 5, dense(m) + 5
+        yield allclose, 5 - m, 5 - dense(m)
+        yield allclose, m - 5, dense(m) - 5
+        yield allclose, m.__div__(5.0), dense(m) / 5.0
+        yield allclose, m.__truediv__(5.0), dense(m) / 5.0
+
+    # Check basic operations for all types: interaction with others.
+    for m1 in [a, d, lr, wb]:
+        for m2 in [a, d, lr, wb]:
+            yield allclose, m1 * m2, dense(m1) * dense(m2)
+            yield allclose, m1 + m2, dense(m1) + dense(m2)
+            yield allclose, m1 - m2, dense(m1) - dense(m2)
+
+    # Finally, check shapes.
+    yield eq, B.shape(a), (4, 3)
+    yield eq, B.shape(d), (4, 3)
+    yield eq, B.shape(lr), (4, 3)
+    yield eq, B.shape(wb), (4, 3)

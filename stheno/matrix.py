@@ -13,11 +13,81 @@ from .field import Element, OneElement, ZeroElement, mul, add, get_field, \
     ScaledElement
 
 __all__ = ['matrix', 'Dense', 'LowRank', 'Diagonal', 'UniformlyDiagonal', 'One',
-           'Zero', 'dense', 'Woodbury']
+           'Zero', 'dense', 'Woodbury', 'Shape', 'Constant']
 
 log = logging.getLogger(__name__)
 
 _dispatch = Dispatcher()
+
+
+class Shape(Referentiable):
+    """Shape of a matrix.
+
+    Args:
+        *sizes (tensor): Sizes of the dimensions.
+    """
+    _dispatch = Dispatcher(in_class=Self)
+
+    @_dispatch([object])
+    def __init__(self, *sizes):
+        # If only one size if given, copy it.
+        if len(sizes) == 1:
+            self.rows, self.cols = sizes[0], sizes[0]
+        elif len(sizes) == 2:
+            self.rows, self.cols = sizes
+        elif len(sizes) != 2:
+            raise ValueError('Incorrect number of sizes given: {}.'
+                             ''.format(len(sizes)))
+
+        self.square = self.rows is self.cols
+        self.diag_len = B.minimum(self.rows, self.cols)
+
+    @_dispatch({list, tuple})
+    def __init__(self, sizes):
+        Shape.__init__(self, *sizes)
+
+    @_dispatch(Self)
+    def __init__(self, shape):
+        Shape.__init__(self, shape.rows, shape.cols)
+
+    @_dispatch(B.DType)
+    def ones(self, dtype):
+        return B.ones([self.rows, self.cols], dtype=dtype)
+
+    @_dispatch(object)
+    def ones(self, reference):
+        return self.ones(B.dtype(reference))
+
+    @_dispatch(B.DType)
+    def zeros(self, dtype):
+        return B.zeros([self.rows, self.cols], dtype=dtype)
+
+    @_dispatch(object)
+    def zeros(self, reference):
+        return self.zeros(B.dtype(reference))
+
+    @_dispatch(object)
+    def diagonal(self, diag):
+        core = B.diag(diag)
+        core_rows, core_cols = B.shape(core)
+        extra_rows, extra_cols = self.rows - core_rows, self.cols - core_cols
+        dtype = B.dtype(diag)
+        return B.concat2d([core, Shape(core_rows, extra_cols).zeros(dtype)],
+                          [Shape(extra_rows, core_cols).zeros(dtype),
+                           Shape(extra_rows, extra_cols).zeros(dtype)])
+
+    @_dispatch(B.DType)
+    def eye(self, dtype):
+        return self.diagonal(B.ones([B.minimum(self.rows, self.cols)],
+                                    dtype=dtype))
+
+    @_dispatch(object)
+    def eye(self, reference):
+        return self.eye(B.dtype(reference))
+
+    @property
+    def T(self):
+        return Shape(self.cols, self.rows)
 
 
 class Dense(Element, Referentiable):
@@ -30,39 +100,23 @@ class Dense(Element, Referentiable):
 
     def __init__(self, mat):
         self.mat = mat
-        self._cholesky = None
-        self._logdet = None
-        self._root = None
 
-    def cholesky(self):
-        """Compute the Cholesky decomposition.
-
-        Returns:
-            tensor: Cholesky decomposition.
-        """
-        if self._cholesky is None:
-            self._cholesky = B.cholesky(B.reg(dense(self)))
-        return self._cholesky
-
-    def logdet(self):
-        """Compute the log-determinant.
-
-        Returns:
-            scalar: Log-determinant.
-        """
-        if self._logdet is None:
-            self._logdet = 2 * B.sum(B.log(B.diag(B.cholesky(self))))
-        return self._logdet
-
-    def root(self):
-        """Compute a square root."""
-        if self._root is None:
-            vals, vecs = B.eig(B.reg(dense(self)))
-            self._root = B.matmul(vecs * vals[None, :] ** .5, vecs, tr_b=True)
-        return self._root
+        # Caching:
+        self.cholesky = None
+        self.logdet = None
+        self.root = None
 
     def __neg__(self):
         return mul(B.cast(-1, dtype=B.dtype(self)), self)
+
+    def __div__(self, other):
+        return B.divide(self, other)
+
+    def __truediv__(self, other):
+        return B.divide(self, other)
+
+    def __getitem__(self, item):
+        return self.mat[item]
 
     @property
     def T(self):
@@ -79,35 +133,29 @@ class Diagonal(Dense, Referentiable):
 
     Args:
         diag (vector): Diagonal of the matrix.
+        shape (shape, optional): Shape of the matrix.
     """
     _dispatch = Dispatcher(in_class=Self)
 
-    def __init__(self, diag):
+    def __init__(self, diag, shape=None):
         Dense.__init__(self, None)
         self.diag = diag
-
-    def cholesky(self):
-        return Diagonal(self.diag ** .5)
-
-    def logdet(self):
-        return B.sum(B.log(self.diag))
-
-    def root(self):
-        return B.cholesky(self)
+        self.shape = Shape(B.shape(diag)[0]) if shape is None else Shape(shape)
 
 
 class UniformlyDiagonal(Diagonal, Referentiable):
     """Uniformly diagonal symmetric positive-definite matrix.
 
     Args:
-        diag_scal (scalar): Scale of the diagonal of the matrix.
-        n (int): Size of the the diagonal.
+        diag_scale (scalar): Scale of the diagonal of the matrix.
+        n (int): Length of the diagonal.
+        shape (shape, optional): Shape of the matrix.
     """
     _dispatch = Dispatcher(in_class=Self)
 
-    def __init__(self, diag_scale, n):
+    def __init__(self, diag_scale, n, shape=None):
         diag = diag_scale * B.ones([n], dtype=B.dtype(diag_scale))
-        Diagonal.__init__(self, diag)
+        Diagonal.__init__(self, diag, shape)
 
 
 class LowRank(Dense, Referentiable):
@@ -120,56 +168,23 @@ class LowRank(Dense, Referentiable):
         right (tensor, optional): Right part of the matrix. Defaults to `left`.
         scales (tensor, optional): Scaling of the outer products. Defaults to
             ones.
-        psd (bool, optional): Indicator for positive definiteness. Defaults to
-            `False`.
     """
     _dispatch = Dispatcher(in_class=Self)
 
-    def __init__(self, left, right=None, scales=None, psd=False):
+    def __init__(self, left, right=None, middle=None):
         Dense.__init__(self, None)
-        self._left = left
-        self._right = left if right is None else right
-        self._scales = scales
-        self.psd = psd
+        self.left = left
+        self.right = left if right is None else right
+        if middle is None:
+            self.middle = B.eye(B.shape_int(self.left)[1],
+                                dtype=B.dtype(self.left))
+        else:
+            self.middle = middle
 
-    @property
-    def scales(self):
-        if self._scales is None:
-            self._scales = B.ones([B.shape_int(self.left)[1]],
-                                  dtype=B.dtype(self.left))
-        return self._scales
-
-    @property
-    def left(self):
-        return self._left
-
-    @property
-    def right(self):
-        return self._right
-
-    def logdet(self):
-        raise RuntimeError('Matrix is singular.')
-
-    def split(self):
-        zero = B.cast(0, dtype=B.dtype(self))
-        pos_scales = B.maximum(self.scales, zero)
-        neg_scales = -B.minimum(self.scales, zero)
-        return LowRank(left=self.left, right=self.right,
-                       scales=pos_scales, psd=True), \
-               LowRank(left=self.left, right=self.right,
-                       scales=neg_scales, psd=True)
-
-    def symmetrise(self):
-        if self.left is self.right:
-            return self
-        inner = B.concat([self.left + self.right,
-                          self.left,
-                          self.right], axis=1)
-        scales = B.concat([.5 * self.scales,
-                           -.5 * self.scales,
-                           -.5 * self.scales],
-                          axis=0)
-        return LowRank(left=inner, right=inner, scales=scales)
+        # Shorthands:
+        self.l = self.left
+        self.r = self.right
+        self.m = self.middle
 
 
 class Constant(LowRank, Referentiable):
@@ -177,46 +192,27 @@ class Constant(LowRank, Referentiable):
 
     Args:
         constant (tensor): Constant of the matrix.
-        num_rows (int): Number of rows.
-        num_cols (int, optional): Number of columns. Defaults to the number of
-            rows.
+        shape (shape): Shape of the matrix.
     """
     _dispatch = Dispatcher(in_class=Self)
 
-    @_dispatch(object, object, [object])
-    def __init__(self, constant, num_rows, num_cols=None):
-        LowRank.__init__(self, None, psd=True)
+    @_dispatch(object, [object])
+    def __init__(self, constant, shape):
         self.constant = constant
-        self.num_rows = num_rows
-        self.num_cols = num_cols
+        self.shape = Shape(shape)
+
+        # Construct and initialise the low-rank representation.
+        left = B.ones([self.shape.rows, 1], dtype=B.dtype(self.constant))
+        if self.shape.square:
+            right = left
+        else:
+            right = B.ones([self.shape.cols, 1], dtype=B.dtype(self.constant))
+        middle = B.expand_dims(B.expand_dims(self.constant, axis=0), axis=0)
+        LowRank.__init__(self, left=left, right=right, middle=middle)
 
     @_dispatch(object, {Dense, B.Numeric})
     def __init__(self, constant, reference):
-        shape = B.shape(reference)
-        Constant.__init__(self, constant, shape[0], shape[1])
-
-    @property
-    def scales(self):
-        if self._scales is None:
-            self._scales = B.expand_dims(self.constant, axis=0)
-        return self._scales
-
-    @property
-    def left(self):
-        if self._left is None:
-            self._left = B.ones([self.num_rows, 1],
-                                dtype=B.dtype(self.constant))
-        return self._left
-
-    @property
-    def right(self):
-        if self.num_cols is None:
-            return self.left
-        else:
-            if self._right is None:
-                self._right = B.ones([self.num_cols, 1],
-                                     dtype=B.dtype(self.constant))
-            return self._right
+        Constant.__init__(self, constant, shape=B.shape(reference))
 
 
 class One(Constant, OneElement, Referentiable):
@@ -224,20 +220,17 @@ class One(Constant, OneElement, Referentiable):
 
     Args:
         dtype (dtype): Data type.
-        num_rows (int): Number of rows.
-        num_cols (int, optional): Number of columns. Defaults to the number of
-            rows.
+        shape (shape): Shape of the matrix.
     """
     _dispatch = Dispatcher(in_class=Self)
 
-    @_dispatch(B.DType, object, [object])
-    def __init__(self, dtype, num_rows, num_cols=None):
-        Constant.__init__(self, B.cast(1, dtype=dtype), num_rows, num_cols)
+    @_dispatch(B.DType, [object])
+    def __init__(self, dtype, shape):
+        Constant.__init__(self, B.cast(1, dtype=dtype), shape=shape)
 
     @_dispatch({Dense, B.Numeric})
     def __init__(self, reference):
-        shape = B.shape(reference)
-        One.__init__(self, B.dtype(reference), shape[0], shape[1])
+        One.__init__(self, B.dtype(reference), B.shape(reference))
 
 
 class Zero(Constant, ZeroElement, Referentiable):
@@ -245,20 +238,17 @@ class Zero(Constant, ZeroElement, Referentiable):
 
     Args:
         dtype (dtype): Data type.
-        num_rows (int): Number of rows.
-        num_cols (int, optional): Number of columns. Defaults to the number of
-            rows.
+        shape (shape): Shape of the matrix.
     """
     _dispatch = Dispatcher(in_class=Self)
 
-    @_dispatch(B.DType, object, [object])
-    def __init__(self, dtype, num_rows, num_cols=None):
-        Constant.__init__(self, B.cast(0, dtype=dtype), num_rows, num_cols)
+    @_dispatch(B.DType, [object])
+    def __init__(self, dtype, shape):
+        Constant.__init__(self, B.cast(0, dtype=dtype), shape=shape)
 
     @_dispatch({Dense, B.Numeric})
     def __init__(self, reference):
-        shape = B.shape(reference)
-        Zero.__init__(self, B.dtype(reference), shape[0], shape[1])
+        Zero.__init__(self, B.dtype(reference), B.shape(reference))
 
 
 class Woodbury(Dense, Referentiable):
@@ -270,64 +260,27 @@ class Woodbury(Dense, Referentiable):
     """
     _dispatch = Dispatcher(in_class=Self)
 
-    @_dispatch(LowRank, Diagonal)
     def __init__(self, lr, diag):
         Dense.__init__(self, None)
-        self.lr_part = lr
-        self.diag_part = diag
+        self.lr = lr
+        self.diag = diag
 
-        # Store stuff related to the (outer) Schur complement.
-        self._schur_inner = None
-        self._schur = None
-        self._schur_left = None
-        self._schur_right = None
-
-    def schur_complement(self):
-        if self._schur is None:
-            if self.lr_part.psd:
-                self._schur_inner = self.diag_part
-                lr = self.lr_part
-            else:
-                # Low-rank part not guaranteed to be PD. Split it up.
-                lr_pos, lr_neg = self.lr_part.symmetrise().split()
-                self._schur_inner = self.diag_part + lr_pos
-                lr = lr_neg
-
-            # Take the scales together with the left and right part.
-            sqrt_scales = lr.scales[None, :] ** .5
-            self._schur_left = lr.right * sqrt_scales
-            self._schur_right = lr.left * sqrt_scales
-
-            # Compute Schur complement.
-            prod = B.qf(self._schur_inner, self._schur_left, self._schur_right)
-
-            if self.lr_part.psd:
-                self._schur = matrix(B.add(B.eye_from(prod), prod))
-            else:
-                # Low-rank part was split up. Instead subtract.
-                self._schur = matrix(B.subtract(B.eye_from(prod), prod))
-
-        return self._schur_inner, \
-               self._schur, \
-               self._schur_left, \
-               self._schur_right
-
-    def logdet(self):
-        inner, schur, left, right = self.schur_complement()
-        return B.logdet(schur) + B.logdet(inner)
+        # Caching:
+        self.inverse = None
+        self.schur = None
 
 
 # Conveniently make identity matrices.
 
 @B.eye_from.extend({Dense, B.Numeric})
-def eye_from(a): return Diagonal(B.ones([B.shape(a)[0]], dtype=B.dtype(a)))
+def eye_from(a): return Shape(B.shape(a)).eye(a)
 
 
 # Conversion between `Matrix`s and dense matrices:
 
 @_dispatch(Dense)
 def matrix(a):
-    """Matrix as `Matrix`.
+    """Matrix as `Dense`.
 
     Args:
         a (tensor): Matrix to type.
@@ -355,24 +308,20 @@ def dense(a):
     return a.mat
 
 
+@_dispatch(B.Numeric)
+def dense(a): return a
+
+
 @_dispatch(Diagonal)
-def dense(a): return B.diag(a.diag)
+def dense(a): return a.shape.diagonal(B.diag(a))
 
 
 @_dispatch(LowRank)
-def dense(a): return B.matmul(a.left * a.scales[None, :], a.right, tr_b=True)
-
-
-@_dispatch(Constant)
-def dense(a): return a.constant * B.ones(B.shape(a), dtype=B.dtype(a))
+def dense(a): return B.matmul(a.left, a.middle, a.right, tr_c=True)
 
 
 @_dispatch(Woodbury)
-def dense(a): return dense(a.lr_part) + dense(a.diag_part)
-
-
-@_dispatch(B.Numeric)
-def dense(a): return a
+def dense(a): return dense(a.lr) + dense(a.diag)
 
 
 # Get data type of `Matrix`s.
@@ -394,7 +343,7 @@ def dtype(a): return B.dtype(a.constant)
 
 
 @B.dtype.extend(Woodbury)
-def dtype(a): return B.dtype(a.lr_part)
+def dtype(a): return B.dtype(a.lr)
 
 
 # Get diagonals of `Matrix`s.
@@ -404,186 +353,317 @@ def diag(a): return B.diag(dense(a))
 
 
 @B.diag.extend(Diagonal)
-def diag(a): return a.diag
+def diag(a):
+    # Append zeros or remove elements as necessary.
+    extra_zeros = B.maximum(a.shape.diag_len - B.shape(a.diag)[0], 0)
+    return B.concat([a.diag[:a.shape.diag_len],
+                     B.zeros([extra_zeros], dtype=B.dtype(a))], axis=0)
 
 
 @B.diag.extend(LowRank)
 def diag(a):
-    # TODO: Correctly handle shape here.
-    return B.sum(a.left * a.right * a.scales[None, :], 1)
+    # The matrix might be non-square, so handle that.
+    shape = Shape(B.shape(a))
+    return B.sum(B.matmul(a.left, a.middle)[:shape.diag_len, :] *
+                 a.right[:shape.diag_len, :], 1)
 
 
 @B.diag.extend(Constant)
-def diag(a):
-    # TODO: Correctly handle shape here.
-    return a.constant * B.ones([a.num_rows], dtype=B.dtype(a))
+def diag(a): return a.constant * B.ones([a.shape.diag_len], dtype=B.dtype(a))
 
 
 @B.diag.extend(Woodbury)
-def diag(a): return B.diag(a.lr_part) + B.diag(a.diag_part)
+def diag(a): return B.diag(a.lr) + B.diag(a.diag)
 
 
 # Cholesky decompose `Matrix`s.
 
 @B.cholesky.extend(Dense)
-def cholesky(a): return a.cholesky()
+def cholesky(a):
+    if a.cholesky is None:
+        a.cholesky = B.cholesky(B.reg(dense(a)))
+    return a.cholesky
 
 
-# Some efficient matrix multiplications:
+@B.cholesky.extend(Diagonal)
+def cholesky(a):
+    if not a.shape.square:
+        raise RuntimeError('Cannot Cholesky decompose of a non-square '
+                           'diagonal matrix.')
+    return Diagonal(a.diag ** .5)
+
+
+# Matrix multiplications:
+
+@B.matmul.extend(Dense, Dense, precedence=-1)
+def matmul(a, b, tr_a=False, tr_b=False):
+    # This is the fallback implementation. Any other specialised implementation
+    # should be preferred over this.
+    return B.matmul(dense(a), dense(b), tr_a=tr_a, tr_b=tr_b)
+
 
 @B.matmul.extend(Diagonal, {B.Numeric, Dense})
 def matmul(a, b, tr_a=False, tr_b=False):
+    a = B.transpose(a) if tr_a else a
     b = B.transpose(b) if tr_b else b
-    return B.diag(a)[:, None] * dense(b)
+
+    # If `a` is square, don't do complicated things.
+    if a.shape.square:
+        return B.diag(a)[:, None] * dense(b)
+
+    # Compute the core part.
+    rows = B.minimum(a.shape.rows, B.shape(b)[0])
+    core = B.diag(a)[:rows, None] * dense(b)[:rows, :]
+
+    # Compute extra zeros to be appended.
+    extra_rows = a.shape.rows - rows
+    extra_zeros = B.zeros([extra_rows, B.shape(b)[1]], dtype=B.dtype(b))
+    return B.concat([core, extra_zeros], axis=0)
 
 
 @B.matmul.extend({B.Numeric, Dense}, Diagonal)
 def matmul(a, b, tr_a=False, tr_b=False):
     a = B.transpose(a) if tr_a else a
-    return dense(a) * B.diag(b)[None, :]
+    b = B.transpose(b) if tr_b else b
+
+    # If `b` is square, don't do complicated things.
+    if b.shape.square:
+        return dense(a) * B.diag(b)[None, :]
+
+    # Compute the core part.
+    cols = B.minimum(B.shape(a)[1], b.shape.cols)
+    core = dense(a)[:, :cols] * B.diag(b)[None, :cols]
+
+    # Compute extra zeros to be appended.
+    extra_cols = b.shape.cols - cols
+    extra_zeros = B.zeros([B.shape(a)[0], extra_cols], dtype=B.dtype(b))
+    return B.concat([core, extra_zeros], axis=1)
 
 
 @B.matmul.extend(Diagonal, Diagonal)
 def matmul(a, b, tr_a=False, tr_b=False):
-    return Diagonal(B.diag(a) * B.diag(b))
-
-
-@B.matmul.extend(Diagonal, LowRank)
-def matmul(a, b, tr_a=False, tr_b=False):
-    b = B.transpose(b) if tr_b else b
-    return LowRank(left=B.diag(a)[:, None] * b.left,
-                   right=b.right,
-                   scales=b.scales)
-
-
-@B.matmul.extend(LowRank, Diagonal)
-def matmul(a, b, tr_a=False, tr_b=False):
     a = B.transpose(a) if tr_a else a
-    return LowRank(left=a.left,
-                   right=a.right * B.diag(b)[:, None],
-                   scales=a.scales)
+    b = B.transpose(b) if tr_b else b
+    diag_len = B.minimum(a.shape.diag_len, b.shape.diag_len)
+    return Diagonal(B.diag(a)[:diag_len] * B.diag(b)[:diag_len],
+                    shape=(a.shape.rows, b.shape.cols))
 
 
 @B.matmul.extend(LowRank, LowRank)
 def matmul(a, b, tr_a=False, tr_b=False):
     a = B.transpose(a) if tr_a else a
     b = B.transpose(b) if tr_b else b
-    inner = B.matmul(a.right, b.left, tr_a=True)
-    U, S, V = B.svd(inner)
-    left = B.matmul(a.left * a.scales[None, :], U)
-    right = B.matmul(b.right * b.scales[None, :], V)
-    return LowRank(left=left, right=right, scales=S)
+    middle_inner = B.matmul(a.right, b.left, tr_a=True)
+    middle = B.matmul(a.middle, middle_inner, b.middle)
+    return LowRank(left=a.left, right=b.right, middle=middle)
 
 
-@B.matmul.extend({B.Numeric, Dense}, Woodbury, precedence=1)
+@B.matmul.extend(LowRank, {B.Numeric, Dense})
 def matmul(a, b, tr_a=False, tr_b=False):
-    return B.add(B.matmul(a, b.lr_part, tr_a=tr_a, tr_b=tr_b),
-                 B.matmul(a, b.diag_part, tr_a=tr_a, tr_b=tr_b))
+    a = B.transpose(a) if tr_a else a
+    b = B.transpose(b) if tr_b else b
+    return LowRank(left=a.left,
+                   right=B.matmul(b, a.right, tr_a=True),
+                   middle=a.middle)
+
+
+@B.matmul.extend({B.Numeric, Dense}, LowRank)
+def matmul(a, b, tr_a=False, tr_b=False):
+    a = B.transpose(a) if tr_a else a
+    b = B.transpose(b) if tr_b else b
+    return LowRank(left=B.matmul(a, b.left),
+                   right=b.right,
+                   middle=b.middle)
+
+
+@B.matmul.extend(Diagonal, LowRank)
+def matmul(a, b, tr_a=False, tr_b=False):
+    # TODO: Refactor this to use ambiguous method resolution.
+    return B.matmul.invoke(Dense, LowRank)(a, b, tr_a, tr_b)
+
+
+@B.matmul.extend(LowRank, Diagonal)
+def matmul(a, b, tr_a=False, tr_b=False):
+    # TODO: Refactor this to use ambiguous method resolution.
+    return B.matmul.invoke(LowRank, Dense)(a, b, tr_a, tr_b)
+
+
+@B.matmul.extend(object, object, object)
+def matmul(a, b, c, tr_a=False, tr_b=False, tr_c=False):
+    return B.matmul(B.matmul(a, b, tr_a=tr_a, tr_b=tr_b), c, tr_b=tr_c)
+
+
+@B.matmul.extend({B.Numeric, Dense}, Woodbury, precedence=2)
+def matmul(a, b, tr_a=False, tr_b=False):
+    # Prioritise expanding out the Woodbury matrix. Give this one even higher
+    # precendence to resolving the ambiguity for two Woodbury matrices.
+    return B.add(B.matmul(a, b.lr, tr_a=tr_a, tr_b=tr_b),
+                 B.matmul(a, b.diag, tr_a=tr_a, tr_b=tr_b))
 
 
 @B.matmul.extend(Woodbury, {B.Numeric, Dense}, precedence=1)
 def matmul(a, b, tr_a=False, tr_b=False):
-    return B.add(B.matmul(a.lr_part, b, tr_a=tr_a, tr_b=tr_b),
-                 B.matmul(a.diag_part, b, tr_a=tr_a, tr_b=tr_b))
+    # Prioritise expanding out the Woodbury matrix.
+    return B.add(B.matmul(a.lr, b, tr_a=tr_a, tr_b=tr_b),
+                 B.matmul(a.diag, b, tr_a=tr_a, tr_b=tr_b))
 
 
-@B.matmul.extend(Woodbury, Woodbury, precedence=1)
-def matmul(a, b, tr_a=False, tr_b=False):
-    return add(add(B.matmul(a.lr_part, b.lr_part, tr_a=tr_a, tr_b=tr_b),
-                   B.matmul(a.lr_part, b.diag_part, tr_a=tr_a, tr_b=tr_b)),
-               add(B.matmul(a.diag_part, b.lr_part, tr_a=tr_a, tr_b=tr_b),
-                   B.matmul(a.diag_part, b.diag_part, tr_a=tr_a, tr_b=tr_b)))
+# Matrix inversion:
 
+@B.inverse.extend({B.Numeric, Dense})
+def inverse(a):
+    # Assume that `a` is PD.
+    a = matrix(a)
+    inv_prod = B.trisolve(B.cholesky(a), B.eye_from(a))
+    return B.matmul(inv_prod, inv_prod, tr_a=True)
 
-@B.matmul.extend(LowRank, B.Numeric)
-def matmul(a, b, tr_a=False, tr_b=False):
-    a = B.transpose(a) if tr_a else a
-    b = B.transpose(b) if tr_b else b
-    return B.matmul(a.left, B.matmul(a.scales[None, :] * a.right, b, tr_a=True))
-
-
-@B.matmul.extend(B.Numeric, LowRank)
-def matmul(a, b, tr_a=False, tr_b=False):
-    a = B.transpose(a) if tr_a else a
-    b = B.transpose(b) if tr_b else b
-    return B.matmul(B.matmul(a, b.scales[None, :] * b.left), b.right, tr_b=True)
-
-
-@B.trimatmul.extend(object, object, object)
-def trimatmul(a, b, c, tr_a=False, tr_b=False, tr_c=False):
-    return B.matmul(B.matmul(a, b, tr_a=tr_a, tr_b=tr_b), c, tr_b=tr_c)
-
-
-@B.trimatmul.extend(Woodbury, object, Woodbury)
-def trimatmul(a, b, c, tr_a=False, tr_b=False, tr_c=False):
-    a = B.transpose(a) if tr_a else a
-    b = B.transpose(b) if tr_b else b
-    c = B.transpose(c) if tr_c else c
-    return B.trimatmul(a.lr_part, b, c.lr_part) + \
-           B.trimatmul(a.diag_part, b, c.lr_part) + \
-           B.trimatmul(a.lr_part, b, c.diag_part) + \
-           B.trimatmul(a.diag_part, b, c.diag_part)
-
-
-@B.trimatmul.extend(LowRank, LowRank, LowRank)
-def trimatmul(a, b, c, tr_a=False, tr_b=False, tr_c=False):
-    a = B.transpose(a) if tr_a else a
-    b = B.transpose(b) if tr_b else b
-    c = B.transpose(c) if tr_c else c
-    left_block = B.matmul(a.right, b.left, tr_a=True)
-    right_block = B.matmul(c.left, b.right, tr_a=True)
-    left = B.matmul(a.left * a.scales[None, :], left_block)
-    right = B.matmul(c.right * c.scales[None, :], right_block)
-    return LowRank(left=left, right=right, scales=b.scales)
-
-
-# Some efficient inverses:
 
 @B.inverse.extend(Diagonal)
-def inverse(a): return Diagonal(1 / B.diag(a))
+def inverse(a): return Diagonal(1 / B.diag(a), shape=a.shape.T)
 
 
-# Compute products with inverses of `Matrix`s.
-
-@B.inv_prod.extend(object, object)
-def inv_prod(a, b):
-    """Compute `inv(a) b`.
-
-    Args:
-        a (tensor): Matrix to invert.
-        b (tensor): Matrix to multiply with.
-
-    Returns:
-        tensor: Product.
-    """
-    return B.qf(a, B.eye_from(a), b)
+@B.inverse.extend(Woodbury)
+def inverse(a):
+    # Use the Woodbury matrix identity.
+    if a.inverse is None:
+        inv_diag = B.inverse(a.diag)
+        a.inverse = inv_diag - \
+                    LowRank(left=B.matmul(inv_diag, a.lr.left),
+                            right=B.matmul(inv_diag, a.lr.right),
+                            middle=B.inverse(B.schur(a)))
+    return a.inverse
 
 
-@B.inv_prod.extend(Diagonal, object)
-def inv_prod(a, b):
-    return b / a.diag[:, None]
-
-
-@B.inv_prod.extend(LowRank, object)
-def inv_prod(a, b):
-    raise RuntimeError('Matrix is singular.')
+@B.inverse.extend(LowRank)
+def inverse(a): raise RuntimeError('Matrix is singular.')
 
 
 # Compute the log-determinant of `Matrix`s.
 
+@B.logdet.extend({B.Numeric, Dense})
+def logdet(a):
+    a = matrix(a)
+    if a.logdet is None:
+        a.logdet = 2 * B.sum(B.log(B.diag(B.cholesky(a))))
+    return a.logdet
 
-@B.logdet.extend(B.Numeric)
-def logdet(a): return B.logdet(matrix(a))
+
+@B.logdet.extend(Diagonal)
+def logdet(a): return B.sum(B.log(a.diag))
 
 
-@B.logdet.extend(Dense)
-def logdet(a): return a.logdet()
+@B.logdet.extend(Woodbury)
+def logdet(a):
+    return B.logdet(B.schur(a)) + \
+           B.logdet(a.diag) + \
+           B.logdet(a.lr.middle)
+
+
+@B.logdet.extend(LowRank)
+def logdet(a): raise RuntimeError('Matrix is singular.')
 
 
 # Compute roots of `Matrix`s.
 
-@B.root.extend(Dense)
-def root(a): return a.root()
+@B.root.extend({B.Numeric, Dense})
+def root(a):
+    a = matrix(a)
+    if a.root is None:
+        vals, vecs = B.eig(B.reg(dense(a)))
+        a.root = B.matmul(vecs * vals[None, :] ** .5, vecs, tr_b=True)
+    return a.root
+
+
+@B.root.extend(Diagonal)
+def root(a):
+    return Diagonal(a.diag ** .5)
+
+
+# Compute Schur complements.
+
+@B.schur.extend(object, object, object, object)
+def schur(a, b, c, d):
+    """Compute the Schur complement `a - transpose(b) inv(c) d`.
+
+    Args:
+        a (tensor): `a`.
+        b (tensor): `b`.
+        c (tensor): `c`.
+        d (tensor): `d`.
+
+    Returns:
+        :class:`.matrix.Dense`: Schur complement.
+    """
+    return B.subtract(a, B.qf(c, b, d))
+
+
+@B.schur.extend(object, object, Woodbury, object)
+def schur(a, b, c, d):
+    # The subtraction will yield a negative-definite Woodbury matrix. Convert
+    # to dense to avoid issues with positive definiteness later on. This is
+    # suboptimal, but more complicated abstractions are required to exploit
+    # this.
+    return dense(B.subtract(a, B.qf(c, b, d)))
+
+
+@B.schur.extend(Woodbury)
+def schur(a):
+    if a.schur is None:
+        a.schur = B.inverse(a.lr.middle) + \
+                  B.matmul(a.lr.right,
+                           B.inverse(a.diag),
+                           a.lr.left, tr_a=True)
+    return a.schur
+
+
+@B.schur.extend(Woodbury, Woodbury, Woodbury, Woodbury)
+def schur(a, b, c, d):
+    # IMPORTANT: Compatibility is assumed here, which may or may not be true.
+    # This needs to be further investigated.
+
+    # The inverse of `c` has bits that we can use and reuse.
+    ic = B.inverse(c)
+    nicm = -ic.lr.m  # Negative inverse `c` middle.
+
+    # Compute blocks of the middle of the low-rank part.
+    m11 = a.lr.m - \
+          B.matmul(b.lr.m, B.matmul(b.lr.l, ic, d.lr.l, tr_a=True), d.lr.m)
+    m12 = B.matmul(b.lr.m, B.matmul(b.lr.l, ic.lr.l, nicm, tr_a=True)) - \
+          b.lr.m
+    m21 = B.matmul(B.matmul(nicm, ic.lr.r, d.lr.l, tr_b=True), d.lr.m) - \
+          d.lr.m
+    m22 = nicm
+
+    # Assemble the middle of the low-rank part.
+    middle = B.concat2d([m11, m12], [m21, m22])
+
+    # Compute left and right of the low-rank part.
+    left = B.concat([a.lr.l, B.matmul(b.diag.T, ic.diag, d.lr.l)], axis=1)
+    right = B.concat([a.lr.r, B.matmul(d.diag.T, ic.diag, b.lr.l)], axis=1)
+
+    # Assemble result.
+    diag = a.diag - B.matmul(b.diag.T, ic.diag, d.diag)
+    lr = LowRank(left=left, right=right, middle=middle)
+
+    return diag + lr
+
+
+@B.convert.extend(LowRank, Woodbury)
+def convert(a, _):
+    diag_len = Shape(B.shape(a)).diag_len
+    diag = Diagonal(B.zeros([diag_len], dtype=B.dtype(a)), shape=B.shape(a))
+    return Woodbury(lr=a, diag=diag)
+
+
+@B.schur.extend({Woodbury, LowRank},
+                {Woodbury, LowRank},
+                Woodbury,
+                {Woodbury, LowRank})
+def schur(a, b, c, d):
+    return B.schur(B.convert(a, Woodbury),
+                   B.convert(b, Woodbury),
+                   B.convert(c, Woodbury),
+                   B.convert(d, Woodbury))
 
 
 # Compute quadratic forms and diagonals thereof.
@@ -608,42 +688,20 @@ def qf(a, b):
 def qf(a, b, c):
     if b is c:
         return B.qf(a, b)
-    left = B.trisolve(B.cholesky(a), b)
-    right = B.trisolve(B.cholesky(a), c)
-    return B.matmul(left, right, tr_a=True)
+    chol = B.cholesky(a)
+    return B.matmul(B.trisolve(chol, b), B.trisolve(chol, c), tr_a=True)
 
 
-@B.qf.extend(Diagonal, object)
-def qf(a, b):
-    return B.qf(a, b, b)
+@B.qf.extend({Diagonal, Woodbury}, object)
+def qf(a, b): return B.qf(a, b, b)
 
 
-@B.qf.extend(Diagonal, object, object)
-def qf(a, b, c):
-    return B.trimatmul(b, B.inverse(a), c, tr_a=True)
+@B.qf.extend({Diagonal, Woodbury}, object, object)
+def qf(a, b, c): return B.matmul(b, B.inverse(a), c, tr_a=True)
 
 
 @B.qf.extend_multi((LowRank, object), (LowRank, object, object))
-def qf(a, b, c=None):
-    raise RuntimeError('Matrix is singular.')
-
-
-@B.qf.extend(Woodbury, object)
-def qf(a, b):
-    return B.qf(a, b, b)
-
-
-@B.qf.extend(Woodbury, object, object)
-def qf(a, b, c):
-    schur_inner, schur, schur_left, schur_right = a.schur_complement()
-    chol = B.cholesky(schur)
-
-    # Compute the component of the low-rank part.
-    left = B.transpose(B.trisolve(chol, B.qf(schur_inner, schur_left, b)))
-    right = B.transpose(B.trisolve(chol, B.qf(schur_inner, schur_right, c)))
-
-    # Complete the Woodbury matrix identity.
-    return matrix(B.qf(schur_inner, b, c)) - LowRank(left, right)
+def qf(a, b, c=None): raise RuntimeError('Matrix is singular.')
 
 
 @B.qf_diag.extend(object, object)
@@ -671,33 +729,16 @@ def qf_diag(a, b, c):
     return B.sum(left * right, axis=0)
 
 
-@B.qf_diag.extend(Diagonal, object)
-def qf_diag(a, b):
-    return B.sum(b ** 2 / a.diag[:, None], axis=0)
+@B.qf_diag.extend({Diagonal, Woodbury}, object)
+def qf_diag(a, b): return B.qf_diag(a, b, b)
 
 
-@B.qf_diag.extend(Diagonal, object, object)
-def qf_diag(a, b, c):
-    if b is c:
-        return B.qf(a, b)
-    return B.sum(b * c / a.diag[:, None], axis=0)
-
-
-@B.qf_diag.extend(Woodbury, object)
-def qf_diag(a, b):
-    # TODO: Optimise this!
-    return B.qf_diag(a, b, b)
-
-
-@B.qf_diag.extend(Woodbury, object, object)
-def qf_diag(a, b, c):
-    # TODO: Optimise this!
-    return B.diag(B.qf(a, b, c))
+@B.qf_diag.extend({Diagonal, Woodbury}, object, object)
+def qf_diag(a, b, c): return B.sum(B.matmul(B.inverse(a), b) * c, axis=0)
 
 
 @B.qf_diag.extend_multi((LowRank, object), (LowRank, object, object))
-def qf_diag(a, b, c=None):
-    raise RuntimeError('Matrix is singular.')
+def qf_diag(a, b, c=None): raise RuntimeError('Matrix is singular.')
 
 
 # Compute ratios between `Matrix`s.
@@ -717,14 +758,11 @@ def ratio(a, b):
 
 
 @B.ratio.extend(LowRank, Dense)
-def ratio(a, b):
-    # TODO: Check that `b` is indeed PSD.
-    return B.sum(B.qf_diag(b, a.left * a.scales[None, :] ** .5))
+def ratio(a, b): return B.sum(B.qf_diag(b, a.right, B.matmul(a.left, a.middle)))
 
 
 @B.ratio.extend(Diagonal, Diagonal)
-def ratio(a, b):
-    return B.sum(a.diag / b.diag)
+def ratio(a, b): return B.sum(a.diag / b.diag)
 
 
 # Transpose `Matrix`s.
@@ -734,16 +772,22 @@ def transpose(a): return matrix(B.transpose(dense(a)))
 
 
 @B.transpose.extend(Diagonal)
-def transpose(a): return a
+def transpose(a): return Diagonal(B.diag(a), shape=a.shape.T)
 
 
 @B.transpose.extend(LowRank)
-def transpose(a): return LowRank(left=a.right, right=a.left, scales=a.scales)
+def transpose(a): return LowRank(left=a.right,
+                                 right=a.left,
+                                 middle=B.transpose(a.middle))
+
+
+@B.transpose.extend(Constant)
+def transpose(a): return Constant(a.constant, shape=a.shape.T)
 
 
 @B.transpose.extend(Woodbury)
-def transpose(a):
-    return Woodbury(B.transpose(a.lr_part), B.transpose(a.diag_part))
+def transpose(a): return Woodbury(lr=B.transpose(a.lr),
+                                  diag=B.transpose(a.diag))
 
 
 # Extend LAB to the field of `Matrix`s.
@@ -771,22 +815,18 @@ def divide(a, b): return B.multiply(a, 1 / b)
 def shape(a): return B.shape(dense(a))
 
 
-@B.shape.extend(Diagonal)
-def shape(a): return B.shape(a.diag)[0], B.shape(a.diag)[0]
+#   Don't use a union here to prevent ambiguity errors with the implementation
+#     for `LowRank`.
+@B.shape.extend_multi((Diagonal,), (Constant,))
+def shape(a): return a.shape.rows, a.shape.cols
 
 
 @B.shape.extend(LowRank)
 def shape(a): return B.shape(a.left)[0], B.shape(a.right)[0]
 
 
-@B.shape.extend(Constant)
-def shape(a):
-    cols = a.num_rows if a.num_cols is None else a.num_cols
-    return a.num_rows, cols
-
-
 @B.shape.extend(Woodbury)
-def shape(a): return B.shape(a.lr_part)
+def shape(a): return B.shape(a.lr)
 
 
 # Setup promotion and conversion of `Matrix`s as a fallback mechanism.
@@ -802,29 +842,53 @@ def mul(a, b): return Dense(dense(a) * dense(b))
 
 
 @mul.extend(Dense, Diagonal)
-def mul(a, b): return Diagonal(B.diag(a) * b.diag)
+def mul(a, b): return Diagonal(B.diag(a) * b.diag, B.shape(a))
 
 
 @mul.extend(Diagonal, Dense)
-def mul(a, b): return Diagonal(a.diag * B.diag(b))
+def mul(a, b): return Diagonal(a.diag * B.diag(b), B.shape(a))
 
 
 @mul.extend(Diagonal, Diagonal)
-def mul(a, b): return Diagonal(a.diag * b.diag)
+def mul(a, b): return Diagonal(a.diag * b.diag, B.shape(a))
 
 
 @mul.extend(LowRank, LowRank)
 def mul(a, b):
-    def cartesian_mul(xs, ys):
-        return [x * y for x, y in product(xs, ys)]
+    # Pick apart the matrices.
+    al, ar = B.unstack(a.left, axis=1), B.unstack(a.right, axis=1)
+    bl, br = B.unstack(b.left, axis=1), B.unstack(b.right, axis=1)
+    am = [B.unstack(x, axis=0) for x in B.unstack(a.middle, axis=0)]
+    bm = [B.unstack(x, axis=0) for x in B.unstack(b.middle, axis=0)]
 
-    left = B.stack(cartesian_mul(B.unstack(a.left, axis=1),
-                                 B.unstack(b.left, axis=1)), axis=1)
-    right = B.stack(cartesian_mul(B.unstack(a.right, axis=1),
-                                  B.unstack(b.right, axis=1)), axis=1)
-    scales = B.stack(cartesian_mul(B.unstack(a.scales, axis=0),
-                                   B.unstack(b.scales, axis=0)), axis=0)
-    return LowRank(left=left, right=right, scales=scales)
+    # Construct part of the product.
+    left = B.stack([ali * blk
+                    for ali in al
+                    for blk in bl], axis=1)
+    right = B.stack([arj * brl
+                     for arj in ar
+                     for brl in br], axis=1)
+    middle = B.stack([B.stack([amij * bmkl
+                               for amij in ami
+                               for bmkl in bmk], axis=0)
+                      for ami in am
+                      for bmk in bm], axis=0)
+
+    # And assemble the result.
+    return LowRank(left=left, right=right, middle=middle)
+
+
+@mul.extend(Dense, Woodbury, precedence=2)
+def mul(a, b):
+    # Prioritise exoanding out the Woodbury matrix. Give this one even higher
+    # precendence to resolving the ambiguity for two Woodbury matrices.
+    return add(mul(a, b.lr), mul(a, b.diag))
+
+
+@mul.extend(Woodbury, Dense, precedence=1)
+def mul(a, b):
+    # Prioritise expanding out the Woodbury matrix.
+    return add(mul(a.lr, b), mul(a.diag, b))
 
 
 @add.extend(Dense, Dense)
@@ -832,13 +896,66 @@ def add(a, b): return Dense(dense(a) + dense(b))
 
 
 @add.extend(Diagonal, Diagonal)
-def add(a, b): return Diagonal(a.diag + b.diag)
+def add(a, b): return Diagonal(a.diag + b.diag, B.shape(a))
 
 
 @add.extend(LowRank, LowRank)
-def add(a, b): return LowRank(left=B.concat([a.left, b.left], axis=1),
-                              right=B.concat([a.right, b.right], axis=1),
-                              scales=B.concat([a.scales, b.scales], axis=0))
+def add(a, b):
+    shape_a, shape_b, dtype = B.shape(a.middle), B.shape(b.middle), B.dtype(a)
+    middle = B.concat2d(
+        [a.middle, B.zeros([shape_a[0], shape_b[1]], dtype=dtype)],
+        [B.zeros([shape_b[0], shape_a[1]], dtype=dtype), b.middle]
+    )
+    return LowRank(left=B.concat([a.left, b.left], axis=1),
+                   right=B.concat([a.right, b.right], axis=1),
+                   middle=middle)
+
+
+#   Woodbury matrices:
+
+@add.extend(LowRank, Diagonal)
+def add(a, b): return Woodbury(a, b)
+
+
+@add.extend(Diagonal, LowRank)
+def add(a, b): return Woodbury(b, a)
+
+
+@add.extend(LowRank, Woodbury)
+def add(a, b): return Woodbury(a + b.lr, b.diag)
+
+
+@add.extend(Woodbury, LowRank)
+def add(a, b): return Woodbury(a.lr + b, a.diag)
+
+
+@add.extend(Diagonal, Woodbury)
+def add(a, b): return Woodbury(b.lr, a + b.diag)
+
+
+@add.extend(Woodbury, Diagonal)
+def add(a, b): return Woodbury(a.lr, a.diag + b)
+
+
+@add.extend(Woodbury, Woodbury)
+def add(a, b): return Woodbury(a.lr + b.lr,
+                               a.diag + b.diag)
+
+
+# Multiplication between matrices and other elements.
+
+@mul.extend(LowRank, Constant)
+def mul(a, b): return LowRank(left=a.left,
+                              right=a.right,
+                              middle=a.middle * b.constant)
+
+
+@mul.extend(Diagonal, Constant)
+def mul(a, b): return Diagonal(B.diag(a) * b.constant, B.shape(a))
+
+
+@mul.extend(Constant, {LowRank, Diagonal})
+def mul(a, b): return mul(b, a)
 
 
 # Simplify addiction and multiplication between `Matrix`s and other objects. We
@@ -889,52 +1006,3 @@ def add(a, b): return mul(b, One(a))
 
 @add.extend(Zero, Zero)
 def add(a, b): return a
-
-
-# Woodbury matrices:
-
-@add.extend(LowRank, Diagonal)
-def add(a, b): return Woodbury(a, b)
-
-
-@add.extend(Diagonal, LowRank)
-def add(a, b): return Woodbury(b, a)
-
-
-@add.extend(LowRank, Woodbury)
-def add(a, b): return Woodbury(a + b.lr_part, b.diag_part)
-
-
-@add.extend(Woodbury, LowRank)
-def add(a, b): return Woodbury(a.lr_part + b, a.diag_part)
-
-
-@add.extend(Diagonal, Woodbury)
-def add(a, b): return Woodbury(b.lr_part, a + b.diag_part)
-
-
-@add.extend(Woodbury, Diagonal)
-def add(a, b): return Woodbury(a.lr_part, a.diag_part + b)
-
-
-@add.extend(Woodbury, Woodbury)
-def add(a, b): return Woodbury(a.lr_part + b.lr_part,
-                               a.diag_part + b.diag_part)
-
-
-# Expand out multiplication with Woodbury matrices. Higher precedence is used to
-# have this happen immediately.
-
-@mul.extend(Dense, Woodbury, precedence=1)
-def mul(a, b): return add(mul(a, b.lr_part), mul(a, b.diag_part))
-
-
-@mul.extend(Woodbury, Dense, precedence=1)
-def mul(a, b): return add(mul(a.lr_part, b), mul(a.diag_part, b))
-
-
-@mul.extend(Woodbury, Woodbury, precedence=1)
-def mul(a, b): return add(add(mul(a.lr_part, b.lr_part),
-                              mul(a.lr_part, b.diag_part)),
-                          add(mul(a.diag_part, b.lr_part),
-                              mul(a.diag_part, b.diag_part)))
