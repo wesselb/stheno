@@ -4,7 +4,7 @@ from __future__ import absolute_import, division, print_function
 
 from plum import parametric, kind
 
-__all__ = ['Input', 'Observed', 'Latent', 'Component', 'At']
+__all__ = ['Input', 'Observed', 'Latent', 'Component', 'At', 'Unique']
 
 
 class Input(object):
@@ -35,6 +35,10 @@ class MultiInput(Input):
 
     def get(self):
         return self._xs
+
+
+class Unique(Input):
+    """One cannot learn about noise at these inputs"""
 
 
 Observed = Component('observed')  #: Observed points
