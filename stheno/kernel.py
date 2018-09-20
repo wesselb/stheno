@@ -85,17 +85,17 @@ class Kernel(Function, Referentiable):
 
     @_dispatch(Input, Input, Cache)
     def __call__(self, x, y, cache):
-        # Both input types were not used. Unwrap.
+        # Both input types were not used. Attempt to unwrap.
         return self(x.get(), y.get(), cache)
 
     @_dispatch(Input, object, Cache)
     def __call__(self, x, y, cache):
-        # Left input type was not used. Unwrap.
+        # Left input type was not used. Attempt to unwrap.
         return self(x.get(), y, cache)
 
     @_dispatch(object, Input, Cache)
     def __call__(self, x, y, cache):
-        # Right input type was not used. Unwrap.
+        # Right input type was not used. Attempt to unwrap.
         return self(x, y.get(), cache)
 
     @_dispatch(object, object, Cache)
@@ -128,6 +128,21 @@ class Kernel(Function, Referentiable):
     @_dispatch(Input, Input)
     def elwise(self, x, y):
         return self.elwise(x, y, Cache())
+
+    @_dispatch(Input, Input, Cache)
+    def elwise(self, x, y, cache):
+        # Both input types were not used. Attempt to unwrap.
+        return self.elwise(x.get(), y.get(), cache)
+
+    @_dispatch(Input, object, Cache)
+    def elwise(self, x, y, cache):
+        # Left input type was not used. Attempt to unwrap.
+        return self.elwise(x.get(), y, cache)
+
+    @_dispatch(object, Input, Cache)
+    def elwise(self, x, y, cache):
+        # Right input type was not used. Attempt to unwrap.
+        return self.elwise(x, y.get(), cache)
 
     def periodic(self, period=1):
         """Map to a periodic space.
