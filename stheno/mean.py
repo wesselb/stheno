@@ -212,8 +212,8 @@ class PosteriorCrossMean(Mean, Referentiable):
     @cache
     def __call__(self, x, B):
         diff = B.subtract(self.y, self.m_z(self.z, B))
-        prod = B.inv_prod(self.K_z, self.k_zi(self.z, x))
-        return B.add(self.m_i(x, B), B.matmul(prod, diff, tr_a=True))
+        return B.add(self.m_i(x, B),
+                     B.qf(self.K_z, self.k_zi(self.z, x), diff))
 
 
 class PosteriorMean(PosteriorCrossMean, Referentiable):
