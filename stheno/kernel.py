@@ -18,7 +18,7 @@ from stheno.function_field import StretchedFunction, ShiftedFunction, \
 from .cache import cache, Cache, uprank
 from .field import add, mul, broadcast, apply_optional_arg, get_field, \
     Formatter, need_parens
-from .input import Input
+from .input import Input, Unique
 from .matrix import Dense, Diagonal, LowRank, UniformlyDiagonal, One, Zero, \
     dense
 
@@ -85,8 +85,18 @@ class Kernel(Function, Referentiable):
 
     @_dispatch(Input, Input, Cache)
     def __call__(self, x, y, cache):
-        # This should not have been reached. Attempt to unwrap.
+        # Both input types were not used. Unwrap.
         return self(x.get(), y.get(), cache)
+
+    @_dispatch(Input, object, Cache)
+    def __call__(self, x, y, cache):
+        # Left input type was not used. Unwrap.
+        return self(x.get(), y, cache)
+
+    @_dispatch(object, Input, Cache)
+    def __call__(self, x, y, cache):
+        # Right input type was not used. Unwrap.
+        return self(x, y.get(), cache)
 
     @_dispatch(object, object, Cache)
     def elwise(self, x, y, cache):
@@ -183,7 +193,7 @@ class OneKernel(Kernel, OneFunction, Referentiable):
         if x is y:
             return One(B.dtype(x), B.shape(x)[0])
         else:
-            return One(B.dtype(x), B.shape(x)[0], B.shape(y)[0])
+            return One(B.dtype(x), (B.shape(x)[0], B.shape(y)[0]))
 
     @_dispatch(B.Numeric, B.Numeric, Cache)
     @cache
@@ -220,7 +230,7 @@ class ZeroKernel(Kernel, ZeroFunction, Referentiable):
         if x is y:
             return Zero(B.dtype(x), B.shape(x)[0])
         else:
-            return Zero(B.dtype(x), B.shape(x)[0], B.shape(y)[0])
+            return Zero(B.dtype(x), (B.shape(x)[0], B.shape(y)[0]))
 
     @_dispatch(B.Numeric, B.Numeric, Cache)
     @cache
@@ -784,12 +794,12 @@ class Delta(Kernel, PrimitiveFunction, Referentiable):
 
     Args:
         epsilon (float, optional): Tolerance for equality in squared distance.
-            Defaults to `1e-6`.
+            Defaults to `1e-10`.
     """
 
     _dispatch = Dispatcher(in_class=Self)
 
-    def __init__(self, epsilon=1e-6):
+    def __init__(self, epsilon=1e-10):
         self.epsilon = epsilon
 
     @_dispatch(B.Numeric, B.Numeric, Cache)
@@ -797,16 +807,62 @@ class Delta(Kernel, PrimitiveFunction, Referentiable):
     @uprank
     def __call__(self, x, y, B):
         if x is y:
-            return UniformlyDiagonal(B.cast(1, dtype=B.dtype(x)),
-                                     B.shape(x)[0])
+            return self._eye(x, B)
         else:
             return Dense(self._compute(B.pw_dists2(x, y), B))
+
+    @_dispatch(Unique, Unique, Cache)
+    @cache
+    @uprank
+    def __call__(self, x, y, B):
+        x, y = x.get(), y.get()
+        if x is y:
+            return self._eye(x, B)
+        else:
+            return Zero(B.dtype(x), (B.shape(x)[0], B.shape(y)[0]))
+
+    @_dispatch(Unique, object, Cache)
+    @cache
+    @uprank
+    def __call__(self, x, y, B):
+        return Zero(B.dtype(x.get()), (B.shape(x.get())[0], B.shape(y)[0]))
+
+    @_dispatch(object, Unique, Cache)
+    @cache
+    @uprank
+    def __call__(self, x, y, B):
+        return Zero(B.dtype(x), (B.shape(x)[0], B.shape(y.get())[0]))
+
+    @_dispatch(Unique, Unique, Cache)
+    @cache
+    @uprank
+    def elwise(self, x, y, B):
+        x, y = x.get(), y.get()
+        if x is y:
+            return B.ones([B.shape(x)[0], 1], dtype=B.dtype(x))
+        else:
+            return B.zeros([B.shape(x)[0], 1], dtype=B.dtype(x))
+
+    @_dispatch(Unique, object, Cache)
+    @cache
+    @uprank
+    def elwise(self, x, y, B):
+        return B.zeros([B.shape(x.get())[0], 1], dtype=B.dtype(x.get()))
+
+    @_dispatch(object, Unique, Cache)
+    @cache
+    @uprank
+    def elwise(self, x, y, B):
+        return B.zeros([B.shape(y.get())[0], 1], dtype=B.dtype(y.get()))
 
     @_dispatch(B.Numeric, B.Numeric, Cache)
     @cache
     @uprank
     def elwise(self, x, y, B):
         return self._compute(B.ew_dists2(x, y), B)
+
+    def _eye(self, x, B):
+        return UniformlyDiagonal(B.cast(1, dtype=B.dtype(x)), B.shape(x)[0])
 
     def _compute(self, dists2, B):
         return B.cast(B.less(dists2, self.epsilon), B.dtype(dists2))
@@ -837,10 +893,7 @@ class Linear(Kernel, PrimitiveFunction, Referentiable):
     @cache
     @uprank
     def __call__(self, x, y, B):
-        if x is y:
-            return LowRank(left=x, psd=True)
-        else:
-            return LowRank(left=x, right=y, psd=True)
+        return LowRank(x) if x is y else LowRank(left=x, right=y)
 
     @_dispatch(B.Numeric, B.Numeric, Cache)
     @cache
@@ -932,14 +985,17 @@ class PosteriorCrossKernel(Kernel, Referentiable):
     @_dispatch(object, object, Cache)
     @cache
     def __call__(self, x, y, B):
-        qf = B.qf(self.K_z, self.k_zi(self.z, x, B), self.k_zj(self.z, y, B))
-        return B.subtract(self.k_ij(x, y, B), qf)
+        return B.schur(self.k_ij(x, y, B),
+                       self.k_zi(self.z, x, B),
+                       self.K_z,
+                       self.k_zj(self.z, y, B))
 
     @_dispatch(object, object, Cache)
     @cache
     def elwise(self, x, y, B):
         qf_diag = B.qf_diag(self.K_z,
-                            self.k_zi(self.z, x, B), self.k_zj(self.z, y, B))
+                            self.k_zi(self.z, x, B),
+                            self.k_zj(self.z, y, B))
         return B.subtract(self.k_ij.elwise(x, y, B), B.expand_dims(qf_diag, 1))
 
 
@@ -1076,7 +1132,7 @@ class TensorProductKernel(Kernel, TensorProductFunction, Referentiable):
     def __call__(self, x, y, B):
         f1, f2 = expand(self.fs)
         if x is y and f1 is f2:
-            return LowRank(left=apply_optional_arg(f1, x, B))
+            return LowRank(apply_optional_arg(f1, x, B))
         else:
             return LowRank(left=apply_optional_arg(f1, x, B),
                            right=apply_optional_arg(f2, y, B))
