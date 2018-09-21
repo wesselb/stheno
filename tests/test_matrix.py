@@ -52,24 +52,24 @@ def test_dense():
           dense(Diagonal([1, 2], 1)), \
           np.array([[1]])
     yield assert_allclose, \
-          dense(Diagonal([1, 2], (3, 3))), \
+          dense(Diagonal([1, 2], 3, 3)), \
           np.array([[1, 0, 0],
                     [0, 2, 0],
                     [0, 0, 0]])
     yield assert_allclose, \
-          dense(Diagonal([1, 2], (2, 3))), \
+          dense(Diagonal([1, 2], 2, 3)), \
           np.array([[1, 0, 0],
                     [0, 2, 0]])
     yield assert_allclose, \
-          dense(Diagonal([1, 2], (3, 2))), \
+          dense(Diagonal([1, 2], 3, 2)), \
           np.array([[1, 0],
                     [0, 2],
                     [0, 0]])
     yield assert_allclose, \
-          dense(Diagonal([1, 2], (1, 3))), \
+          dense(Diagonal([1, 2], 1, 3)), \
           np.array([[1, 0, 0]])
     yield assert_allclose, \
-          dense(Diagonal([1, 2], (3, 1))), \
+          dense(Diagonal([1, 2], 3, 1)), \
           np.array([[1],
                     [0],
                     [0]])
@@ -82,7 +82,7 @@ def test_dense():
     yield assert_allclose, dense(lr), left.dot(middle).dot(right.T)
 
     # Test Woodbury matrices.
-    diag = Diagonal([1, 2, 3, 4], (5, 10))
+    diag = Diagonal([1, 2, 3, 4], 5, 10)
     wb = Woodbury(lr, diag)
     yield assert_allclose, dense(wb), dense(diag) + dense(lr)
 
@@ -109,8 +109,8 @@ def test_dtype():
     yield eq, B.dtype(lr_float), float
 
     # Test `Constant`.
-    yield eq, B.dtype(Constant(1, shape=1)), int
-    yield eq, B.dtype(Constant(1.0, shape=1)), float
+    yield eq, B.dtype(Constant(1, rows=1)), int
+    yield eq, B.dtype(Constant(1.0, rows=1)), float
 
     # Test `Woodbury`.
     yield eq, B.dtype(Woodbury(lr_int, diag_int)), int
@@ -121,7 +121,7 @@ def test_sum():
     a = Dense(np.random.randn(10, 20))
     yield assert_allclose, B.sum(a, axis=0), np.sum(dense(a), axis=0)
 
-    for x in [Diagonal(np.array([1, 2, 3]), shape=(3, 5)),
+    for x in [Diagonal(np.array([1, 2, 3]), rows=3, cols=5),
               LowRank(left=np.random.randn(5, 3),
                       right=np.random.randn(10, 3),
                       middle=np.random.randn(3, 3))]:
@@ -154,14 +154,23 @@ def test_diag():
     yield assert_allclose, B.diag(LowRank(left=b, right=b)), np.diag(b.dot(b.T))
 
     # Test `Constant`.
-    yield assert_allclose, B.diag(Constant(1, shape=(3, 5))), np.ones(3)
+    yield assert_allclose, B.diag(Constant(1, rows=3, cols=5)), np.ones(3)
 
     # Test `Woodbury`.
     yield assert_allclose, \
           B.diag(Woodbury(LowRank(left=a, right=b),
-                          Diagonal([1, 2, 3], shape=(5, 10)))), \
+                          Diagonal([1, 2, 3], rows=5, cols=10))), \
           np.diag(a.dot(b.T) + np.concatenate((np.diag([1, 2, 3, 0, 0]),
                                                np.zeros((5, 5))), axis=1))
+
+    # The method `B.diag(diag, rows, cols)` is tested in the tests for
+    # `Diagonal` in `test_dense`.
+
+
+def test_diag_len():
+    yield eq, B.diag_len(np.ones((5, 5))), 5
+    yield eq, B.diag_len(np.ones((10, 5))), 5
+    yield eq, B.diag_len(np.ones((5, 10))), 5
 
 
 def test_cholesky():
@@ -174,13 +183,14 @@ def test_cholesky():
     # Test `Diagonal`.
     d = Diagonal(np.diag(a))
     yield assert_allclose, np.linalg.cholesky(dense(d)), B.cholesky(d)
-    yield raises, RuntimeError, lambda: B.cholesky(Diagonal([1], shape=(2, 1)))
+    yield raises, RuntimeError, \
+          lambda: B.cholesky(Diagonal([1], rows=2, cols=1))
 
 
 def test_matmul():
     diag_square = Diagonal([1, 2], 3)
-    diag_tall = Diagonal([3, 4], (5, 3))
-    diag_wide = Diagonal([5, 6], (2, 3))
+    diag_tall = Diagonal([3, 4], 5, 3)
+    diag_wide = Diagonal([5, 6], 2, 3)
 
     dense_square = Dense(np.random.randn(3, 3))
     dense_tall = Dense(np.random.randn(5, 3))
@@ -263,7 +273,7 @@ def test_inverse_and_logdet():
     yield assert_allclose, B.matmul(d, B.inverse(d)), np.eye(5)
     yield assert_allclose, B.matmul(B.inverse(d), d), np.eye(5)
     yield assert_allclose, B.logdet(d), np.log(np.linalg.det(dense(d)))
-    yield eq, B.shape(B.inverse(Diagonal([1, 2], shape=(2, 4)))), (4, 2)
+    yield eq, B.shape(B.inverse(Diagonal([1, 2], rows=2, cols=4))), (4, 2)
 
     # Test `Woodbury`.
     a = np.random.randn(5, 3)
@@ -311,19 +321,19 @@ def test_schur():
 
     #   Test all combinations of `Woodbury`, `LowRank`, and `Diagonal`.
     a = np.random.randn(2, 2)
-    a = Diagonal(np.array([4, 5, 6, 7, 8]), shape=(5, 10)) + \
+    a = Diagonal(np.array([4, 5, 6, 7, 8]), rows=5, cols=10) + \
         LowRank(left=np.random.randn(5, 2),
                 right=np.random.randn(10, 2),
                 middle=a.dot(a.T))
 
     b = np.random.randn(2, 2)
-    b = Diagonal(np.array([9, 10, 11]), shape=(3, 5)) + \
+    b = Diagonal(np.array([9, 10, 11]), rows=3, cols=5) + \
         LowRank(left=c.lr.left,
                 right=a.lr.left,
                 middle=b.dot(b.T))
 
     d = np.random.randn(2, 2)
-    d = Diagonal(np.array([12, 13, 14]), shape=(3, 10)) + \
+    d = Diagonal(np.array([12, 13, 14]), rows=3, cols=10) + \
         LowRank(left=c.lr.right,
                 right=a.lr.right,
                 middle=d.dot(d.T))
@@ -391,19 +401,19 @@ def test_transposition():
     def compare(a):
         assert_allclose(B.transpose(a), dense(a).T)
 
-    d = Diagonal([1, 2, 3], shape=(5, 10))
+    d = Diagonal([1, 2, 3], rows=5, cols=10)
     lr = LowRank(left=np.random.randn(5, 3), right=np.random.randn(10, 3))
 
     yield compare, Dense(np.random.randn(5, 5))
     yield compare, d
     yield compare, lr
     yield compare, d + lr
-    yield compare, Constant(5, shape=(4, 2))
+    yield compare, Constant(5, rows=4, cols=2)
 
 
 def test_arithmetic_and_shapes():
     a = Dense(np.random.randn(4, 3))
-    d = Diagonal(np.array([1, 2, 3]), shape=(4, 3))
+    d = Diagonal(np.array([1.0, 2.0, 3.0]), rows=4, cols=3)
     lr = LowRank(left=np.random.randn(4, 2),
                  right=np.random.randn(3, 2),
                  middle=np.random.randn(2, 2))

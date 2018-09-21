@@ -208,7 +208,7 @@ class OneKernel(Kernel, OneFunction, Referentiable):
         if x is y:
             return One(B.dtype(x), B.shape(x)[0])
         else:
-            return One(B.dtype(x), (B.shape(x)[0], B.shape(y)[0]))
+            return One(B.dtype(x), B.shape(x)[0], B.shape(y)[0])
 
     @_dispatch(B.Numeric, B.Numeric, Cache)
     @cache
@@ -245,7 +245,7 @@ class ZeroKernel(Kernel, ZeroFunction, Referentiable):
         if x is y:
             return Zero(B.dtype(x), B.shape(x)[0])
         else:
-            return Zero(B.dtype(x), (B.shape(x)[0], B.shape(y)[0]))
+            return Zero(B.dtype(x), B.shape(x)[0], B.shape(y)[0])
 
     @_dispatch(B.Numeric, B.Numeric, Cache)
     @cache
@@ -834,19 +834,19 @@ class Delta(Kernel, PrimitiveFunction, Referentiable):
         if x is y:
             return self._eye(x, B)
         else:
-            return Zero(B.dtype(x), (B.shape(x)[0], B.shape(y)[0]))
+            return Zero(B.dtype(x), B.shape(x)[0], B.shape(y)[0])
 
     @_dispatch(Unique, object, Cache)
     @cache
     @uprank
     def __call__(self, x, y, B):
-        return Zero(B.dtype(x.get()), (B.shape(x.get())[0], B.shape(y)[0]))
+        return Zero(B.dtype(x.get()), B.shape(x.get())[0], B.shape(y)[0])
 
     @_dispatch(object, Unique, Cache)
     @cache
     @uprank
     def __call__(self, x, y, B):
-        return Zero(B.dtype(x), (B.shape(x)[0], B.shape(y.get())[0]))
+        return Zero(B.dtype(x), B.shape(x)[0], B.shape(y.get())[0])
 
     @_dispatch(Unique, Unique, Cache)
     @cache
@@ -854,28 +854,28 @@ class Delta(Kernel, PrimitiveFunction, Referentiable):
     def elwise(self, x, y, B):
         x, y = x.get(), y.get()
         if x is y:
-            return One(B.dtype(x), (B.shape(x)[0], 1))
+            return One(B.dtype(x), B.shape(x)[0], 1)
         else:
-            return Zero(B.dtype(x), (B.shape(x)[0], 1))
+            return Zero(B.dtype(x), B.shape(x)[0], 1)
 
     @_dispatch(Unique, object, Cache)
     @cache
     @uprank
     def elwise(self, x, y, B):
-        return Zero(B.dtype(x.get()), (B.shape(x.get())[0], 1))
+        return Zero(B.dtype(x.get()), B.shape(x.get())[0], 1)
 
     @_dispatch(object, Unique, Cache)
     @cache
     @uprank
     def elwise(self, x, y, B):
-        return Zero(B.dtype(x.get()), (B.shape(x.get())[0], 1))
+        return Zero(B.dtype(x.get()), B.shape(x.get())[0], 1)
 
     @_dispatch(B.Numeric, B.Numeric, Cache)
     @cache
     @uprank
     def elwise(self, x, y, B):
         if x is y:
-            return One(B.dtype(x), (B.shape(x)[0], 1))
+            return One(B.dtype(x), B.shape(x)[0], 1)
         else:
             return self._compute(B.ew_dists2(x, y), B)
 
