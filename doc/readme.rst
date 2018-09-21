@@ -84,7 +84,7 @@ Inputs to kernels, means, and GPs, henceforth referred to simply as
 
 -  If the input ``x`` is a *rank 2 tensor*, then every *row* of ``x`` is
    interpreted as a separate input location. In this case inputs are
-   multi-dimensional, and the columns correspond to the various inputs
+   multi-dimensional, and the columns correspond to the various input
    dimensions.
 
 If ``k`` is a kernel, say ``k = EQ()``, then ``k(x, y)`` constructs the
@@ -321,7 +321,7 @@ Compositional Design
 
    .. code:: python
 
-       k.diff(0)(x, y) == d/d(x[:, 0]) k(x, y)
+       k.diff(0)(x, y) == d/d(x[:, 0]) d/d(y[:, 0]) k(x, y)
 
        k.diff(0, 1)(x, y) == d/d(x[:, 0]) d/d(y[:, 1]) k(x, y)
 

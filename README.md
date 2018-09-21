@@ -71,7 +71,7 @@ generates 10 different input locations ranging from `0` to `1`.
 
 * If the input `x` is a _rank 2 tensor_, then every _row_ of `x` is 
 interpreted as a separate input location. In this case inputs are 
-multi-dimensional, and the columns correspond to the various inputs dimensions.
+multi-dimensional, and the columns correspond to the various input dimensions.
 
 If `k` is a kernel, say `k = EQ()`, then `k(x, y)` constructs the _kernel 
 matrix_ for all pairs of points between `x` and `y`. `k(x)` is shorthand for `k
@@ -296,7 +296,7 @@ currently only works in TensorFlow and derivatives cannot be nested.
     Definition:
 
     ```python
-    k.diff(0)(x, y) == d/d(x[:, 0]) k(x, y)
+    k.diff(0)(x, y) == d/d(x[:, 0]) d/d(y[:, 0]) k(x, y)
 
     k.diff(0, 1)(x, y) == d/d(x[:, 0]) d/d(y[:, 1]) k(x, y)
 
