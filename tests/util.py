@@ -28,10 +28,12 @@ def call(f, method, args=(), res=True):
     assert_equal(getattr(f, method)(*args), res)
 
 
-def lam(f, args=()): ok_(f(*args), 'Lambda returned False.')
+def lam(f, args=()):
+    ok_(f(*args), 'Lambda returned False.')
 
 
-def eprint(*args, **kw_args): print(*args, file=sys.stderr, **kw_args)
+def eprint(*args, **kw_args):
+    print(*args, file=sys.stderr, **kw_args)
 
 
 def benchmark(f, args, n=1000, get_output=False):
@@ -52,18 +54,22 @@ def benchmark(f, args, n=1000, get_output=False):
 
 
 @dispatch(B.Numeric)
-def dense(a): return a
+def dense(a):
+    return a
 
 
 @dispatch(Dense)
-def dense(a): return _dense(a)
+def dense(a):
+    return _dense(a)
 
 
 @dispatch(list)
-def dense(a): return B.array(a)
+def dense(a):
+    return B.array(a)
 
 
-def allclose(a, b, desc=None): return np.allclose(dense(a), dense(b), atol=1e-9)
+def allclose(a, b, desc=None):
+    return np.allclose(dense(a), dense(b), atol=1e-9)
 
 
 def assert_allclose(a, b, desc=None):
