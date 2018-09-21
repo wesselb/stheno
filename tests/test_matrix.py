@@ -183,8 +183,14 @@ def test_cholesky():
     # Test `Diagonal`.
     d = Diagonal(np.diag(a))
     yield assert_allclose, np.linalg.cholesky(dense(d)), B.cholesky(d)
-    yield raises, RuntimeError, \
-          lambda: B.cholesky(Diagonal([1], rows=2, cols=1))
+
+    # Test `LowRank`.
+    a = np.random.randn(2, 2)
+    lr = LowRank(left=np.random.randn(5, 2), middle=a.dot(a.T))
+    chol = dense(B.cholesky(lr))
+    #   The Cholesky here is not technically the Cholesky decomposition. Hence
+    #   we test this slightly differently.
+    yield assert_allclose, chol.dot(chol.T), lr
 
 
 def test_matmul():
@@ -297,6 +303,21 @@ def test_root():
     # Test `Diagonal`.
     d = Diagonal(np.array([1, 2, 3, 4, 5]))
     yield assert_allclose, d, B.matmul(B.root(d), B.root(d))
+
+
+def test_sample():
+    a = np.random.randn(3, 3)
+    a = Dense(a.dot(a.T))
+    b = np.random.randn(2, 2)
+    wb = Diagonal(B.diag(a)) + \
+         LowRank(left=np.random.randn(3, 2), middle=b.dot(b.T))
+
+    # Test `Dense` and `Woodbury`.
+    num_samps = 500000
+    for cov in [a, wb]:
+        samps = B.sample(cov, num_samps)
+        cov_emp = B.matmul(samps, samps, tr_b=True) / num_samps
+        yield le, np.mean(np.abs(dense(cov_emp) - dense(cov))), 5e-2
 
 
 def test_schur():

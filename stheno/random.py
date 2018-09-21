@@ -143,15 +143,9 @@ class Normal(RandomVector, Referentiable):
         Returns:
             tensor: Samples as rank 2 column vectors.
         """
-        # Convert integer data types to floats.
-        if B.issubdtype(self.dtype, np.integer):
-            random_dtype = float
-        else:
-            random_dtype = self.dtype
 
         # Perform sampling operation.
-        e = B.randn((self.dim, num), dtype=random_dtype)
-        out = B.matmul(B.cholesky(self.var), e) + self.mean
+        out = B.sample(self.var, num) + self.mean
         if noise is not None:
             out += noise ** .5 * B.randn((self.dim, num), dtype=random_dtype)
         return out

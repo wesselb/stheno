@@ -4,6 +4,7 @@ from __future__ import print_function, division, absolute_import
 
 import logging
 from numbers import Number
+import numpy as np
 
 from lab import B
 from plum import Referentiable, Self, Dispatcher
@@ -212,8 +213,7 @@ class Woodbury(Dense, Referentiable):
 # Conveniently make identity matrices.
 
 @B.eye_from.extend({Dense, B.Numeric})
-def eye_from(a):
-    return B.diag(B.ones([B.diag_len(a)], dtype=B.dtype(a)), *B.shape(a))
+def eye_from(a): return B.eye(B.shape(a)[0], B.shape(a)[1], dtype=B.dtype(a))
 
 
 # Conversion between matrices and dense matrices:
@@ -409,11 +409,18 @@ def cholesky(a):
 
 @B.cholesky.extend(Diagonal)
 def cholesky(a):
-    rows, cols = B.shape(a)
-    if rows is not cols:
-        raise RuntimeError('Cannot Cholesky decompose a non-square '
-                           'diagonal matrix.')
-    return Diagonal(a.diag ** .5)
+    # NOTE: Assumes that the matrix is symmetric.
+    if a.cholesky is None:
+        a.cholesky = Diagonal(a.diag ** .5)
+    return a.cholesky
+
+
+@B.cholesky.extend(LowRank)
+def cholesky(a):
+    # NOTE: Assumes that the matrix is symmetric.
+    if a.cholesky is None:
+        a.cholesky = B.matmul(a.left, B.cholesky(a.middle))
+    return a.cholesky
 
 
 # Matrix multiplications:
@@ -609,6 +616,31 @@ def root(a):
 @B.root.extend(Diagonal)
 def root(a):
     return Diagonal(a.diag ** .5)
+
+
+# Sample from covariance matrices.
+
+@B.sample.extend({B.Numeric, Dense}, [object])
+def sample(a, num=1):
+    """Sample from covariance matrices.
+
+    Args:
+        a (tensor): Covariance matrix to sample from.
+        num (int): Number of samples.
+
+    Returns:
+        tensor: Samples as rank 2 column vectors.
+    """
+    # Convert integer data types to floats.
+    dtype = float if B.issubdtype(B.dtype(a), np.integer) else B.dtype(a)
+
+    # Perform sampling operation.
+    chol = B.cholesky(a)
+    return B.matmul(chol, B.randn([B.shape(chol)[1], num], dtype=dtype))
+
+
+@B.sample.extend(Woodbury, [object])
+def sample(a, num=1): return B.sample(a.diag, num) + B.sample(a.lr, num)
 
 
 # Compute Schur complements.
