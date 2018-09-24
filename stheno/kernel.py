@@ -828,9 +828,8 @@ class Delta(Kernel, PrimitiveFunction, Referentiable):
 
     @_dispatch(Unique, Unique, Cache)
     @cache
-    @uprank
     def __call__(self, x, y, B):
-        x, y = x.get(), y.get()
+        x, y = uprank(x.get(), B), uprank(y.get(), B)
         if x is y:
             return self._eye(x, B)
         else:
@@ -840,19 +839,20 @@ class Delta(Kernel, PrimitiveFunction, Referentiable):
     @cache
     @uprank
     def __call__(self, x, y, B):
-        return Zero(B.dtype(x.get()), B.shape(x.get())[0], B.shape(y)[0])
+        x = uprank(x.get(), B)
+        return Zero(B.dtype(x), B.shape(x)[0], B.shape(y)[0])
 
     @_dispatch(object, Unique, Cache)
     @cache
     @uprank
     def __call__(self, x, y, B):
-        return Zero(B.dtype(x), B.shape(x)[0], B.shape(y.get())[0])
+        y = uprank(y.get(), B)
+        return Zero(B.dtype(x), B.shape(x)[0], B.shape(y)[0])
 
     @_dispatch(Unique, Unique, Cache)
     @cache
-    @uprank
     def elwise(self, x, y, B):
-        x, y = x.get(), y.get()
+        x, y = uprank(x.get(), B), uprank(y.get(), B)
         if x is y:
             return One(B.dtype(x), B.shape(x)[0], 1)
         else:
@@ -862,13 +862,14 @@ class Delta(Kernel, PrimitiveFunction, Referentiable):
     @cache
     @uprank
     def elwise(self, x, y, B):
-        return Zero(B.dtype(x.get()), B.shape(x.get())[0], 1)
+        x = uprank(x.get(), B)
+        return Zero(B.dtype(x), B.shape(x)[0], 1)
 
     @_dispatch(object, Unique, Cache)
     @cache
     @uprank
     def elwise(self, x, y, B):
-        return Zero(B.dtype(x.get()), B.shape(x.get())[0], 1)
+        return Zero(B.dtype(x), B.shape(x)[0], 1)
 
     @_dispatch(B.Numeric, B.Numeric, Cache)
     @cache
@@ -1003,10 +1004,12 @@ class PosteriorCrossKernel(Kernel, Referentiable):
     @_dispatch(object, object, Cache)
     @cache
     def __call__(self, x, y, B):
-        return B.schur(self.k_ij(x, y, B),
-                       self.k_zi(self.z, x, B),
-                       self.K_z,
-                       self.k_zj(self.z, y, B))
+        a = self.k_ij(x, y, B)
+        b = self.k_zi(self.z, x, B)
+        c = self.K_z
+        d = self.k_zj(self.z, y, B)
+        print('------------->', self.k_ij, '&', self.k_zi, '&', self.k_zj)
+        return B.schur(a, b, c, d)
 
     @_dispatch(object, object, Cache)
     @cache

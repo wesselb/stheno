@@ -419,7 +419,9 @@ def cholesky(a):
 def cholesky(a):
     # NOTE: Assumes that the matrix is symmetric.
     if a.cholesky is None:
-        a.cholesky = B.matmul(a.left, B.cholesky(a.middle))
+        m = matrix(a.middle)
+        m = 0.5 * (m + m.T)
+        a.cholesky = B.matmul(a.left, B.cholesky(m))
     return a.cholesky
 
 
@@ -573,6 +575,49 @@ def inverse(a):
     return a.inverse
 
 
+@B.inverse2.extend(Woodbury)
+def inverse2(a):
+    # Use the Woodbury matrix identity.
+    if a.inverse is None:
+        inv_diag = B.inverse(a.diag)
+        a.inverse = inv_diag + \
+                    LowRank(left=B.matmul(inv_diag, a.lr.left),
+                            right=B.matmul(inv_diag, a.lr.right),
+                            middle=B.inverse(B.schur2(a)))
+    return a.inverse
+
+
+@B.lr_diff.extend(LowRank, LowRank)
+def lr_diff(a, b):
+    # chol_a = B.cholesky(matrix(a.m))
+    # chol_b = B.cholesky(matrix(b.m))
+    # a = LowRank(left=B.matmul(a.l, chol_a), right=B.matmul(a.r, chol_a))
+    # b = LowRank(left=B.matmul(b.l, chol_b), right=B.matmul(b.r, chol_b))
+    print('LRDIFF:')
+    print('a', B.shape(a.l), B.shape(a.m), B.shape(a.r))
+    print('b', B.shape(b.l), B.shape(b.m), B.shape(b.r))
+    diff = a - b
+    n = B.shape(a.left)[1]
+    print('diff', B.shape(diff.l), B.shape(diff.m), B.shape(diff.r))
+
+    # Left:
+    u, s, v = B.svd(diff.left)
+    ul, sl, vl = u[:, :n], s[:n], v[:, :n]
+    ul, sl, vl = u, s, v
+
+    # Right:
+    u, s, v = B.svd(diff.right)
+    ur, sr, vr = u[:, :n], s[:n], v[:, :n]
+    ur, sr, vr = u, s, v
+
+    m = B.matmul(Diagonal(sl),
+                 B.matmul(vl, diff.m, vr, tr_a=True),
+                 Diagonal(sr))
+    print('result for m', B.shape(m))
+    print('DONE')
+    return LowRank(left=ul, right=ur, middle=m)
+
+
 @B.inverse.extend(LowRank)
 def inverse(a): raise RuntimeError('Matrix is singular.')
 
@@ -678,7 +723,116 @@ def schur(a):
     return a.schur
 
 
+@B.schur2.extend(Woodbury)
+def schur2(a):
+    if a.schur is None:
+        a.schur = B.inverse(-a.lr.middle) - \
+                  B.matmul(a.lr.right, B.inverse(a.diag), a.lr.left, tr_a=True)
+    return a.schur
+
+
+# @B.schur.extend(Woodbury, Woodbury, Woodbury, Woodbury)
+# def schur(a, b, c, d):
+#     # if B.mean(B.abs(dense(b) - dense(d))) > 1e-6:
+#     #     print('There we go cheat... with this:')
+#     #     for x in [a, b, c, d]:
+#     #         print(B.shape(x.lr.l), B.shape(x.lr.m), B.shape(x.lr.r))
+#     #     res = a - B.matmul(b, B.inverse(c), d, tr_a=True)
+#     #     print(res, B.shape(res.lr.l), B.shape(res.lr.m), B.shape(res.lr.r))
+#     #     return res
+#     # Assumptions:
+#     #   - b.lr.middle = d.lr.middle
+#     #   - b.lr.l = b.lr.r
+#     print('There we go... with this:')
+#     for x in [a, b, c, d]:
+#         print(B.shape(x.lr.l), B.shape(x.lr.m), B.shape(x.lr.r))
+#     print('All good? Then go!')
+#
+#     # Split `c` and `a`.
+#     y, m = b.lr.l, b.lr.middle
+#     lr_a = LowRank(left=b.lr.r, right=d.lr.r, middle=m)
+#     lr_c = LowRank(left=b.lr.l, right=d.lr.l, middle=m)
+#     print('lr_a', B.shape(lr_a.l), B.shape(lr_a.m), B.shape(lr_a.r))
+#     k1 = a.diag + B.lr_diff(a.lr, lr_a)
+#     k2 = c.diag + B.lr_diff(c.lr, lr_c)
+#     # print('k1 eigs:', B.eig(k1.lr.m)[0])
+#     # print('k2 eigs:', B.eig(k2.lr.m)[0])
+#     #
+#     # if np.any(B.eig(k1.lr.m)[0] < -1e-2):
+#     #     raise RuntimeError
+#
+#     # Precompute quantities that we'll reuse.
+#     ik2 = B.inverse(k2)
+#     print(m)
+#     print('m before inversion eigs:', B.eig(m)[0])
+#     icore = B.inverse(m) + B.matmul(y, ik2, y, tr_a=True)
+#     core = B.inverse(icore)
+#     p = B.matmul(y, ik2, y, tr_a=True)
+#
+#     # Construct blocks of the middle of the low-rank part.
+#     m11 = m - B.matmul(m, B.matmul(y, B.inverse(c), y, tr_a=True), m)
+#     m12 = B.matmul(core, p, m) - m
+#     m22 = core
+#
+#     # Assemble the middle of the low-rank part.
+#     middle = B.concat2d([m11, m12], [B.transpose(m12), m22])
+#     eigs = B.eig(middle)[0]
+#     print('middle eigs:', eigs)
+#
+#     # Compute left and right of the low-rank part.
+#     left = B.concat([lr_a.l, dense(B.matmul(b.diag.T, ik2, y))], axis=1)
+#     right = B.concat([lr_a.r, dense(B.matmul(d.diag.T, ik2, y))], axis=1)
+#
+#     # Assemble result.
+#     res = k1 - \
+#           B.matmul(b.diag.T, ik2, d.diag) + \
+#           LowRank(left=left, right=right, middle=middle)
+#
+#     print('!!!!!!!!!!! done with this:')
+#     print(res, B.shape(res.lr.l), B.shape(res.lr.m), B.shape(res.lr.r))
+#
+#     return res
+
+
 @B.schur.extend(Woodbury, Woodbury, Woodbury, Woodbury)
+def schur(a, b, c, d):
+    ic = B.inverse(c)
+
+    part1 = a
+    part2 = B.matmul(b.diag.T, ic, d.diag)
+    print('p1 shape:', B.shape(part1))
+    print('p2 shape:', B.shape(part2))
+
+    left = B.concat([b.lr.r, dense(B.matmul(b.diag.T, ic, d.lr.l))], axis=1)
+    right = B.concat([d.lr.r, dense(B.matmul(d.diag.T, ic, b.lr.l))], axis=1)
+
+    m11 = B.matmul(B.matmul(b.lr.l, b.lr.m), ic, B.matmul(d.lr.l, d.lr.m),
+                   tr_a=True)
+    m12 = B.transpose(b.lr.m)
+    m21 = d.lr.m
+    m22 = B.zeros([B.shape(m21)[0], B.shape(m12)[1]], dtype=B.dtype(m12))
+
+    middle = B.concat2d([m11, m12], [m21, m22])
+
+    lr = LowRank(left=left, right=right, middle=middle)
+
+
+    res_lr = B.lr_diff(B.lr_diff(part1.lr, part2.lr), lr)
+
+
+    res_diag = part1.diag + part2.diag
+    res = res_lr + res_diag
+
+    if B.shape(res)[0] == B.shape(res)[1]:
+        min_eig = B.min(B.real(B.eig(res.lr.m)[0]))
+        print('eigs res lr:', min_eig)
+        if min_eig < -1e-2:
+            raise RuntimeError
+    return res
+
+
+
+@B.schur2.extend(Woodbury, Woodbury, Woodbury, Woodbury)
 def schur(a, b, c, d):
     # IMPORTANT: Compatibility is assumed here, which may or may not be true in
     # most cases. This needs to be further investigated.
@@ -961,7 +1115,7 @@ def add(a, b): return Dense(dense(a) + dense(b))
 
 
 @add.extend(Diagonal, Diagonal)
-def add(a, b): return Diagonal(a.diag + b.diag, *B.shape(a))
+def add(a, b): return Diagonal(B.diag(a) + B.diag(b), *B.shape(a))
 
 
 @add.extend(LowRank, LowRank)
