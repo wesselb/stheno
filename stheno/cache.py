@@ -10,7 +10,7 @@ from types import FunctionType
 from lab import B
 from plum import Dispatcher, Self, Referentiable
 
-__all__ = ['Cache']
+__all__ = ['Cache', 'cache']
 
 log_cache_call = logging.getLogger(__name__ + '.call')
 log_cache_lab = logging.getLogger(__name__ + '.lab')
