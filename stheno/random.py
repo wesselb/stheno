@@ -143,12 +143,14 @@ class Normal(RandomVector, Referentiable):
         Returns:
             tensor: Samples as rank 2 column vectors.
         """
+        var = self.var
+
+        # Add noise if requested for.
+        if noise is not None:
+            var += UniformlyDiagonal.from_(noise, self.var)
 
         # Perform sampling operation.
-        out = B.sample(self.var, num) + self.mean
-        if noise is not None:
-            out += noise ** .5 * B.randn((self.dim, num), dtype=random_dtype)
-        return out
+        return B.sample(var, num) + self.mean
 
     @_dispatch(object)
     def __add__(self, other):
