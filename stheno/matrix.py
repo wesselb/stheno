@@ -5,6 +5,7 @@ from __future__ import print_function, division, absolute_import
 import logging
 from numbers import Number
 import numpy as np
+from string import ascii_lowercase
 
 from lab import B
 from plum import Referentiable, Self, Dispatcher
@@ -52,6 +53,9 @@ class Dense(Element, Referentiable):
     def T(self):
         return B.transpose(self)
 
+    def __matmul__(self, other):
+        return B.matmul(self, other)
+
 
 # Register field.
 @get_field.extend(Dense)
@@ -93,6 +97,12 @@ class UniformlyDiagonal(Diagonal, Referentiable):
     def __init__(self, diag_scale, n, rows=None, cols=None):
         diag = diag_scale * B.ones([n], dtype=B.dtype(diag_scale))
         Diagonal.__init__(self, diag=diag, rows=rows, cols=cols)
+
+    @classmethod
+    def from_(cls, diag_scale, ref):
+        return cls(B.cast(diag_scale, dtype=B.dtype(ref)),
+                   B.diag_len(ref),
+                   *B.shape(ref))
 
 
 class LowRank(Dense, Referentiable):
@@ -525,11 +535,6 @@ def matmul(a, b, tr_a=False, tr_b=False):
     return B.matmul.invoke(LowRank, Dense)(a, b, tr_a, tr_b)
 
 
-@B.matmul.extend(object, object, object)
-def matmul(a, b, c, tr_a=False, tr_b=False, tr_c=False):
-    return B.matmul(B.matmul(a, b, tr_a=tr_a, tr_b=tr_b), c, tr_b=tr_c)
-
-
 @B.matmul.extend({B.Numeric, Dense}, Woodbury, precedence=2)
 def matmul(a, b, tr_a=False, tr_b=False):
     # Prioritise expanding out the Woodbury matrix. Give this one even higher
@@ -543,6 +548,24 @@ def matmul(a, b, tr_a=False, tr_b=False):
     # Prioritise expanding out the Woodbury matrix.
     return B.add(B.matmul(a.lr, b, tr_a=tr_a, tr_b=tr_b),
                  B.matmul(a.diag, b, tr_a=tr_a, tr_b=tr_b))
+
+
+@B.matmul.extend({B.Numeric, Dense},
+                 {B.Numeric, Dense},
+                 {B.Numeric, Dense},
+                 [{B.Numeric, Dense}])
+def matmul(*xs, **trs):
+    def tr(name):
+        return trs['tr_' + name] if 'tr_' + name in trs else False
+
+    # Compute the first product.
+    res = B.matmul(xs[0], xs[1], tr_a=tr('a'), tr_b=tr('b'))
+
+    # Compute the remaining products.
+    for name, x in zip(ascii_lowercase[2:], xs[2:]):
+        res = B.matmul(res, x, tr_b=tr(name))
+
+    return res
 
 
 # Matrix inversion:
