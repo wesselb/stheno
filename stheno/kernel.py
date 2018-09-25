@@ -977,8 +977,8 @@ class DecayingKernel(Kernel, Referentiable):
         return np.inf
 
 
-class PosteriorCrossKernel(Kernel, Referentiable):
-    """Posterior cross kernel.
+class PosteriorKernel(Kernel, Referentiable):
+    """Posterior kernel.
 
     Args:
         k_ij (:class:`.kernel.Kernel`): Kernel between processes
@@ -1017,24 +1017,7 @@ class PosteriorCrossKernel(Kernel, Referentiable):
         return B.subtract(self.k_ij.elwise(x, y, B), B.expand_dims(qf_diag, 1))
 
 
-class PosteriorKernel(PosteriorCrossKernel, Referentiable):
-    """Posterior kernel.
-
-    Args:
-        gp (:class:`.random.GP`): Prior GP.
-        z (input): Locations of data.
-        Kz (:class:`.matrix.Dense`): Kernel matrix of data.
-    """
-
-    _dispatch = Dispatcher(in_class=Self)
-
-    def __init__(self, gp, z, Kz):
-        PosteriorCrossKernel.__init__(
-            self, gp.kernel, gp.kernel, gp.kernel, z, Kz
-        )
-
-
-class CorrectiveCrossKernel(Kernel, Referentiable):
+class CorrectiveKernel(Kernel, Referentiable):
     """Kernel that adds the corrective variance in sparse conditioning.
 
     Args:

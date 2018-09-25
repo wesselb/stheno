@@ -10,12 +10,11 @@ from numpy.testing import assert_allclose
 from plum import Dispatcher
 
 from stheno.cache import Cache
-from stheno.graph import GP, Graph
 from stheno.input import Observed
 from stheno.kernel import EQ
 from stheno.matrix import matrix
 from stheno.mean import TensorProductMean, ZeroMean, Mean, OneMean, \
-    PosteriorCrossMean, PosteriorMean
+    PosteriorMean
 # noinspection PyUnresolvedReferences
 from . import eq, neq, lt, le, ge, gt, raises, call, ok, eprint
 
@@ -70,22 +69,17 @@ def test_basic_arithmetic():
 
 def test_posterior_mean():
     z = np.linspace(0, 1, 10)
-    pcm = PosteriorCrossMean(
+    pcm = PosteriorMean(
         TensorProductMean(lambda x: x),
         TensorProductMean(lambda x: x ** 2),
         EQ(), z, matrix(2 * EQ()(z)), np.random.randn(10)
     )
 
     # Check name.
-    yield eq, str(pcm), 'PosteriorCrossMean()'
+    yield eq, str(pcm), 'PosteriorMean()'
 
     # Check that the mean computes.
     yield lambda: pcm(z)
-
-    # Check regular posterior kernel.
-    gp = GP(EQ(), graph=Graph())
-    pm = PosteriorMean(gp, None, None, None)
-    yield eq, str(pm), 'PosteriorMean()'
 
 
 def test_function_mean():

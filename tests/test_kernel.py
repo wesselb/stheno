@@ -8,10 +8,9 @@ from lab import B
 from stheno.cache import Cache
 from stheno.input import Observed
 from stheno.kernel import EQ, RQ, Matern12, Matern32, Matern52, Delta, Kernel, \
-    Linear, OneKernel, ZeroKernel, PosteriorCrossKernel, PosteriorKernel, \
-    ShiftedKernel, TensorProductKernel, CorrectiveCrossKernel
+    Linear, OneKernel, ZeroKernel, PosteriorKernel, \
+    ShiftedKernel, TensorProductKernel, CorrectiveKernel
 from stheno.matrix import matrix, dense
-from stheno.random import GPPrimitive
 # noinspection PyUnresolvedReferences
 from tests import ok
 from . import eq, raises, ok, allclose, assert_allclose
@@ -314,8 +313,8 @@ def test_linear():
         yield x
 
 
-def test_posterior_crosskernel():
-    k = PosteriorCrossKernel(
+def test_posterior_kernel():
+    k = PosteriorKernel(
         EQ(), EQ(), EQ(),
         np.random.randn(5, 2), matrix(EQ()(np.random.randn(5, 1)))
     )
@@ -330,24 +329,21 @@ def test_posterior_crosskernel():
     yield raises, RuntimeError, lambda: k.var
     yield raises, RuntimeError, lambda: k.length_scale
     yield raises, RuntimeError, lambda: k.period
-    yield eq, str(k), 'PosteriorCrossKernel()'
+    yield eq, str(k), 'PosteriorKernel()'
 
     # Test `elwise`.
     for x in elwise_generator(k):
         yield x
 
-    k = PosteriorKernel(GPPrimitive(EQ()), None, None)
-    yield eq, str(k), 'PosteriorKernel()'
 
-
-def test_corrective_crosskernel():
+def test_corrective_kernel():
     a, b = np.random.randn(3, 3), np.random.randn(3, 3)
     a, b = a.dot(a.T), b.dot(b.T)
     z = np.random.randn(3, 2)
     x1 = np.random.randn(10, 2)
     x2 = np.random.randn(5, 2)
 
-    k = CorrectiveCrossKernel(EQ(), EQ(), z, a, matrix(b))
+    k = CorrectiveKernel(EQ(), EQ(), z, a, matrix(b))
 
     # Test that the kernel computes.
     yield assert_allclose, k(x1, x2), k(x2, x1).T
@@ -357,7 +353,7 @@ def test_corrective_crosskernel():
     yield raises, RuntimeError, lambda: k.var
     yield raises, RuntimeError, lambda: k.length_scale
     yield raises, RuntimeError, lambda: k.period
-    yield eq, str(k), 'CorrectiveCrossKernel()'
+    yield eq, str(k), 'CorrectiveKernel()'
 
     # Test `elwise`.
     for x in elwise_generator(k):

@@ -4,14 +4,13 @@ from __future__ import absolute_import, division, print_function
 
 from types import FunctionType
 
-import numpy as np
 from lab import B
 from plum import Self, Referentiable
 
 from .cache import Cache, uprank
 from .kernel import PosteriorKernel, OneKernel
-from .mean import ZeroMean, PosteriorMean, OneMean
 from .matrix import matrix, Dispatcher, UniformlyDiagonal, Diagonal, dense
+from .mean import ZeroMean, PosteriorMean, OneMean
 
 __all__ = ['Normal', 'GPPrimitive', 'Normal1D']
 
@@ -291,8 +290,12 @@ class GPPrimitive(RandomProcess, Referentiable):
             :class:`.random.GP`: Conditioned GP.
         """
         K = matrix(self.kernel(x))
-        return GPPrimitive(PosteriorKernel(self, x, K),
-                           PosteriorMean(self, x, K, y))
+        return GPPrimitive(PosteriorKernel(self.kernel,
+                                           self.kernel,
+                                           self.kernel, x, K),
+                           PosteriorMean(self.mean,
+                                         self.mean,
+                                         self.kernel, x, K, y))
 
     def predict(self, x, cache=None):
         """Predict at specified locations.

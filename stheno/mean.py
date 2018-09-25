@@ -183,8 +183,8 @@ class DerivativeMean(Mean, DerivativeFunction, Referentiable):
         return B.gradients(self[0](x, B), x)[0][:, i:i + 1]
 
 
-class PosteriorCrossMean(Mean, Referentiable):
-    """Posterior cross mean.
+class PosteriorMean(Mean, Referentiable):
+    """Posterior mean.
 
     Args:
         m_i (:class:`.mean.Mean`): Mean of process corresponding to
@@ -215,19 +215,3 @@ class PosteriorCrossMean(Mean, Referentiable):
         return B.add(self.m_i(x, B),
                      B.qf(self.K_z, self.k_zi(self.z, x), diff))
 
-
-class PosteriorMean(PosteriorCrossMean, Referentiable):
-    """Posterior mean.
-
-    Args:
-        gp (:class:`.random.GP`): Corresponding GP.
-        z (input): Locations of data.
-        K_z (:class:`.matrix.Dense`): Kernel matrix of data.
-        y (tensor): Observations to condition on.
-    """
-
-    _dispatch = Dispatcher(in_class=Self)
-
-    def __init__(self, gp, z, K_z, y):
-        PosteriorCrossMean.__init__(self, gp.mean, gp.mean, gp.kernel,
-                                    z, K_z, y)
