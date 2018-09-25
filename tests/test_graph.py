@@ -611,23 +611,25 @@ def test_sparse_conditioning():
 
     y = f(x).sample()
 
-    model.condition(f @ x, y, f @ x, e)
+    model.condition(At(f)(x), y, At(f)(x), e)
     yield le, abs_err(f(x).mean, y), 1e-4
     model.revert_prior()
 
-    model.condition((2 * f + 2) @ x, 2 * y + 2, f @ x, e)
+    model.condition(At(2 * f + 2)(x), 2 * y + 2, At(f)(x), e)
     yield le, abs_err(f(x).mean, y), 1e-4
     model.revert_prior()
 
-    model.condition(f @ x, y, (2 * f + 2) @ x, e)
+    model.condition(At(f)(x), y, At(2 * f + 2)(x), e)
     yield le, abs_err(f(x).mean, y), 1e-4
     model.revert_prior()
 
     e = GP(1e-2 * Delta(), graph=model)
-    yield assert_allclose, model.elbo(f @ x, y, f @ x, e), (f + e)(x).logpdf(y)
     yield assert_allclose, \
-          model.elbo((2 * f + 2) @ x, 2 * y + 2, f @ x, e), \
+          model.elbo(At(f)(x), y, At(f)(x), e), \
+          (f + e)(x).logpdf(y)
+    yield assert_allclose, \
+          model.elbo(At(2 * f + 2)(x), 2 * y + 2, At(f)(x), e), \
           (2 * f + 2 + e)(x).logpdf(2 * y + 2)
     yield assert_allclose, \
-          model.elbo(f @ x, y, (2 * f + 2) @ x, e), \
+          model.elbo(At(f)(x), y, At(2 * f + 2)(x), e), \
           (f + e)(x).logpdf(y)
