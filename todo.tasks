@@ -1,7 +1,12 @@
 Features:
     ☐ FITC approximation
     ☐ DTC approximation
-    ☐ ICM multi-output kernel
+
+    ☐ Multi-argument sparse conditioning
+
+    Multi Output Support:
+        ☐ ICM
+        ☐ (O)LMM
 
 Refactor:
     ☐ Make RQ, Exp, Matern32, and Matern52 cache friendly.
