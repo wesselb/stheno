@@ -278,18 +278,19 @@ class Graph(Referentiable):
 
         self.condition(build_posterior_kernel, build_posterior_mean)
 
-    @_dispatch(At, B.Numeric, At)
-    def condition(self, x, y, z):
+    @_dispatch(At, B.Numeric, At, PromisedGP)
+    def condition(self, x, y, z, e):
         """Sparsely condition the graph on data.
 
         Args:
             x (input): Locations of points to condition on.
             y (tensor): Observations to condition on.
             z (input): Locations of inducing points.
+            e (:class:`.graph.GP`): GP representing the additive, independent
+                noise process.
         """
         K_z, L_z, K_zx, K_n, A, y_bar, prod_y_bar = \
-            self._sparse_components(x, y, z)
-        p_x, x = type_parameter(x), x.get()
+            self._sparse_components(x, y, z, e)
         p_z, z = type_parameter(z), z.get()
 
         # Compute the optimal mean.
@@ -301,36 +302,38 @@ class Graph(Referentiable):
 
         def build_posterior_kernel(pi, pj):
             return PosteriorKernel(
-                kernels[pi, pj], kernels[p_x, pi], kernels[p_x, pj], z, K_z
+                kernels[pi, pj], kernels[p_z, pi], kernels[p_z, pj], z, K_z
             ) + CorrectiveKernel(
-                kernels[p_x, pi], kernels[p_x, pj], z, A, K_z
+                kernels[p_z, pi], kernels[p_z, pj], z, A, K_z
             )
 
         def build_posterior_mean(pi):
             return PosteriorMean(
-                means[pi], means[p_x], kernels[p_x, pi], z, K_z, mu
+                means[pi], means[p_z], kernels[p_z, pi], z, K_z, mu
             )
 
         self.condition(build_posterior_kernel, build_posterior_mean)
 
-    @_dispatch(At, B.Numeric, At)
-    def elbo(self, x, y, z):
+    @_dispatch(At, B.Numeric, At, PromisedGP)
+    def elbo(self, x, y, z, e):
         """Compute the ELBO.
 
         Args:
             x (input): Locations of points to condition on.
             y (tensor): Observations to condition on.
             z (input): Locations of inducing points.
+            e (:class:`.graph.GP`): GP representing the additive, independent
+                noise process.
 
         Returns:
             tensor: ELBO.
         """
         K_z, L_z, K_zx, K_n, A, y_bar, prod_y_bar = \
-            self._sparse_components(x, y, z)
+            self._sparse_components(x, y, z, e)
         p_x, x = type_parameter(x), x.get()
 
         if not isinstance(K_n, Diagonal):
-            raise RuntimeError('Kernel of y|f must be diagonal.')
+            raise RuntimeError('Kernel matrix of noise must be diagonal.')
 
         # Compute the ELBO.
         trace_part = B.ratio(Diagonal(self.kernels[p_x].elwise(x)[:, 0]) -
@@ -339,23 +342,22 @@ class Graph(Referentiable):
         qf_part = B.qf(K_n, y_bar)[0, 0] - B.qf(A, prod_y_bar)[0, 0]
         return -0.5 * (trace_part + det_part + qf_part)
 
-    @_dispatch(At, B.Numeric, At)
-    def _sparse_components(self, x, y, z):
+    @_dispatch(At, B.Numeric, At, PromisedGP)
+    def _sparse_components(self, x, y, z, e):
         p_x, x = type_parameter(x), x.get()
         p_z, z = type_parameter(z), z.get()
 
-        # TODO: Get this properly.
-        k_e = .5 * Delta()
+        # TODO: Get `e` via graph analysis.
 
         # Construct the necessary kernel matrices.
         K_zx = self.kernels[p_z, p_x](z, x)
         K_z = self.kernels[p_z](z)
-        K_n = k_e(x)
+        K_n = e.kernel(x)
 
         # And construct the components for the inducing point approximation.
         L_z = B.cholesky(matrix(K_z))
         A = B.eye_from(K_z) + B.qf(K_n, B.transpose(B.trisolve(L_z, K_zx)))
-        y_bar = y - self.means[p_x](x)
+        y_bar = y - e.mean(x) - self.means[p_x](x)
         prod_y_bar = B.trisolve(L_z, B.qf(K_n, B.transpose(K_zx), y_bar))
 
         return K_z, L_z, K_zx, K_n, A, y_bar, prod_y_bar
@@ -790,16 +792,16 @@ class GP(GPPrimitive, Referentiable):
         self.graph.condition(*[(self._ensure_at(x), y) for x, y in pairs])
         return self
 
-    @_dispatch({B.Numeric, Input}, B.Numeric, {B.Numeric, Input})
-    def condition(self, x, y, z):
+    @_dispatch({B.Numeric, Input}, B.Numeric, {B.Numeric, Input}, Self)
+    def condition(self, x, y, z, e):
         """Sparsely condition the GP. See :meth:`.graph.Graph.condition`."""
-        self.graph.condition(self._ensure_at(x), y, self._ensure_at(z))
+        self.graph.condition(self._ensure_at(x), y, self._ensure_at(z), e)
         return self
 
-    @_dispatch({B.Numeric, Input}, B.Numeric, {B.Numeric, Input})
-    def elbo(self, x, y, z):
+    @_dispatch({B.Numeric, Input}, B.Numeric, {B.Numeric, Input}, Self)
+    def elbo(self, x, y, z, e):
         """Compute the ELBO. See :meth:`.graph.Graph.elbo`."""
-        return self.graph.elbo(self._ensure_at(x), y, self._ensure_at(z))
+        return self.graph.elbo(self._ensure_at(x), y, self._ensure_at(z), e)
 
     @_dispatch(tuple)
     def __or__(self, args):
