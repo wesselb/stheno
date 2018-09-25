@@ -20,7 +20,7 @@ from .field import add, mul, broadcast, apply_optional_arg, get_field, \
     Formatter, need_parens
 from .input import Input, Unique
 from .matrix import Dense, Diagonal, LowRank, UniformlyDiagonal, One, Zero, \
-    dense
+    dense, matrix
 
 __all__ = ['Kernel', 'OneKernel', 'ZeroKernel', 'ScaledKernel', 'EQ', 'RQ',
            'Matern12', 'Exp', 'Matern32', 'Matern52', 'Delta', 'Linear',
@@ -998,7 +998,7 @@ class PosteriorCrossKernel(Kernel, Referentiable):
         self.k_zi = k_zi
         self.k_zj = k_zj
         self.z = z
-        self.K_z = K_z
+        self.K_z = matrix(K_z)
 
     @_dispatch(object, object, Cache)
     @cache
@@ -1032,6 +1032,44 @@ class PosteriorKernel(PosteriorCrossKernel, Referentiable):
         PosteriorCrossKernel.__init__(
             self, gp.kernel, gp.kernel, gp.kernel, z, Kz
         )
+
+
+class CorrectiveCrossKernel(Kernel, Referentiable):
+    """Kernel that adds the corrective variance in sparse conditioning.
+
+    Args:
+        k_zi (:class:`.kernel.Kernel`): Kernel between the processes
+            corresponding to the left input and the inducing points
+            respectively.
+        k_zj (:class:`.kernel.Kernel`): Kernel between the processes
+            corresponding to the right input and the inducing points
+            respectively.
+        z (input): Locations of the inducing points.
+        A (tensor): Corrective matrix.
+        L (tensor): Kernel matrix of the inducing points.
+    """
+    _dispatch = Dispatcher(in_class=Self)
+
+    def __init__(self, k_zi, k_zj, z, A, K_z):
+        self.k_zi = k_zi
+        self.k_zj = k_zj
+        self.z = z
+        self.A = A
+        self.L = B.cholesky(matrix(K_z))
+
+    @_dispatch(object, object, Cache)
+    @cache
+    def __call__(self, x, y, B):
+        return B.qf(self.A,
+                    B.trisolve(self.L, self.k_zi(self.z, x)),
+                    B.trisolve(self.L, self.k_zj(self.z, y)))
+
+    @_dispatch(object, object, Cache)
+    @cache
+    def elwise(self, x, y, B):
+        return B.qf_diag(self.A,
+                         B.trisolve(self.L, self.k_zi(self.z, x)),
+                         B.trisolve(self.L, self.k_zj(self.z, y)))[:, None]
 
 
 class DerivativeKernel(Kernel, DerivativeFunction, Referentiable):

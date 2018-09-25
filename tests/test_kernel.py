@@ -9,9 +9,9 @@ from stheno.cache import Cache
 from stheno.input import Observed
 from stheno.kernel import EQ, RQ, Matern12, Matern32, Matern52, Delta, Kernel, \
     Linear, OneKernel, ZeroKernel, PosteriorCrossKernel, PosteriorKernel, \
-    ShiftedKernel, TensorProductKernel, VariationalPosteriorCrossKernel
-from stheno.random import GPPrimitive
+    ShiftedKernel, TensorProductKernel, CorrectiveCrossKernel
 from stheno.matrix import matrix, dense
+from stheno.random import GPPrimitive
 # noinspection PyUnresolvedReferences
 from tests import ok
 from . import eq, raises, ok, allclose, assert_allclose
@@ -338,6 +338,30 @@ def test_posterior_crosskernel():
 
     k = PosteriorKernel(GPPrimitive(EQ()), None, None)
     yield eq, str(k), 'PosteriorKernel()'
+
+
+def test_corrective_crosskernel():
+    a, b = np.random.randn(3, 3), np.random.randn(3, 3)
+    a, b = a.dot(a.T), b.dot(b.T)
+    z = np.random.randn(3, 2)
+    x1 = np.random.randn(10, 2)
+    x2 = np.random.randn(5, 2)
+
+    k = CorrectiveCrossKernel(EQ(), EQ(), z, a, matrix(b))
+
+    # Test that the kernel computes.
+    yield assert_allclose, k(x1, x2), k(x2, x1).T
+
+    # Verify that the kernel has the right properties.
+    yield eq, k.stationary, False
+    yield raises, RuntimeError, lambda: k.var
+    yield raises, RuntimeError, lambda: k.length_scale
+    yield raises, RuntimeError, lambda: k.period
+    yield eq, str(k), 'CorrectiveCrossKernel()'
+
+    # Test `elwise`.
+    for x in elwise_generator(k):
+        yield x
 
 
 def test_sum():

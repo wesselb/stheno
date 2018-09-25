@@ -9,13 +9,13 @@ from lab import B
 from numpy.testing import assert_allclose
 from plum import Dispatcher
 
+from stheno.cache import Cache
 from stheno.graph import GP, Graph
 from stheno.input import Observed
 from stheno.kernel import EQ
-from stheno.mean import TensorProductMean, ZeroMean, Mean, OneMean, \
-    PosteriorCrossMean, PosteriorMean, VariationalPosteriorCrossMean
-from stheno.cache import Cache
 from stheno.matrix import matrix
+from stheno.mean import TensorProductMean, ZeroMean, Mean, OneMean, \
+    PosteriorCrossMean, PosteriorMean
 # noinspection PyUnresolvedReferences
 from . import eq, neq, lt, le, ge, gt, raises, call, ok, eprint
 
