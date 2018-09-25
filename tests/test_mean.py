@@ -88,21 +88,6 @@ def test_posterior_mean():
     yield eq, str(pm), 'PosteriorMean()'
 
 
-def test_variational_posterior_mean():
-    z = np.linspace(0, 1, 10)
-    pcm = VariationalPosteriorCrossMean(
-        TensorProductMean(lambda x: x),
-        TensorProductMean(lambda x: x ** 2),
-        EQ(), z, np.random.randn(10)
-    )
-
-    # Check name.
-    yield eq, str(pcm), 'VariationalPosteriorCrossMean()'
-
-    # Check that the mean computes.
-    yield lambda: pcm(z)
-
-
 def test_function_mean():
     m1 = 5 * OneMean() + (lambda x: x ** 2)
     m2 = (lambda x: x ** 2) + 5 * OneMean()

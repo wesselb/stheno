@@ -340,31 +340,6 @@ def test_posterior_crosskernel():
     yield eq, str(k), 'PosteriorKernel()'
 
 
-def test_variational_posterior_crosskernel():
-    k = VariationalPosteriorCrossKernel(
-        EQ(), EQ(), EQ(),
-        np.random.randn(5, 2),
-        2 * matrix(EQ()(np.random.randn(5, 1))),
-        matrix(EQ()(np.random.randn(5, 1)))
-    )
-    x1 = np.random.randn(10, 2)
-    x2 = np.random.randn(5, 2)
-
-    # Test that the kernel computes.
-    yield assert_allclose, k(x1, x2), k(x2, x1).T
-
-    # Verify that the kernel has the right properties.
-    yield eq, k.stationary, False
-    yield raises, RuntimeError, lambda: k.var
-    yield raises, RuntimeError, lambda: k.length_scale
-    yield raises, RuntimeError, lambda: k.period
-    yield eq, str(k), 'VariationalPosteriorCrossKernel()'
-
-    # Test `elwise`.
-    for x in elwise_generator(k):
-        yield x
-
-
 def test_sum():
     k1 = EQ().stretch(2)
     k2 = 3 * RQ(1e-2).stretch(5)

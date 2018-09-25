@@ -1034,51 +1034,6 @@ class PosteriorKernel(PosteriorCrossKernel, Referentiable):
         )
 
 
-class VariationalPosteriorCrossKernel(Kernel, Referentiable):
-    """Variational posterior cross kernel.
-
-    Args:
-        k_ij (:class:`.kernel.Kernel`): Kernel between processes
-            corresponding to the left input and the right input respectively.
-        k_zi (:class:`.kernel.Kernel`): Kernel between processes
-            corresponding to the data and the left input respectively.
-        k_zj (:class:`.kernel.Kernel`): Kernel between processes
-            corresponding to the data and the right input respectively.
-        z (input): Locations of the pseudo-points.
-        Kz (:class:`.matrix.Dense`): Prior covariance of the pseudo-points.
-        A (:class:`.matrix.Dense): Variational covariance of the pseudo-points
-            premultiplied and postmultiplied by `Kz`.
-    """
-
-    _dispatch = Dispatcher(in_class=Self)
-
-    def __init__(self, k_ij, k_zi, k_zj, z, K_z, A):
-        self.k_ij = k_ij
-        self.k_zi = k_zi
-        self.k_zj = k_zj
-        self.z = z
-        self.K_z = K_z
-        self.A = A
-
-    @_dispatch(object, object, Cache)
-    @cache
-    def __call__(self, x, y, B):
-        K_zi = self.k_zi(self.z, x, B)
-        K_zj = self.k_zj(self.z, y, B)
-        qf1 = B.qf(self.K_z, K_zi, K_zj)
-        qf2 = B.qf(self.A, K_zi, K_zj)
-        return B.add(B.subtract(self.k_ij(x, y, B), qf1), qf2)
-
-    @_dispatch(object, object, Cache)
-    @cache
-    def elwise(self, x, y, B):
-        K_zi = self.k_zi(self.z, x, B)
-        K_zj = self.k_zj(self.z, y, B)
-        qf1_diag = B.expand_dims(B.qf_diag(self.K_z, K_zi, K_zj), 1)
-        qf2_diag = B.expand_dims(B.qf_diag(self.A, K_zi, K_zj), 1)
-        return B.add(B.subtract(self.k_ij.elwise(x, y, B), qf1_diag), qf2_diag)
-
-
 class DerivativeKernel(Kernel, DerivativeFunction, Referentiable):
     """Derivative of kernel."""
     _dispatch = Dispatcher(in_class=Self)
