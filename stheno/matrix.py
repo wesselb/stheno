@@ -429,7 +429,7 @@ def cholesky(a):
 def cholesky(a):
     # NOTE: Assumes that the matrix is symmetric.
     if a.cholesky is None:
-        a.cholesky = B.matmul(a.left, B.cholesky(a.middle))
+        a.cholesky = B.matmul(a.left, B.cholesky(matrix(a.middle)))
     return a.cholesky
 
 
@@ -658,7 +658,7 @@ def sample(a, num=1):
     dtype = float if B.issubdtype(B.dtype(a), np.integer) else B.dtype(a)
 
     # Perform sampling operation.
-    chol = B.cholesky(a)
+    chol = B.cholesky(matrix(a))
     return B.matmul(chol, B.randn([B.shape(chol)[1], num], dtype=dtype))
 
 
@@ -764,7 +764,7 @@ def qf(a, b):
     Returns:
         :class:`.matrix.Dense`: Quadratic form.
     """
-    prod = B.trisolve(B.cholesky(a), b)
+    prod = B.trisolve(B.cholesky(matrix(a)), b)
     return matrix(B.matmul(prod, prod, tr_a=True))
 
 
@@ -772,7 +772,7 @@ def qf(a, b):
 def qf(a, b, c):
     if b is c:
         return B.qf(a, b)
-    chol = B.cholesky(a)
+    chol = B.cholesky(matrix(a))
     return B.matmul(B.trisolve(chol, b), B.trisolve(chol, c), tr_a=True)
 
 
@@ -800,12 +800,13 @@ def qf_diag(a, b):
     Returns:
         tensor: Diagonal of the quadratic form.
     """
-    prod = B.trisolve(B.cholesky(a), b)
+    prod = B.trisolve(B.cholesky(matrix(a)), b)
     return B.sum(prod ** 2, axis=0)
 
 
 @B.qf_diag.extend(object, object, object)
 def qf_diag(a, b, c):
+    a = matrix(a)
     if b is c:
         return B.qf_diag(a, b)
     left = B.trisolve(B.cholesky(a), b)
@@ -842,7 +843,7 @@ def ratio(a, b):
     Returns:
         tensor: Ratio.
     """
-    return B.sum(B.qf_diag(b, B.cholesky(a)))
+    return B.sum(B.qf_diag(b, B.cholesky(matrix(a))))
 
 
 @B.ratio.extend(LowRank, Dense)
