@@ -45,4 +45,4 @@ Observed = Component('observed')  #: Observed points
 Latent = Component('latent')  #: Latent points
 
 #: A generic parametric type used to specify locations at a particular process.
-At = kind()
+At = kind(Input)
