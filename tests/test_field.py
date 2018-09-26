@@ -10,22 +10,27 @@ from stheno.function_field import stretch, differentiate, shift, transform, \
     select, Function
 from stheno.kernel import EQ, RQ, Linear, OneKernel, ZeroKernel, Delta, \
     TensorProductKernel, Kernel
-from stheno.mean import TensorProductMean, ZeroMean, OneMean, Mean
 from stheno.matrix import Dense
+from stheno.mean import TensorProductMean, ZeroMean, OneMean, Mean
 # noinspection PyUnresolvedReferences
-from tests import ok, raises
-from . import eq
+from . import eq, ok, raises, lam
 
 
 def test_registrations():
     for x in [Function, Kernel, Mean, Dense]:
         yield eq, get_field.invoke(x)(1), x
 
-
-def test_corner_cases():
     class MyField(Element):
         pass
 
+    # Test registration of fields and creation of new types.
+    yield raises, RuntimeError, lambda: get_field(MyField())
+    get_field.extend(MyField)(lambda _: MyField)
+    yield lam, lambda: get_field(MyField())
+    yield raises, RuntimeError, lambda: new(MyField(), SumElement)
+
+
+def test_corner_cases():
     yield raises, IndexError, lambda: EQ().stretch(1)[1]
     yield raises, IndexError, lambda: (EQ() + RQ(1))[2]
     yield raises, RuntimeError, lambda: mul(1, 1)
@@ -35,8 +40,6 @@ def test_corner_cases():
     yield raises, RuntimeError, lambda: differentiate(1, 1)
     yield raises, RuntimeError, lambda: select(1, 1)
     yield raises, RuntimeError, lambda: shift(1, 1)
-    yield raises, RuntimeError, lambda: get_field(1)
-    yield raises, RuntimeError, lambda: new(MyField(), SumElement)
     yield eq, repr(EQ()), str(EQ())
     yield eq, EQ().__name__, 'EQ'
     yield raises, NotImplementedError, \
