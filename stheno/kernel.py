@@ -7,19 +7,19 @@ import operator
 
 import numpy as np
 from lab import B
+from numpy import all
 from plum import Dispatcher, Self, Referentiable
 
 from stheno.function_field import StretchedFunction, ShiftedFunction, \
     SelectedFunction, InputTransformedFunction, DerivativeFunction, \
     TensorProductFunction, stretch, transform, Function, ZeroFunction, \
     OneFunction, ScaledFunction, ProductFunction, SumFunction, \
-    WrappedFunction, PrimitiveFunction, JoinFunction, shift, select, \
-    to_tensor
+    WrappedFunction, JoinFunction, shift, select, to_tensor, tuple_equal
 from .cache import cache, Cache, uprank
 from .field import add, mul, broadcast, apply_optional_arg, get_field, \
     Formatter, need_parens
 from .input import Input, Unique
-from .matrix import Dense, Diagonal, LowRank, UniformlyDiagonal, One, Zero, \
+from .matrix import Dense, LowRank, UniformlyDiagonal, One, Zero, \
     dense, matrix
 
 __all__ = ['Kernel', 'OneKernel', 'ZeroKernel', 'ScaledKernel', 'EQ', 'RQ',
@@ -419,6 +419,10 @@ class StretchedKernel(Kernel, StretchedFunction, Referentiable):
             # NOTE: Can do something more clever here.
             return Kernel.period.fget(self)
 
+    @_dispatch(Self)
+    def __eq__(self, other):
+        return tuple_equal(expand(self.stretches), expand(other.stretches))
+
 
 class ShiftedKernel(Kernel, ShiftedFunction, Referentiable):
     """Shifted kernel."""
@@ -464,6 +468,10 @@ class ShiftedKernel(Kernel, ShiftedFunction, Referentiable):
     @property
     def period(self):
         return self[0].period
+
+    @_dispatch(Self)
+    def __eq__(self, other):
+        return tuple_equal(expand(self.shifts), expand(other.shifts))
 
 
 class SelectedKernel(Kernel, SelectedFunction, Referentiable):
@@ -525,6 +533,10 @@ class SelectedKernel(Kernel, SelectedFunction, Referentiable):
                 # NOTE: Can do something more clever here.
                 return Kernel.period.fget(self)
 
+    @_dispatch(Self)
+    def __eq__(self, other):
+        return tuple_equal(expand(self.dims), expand(other.dims))
+
 
 class InputTransformedKernel(Kernel, InputTransformedFunction, Referentiable):
     """Input-transformed kernel."""
@@ -548,6 +560,10 @@ class InputTransformedKernel(Kernel, InputTransformedFunction, Referentiable):
         x = x if f1 is None else apply_optional_arg(f1, x, B)
         y = y if f2 is None else apply_optional_arg(f2, y, B)
         return x, y, B
+
+    @_dispatch(Self)
+    def __eq__(self, other):
+        return tuple_equal(expand(self.fs), expand(other.fs))
 
 
 class PeriodicKernel(Kernel, WrappedFunction, Referentiable):
@@ -603,8 +619,12 @@ class PeriodicKernel(Kernel, WrappedFunction, Referentiable):
     def display(self, e, formatter):
         return '{} per {}'.format(e, formatter(self._period))
 
+    @_dispatch(Self)
+    def __eq__(self, other):
+        return all(self.period == other.period)
 
-class EQ(Kernel, PrimitiveFunction, Referentiable):
+
+class EQ(Kernel, Referentiable):
     """Exponentiated quadratic kernel."""
 
     _dispatch = Dispatcher(in_class=Self)
@@ -639,6 +659,10 @@ class EQ(Kernel, PrimitiveFunction, Referentiable):
     @property
     def period(self):
         return np.inf
+
+    @_dispatch(Self)
+    def __eq__(self, other):
+        return True
 
 
 class RQ(Kernel, Referentiable):
@@ -689,8 +713,12 @@ class RQ(Kernel, Referentiable):
     def period(self):
         return np.inf
 
+    @_dispatch(Self)
+    def __eq__(self, other):
+        return all(self.alpha == other.alpha)
 
-class Exp(Kernel, PrimitiveFunction, Referentiable):
+
+class Exp(Kernel, Referentiable):
     """Exponential kernel."""
 
     _dispatch = Dispatcher(in_class=Self)
@@ -723,11 +751,15 @@ class Exp(Kernel, PrimitiveFunction, Referentiable):
     def period(self):
         return np.inf
 
+    @_dispatch(Self)
+    def __eq__(self, other):
+        return True
+
 
 Matern12 = Exp  #: Alias for the exponential kernel.
 
 
-class Matern32(Kernel, PrimitiveFunction, Referentiable):
+class Matern32(Kernel, Referentiable):
     """Matern--3/2 kernel."""
 
     _dispatch = Dispatcher(in_class=Self)
@@ -764,8 +796,12 @@ class Matern32(Kernel, PrimitiveFunction, Referentiable):
     def period(self):
         return np.inf
 
+    @_dispatch(Self)
+    def __eq__(self, other):
+        return True
 
-class Matern52(Kernel, PrimitiveFunction, Referentiable):
+
+class Matern52(Kernel, Referentiable):
     """Matern--5/2 kernel."""
 
     _dispatch = Dispatcher(in_class=Self)
@@ -803,8 +839,12 @@ class Matern52(Kernel, PrimitiveFunction, Referentiable):
     def period(self):
         return np.inf
 
+    @_dispatch(Self)
+    def __eq__(self, other):
+        return True
 
-class Delta(Kernel, PrimitiveFunction, Referentiable):
+
+class Delta(Kernel, Referentiable):
     """Kronecker delta kernel.
 
     Args:
@@ -901,8 +941,12 @@ class Delta(Kernel, PrimitiveFunction, Referentiable):
     def period(self):
         return np.inf
 
+    @_dispatch(Self)
+    def __eq__(self, other):
+        return True
 
-class Linear(Kernel, PrimitiveFunction, Referentiable):
+
+class Linear(Kernel, Referentiable):
     """Linear kernel."""
 
     _dispatch = Dispatcher(in_class=Self)
@@ -926,6 +970,10 @@ class Linear(Kernel, PrimitiveFunction, Referentiable):
     @property
     def period(self):
         return np.inf
+
+    @_dispatch(Self)
+    def __eq__(self, other):
+        return True
 
 
 class DecayingKernel(Kernel, Referentiable):
@@ -971,6 +1019,10 @@ class DecayingKernel(Kernel, Referentiable):
     @property
     def period(self):
         return np.inf
+
+    @_dispatch(Self)
+    def __eq__(self, other):
+        return all(self.alpha == other.alpha) and all(self.beta == other.beta)
 
 
 class PosteriorKernel(Kernel, Referentiable):
@@ -1111,6 +1163,10 @@ class DerivativeKernel(Kernel, DerivativeFunction, Referentiable):
         # arguments are taken, then the result is in fact stationary.
         return False
 
+    @_dispatch(Self)
+    def __eq__(self, other):
+        return tuple_equal(expand(self.derivs), expand(other.derivs))
+
 
 class TensorProductKernel(Kernel, TensorProductFunction, Referentiable):
     """Tensor product kernel."""
@@ -1134,6 +1190,10 @@ class TensorProductKernel(Kernel, TensorProductFunction, Referentiable):
         f1, f2 = expand(self.fs)
         return B.multiply(apply_optional_arg(f1, x, B),
                           apply_optional_arg(f2, y, B))
+
+    @_dispatch(Self)
+    def __eq__(self, other):
+        return tuple_equal(expand(self.fs), expand(other.fs))
 
 
 class ReversedKernel(Kernel, WrappedFunction, Referentiable):
@@ -1172,6 +1232,10 @@ class ReversedKernel(Kernel, WrappedFunction, Referentiable):
     @_dispatch(object, Formatter)
     def display(self, e, formatter):
         return 'Reversed({})'.format(e)
+
+    @_dispatch(Self)
+    def __eq__(self, other):
+        return self[0] == other[0]
 
 
 @need_parens.extend_multi((Function, ReversedKernel),

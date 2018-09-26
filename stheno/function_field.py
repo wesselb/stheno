@@ -6,16 +6,31 @@ import operator
 from types import FunctionType as PythonFunction
 
 from lab import B
+from numpy import all
 from plum import Dispatcher, Referentiable, Self
-from stheno.field import squeeze, mul, add, SumElement, ProductElement, \
-    ScaledElement, OneElement, ZeroElement, WrappedElement, PrimitiveElement, \
-    JoinElement, Formatter
 
+from stheno.field import squeeze, mul, add, SumElement, ProductElement, \
+    ScaledElement, OneElement, ZeroElement, WrappedElement, JoinElement, \
+    Formatter
 from .field import Element, new, get_field, broadcast
 
 __all__ = []
 
 _dispatch = Dispatcher()
+
+
+@_dispatch(tuple, tuple)
+def tuple_equal(x, y):
+    """Check tuples for equality.
+
+    Args:
+        x (tuple): First tuple.
+        y (tuple): Second tuple.
+
+    Returns:
+        bool: `x` and `y` are equal.
+    """
+    return len(x) == len(y) and all([all(xi == yi) for xi, yi in zip(x, y)])
 
 
 @_dispatch(B.Numeric)
@@ -115,10 +130,6 @@ class Function(Element, Referentiable):
 def get_field(a): return Function
 
 
-class PrimitiveFunction(Function, PrimitiveElement):
-    """A primitive function."""
-
-
 class OneFunction(Function, OneElement):
     """The constant function `1`."""
 
@@ -165,6 +176,11 @@ class StretchedFunction(WrappedFunction, Referentiable):
         stretches = tuple(formatter(s) for s in self.stretches)
         return '{} > {}'.format(e, squeeze(stretches))
 
+    @_dispatch(Self)
+    def __eq__(self, other):
+        return self[0] == other[0] and \
+               tuple_equal(self.stretches, other.stretches)
+
 
 class ShiftedFunction(WrappedFunction, Referentiable):
     """Shifted function.
@@ -184,6 +200,11 @@ class ShiftedFunction(WrappedFunction, Referentiable):
         shifts = tuple(formatter(s) for s in self.shifts)
         return '{} shift {}'.format(e, squeeze(shifts))
 
+    @_dispatch(Self)
+    def __eq__(self, other):
+        return self[0] == other[0] and \
+               tuple_equal(self.shifts, other.shifts)
+
 
 class SelectedFunction(WrappedFunction, Referentiable):
     """Select particular dimensions of the input features.
@@ -201,6 +222,11 @@ class SelectedFunction(WrappedFunction, Referentiable):
     @_dispatch(object, Formatter)
     def display(self, e, formatter):
         return '{} : {}'.format(e, squeeze(tuple(list(ds) for ds in self.dims)))
+
+    @_dispatch(Self)
+    def __eq__(self, other):
+        return self[0] == other[0] and \
+               tuple_equal(self.dims, other.dims)
 
 
 class InputTransformedFunction(WrappedFunction, Referentiable):
@@ -229,6 +255,11 @@ class InputTransformedFunction(WrappedFunction, Referentiable):
             fs = '({})'.format(', '.join(name(f) for f in self.fs))
         return '{} transform {}'.format(e, fs)
 
+    @_dispatch(Self)
+    def __eq__(self, other):
+        return self[0] == other[0] and \
+               tuple_equal(self.fs, other.fs)
+
 
 class DerivativeFunction(WrappedFunction, Referentiable):
     """Compute the derivative of a function.
@@ -253,6 +284,11 @@ class DerivativeFunction(WrappedFunction, Referentiable):
             derivs = self.derivs
         return 'd{} {}'.format(derivs, e)
 
+    @_dispatch(Self)
+    def __eq__(self, other):
+        return self[0] == other[0] and \
+               tuple_equal(self.derivs, other.derivs)
+
 
 class TensorProductFunction(Function, Referentiable):
     """An element built from a product of functions for each input.
@@ -271,6 +307,10 @@ class TensorProductFunction(Function, Referentiable):
             return self.fs[0].__name__
         else:
             return '({})'.format(' x '.join(f.__name__ for f in self.fs))
+
+    @_dispatch(Self)
+    def __eq__(self, other):
+        return tuple_equal(self.fs, other.fs)
 
 
 @_dispatch(object, [object])

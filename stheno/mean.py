@@ -5,12 +5,13 @@ from __future__ import absolute_import, division, print_function
 import logging
 
 from lab import B
+from numpy import all
 from plum import Dispatcher, Self, Referentiable
+
 from stheno.function_field import StretchedFunction, ShiftedFunction, \
     SelectedFunction, InputTransformedFunction, DerivativeFunction, \
     TensorProductFunction, ZeroFunction, OneFunction, \
     ScaledFunction, ProductFunction, SumFunction, Function
-
 from .cache import Cache, cache, uprank
 from .field import apply_optional_arg, get_field
 from .input import Input
@@ -202,8 +203,8 @@ class PosteriorMean(Mean, Referentiable):
 
     def __init__(self, m_i, m_z, k_zi, z, K_z, y):
         self.m_i = m_i
-        self.k_zi = k_zi
         self.m_z = m_z
+        self.k_zi = k_zi
         self.z = z
         self.K_z = K_z
         self.y = uprank(y)
@@ -214,4 +215,3 @@ class PosteriorMean(Mean, Referentiable):
         diff = B.subtract(self.y, self.m_z(self.z, B))
         return B.add(self.m_i(x, B),
                      B.qf(self.K_z, self.k_zi(self.z, x), diff))
-

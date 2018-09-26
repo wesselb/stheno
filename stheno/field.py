@@ -2,8 +2,7 @@
 
 from __future__ import absolute_import, division, print_function
 
-from numbers import Number
-
+from numpy import all
 from plum import Dispatcher, Referentiable, Self, NotFoundLookupError
 
 __all__ = []
@@ -97,7 +96,7 @@ class Element(Referentiable):
     _dispatch = Dispatcher(in_class=Self)
 
     def __eq__(self, other):
-        return equal(self, other)
+        return False
 
     def __mul__(self, other):
         return mul(self, other)
@@ -191,15 +190,7 @@ class Element(Referentiable):
         return self.display(lambda x: x)
 
 
-class PrimitiveElement(Element):
-    """A primitive.
-
-    Instances of primitives should always be the same element. It therefore
-    does not make sense if primitive elements have external parameters.
-    """
-
-
-class OneElement(PrimitiveElement, Referentiable):
+class OneElement(Element, Referentiable):
     """The constant `1`."""
     _dispatch = Dispatcher(in_class=Self)
 
@@ -207,14 +198,22 @@ class OneElement(PrimitiveElement, Referentiable):
     def display(self, formatter):
         return '1'
 
+    @_dispatch(Self)
+    def __eq__(self, other):
+        return True
 
-class ZeroElement(PrimitiveElement, Referentiable):
+
+class ZeroElement(Element, Referentiable):
     """The constant `0`."""
     _dispatch = Dispatcher(in_class=Self)
 
     @_dispatch(Formatter)
     def display(self, formatter):
         return '0'
+
+    @_dispatch(Self)
+    def __eq__(self, other):
+        return True
 
 
 class WrappedElement(Element, Referentiable):
@@ -292,6 +291,10 @@ class ScaledElement(WrappedElement, Referentiable):
         else:
             return self.scale if i == 0 else self[0].factor(i - 1)
 
+    @_dispatch(Self)
+    def __eq__(self, other):
+        return all(self.scale == other.scale) and self[0] == other[0]
+
 
 class ProductElement(JoinElement, Referentiable):
     """Product of elements."""
@@ -313,6 +316,11 @@ class ProductElement(JoinElement, Referentiable):
     def display(self, e1, e2, formatter):
         return '{} * {}'.format(e1, e2)
 
+    @_dispatch(Self)
+    def __eq__(self, other):
+        return (self[0] == other[0] and self[1] == other[1]) or \
+               (self[0] == other[1] and self[1] == other[0])
+
 
 class SumElement(JoinElement, Referentiable):
     """Sum of elements."""
@@ -333,6 +341,11 @@ class SumElement(JoinElement, Referentiable):
     @_dispatch(object, object, Formatter)
     def display(self, e1, e2, formatter):
         return '{} + {}'.format(e1, e2)
+
+    @_dispatch(Self)
+    def __eq__(self, other):
+        return (self[0] == other[0] and self[1] == other[1]) or \
+               (self[0] == other[1] and self[1] == other[0])
 
 
 @_dispatch(object, object)
@@ -635,19 +648,3 @@ def add(a, b):
         return mul(a.scale + b.scale, a[0])
     else:
         return new(a, SumElement)(a, b)
-
-
-# Equality:
-
-@_dispatch(object, object)
-def equal(a, b): return False
-
-
-@_dispatch(PrimitiveElement, PrimitiveElement)
-def equal(a, b): return type(a) == type(b)
-
-
-@_dispatch.multi((SumElement, SumElement),
-                 (ProductElement, ProductElement))
-def equal(a, b): return (equal(a[0], b[0]) and equal(a[1], b[1])) or \
-                        (equal(a[0], b[1]) and equal(a[1], b[0]))

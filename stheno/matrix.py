@@ -56,6 +56,10 @@ class Dense(Element, Referentiable):
     def __matmul__(self, other):
         return B.matmul(self, other)
 
+    @_dispatch(Self)
+    def __eq__(self, other):
+        return dense(self) == dense(other)
+
 
 # Register field.
 @get_field.extend(Dense)
@@ -79,6 +83,10 @@ class Diagonal(Dense, Referentiable):
         self.diag = diag
         self.rows = B.shape(diag)[0] if rows is None else rows
         self.cols = self.rows if cols is None else cols
+
+    @_dispatch(Self)
+    def __eq__(self, other):
+        return B.diag(self) == B.diag(other)
 
 
 class UniformlyDiagonal(Diagonal, Referentiable):
@@ -132,6 +140,12 @@ class LowRank(Dense, Referentiable):
         self.r = self.right
         self.m = self.middle
 
+    @_dispatch(Self)
+    def __eq__(self, other):
+        return (self.left == other.left,
+                self.middle == other.middle,
+                self.right == other.right)
+
 
 class Constant(LowRank, Referentiable):
     """Constant symmetric positive-definite matrix.
@@ -162,6 +176,10 @@ class Constant(LowRank, Referentiable):
     def from_(cls, constant, ref):
         return cls(B.cast(constant, dtype=B.dtype(ref)), *B.shape(ref))
 
+    def __eq__(self, other):
+        return B.shape(self) == B.shape(other) \
+               and self.constant == other.constant
+
 
 class One(Constant, OneElement, Referentiable):
     """Dense matrix full of ones.
@@ -180,6 +198,10 @@ class One(Constant, OneElement, Referentiable):
     @classmethod
     def from_(cls, ref):
         return cls(B.dtype(ref), *B.shape(ref))
+
+    @_dispatch(Self)
+    def __eq__(self, other):
+        return B.shape(self) == B.shape(other)
 
 
 class Zero(Constant, ZeroElement, Referentiable):
@@ -201,6 +223,10 @@ class Zero(Constant, ZeroElement, Referentiable):
     def from_(cls, ref):
         return cls(B.dtype(ref), *B.shape(ref))
 
+    @_dispatch(Self)
+    def __eq__(self, other):
+        return B.shape(self) == B.shape(other)
+
 
 class Woodbury(Dense, Referentiable):
     """Sum of a low-rank and diagonal symmetric positive-definite matrix.
@@ -218,6 +244,10 @@ class Woodbury(Dense, Referentiable):
 
         # Caching:
         self.schur = None
+
+    @_dispatch(Self)
+    def __eq__(self, other):
+        return self.lr == other.lr, self.diag == other.diag
 
 
 # Conveniently make identity matrices.

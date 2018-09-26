@@ -12,7 +12,7 @@ from stheno.kernel import EQ, RQ, Matern12, Matern32, Matern52, Delta, Kernel, \
     TensorProductKernel, CorrectiveKernel, DecayingKernel
 from stheno.matrix import matrix, dense, Zero, One, UniformlyDiagonal
 # noinspection PyUnresolvedReferences
-from . import eq, raises, ok, allclose, assert_allclose, assert_instance
+from . import eq, raises, ok, allclose, assert_allclose, assert_instance, neq
 
 
 def kernel_generator(k):
@@ -127,13 +127,18 @@ def test_reversal():
     yield eq, k.length_scale, 1
     yield eq, k.period, np.inf
 
-    # Verify that the kernel has the right properties.
     k = reversed(Linear())
     yield eq, k.stationary, False
     yield raises, RuntimeError, lambda: k.var
     yield raises, RuntimeError, lambda: k.length_scale
     yield eq, k.period, np.inf
     yield eq, str(k), 'Reversed(Linear())'
+
+    # Check equality.
+    k = reversed(Linear())
+    yield eq, k, k
+    yield neq, k, Linear()
+    yield neq, k, EQ()
 
     # Standard tests:
     for x in kernel_generator(k):
@@ -182,6 +187,10 @@ def test_eq():
     yield eq, k.period, np.inf
     yield eq, str(k), 'EQ()'
 
+    # Test equality.
+    yield eq, k, k
+    yield neq, k, Linear()
+
     # Standard tests:
     for x in kernel_generator(k):
         yield x
@@ -198,6 +207,11 @@ def test_rq():
     yield eq, k.period, np.inf
     yield eq, str(k), 'RQ(0.1)'
 
+    # Test equality.
+    yield eq, k, k
+    yield neq, k, RQ(2e-1)
+    yield neq, k, Linear()
+
     # Standard tests:
     for x in kernel_generator(k):
         yield x
@@ -212,6 +226,10 @@ def test_exp():
     yield eq, k.length_scale, 1
     yield eq, k.period, np.inf
     yield eq, str(k), 'Exp()'
+
+    # Test equality.
+    yield eq, k, k
+    yield neq, k, Linear()
 
     # Standard tests:
     for x in kernel_generator(k):
@@ -228,6 +246,10 @@ def test_mat32():
     yield eq, k.period, np.inf
     yield eq, str(k), 'Matern32()'
 
+    # Test equality.
+    yield eq, k, k
+    yield neq, k, Linear()
+
     # Standard tests:
     for x in kernel_generator(k):
         yield x
@@ -242,6 +264,10 @@ def test_mat52():
     yield eq, k.length_scale, 1
     yield eq, k.period, np.inf
     yield eq, str(k), 'Matern52()'
+
+    # Test equality.
+    yield eq, k, k
+    yield neq, k, Linear()
 
     # Standard tests:
     for x in kernel_generator(k):
@@ -264,6 +290,10 @@ def test_one():
     yield eq, k.period, 0
     yield eq, str(k), '1'
 
+    # Test equality.
+    yield eq, k, k
+    yield neq, k, Linear()
+
     # Standard tests:
     for x in kernel_generator(k):
         yield x
@@ -284,6 +314,10 @@ def test_zero():
     yield eq, k.period, 0
     yield eq, str(k), '0'
 
+    # Test equality.
+    yield eq, k, k
+    yield neq, k, Linear()
+
     # Standard tests:
     for x in kernel_generator(k):
         yield x
@@ -298,6 +332,10 @@ def test_linear():
     yield raises, RuntimeError, lambda: k.length_scale
     yield eq, k.period, np.inf
     yield eq, str(k), 'Linear()'
+
+    # Test equality.
+    yield eq, k, k
+    yield neq, k, EQ()
 
     # Standard tests:
     for x in kernel_generator(k):
@@ -358,13 +396,17 @@ def test_sum():
         yield x
 
 
-def test_stretch():
+def test_stretched():
     k = EQ().stretch(2)
 
     yield eq, k.stationary, True
     yield eq, k.length_scale, 2
     yield eq, k.period, np.inf
     yield eq, k.var, 1
+
+    # Test equality.
+    yield eq, EQ().stretch(2), EQ().stretch(2)
+    yield neq, EQ().stretch(2), EQ().stretch(3)
 
     # Standard tests:
     for x in kernel_generator(k):
@@ -389,6 +431,10 @@ def test_periodic():
     yield eq, k.length_scale, 2
     yield eq, k.period, 3
     yield eq, k.var, 1
+
+    # Test equality.
+    yield eq, EQ().periodic(2), EQ().periodic(2)
+    yield neq, EQ().periodic(2), EQ().periodic(3)
 
     # Standard tests:
     for x in kernel_generator(k):
@@ -426,6 +472,10 @@ def test_shifted():
     yield eq, k.length_scale, 1
     yield eq, k.period, np.inf
     yield eq, k.var, 2
+
+    # Test equality.
+    yield eq, Linear().shift(2), Linear().shift(2)
+    yield neq, Linear().shift(2), Linear().shift(3)
 
     # Standard tests:
     for x in kernel_generator(k):
@@ -469,6 +519,10 @@ def test_selected():
     yield eq, k.length_scale, 5
     yield eq, k.period, np.inf
     yield eq, k.var, 2
+
+    # Test equality.
+    yield eq, EQ().select(0), EQ().select(0)
+    yield neq, EQ().select(0), EQ().select(1)
 
     # Standard tests:
     for x in kernel_generator(k):
@@ -524,6 +578,16 @@ def test_input_transform():
     yield raises, RuntimeError, lambda: k.var
     yield raises, RuntimeError, lambda: k.period
 
+    def f1(x):
+        return x
+
+    def f2(x):
+        return x ** 2
+
+    # Test equality.
+    yield eq, EQ().transform(f1), EQ().transform(f1)
+    yield neq, EQ().transform(f1), EQ().transform(f2)
+
     # Standard tests:
     for x in kernel_generator(k):
         yield x
@@ -546,6 +610,11 @@ def test_tensor_product():
     yield raises, RuntimeError, lambda: k.length_scale
     yield raises, RuntimeError, lambda: k.var
     yield raises, RuntimeError, lambda: k.period
+
+    # Check equality.
+    yield eq, k, k
+    yield neq, k, TensorProductKernel(lambda x: x)
+    yield neq, k, EQ()
 
     # Standard tests:
     for x in kernel_generator(k):
@@ -573,6 +642,10 @@ def test_derivative():
     yield raises, RuntimeError, lambda: k.length_scale
     yield raises, RuntimeError, lambda: k.var
     yield raises, RuntimeError, lambda: k.period
+
+    # Test equality.
+    yield eq, k, k
+    yield neq, k, EQ().diff(1)
 
     yield raises, RuntimeError, lambda: EQ().diff(None, None)(1)
 
@@ -646,3 +719,8 @@ def test_decaying_kernel():
     # Standard tests:
     for x in kernel_generator(k):
         yield x
+
+    # Test equality.
+    yield eq, k, k
+    yield neq, k, DecayingKernel(3.0, 5.0)
+    yield neq, k, EQ()

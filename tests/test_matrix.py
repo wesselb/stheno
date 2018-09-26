@@ -13,6 +13,44 @@ from . import eq, neq, lt, le, ge, gt, raises, call, ok, eprint, allclose, \
     assert_allclose
 
 
+def test_equality():
+    # Test `Dense.`
+    a = Dense(np.random.randn(4, 2))
+    yield assert_allclose, a == a, dense(a) == dense(a)
+
+    # Test `Diagonal`.
+    d = Diagonal(np.random.randn(4))
+    yield assert_allclose, d == d, B.diag(d) == B.diag(d)
+
+    # Test `LowRank`.
+    lr = LowRank(left=np.random.randn(4, 2),
+                 middle=np.random.randn(2, 2))
+    yield assert_allclose, lr == lr, (lr.l == lr.l, lr.m == lr.m, lr.r == lr.r)
+
+    # Test `Woodbury`.
+    yield assert_allclose, (lr + d) == (lr + d), (lr == lr, d == d)
+
+    # Test `Constant`.
+    c1 = Constant.from_(1, a)
+    c1_2 = Constant(1, 4, 3)
+    c2 = Constant.from_(2, a)
+    yield eq, c1, c1
+    yield neq, c1, c1_2
+    yield neq, c1, c2
+
+    # Test `One`.
+    one1 = One(np.float64, 4, 2)
+    one2 = One(np.float64, 4, 3)
+    yield eq, one1, one1
+    yield neq, one1, one2
+
+    # Test `Zero`.
+    zero1 = Zero(np.float64, 4, 2)
+    zero2 = Zero(np.float64, 4, 3)
+    yield eq, zero1, zero1
+    yield neq, zero1, zero2
+
+
 def test_constant_zero_one():
     a = np.random.randn(4, 2)
     b = Dense(a)
@@ -289,25 +327,25 @@ def test_matmul():
 
 def test_inverse_and_logdet():
     # Test `Dense`.
-    a = np.random.randn(5, 5)
+    a = np.random.randn(3, 3)
     a = Dense(a.dot(a.T))
-    yield assert_allclose, B.matmul(a, B.inverse(a)), np.eye(5)
-    yield assert_allclose, B.matmul(B.inverse(a), a), np.eye(5)
+    yield assert_allclose, B.matmul(a, B.inverse(a)), np.eye(3)
+    yield assert_allclose, B.matmul(B.inverse(a), a), np.eye(3)
     yield assert_allclose, B.logdet(a), np.log(np.linalg.det(dense(a)))
 
     # Test `Diagonal`.
-    d = Diagonal([1, 2, 3, 4, 5])
-    yield assert_allclose, B.matmul(d, B.inverse(d)), np.eye(5)
-    yield assert_allclose, B.matmul(B.inverse(d), d), np.eye(5)
+    d = Diagonal([1, 2, 3])
+    yield assert_allclose, B.matmul(d, B.inverse(d)), np.eye(3)
+    yield assert_allclose, B.matmul(B.inverse(d), d), np.eye(3)
     yield assert_allclose, B.logdet(d), np.log(np.linalg.det(dense(d)))
     yield eq, B.shape(B.inverse(Diagonal([1, 2], rows=2, cols=4))), (4, 2)
 
     # Test `Woodbury`.
-    a = np.random.randn(5, 3)
-    b = np.random.randn(3, 3)
+    a = np.random.randn(3, 2)
+    b = np.random.randn(2, 2)
     wb = d + LowRank(left=a, right=a, middle=b.dot(b.T))
-    yield assert_allclose, B.matmul(wb, B.inverse(wb)), np.eye(5)
-    yield assert_allclose, B.matmul(B.inverse(wb), wb), np.eye(5)
+    yield assert_allclose, B.matmul(wb, B.inverse(wb)), np.eye(3)
+    yield assert_allclose, B.matmul(B.inverse(wb), wb), np.eye(3)
     yield assert_allclose, B.logdet(wb), np.log(np.linalg.det(dense(wb)))
 
     # Test `LowRank`.

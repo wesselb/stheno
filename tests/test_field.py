@@ -5,29 +5,18 @@ from __future__ import absolute_import, division, print_function
 import operator
 
 from stheno.field import mul, add, SumElement, new, get_field, broadcast, \
-    WrappedElement, JoinElement, Element
+    WrappedElement, JoinElement, Element, OneElement, ZeroElement, \
+    ScaledElement, ProductElement
 from stheno.function_field import stretch, differentiate, shift, transform, \
-    select, Function
+    select, Function, StretchedFunction, ShiftedFunction, SelectedFunction, \
+    InputTransformedFunction, DerivativeFunction, TensorProductFunction, \
+    OneFunction, ZeroFunction
 from stheno.kernel import EQ, RQ, Linear, OneKernel, ZeroKernel, Delta, \
     TensorProductKernel, Kernel
 from stheno.matrix import Dense
 from stheno.mean import TensorProductMean, ZeroMean, OneMean, Mean
 # noinspection PyUnresolvedReferences
-from . import eq, ok, raises, lam
-
-
-def test_registrations():
-    for x in [Function, Kernel, Mean, Dense]:
-        yield eq, get_field.invoke(x)(1), x
-
-    class MyField(Element):
-        pass
-
-    # Test registration of fields and creation of new types.
-    yield raises, RuntimeError, lambda: get_field(MyField())
-    get_field.extend(MyField)(lambda _: MyField)
-    yield lam, lambda: get_field(MyField())
-    yield raises, RuntimeError, lambda: new(MyField(), SumElement)
+from . import eq, ok, raises, lam, neq
 
 
 def test_corner_cases():
@@ -46,6 +35,77 @@ def test_corner_cases():
           lambda: WrappedElement(1).display(1, lambda x: x)
     yield raises, NotImplementedError, \
           lambda: JoinElement(1, 2).display(1, 2, lambda x: x)
+
+
+def test_equality_field():
+    one, zero = OneElement(), ZeroElement()
+
+    yield neq, Element(), Element()
+
+    # Ones and zeros:
+    yield eq, one, one
+    yield neq, one, zero
+    yield eq, zero, zero
+
+    # Scaled elements:
+    yield eq, ScaledElement(one, 1), ScaledElement(one, 1)
+    yield neq, ScaledElement(one, 2), ScaledElement(one, 1)
+    yield neq, ScaledElement(zero, 1), ScaledElement(one, 1)
+
+    # Product elements:
+    yield eq, ProductElement(one, zero), ProductElement(one, zero)
+    yield eq, ProductElement(one, zero), ProductElement(zero, one)
+    yield neq, ProductElement(one, zero), ProductElement(one, one)
+
+    # Sum elements:
+    yield eq, SumElement(one, zero), SumElement(one, zero)
+    yield eq, SumElement(one, zero), SumElement(zero, one)
+    yield neq, SumElement(one, zero), SumElement(one, one)
+
+
+def test_equality_function_field():
+    one, zero = OneFunction(), ZeroFunction()
+
+    def f1(x):
+        return x
+
+    def f2(x):
+        return x ** 2
+
+    # Test wrapped elements.
+    for Type, val1, val2 in [(StretchedFunction, 1, 2),
+                             (ShiftedFunction, 1, 2),
+                             (SelectedFunction, (1,), (2,)),
+                             (InputTransformedFunction, f1, f2),
+                             (DerivativeFunction, 1, 2)]:
+        yield eq, Type(one, val1), Type(one, val1)
+        yield neq, Type(one, val1), Type(one, val2)
+        yield neq, Type(one, val1), Type(zero, val1)
+
+    yield eq, TensorProductFunction(f1), TensorProductFunction(f1)
+    yield neq, TensorProductFunction(f1), TensorProductFunction(f2)
+
+
+def test_equality_integration():
+    # This can be more thorough.
+    yield eq, EQ() + EQ(), 2 * EQ()
+    yield neq, EQ(), EQ() + 1
+    yield eq, EQ().stretch(1).select(0), EQ().stretch(1).select(0)
+    yield eq, Linear() - 1, Linear() - 1
+
+
+def test_registrations():
+    for x in [Function, Kernel, Mean, Dense]:
+        yield eq, get_field.invoke(x)(1), x
+
+    class MyField(Element):
+        pass
+
+    # Test registration of fields and creation of new types.
+    yield raises, RuntimeError, lambda: get_field(MyField())
+    get_field.extend(MyField)(lambda _: MyField)
+    yield lam, lambda: get_field(MyField())
+    yield raises, RuntimeError, lambda: new(MyField(), SumElement)
 
 
 def test_broadcast():

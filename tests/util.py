@@ -58,6 +58,11 @@ def dense(a):
     return a
 
 
+@dispatch(tuple)
+def dense(a):
+    return tuple(dense(x) for x in a)
+
+
 @dispatch(Dense)
 def dense(a):
     return _dense(a)
@@ -72,8 +77,16 @@ def allclose(a, b, desc=None):
     return np.allclose(dense(a), dense(b), atol=1e-9)
 
 
+@dispatch({B.Numeric, Dense, list}, {B.Numeric, Dense, list}, [object])
 def assert_allclose(a, b, desc=None):
     np.testing.assert_allclose(dense(a), dense(b), atol=1e-9)
+
+
+@dispatch(tuple, tuple, [object])
+def assert_allclose(a, b, desc=None):
+    assert len(a) == len(b)
+    for x, y in zip(a, b):
+        assert_allclose(x, y, desc)
 
 
 def assert_instance(a, b, desc=None):
