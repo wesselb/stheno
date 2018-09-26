@@ -961,7 +961,7 @@ class DecayingKernel(Kernel, Referentiable):
     def _compute_beta_raised(self, B):
         beta_norm = B.sqrt(B.maximum(B.sum(B.power(self.beta, 2)),
                                      B.cast(1e-30, dtype=B.dtype(self.beta))))
-        return beta_norm ** self.alpha
+        return B.power(beta_norm, self.alpha)
 
     @_dispatch(Formatter)
     def display(self, formatter):
