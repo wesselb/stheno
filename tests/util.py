@@ -74,3 +74,7 @@ def allclose(a, b, desc=None):
 
 def assert_allclose(a, b, desc=None):
     np.testing.assert_allclose(dense(a), dense(b), atol=1e-9)
+
+
+def assert_instance(a, b, desc=None):
+    assert isinstance(a, b)

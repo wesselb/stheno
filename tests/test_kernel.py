@@ -6,15 +6,14 @@ import numpy as np
 from lab import B
 
 from stheno.cache import Cache
-from stheno.input import Observed
+from stheno.input import Observed, Unique
 from stheno.kernel import EQ, RQ, Matern12, Matern32, Matern52, Delta, Kernel, \
     Linear, OneKernel, ZeroKernel, PosteriorCrossKernel, PosteriorKernel, \
     ShiftedKernel, TensorProductKernel, VariationalPosteriorCrossKernel
+from stheno.matrix import matrix, dense, Zero, One, UniformlyDiagonal
 from stheno.random import GPPrimitive
-from stheno.matrix import matrix, dense
 # noinspection PyUnresolvedReferences
-from tests import ok
-from . import eq, raises, ok, allclose, assert_allclose
+from . import eq, raises, ok, allclose, assert_allclose, assert_instance
 
 
 def elwise_generator(k):
@@ -157,6 +156,17 @@ def test_delta():
     # Test `elwise`.
     for x in elwise_generator(k):
         yield x
+
+    # Test `Unique` inputs.
+    yield assert_instance, k(Unique(x1), Unique(x1.copy())), Zero
+    yield assert_instance, k(Unique(x1), Unique(x1)), UniformlyDiagonal
+    yield assert_instance, k(Unique(x1), x1), Zero
+    yield assert_instance, k(x1, Unique(x1)), Zero
+
+    yield assert_instance, k.elwise(Unique(x1), Unique(x1.copy())), Zero
+    yield assert_instance, k.elwise(Unique(x1), Unique(x1)), One
+    yield assert_instance, k.elwise(Unique(x1), x1), Zero
+    yield assert_instance, k.elwise(x1, Unique(x1)), Zero
 
 
 def test_eq():
