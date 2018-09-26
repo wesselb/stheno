@@ -949,17 +949,17 @@ class DecayingKernel(Kernel, Referentiable):
     @uprank
     def __call__(self, x, y, B):
         return B.divide(self._compute_beta_raised(B),
-                        B.pw_sums(x + self.beta, y) ** self.alpha)
+                        B.power(B.pw_sums(B.add(x, self.beta), y), self.alpha))
 
     @_dispatch(B.Numeric, B.Numeric, Cache)
     @cache
     @uprank
     def elwise(self, x, y, B):
         return B.divide(self._compute_beta_raised(B),
-                        B.ew_sums(x + self.beta, y) ** self.alpha)
+                        B.power(B.ew_sums(B.add(x, self.beta), y), self.alpha))
 
     def _compute_beta_raised(self, B):
-        beta_norm = B.sqrt(B.maximum(B.sum(self.beta ** 2),
+        beta_norm = B.sqrt(B.maximum(B.sum(B.power(self.beta, 2)),
                                      B.cast(1e-30, dtype=B.dtype(self.beta))))
         return beta_norm ** self.alpha
 
@@ -967,10 +967,6 @@ class DecayingKernel(Kernel, Referentiable):
     def display(self, formatter):
         return 'DecayingKernel({}, {})'.format(formatter(self.alpha),
                                                formatter(self.beta))
-
-    @property
-    def _stationary(self):
-        return False
 
     @property
     def period(self):
