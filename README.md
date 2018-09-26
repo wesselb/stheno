@@ -129,6 +129,10 @@ available:
         1 & \text{if } x = y, \\
         0 & \text{otherwise};
        \end{cases} $$
+       
+* `DecayingKernel(alpha, beta)`:
+
+    $$ k(x, y) = \frac{\|\beta\|^\alpha}{\|x + y + \beta\|^\alpha}; $$
 
 * `TensorProductKernel(f)`:
 

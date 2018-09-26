@@ -152,6 +152,10 @@ kernels are available:
           0 & \text{otherwise};
          \end{cases} 
 
+-  ``DecayingKernel(alpha, beta)``:
+
+   .. math::  k(x, y) = \frac{\|\beta\|^\alpha}{\|x + y + \beta\|^\alpha} 
+
 -  ``TensorProductKernel(f)``:
 
    .. math::  k(x, y) = f(x)f(y). 
