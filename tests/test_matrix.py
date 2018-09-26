@@ -30,7 +30,7 @@ def test_constant_zero_one():
 def test_shorthands():
     a = Dense(np.random.randn(4, 4))
     yield assert_allclose, a.T, B.transpose(a)
-    yield assert_allclose, a @ a, B.matmul(a, a)
+    yield assert_allclose, a.__matmul__(a), B.matmul(a, a)
 
 
 def test_dense_methods():
