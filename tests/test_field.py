@@ -7,13 +7,19 @@ import operator
 from stheno.field import mul, add, SumElement, new, get_field, broadcast, \
     WrappedElement, JoinElement, Element
 from stheno.function_field import stretch, differentiate, shift, transform, \
-    select
+    select, Function
 from stheno.kernel import EQ, RQ, Linear, OneKernel, ZeroKernel, Delta, \
-    TensorProductKernel
-from stheno.mean import TensorProductMean, ZeroMean, OneMean
+    TensorProductKernel, Kernel
+from stheno.mean import TensorProductMean, ZeroMean, OneMean, Mean
+from stheno.matrix import Dense
 # noinspection PyUnresolvedReferences
 from tests import ok, raises
 from . import eq
+
+
+def test_registrations():
+    for x in [Function, Kernel, Mean, Dense]:
+        yield eq, get_field.invoke(x)(1), x
 
 
 def test_corner_cases():
