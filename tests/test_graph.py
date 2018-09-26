@@ -148,13 +148,17 @@ def test_terms_factors():
     p = 2 * GP(EQ() * RQ(1) + Linear(), lambda x: x, graph=model) + 3
 
     yield eq, p.kernel.num_factors, 2
+    yield eq, p.kernel.num_terms, 1
+    yield eq, str(p.kernel.term(0)), str(p.kernel)
     yield eq, str(p.kernel.factor(0)), '4'
     yield eq, str(p.kernel.factor(1)), 'EQ() * RQ(1) + Linear()'
     yield eq, p.kernel.factor(1).num_terms, 2
     yield eq, str(p.kernel.factor(1).term(0)), 'EQ() * RQ(1)'
     yield eq, str(p.kernel.factor(1).term(1)), 'Linear()'
 
+    yield eq, p.mean.num_factors, 1
     yield eq, p.mean.num_terms, 2
+    yield eq, str(p.mean.factor(0)), str(p.mean)
     yield eq, str(p.mean.term(0)), '2 * <lambda>'
     yield eq, str(p.mean.term(1)), '3 * 1'
     yield eq, p.mean.term(0).num_factors, 2
@@ -611,25 +615,28 @@ def test_sparse_conditioning():
 
     y = f(x).sample()
 
-    model.condition(At(f)(x), y, At(f)(x), e)
+    # Test that noise matrix must indeed be diagonal.
+    yield raises, RuntimeError, lambda: f.condition(x, y, x, f)
+
+    # Test posterior.
+    f.condition(x, y, x, e)
     yield le, abs_err(f(x).mean, y), 1e-4
     model.revert_prior()
 
-    model.condition(At(2 * f + 2)(x), 2 * y + 2, At(f)(x), e)
+    f.condition(At(2 * f + 2)(x), 2 * y + 2, x, e)
     yield le, abs_err(f(x).mean, y), 1e-4
     model.revert_prior()
 
-    model.condition(At(f)(x), y, At(2 * f + 2)(x), e)
+    f.condition(x, y, At(2 * f + 2)(x), e)
     yield le, abs_err(f(x).mean, y), 1e-4
     model.revert_prior()
 
+    # Test ELBO.
     e = GP(1e-2 * Delta(), graph=model)
+    yield assert_allclose, f.elbo(x, y, x, e), (f + e)(x).logpdf(y)
     yield assert_allclose, \
-          model.elbo(At(f)(x), y, At(f)(x), e), \
-          (f + e)(x).logpdf(y)
-    yield assert_allclose, \
-          model.elbo(At(2 * f + 2)(x), 2 * y + 2, At(f)(x), e), \
+          f.elbo(At(2 * f + 2)(x), 2 * y + 2, At(f)(x), e), \
           (2 * f + 2 + e)(x).logpdf(2 * y + 2)
     yield assert_allclose, \
-          model.elbo(At(f)(x), y, At(2 * f + 2)(x), e), \
+          f.elbo(x, y, At(2 * f + 2)(x), e), \
           (f + e)(x).logpdf(y)

@@ -332,9 +332,6 @@ class Graph(Referentiable):
             self._sparse_components(x, y, z, e)
         p_x, x = type_parameter(x), x.get()
 
-        if not isinstance(K_n, Diagonal):
-            raise RuntimeError('Kernel matrix of noise must be diagonal.')
-
         # Compute the ELBO.
         trace_part = B.ratio(Diagonal(self.kernels[p_x].elwise(x)[:, 0]) -
                              Diagonal(B.qf_diag(K_z, K_zx)), K_n)
@@ -353,6 +350,9 @@ class Graph(Referentiable):
         K_zx = self.kernels[p_z, p_x](z, x)
         K_z = self.kernels[p_z](z)
         K_n = e.kernel(x)
+
+        if not isinstance(K_n, Diagonal):
+            raise RuntimeError('Kernel matrix of noise must be diagonal.')
 
         # And construct the components for the inducing point approximation.
         L_z = B.cholesky(matrix(K_z))
