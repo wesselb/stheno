@@ -943,7 +943,7 @@ class Delta(Kernel, Referentiable):
 
     @_dispatch(Self)
     def __eq__(self, other):
-        return True
+        return self.epsilon == other.epsilon
 
 
 class Linear(Kernel, Referentiable):

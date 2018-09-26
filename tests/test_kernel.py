@@ -157,6 +157,11 @@ def test_delta():
     yield eq, k.period, np.inf
     yield eq, str(k), 'Delta()'
 
+    # Check equality.
+    yield eq, k, k
+    yield neq, k, Delta(epsilon=k.epsilon * 10)
+    yield neq, k, EQ()
+
     # Check caching.
     yield ok, allclose(k(x1), np.eye(10)), 'same'
     yield ok, allclose(k(x1, x2), np.zeros((10, 5))), 'others'
