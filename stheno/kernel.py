@@ -868,7 +868,7 @@ class Delta(Kernel, PrimitiveFunction, Referentiable):
     @cache
     @uprank
     def elwise(self, x, y, B):
-        return Zero(B.dtype(x.get()), B.shape(x.get())[0], 1)
+        return Zero(B.dtype(x), B.shape(x)[0], 1)
 
     @_dispatch(B.Numeric, B.Numeric, Cache)
     @cache
