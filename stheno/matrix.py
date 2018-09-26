@@ -1000,7 +1000,7 @@ def add(a, b):
                    middle=middle)
 
 
-#   Woodbury matrices:
+# Woodbury matrices:
 
 @add.extend(LowRank, Diagonal)
 def add(a, b): return Woodbury(a, b)
@@ -1027,11 +1027,10 @@ def add(a, b): return Woodbury(a.lr, a.diag + b)
 
 
 @add.extend(Woodbury, Woodbury)
-def add(a, b): return Woodbury(a.lr + b.lr,
-                               a.diag + b.diag)
+def add(a, b): return Woodbury(a.lr + b.lr, a.diag + b.diag)
 
 
-# Multiplication between matrices and other elements.
+# Multiplication between matrices and constants.
 
 @mul.extend(LowRank, Constant)
 def mul(a, b): return LowRank(left=a.left,
@@ -1039,12 +1038,22 @@ def mul(a, b): return LowRank(left=a.left,
                               middle=a.middle * b.constant)
 
 
+@mul.extend(Constant, LowRank)
+def mul(a, b): return LowRank(left=b.left,
+                              right=b.right,
+                              middle=a.constant * b.middle)
+
+
 @mul.extend(Diagonal, Constant)
 def mul(a, b): return Diagonal(B.diag(a) * b.constant, *B.shape(a))
 
 
-@mul.extend(Constant, {LowRank, Diagonal})
-def mul(a, b): return mul(b, a)
+@mul.extend(Constant, Diagonal)
+def mul(a, b): return Diagonal(a.constant * B.diag(b), *B.shape(a))
+
+
+@mul.extend(Constant, Constant)
+def mul(a, b): return Constant(a.constant * b.constant, *B.shape(a))
 
 
 # Simplify addiction and multiplication between matrices and other objects. We

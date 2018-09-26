@@ -4,12 +4,33 @@ from __future__ import absolute_import, division, print_function
 
 import numpy as np
 from lab import B
+from itertools import product
 
 from stheno.matrix import Dense, Diagonal, LowRank, dense, \
-    Woodbury, Constant, matrix
+    Woodbury, Constant, matrix, Zero, One, Constant
 # noinspection PyUnresolvedReferences
 from . import eq, neq, lt, le, ge, gt, raises, call, ok, eprint, allclose, \
     assert_allclose
+
+
+def test_constant_zero_one():
+    a = np.random.randn(4, 2)
+    b = Dense(a)
+
+    yield assert_allclose, Zero.from_(a), np.zeros((4, 2))
+    yield assert_allclose, Zero.from_(b), np.zeros((4, 2))
+
+    yield assert_allclose, One.from_(a), np.ones((4, 2))
+    yield assert_allclose, One.from_(b), np.ones((4, 2))
+
+    yield assert_allclose, Constant.from_(2, a), 2 * np.ones((4, 2))
+    yield assert_allclose, Constant.from_(2, b), 2 * np.ones((4, 2))
+
+
+def test_shorthands():
+    a = Dense(np.random.randn(4, 4))
+    yield assert_allclose, a.T, B.transpose(a)
+    yield assert_allclose, a @ a, B.matmul(a, a)
 
 
 def test_dense_methods():
@@ -438,28 +459,24 @@ def test_arithmetic_and_shapes():
     lr = LowRank(left=np.random.randn(4, 2),
                  right=np.random.randn(3, 2),
                  middle=np.random.randn(2, 2))
+    zero = Zero.from_(a)
+    one = One.from_(a)
+    constant = Constant.from_(2.0, a)
     wb = d + lr
 
-    # Check basic operations for all types: interaction with scalars.
-    for m in [a, d, lr, wb]:
-        yield assert_allclose, 5 * m, 5 * dense(m)
-        yield assert_allclose, m * 5, dense(m) * 5
-        yield assert_allclose, 5 + m, 5 + dense(m)
-        yield assert_allclose, m + 5, dense(m) + 5
-        yield assert_allclose, 5 - m, 5 - dense(m)
-        yield assert_allclose, m - 5, dense(m) - 5
-        yield assert_allclose, m.__div__(5.0), dense(m) / 5.0
-        yield assert_allclose, m.__truediv__(5.0), dense(m) / 5.0
+    # Aggregate all matrices.
+    candidates = [a, d, lr, wb, constant, one, zero, 2, 1, 0]
 
-    # Check basic operations for all types: interaction with others.
-    for m1 in [a, d, lr, wb]:
-        for m2 in [a, d, lr, wb]:
-            yield assert_allclose, m1 * m2, dense(m1) * dense(m2)
-            yield assert_allclose, m1 + m2, dense(m1) + dense(m2)
-            yield assert_allclose, m1 - m2, dense(m1) - dense(m2)
+    # Check division.
+    yield assert_allclose, a.__div__(5.0), dense(a) / 5.0
+    yield assert_allclose, a.__truediv__(5.0), dense(a) / 5.0
 
-    # Finally, check shapes.
-    yield eq, B.shape(a), (4, 3)
-    yield eq, B.shape(d), (4, 3)
-    yield eq, B.shape(lr), (4, 3)
-    yield eq, B.shape(wb), (4, 3)
+    # Check shapes.
+    for m in candidates:
+        yield eq, B.shape(a), (4, 3)
+
+    # Check interactions.
+    for m1, m2 in product(candidates, candidates):
+        yield assert_allclose, m1 * m2, dense(m1) * dense(m2)
+        yield assert_allclose, m1 + m2, dense(m1) + dense(m2)
+        yield assert_allclose, m1 - m2, dense(m1) - dense(m2)
