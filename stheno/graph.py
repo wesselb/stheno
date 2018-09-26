@@ -486,7 +486,9 @@ class GP(GPPrimitive, Referentiable):
 
         # Then add a new `GP` to the graph with the resolved kernel and mean.
         self.graph = graph
-        self.graph.add_independent_gp(self, self._kernel, self._mean)
+        self.graph.add_independent_gp(self,
+                                      GPPrimitive.kernel.fget(self),
+                                      GPPrimitive.mean.fget(self))
 
         # If a name is given, set the name.
         if name:
