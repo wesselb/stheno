@@ -464,235 +464,6 @@ class Graph(Referentiable):
         return self.sample(1, *xs)
 
 
-class GraphMean(Mean, Referentiable):
-    """Mean that evaluates to the right mean for a GP attached to a graph.
-
-    Args:
-        graph (:class:`.graph.Graph`): Corresponding graph.
-        p (:class:`.graph.GP`): Corresponding GP object.
-    """
-    _dispatch = Dispatcher(in_class=Self)
-
-    def __init__(self, graph, p):
-        self.p = p
-        self.graph = graph
-
-    @_dispatch(object)
-    def __call__(self, x):
-        return self.graph.means[self.p](x)
-
-    @_dispatch(object, Cache)
-    def __call__(self, x, cache):
-        return self.graph.means[self.p](x, cache)
-
-    @_dispatch(At)
-    def __call__(self, x):
-        return self.graph.means[type_parameter(x)](x.get())
-
-    @_dispatch(At, Cache)
-    def __call__(self, x, cache):
-        return self.graph.means[type_parameter(x)](x.get(), cache)
-
-    @_dispatch(Formatter)
-    def display(self, formatter):
-        return self.graph.means[self.p].display(formatter)
-
-    @property
-    def num_terms(self):
-        """Number of terms."""
-        return self.graph.means[self.p].num_terms
-
-    def term(self, i):
-        """Get a specific term.
-
-        Args:
-            i (int): Index of term.
-
-        Returns:
-            :class:`.mean.Mean`: The referenced term.
-        """
-        return self.graph.means[self.p].term(i)
-
-    @property
-    def num_factors(self):
-        """Number of factors."""
-        return self.graph.means[self.p].num_factors
-
-    def factor(self, i):
-        """Get a specific factor.
-
-        Args:
-            i (int): Index of factor.
-
-        Returns:
-            :class:`.mean.Mean`: The referenced factor.
-        """
-        return self.graph.means[self.p].factor(i)
-
-    def __getitem__(self, item):
-        return self.graph.means[self.p][item]
-
-
-class GraphKernel(Kernel, Referentiable):
-    """Kernel that evaluates to the right kernel for a GP attached to a graph.
-
-    Args:
-        graph (:class:`.graph.Graph`): Corresponding graph.
-        p (:class:`.graph.GP`): Corresponding GP object.
-    """
-    _dispatch = Dispatcher(in_class=Self)
-
-    def __init__(self, graph, p):
-        self.p = p
-        self.graph = graph
-
-    @_dispatch(object)
-    def __call__(self, x):
-        return self(x, x)
-
-    @_dispatch.multi((object, Cache), (At, Cache))
-    def __call__(self, x, cache):
-        return self(x, x, cache)
-
-    @_dispatch(object, object)
-    def __call__(self, x, y):
-        return self.graph.kernels[self.p, self.p](x, y)
-
-    @_dispatch(object, object, Cache)
-    def __call__(self, x, y, cache):
-        return self.graph.kernels[self.p, self.p](x, y, cache)
-
-    @_dispatch(object, At)
-    def __call__(self, x, y):
-        return self.graph.kernels[self.p, type_parameter(y)](x, y.get())
-
-    @_dispatch(object, At, Cache)
-    def __call__(self, x, y, cache):
-        return self.graph.kernels[self.p, type_parameter(y)](x, y.get(), cache)
-
-    @_dispatch(At, object)
-    def __call__(self, x, y):
-        return self.graph.kernels[type_parameter(x), self.p](x.get(), y)
-
-    @_dispatch(At, object, Cache)
-    def __call__(self, x, y, cache=None):
-        return self.graph.kernels[type_parameter(x), self.p](x.get(), y, cache)
-
-    @_dispatch(At, At)
-    def __call__(self, x, y):
-        return self.graph.kernels[type_parameter(x),
-                                  type_parameter(y)](x.get(), y.get())
-
-    @_dispatch(At, At, Cache)
-    def __call__(self, x, y, cache):
-        return self.graph.kernels[type_parameter(x),
-                                  type_parameter(y)](x.get(), y.get(), cache)
-
-    @_dispatch(object)
-    def elwise(self, x):
-        return self.elwise(x, x)
-
-    @_dispatch.multi((object, Cache), (At, Cache))
-    def elwise(self, x, cache):
-        return self.elwise(x, x, cache)
-
-    @_dispatch(object, object)
-    def elwise(self, x, y):
-        return self.graph.kernels[self.p, self.p].elwise(x, y)
-
-    @_dispatch(object, object, Cache)
-    def elwise(self, x, y, cache):
-        return self.graph.kernels[self.p, self.p].elwise(x, y, cache)
-
-    @_dispatch(object, At)
-    def elwise(self, x, y):
-        return self.graph.kernels[self.p, type_parameter(y)].elwise(x, y.get())
-
-    @_dispatch(object, At, Cache)
-    def elwise(self, x, y, cache):
-        return self.graph.kernels[self.p,
-                                  type_parameter(y)].elwise(x, y.get(), cache)
-
-    @_dispatch(At, object)
-    def elwise(self, x, y):
-        return self.graph.kernels[type_parameter(x), self.p].elwise(x.get(), y)
-
-    @_dispatch(At, object, Cache)
-    def elwise(self, x, y, cache=None):
-        return self.graph.kernels[type_parameter(x),
-                                  self.p].elwise(x.get(), y, cache)
-
-    @_dispatch(At, At)
-    def elwise(self, x, y):
-        return self.graph.kernels[type_parameter(x),
-                                  type_parameter(y)].elwise(x.get(), y.get())
-
-    @_dispatch(At, At, Cache)
-    def elwise(self, x, y, cache):
-        return self.graph.kernels[type_parameter(x),
-                                  type_parameter(y)].elwise(x.get(),
-                                                            y.get(), cache)
-
-    @property
-    def stationary(self):
-        """Stationarity of the kernel."""
-        return self.graph.kernels[self.p].stationary
-
-    @property
-    def var(self):
-        """Variance of the kernel."""
-        return self.graph.kernels[self.p].var
-
-    @property
-    def length_scale(self):
-        """Approximation of the length scale of the kernel."""
-        return self.graph.kernels[self.p].length_scale
-
-    @property
-    def period(self):
-        """Period of the kernel."""
-        return self.graph.kernels[self.p].period
-
-    @_dispatch(Formatter)
-    def display(self, formatter):
-        return self.graph.kernels[self.p].display(formatter)
-
-    @property
-    def num_terms(self):
-        """Number of terms."""
-        return self.graph.kernels[self.p].num_terms
-
-    def term(self, i):
-        """Get a specific term.
-
-        Args:
-            i (int): Index of term.
-
-        Returns:
-            :class:`.kernel.Kernel`: The referenced term.
-        """
-        return self.graph.kernels[self.p].term(i)
-
-    @property
-    def num_factors(self):
-        """Number of factors."""
-        return self.graph.kernels[self.p].num_factors
-
-    def factor(self, i):
-        """Get a specific factor.
-
-        Args:
-            i (int): Index of factor.
-
-        Returns:
-            :class:`.kernel.Kernel`: The referenced factor.
-        """
-        return self.graph.kernels[self.p].factor(i)
-
-    def __getitem__(self, item):
-        return self.graph.kernels[self.p][item]
-
-
 model = Graph()  #: A default graph provided for convenience
 
 
@@ -712,15 +483,29 @@ class GP(GPPrimitive, Referentiable):
     def __init__(self, kernel, mean=None, graph=model, name=None):
         # First resolve `kernel` and `mean` through `GPPrimitive`s constructor.
         GPPrimitive.__init__(self, kernel, mean)
-        kernel, mean = self.kernel, self.mean
 
-        # Then add a new `GP` to the graph.
-        GP.__init__(self, graph)
-        graph.add_independent_gp(self, kernel, mean)
+        # Then add a new `GP` to the graph with the resolved kernel and mean.
+        self.graph = graph
+        self.graph.add_independent_gp(self, self._kernel, self._mean)
 
         # If a name is given, set the name.
         if name:
-            graph.name(self, name)
+            self.graph.name(self, name)
+
+    @_dispatch(Graph)
+    def __init__(self, graph):
+        GPPrimitive.__init__(self, None)
+        self.graph = graph
+
+    @property
+    def kernel(self):
+        """Kernel of the GP."""
+        return self.graph.kernels[self]
+
+    @property
+    def mean(self):
+        """Mean function of the GP."""
+        return self.graph.means[self]
 
     @property
     def name(self):
@@ -731,15 +516,6 @@ class GP(GPPrimitive, Referentiable):
     @_dispatch(str)
     def name(self, name):
         self.graph.name(self, name)
-
-    @_dispatch(Graph)
-    def __init__(self, graph):
-        GPPrimitive.__init__(
-            self,
-            GraphKernel(graph, self),
-            GraphMean(graph, self)
-        )
-        self.graph = graph
 
     @_dispatch(object)
     def __add__(self, other):

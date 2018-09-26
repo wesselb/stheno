@@ -253,17 +253,27 @@ class GPPrimitive(RandomProcess, Referentiable):
     def __init__(self, kernel, mean=None):
         # Resolve `mean`.
         if mean is None:
-            self.mean = ZeroMean()
+            self._mean = ZeroMean()
         elif isinstance(mean, B.Numeric) or isinstance(mean, FunctionType):
-            self.mean = mean * OneMean()
+            self._mean = mean * OneMean()
         else:
-            self.mean = mean
+            self._mean = mean
 
         # Resolve `kernel`.
         if isinstance(kernel, B.Numeric) or isinstance(kernel, FunctionType):
-            self.kernel = kernel * OneKernel()
+            self._kernel = kernel * OneKernel()
         else:
-            self.kernel = kernel
+            self._kernel = kernel
+
+    @property
+    def kernel(self):
+        """Kernel of the GP."""
+        return self._kernel
+
+    @property
+    def mean(self):
+        """Mean function of the GP."""
+        return self._mean
 
     def __call__(self, x, cache=None):
         """Construct a finite-dimensional distribution at specified locations.
@@ -273,7 +283,7 @@ class GPPrimitive(RandomProcess, Referentiable):
             cache (:class:`.cache.Cache`, optional): Cache.
 
         Returns:
-            :class:`gptools.normal.Normal`: Finite-dimensional distribution.
+            :class:`.random.Normal`: Finite-dimensional distribution.
         """
         cache = Cache() if cache is None else cache
         return Normal(self.kernel(x, cache), self.mean(x, cache))

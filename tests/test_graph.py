@@ -15,10 +15,12 @@ from stheno.cache import Cache
 from . import eq, raises, ok, le, eprint, lam, assert_allclose
 
 
-def abs_err(x1, x2=0): return np.sum(np.abs(x1 - x2))
+def abs_err(x1, x2=0):
+    return np.sum(np.abs(x1 - x2))
 
 
-def rel_err(x1, x2): return 2 * abs_err(x1, x2) / (abs_err(x1) + abs_err(x2))
+def rel_err(x1, x2):
+    return 2 * abs_err(x1, x2) / (abs_err(x1) + abs_err(x2))
 
 
 def test_corner_cases():
@@ -102,8 +104,7 @@ def test_mul_other():
     yield assert_allclose, 5. * p1.mean(x), p3.mean(x)
     yield assert_allclose, 25. * p1.kernel(x), p2.kernel(x)
     yield assert_allclose, 25. * p1.kernel(x), p3.kernel(x)
-    yield assert_allclose, p1.kernel(At(p2)(x), At(p3)(x)), \
-          25. * p1.kernel(x)
+    yield assert_allclose, model.kernels[p2, p3](x, x), 25. * p1.kernel(x)
 
 
 def test_at_shorthand():
@@ -143,36 +144,6 @@ def test_properties():
     yield eq, p.stationary, False, 'stationary 3'
 
 
-def test_terms_factors():
-    model = Graph()
-    p = 2 * GP(EQ() * RQ(1) + Linear(), lambda x: x, graph=model) + 3
-
-    yield eq, p.kernel.num_factors, 2
-    yield eq, p.kernel.num_terms, 1
-    yield eq, str(p.kernel.term(0)), str(p.kernel)
-    yield eq, str(p.kernel.factor(0)), '4'
-    yield eq, str(p.kernel.factor(1)), 'EQ() * RQ(1) + Linear()'
-    yield eq, p.kernel.factor(1).num_terms, 2
-    yield eq, str(p.kernel.factor(1).term(0)), 'EQ() * RQ(1)'
-    yield eq, str(p.kernel.factor(1).term(1)), 'Linear()'
-
-    yield eq, p.mean.num_factors, 1
-    yield eq, p.mean.num_terms, 2
-    yield eq, str(p.mean.factor(0)), str(p.mean)
-    yield eq, str(p.mean.term(0)), '2 * <lambda>'
-    yield eq, str(p.mean.term(1)), '3 * 1'
-    yield eq, p.mean.term(0).num_factors, 2
-    yield eq, str(p.mean.term(0).factor(0)), '2'
-    yield eq, str(p.mean.term(0).factor(1)), '<lambda>'
-
-
-def test_indexing():
-    p = 5 * GP(5 * EQ(), lambda x: x, graph=Graph())
-
-    yield eq, type(p.kernel[0]), EQ
-    yield eq, type(p.mean[0]), TensorProductMean
-
-
 def test_case_summation_with_itself():
     # Test summing the same GP with itself.
     model = Graph()
@@ -203,10 +174,8 @@ def test_case_additive_model():
     y2 = p2(x).sample()
 
     # First, test independence:
-    yield assert_allclose, p1.kernel(At(p2)(x), x), np.zeros((n, n))
-    yield assert_allclose, p1.kernel(At(p2)(x), At(p1)(x)), np.zeros((n, n))
-    yield assert_allclose, p1.kernel(x, At(p2)(x)), np.zeros((n, n))
-    yield assert_allclose, p1.kernel(At(p1)(x), At(p2)(x)), np.zeros((n, n))
+    yield assert_allclose, model.kernels[p2, p1](x), np.zeros((n, n))
+    yield assert_allclose, model.kernels[p1, p2](x), np.zeros((n, n))
 
     # Now run through some test cases:
 

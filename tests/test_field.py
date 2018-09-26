@@ -233,35 +233,39 @@ def test_parentheses():
 
 
 def test_terms():
-    yield eq, str((EQ() + EQ() * Linear() +
-                   RQ(1) * RQ(2) + Delta()).term(0)), 'EQ()'
-    yield eq, str((EQ() + EQ() * Linear() +
-                   RQ(1) * RQ(2) + Delta()).term(1)), 'EQ() * Linear()'
-    yield eq, str((EQ() + EQ() * Linear() +
-                   RQ(1) * RQ(2) + Delta()).term(2)), 'RQ(1) * RQ(2)'
-    yield eq, str((EQ() + EQ() * Linear() +
-                   RQ(1) * RQ(2) + Delta()).term(3)), 'Delta()'
-    yield raises, IndexError, lambda: (EQ() + EQ() * Linear() +
-                                       RQ(1) * RQ(2) + Delta()).term(4)
+    k = EQ() + EQ() * Linear() + RQ(1) * RQ(2) + Delta()
+    yield eq, k.num_terms, 4
+    yield eq, str(k.term(0)), 'EQ()'
+    yield eq, str(k.term(1)), 'EQ() * Linear()'
+    yield eq, str(k.term(2)), 'RQ(1) * RQ(2)'
+    yield eq, str(k.term(3)), 'Delta()'
+    yield raises, IndexError, lambda: k.term(4)
     yield raises, IndexError, lambda: EQ().term(1)
 
 
 def test_factors():
-    yield eq, str((EQ() * Linear()).factor(0)), 'EQ()'
-    yield eq, str((EQ() * Linear()).factor(1)), 'Linear()'
-    yield raises, IndexError, lambda: (EQ() * Linear()).factor(2)
+    k = EQ() * Linear()
+    yield eq, k.num_factors, 2
+    yield eq, str(k.factor(0)), 'EQ()'
+    yield eq, str(k.factor(1)), 'Linear()'
+    yield raises, IndexError, lambda: k.factor(2)
 
-    yield eq, str(((EQ() + EQ()) * Delta() * (RQ(1) + Linear())).factor(0)), \
-          '2'
-    yield eq, str(((EQ() + EQ()) * Delta() * (RQ(1) + Linear())).factor(1)), \
-          'EQ()'
-    yield eq, str(((EQ() + EQ()) * Delta() * (RQ(1) + Linear())).factor(2)), \
-          'Delta()'
-    yield eq, str(((EQ() + EQ()) * Delta() * (RQ(1) + Linear())).factor(3)), \
-          'RQ(1) + Linear()'
-    yield raises, IndexError, lambda: ((EQ() + EQ()) * Delta() *
-                                       (RQ(1) + Linear())).factor(4)
+    k = (EQ() + EQ()) * Delta() * (RQ(1) + Linear())
+    yield eq, k.num_factors, 4
+    yield eq, str(k.factor(0)), '2'
+    yield eq, str(k.factor(1)), 'EQ()'
+    yield eq, str(k.factor(2)), 'Delta()'
+    yield eq, str(k.factor(3)), 'RQ(1) + Linear()'
+    yield raises, IndexError, lambda: k.factor(4)
     yield raises, IndexError, lambda: EQ().factor(1)
+
+
+def test_indexing():
+    yield eq, str((5 * EQ())[0]), 'EQ()'
+    yield eq, str((EQ() + RQ(1.0))[0]), 'EQ()'
+    yield eq, str((EQ() + RQ(1.0))[1]), 'RQ(1.0)'
+    yield eq, str((EQ() * RQ(1.0))[0]), 'EQ()'
+    yield eq, str((EQ() * RQ(1.0))[1]), 'RQ(1.0)'
 
 
 def test_shifting():
