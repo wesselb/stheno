@@ -614,16 +614,37 @@ def inverse(a):
 def inverse(a): return Diagonal(1 / B.diag(a), *reversed(B.shape(a)))
 
 
-@B.inverse.extend(Woodbury)
-def inverse(a):
+@B.inverse.extend_multi((Woodbury,), (Woodbury, bool))
+def inverse(a, lr_psd=True):
     # Use the Woodbury matrix identity.
     if a.inverse is None:
         inv_diag = B.inverse(a.diag)
-        a.inverse = inv_diag - \
-                    LowRank(left=B.matmul(inv_diag, a.lr.left),
-                            right=B.matmul(inv_diag, a.lr.right),
-                            middle=B.inverse(B.schur(a)))
+        lr = LowRank(left=B.matmul(inv_diag, a.lr.left),
+                     right=B.matmul(inv_diag, a.lr.right),
+                     middle=B.inverse(B.schur(a)))
+        a.inverse = inv_diag - lr if lr_psd else inv_diag + lr
     return a.inverse
+
+
+@B.lr_diff.extend(LowRank, LowRank)
+def lr_diff(a, b):
+    """Subtract two low-rank matrices, forcing the resulting middle part to
+    be positive definite if the result is so.
+
+    Args:
+        a (:class:`.matrix.LowRank`): `a`.
+        b (:class:`.matrix.LowRank`): `b`.
+
+    Returns:
+        :class:`.matrix.LowRank`: Difference between `a` and `b`.
+    """
+    diff = a - b
+    ul, sl, vl = B.svd(diff.left)
+    ur, sr, vr = B.svd(diff.right)
+    middle = B.matmul(Diagonal(sl),
+                      B.matmul(vl, diff.m, vr, tr_a=True),
+                      Diagonal(sr))
+    return LowRank(left=ul, right=ur, middle=middle)
 
 
 @B.inverse.extend(LowRank)
@@ -723,44 +744,39 @@ def schur(a, b, c, d):
     return dense(B.subtract(a, B.qf(c, b, d)))
 
 
-@B.schur.extend(Woodbury)
-def schur(a):
+@B.schur.extend(Woodbury, [bool])
+def schur(a, lr_psd=True):
     if a.schur is None:
-        a.schur = B.inverse(a.lr.middle) + \
-                  B.matmul(a.lr.right, B.inverse(a.diag), a.lr.left, tr_a=True)
+        inv_middle = B.inverse(a.lr.middle)
+        prod = B.matmul(a.lr.right, B.inverse(a.diag), a.lr.left, tr_a=True)
+        a.schur = inv_middle + prod if lr_psd else inv_middle - prod
     return a.schur
 
 
 @B.schur.extend(Woodbury, Woodbury, Woodbury, Woodbury)
 def schur(a, b, c, d):
-    # IMPORTANT: Compatibility is assumed here, which may or may not be true in
-    # most cases. This needs to be further investigated.
+    return B.schur.invoke(object, object, Woodbury, object)(a, b, c, d)
 
-    # The inverse of `c` has bits that we can use and reuse.
+    # NOTE: This implementation is currently unsound.
+
     ic = B.inverse(c)
-    nicm = -ic.lr.m  # _N_egative _i_nverse `c` _m_iddle.
+    part = B.matmul(b.diag.T, ic, d.diag)
 
-    # Compute blocks of the middle of the low-rank part.
-    m11 = a.lr.m - \
-          B.matmul(b.lr.m, B.matmul(b.lr.l, ic, d.lr.l, tr_a=True), d.lr.m)
-    m12 = B.matmul(b.lr.m, B.matmul(b.lr.l, ic.lr.l, nicm, tr_a=True)) - \
-          b.lr.m
-    m21 = B.matmul(B.matmul(nicm, ic.lr.r, d.lr.l, tr_b=True), d.lr.m) - \
-          d.lr.m
-    m22 = nicm
+    left = B.concat([b.lr.r, dense(B.matmul(b.diag.T, ic, d.lr.l))], axis=1)
+    right = B.concat([d.lr.r, dense(B.matmul(d.diag.T, ic, b.lr.l))], axis=1)
 
-    # Assemble the middle of the low-rank part.
+    m11 = B.matmul(B.matmul(b.lr.l, b.lr.m),
+                   ic,
+                   B.matmul(d.lr.l, d.lr.m), tr_a=True)
+    m12 = B.transpose(b.lr.m)
+    m21 = d.lr.m
+    m22 = B.zeros([B.shape(m21)[0], B.shape(m12)[1]], dtype=B.dtype(m12))
+
     middle = B.concat2d([m11, m12], [m21, m22])
 
-    # Compute left and right of the low-rank part.
-    left = B.concat([a.lr.l, B.matmul(b.diag.T, ic.diag, d.lr.l)], axis=1)
-    right = B.concat([a.lr.r, B.matmul(d.diag.T, ic.diag, b.lr.l)], axis=1)
-
-    # Assemble result.
-    diag = a.diag - B.matmul(b.diag.T, ic.diag, d.diag)
-    lr = LowRank(left=left, right=right, middle=middle)
-
-    return diag + lr
+    return a.diag - part.diag + \
+           B.lr_diff(B.lr_diff(a.lr, part.lr),
+                     LowRank(left=left, right=right, middle=middle))
 
 
 @B.convert.extend(LowRank, Woodbury)
@@ -1015,7 +1031,7 @@ def add(a, b): return Dense(dense(a) + dense(b))
 
 
 @add.extend(Diagonal, Diagonal)
-def add(a, b): return Diagonal(a.diag + b.diag, *B.shape(a))
+def add(a, b): return Diagonal(B.diag(a) + B.diag(b), *B.shape(a))
 
 
 @add.extend(LowRank, LowRank)

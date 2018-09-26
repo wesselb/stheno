@@ -868,9 +868,8 @@ class Delta(Kernel, Referentiable):
 
     @_dispatch(Unique, Unique, Cache)
     @cache
-    @uprank
     def __call__(self, x, y, B):
-        x, y = x.get(), y.get()
+        x, y = uprank(x.get(), B), uprank(y.get(), B)
         if x is y:
             return self._eye(x, B)
         else:
@@ -880,19 +879,20 @@ class Delta(Kernel, Referentiable):
     @cache
     @uprank
     def __call__(self, x, y, B):
-        return Zero(B.dtype(x.get()), B.shape(x.get())[0], B.shape(y)[0])
+        x = uprank(x.get(), B)
+        return Zero(B.dtype(x), B.shape(x)[0], B.shape(y)[0])
 
     @_dispatch(object, Unique, Cache)
     @cache
     @uprank
     def __call__(self, x, y, B):
-        return Zero(B.dtype(x), B.shape(x)[0], B.shape(y.get())[0])
+        y = uprank(y.get(), B)
+        return Zero(B.dtype(x), B.shape(x)[0], B.shape(y)[0])
 
     @_dispatch(Unique, Unique, Cache)
     @cache
-    @uprank
     def elwise(self, x, y, B):
-        x, y = x.get(), y.get()
+        x, y = uprank(x.get(), B), uprank(y.get(), B)
         if x is y:
             return One(B.dtype(x), B.shape(x)[0], 1)
         else:
@@ -902,7 +902,8 @@ class Delta(Kernel, Referentiable):
     @cache
     @uprank
     def elwise(self, x, y, B):
-        return Zero(B.dtype(x.get()), B.shape(x.get())[0], 1)
+        x = uprank(x.get(), B)
+        return Zero(B.dtype(x), B.shape(x)[0], 1)
 
     @_dispatch(object, Unique, Cache)
     @cache
