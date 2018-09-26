@@ -425,11 +425,11 @@ def test_qf():
 
 
 def test_ratio():
-    a, b = np.random.randn(5, 5), np.random.randn(5, 5)
+    a, b = np.random.randn(4, 4), np.random.randn(4, 4)
     a, b = Dense(a.dot(a.T)), Dense(b.dot(b.T))
     d, e = Diagonal(B.diag(a)), Diagonal(B.diag(b))
     c = np.random.randn(3, 3)
-    lr = LowRank(left=np.random.randn(5, 3), middle=c.dot(c.T))
+    lr = LowRank(left=np.random.randn(4, 3), middle=c.dot(c.T))
 
     yield assert_allclose, B.ratio(a, b), \
           np.trace(np.linalg.solve(dense(b), dense(a)))
