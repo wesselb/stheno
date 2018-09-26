@@ -400,6 +400,7 @@ def new(a, t):
 
         # There should only be a single candidate.
         if len(candidates) != 1:
+            # pragma: no cover
             raise RuntimeError('Could not determine "{}" for field "{}".'
                                ''.format(t.__name__, field.__name__))
 

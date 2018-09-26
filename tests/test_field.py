@@ -61,7 +61,9 @@ def test_subtraction_and_negation():
 def test_cancellations_zero():
     # With constants:
     yield eq, str(1 * EQ()), 'EQ()'
+    yield eq, str(EQ() * 1), 'EQ()'
     yield eq, str(0 * EQ()), '0'
+    yield eq, str(EQ() * 0), '0'
     yield eq, str(0 + EQ()), 'EQ()'
     yield eq, str(EQ() + 0), 'EQ()'
     yield eq, str(0 + OneMean()), '1'
