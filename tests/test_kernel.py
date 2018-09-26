@@ -48,6 +48,10 @@ def test_construction():
     yield k, Observed(x), c
     yield k, Observed(x), Observed(x)
     yield k, Observed(x), Observed(x), c
+    yield k, x, Observed(x)
+    yield k, x, Observed(x), c
+    yield k, Observed(x), x
+    yield k, Observed(x), x, c
 
     yield k.elwise, x
     yield k.elwise, x, c
@@ -58,6 +62,10 @@ def test_construction():
     yield k.elwise, Observed(x), c
     yield k.elwise, Observed(x), Observed(x)
     yield k.elwise, Observed(x), Observed(x), c
+    yield k.elwise, x, Observed(x)
+    yield k.elwise, x, Observed(x), c
+    yield k.elwise, Observed(x), x
+    yield k.elwise, Observed(x), x, c
 
 
 def test_basic_arithmetic():
