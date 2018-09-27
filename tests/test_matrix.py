@@ -353,6 +353,39 @@ def test_inverse_and_logdet():
     yield raises, RuntimeError, lambda: B.logdet(wb.lr)
 
 
+def test_lr_diff():
+    # First, test correctness.
+    a = np.random.randn(3, 2)
+    b = np.random.randn(2, 2)
+    lr1 = LowRank(left=a, right=np.random.randn(3, 2), middle=b.dot(b.T))
+    a = np.random.randn(3, 2)
+    b = np.random.randn(2, 2)
+    lr2 = LowRank(left=a, right=np.random.randn(3, 2), middle=b.dot(b.T))
+
+    yield assert_allclose, B.lr_diff(lr1, lr1), B.zeros((3, 3))
+    yield assert_allclose, B.lr_diff(lr1 + lr2, lr1), lr2
+    yield assert_allclose, B.lr_diff(lr1 + lr2, lr2), lr1
+    yield assert_allclose, B.lr_diff(lr1 + lr1 + lr2, lr1), lr1 + lr2
+    yield assert_allclose, B.lr_diff(lr1 + lr1 + lr2, lr2), lr1 + lr1
+    yield assert_allclose, B.lr_diff(lr1 + lr1 + lr2, lr1 + lr1), lr2
+    yield assert_allclose, B.lr_diff(lr1 + lr1 + lr2, lr1 + lr2), lr1
+    yield assert_allclose, \
+          B.lr_diff(lr1 + lr1 + lr2, lr1 + lr1 + lr2), \
+          B.zeros((3, 3))
+
+    # Second, test positive definiteness.
+    lr1 = LowRank(left=lr1.left, middle=lr1.middle)
+    lr2 = LowRank(left=lr2.left, middle=lr2.middle)
+
+    yield B.cholesky, B.lr_diff(lr1, 0.999 * lr1)
+    yield B.cholesky, B.lr_diff(lr1 + lr2, lr1)
+    yield B.cholesky, B.lr_diff(lr1 + lr2, lr2)
+    yield B.cholesky, B.lr_diff(lr1 + lr1 + lr2, lr1)
+    yield B.cholesky, B.lr_diff(lr1 + lr1 + lr2, lr1 + lr1)
+    yield B.cholesky, B.lr_diff(lr1 + lr1 + lr2, lr1 + lr2)
+    yield B.cholesky, B.lr_diff(lr1 + lr1 + lr2, lr1 + lr1 + 0.999 * lr2)
+
+
 def test_root():
     # Test `Dense`.
     a = np.random.randn(5, 5)
