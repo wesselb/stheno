@@ -585,14 +585,20 @@ def test_sparse_conditioning():
     yield raises, RuntimeError, lambda: SparseObs(f(x), f, f(x), y)
 
     # Test posterior.
-    post = f | SparseObs(f(x), e, f(x), y)
-    yield le, abs_err(post(x).mean, y), 1e-4
+    post_sparse = (f | SparseObs(f(x), e, f(x), y))(x)
+    post_ref = (f | ((f + e)(x), y))(x)
+    yield assert_allclose, post_sparse.mean, post_ref.mean
+    yield assert_allclose, post_sparse.var, post_ref.var
 
-    post = f | SparseObs(f(x), e, (2 * f + 2)(x), 2 * y + 2)
-    yield le, abs_err(post(x).mean, y), 1e-4
+    post_sparse = (f | SparseObs(f(x), e, (2 * f + 2)(x), 2 * y + 2))(x)
+    post_ref = (f | ((2 * f + 2 + e)(x), 2 * y + 2))(x)
+    yield assert_allclose, post_sparse.mean, post_ref.mean
+    yield assert_allclose, post_sparse.var, post_ref.var
 
-    post = f | SparseObs((2 * f + 2)(x), e, f(x), y)
-    yield le, abs_err(post(x).mean, y), 1e-4
+    post_sparse = (f | SparseObs((2 * f + 2)(x), e, f(x), y))(x)
+    post_ref = (f | ((f + e)(x), y))(x)
+    yield assert_allclose, post_sparse.mean, post_ref.mean
+    yield assert_allclose, post_sparse.var, post_ref.var
 
     # Test ELBO.
     e = GP(1e-2 * Delta(), graph=model)
