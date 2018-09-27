@@ -69,6 +69,10 @@ class Function(Element, Referentiable):
         """
         return stretch(self, *(to_tensor(x) for x in stretches))
 
+    def __gt__(self, stretch):
+        """Shorthand for :meth:`.function_field.Function.stretch`."""
+        return self.stretch(stretch)
+
     def shift(self, *amounts):
         """Shift the inputs of an function by a certain amount.
 

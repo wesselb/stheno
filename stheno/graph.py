@@ -606,6 +606,10 @@ class GP(GPPrimitive, Referentiable):
         """Stretch the GP. See :meth:`.graph.Graph.stretch`."""
         return self.graph.stretch(self, stretch)
 
+    def __gt__(self, stretch):
+        """Shorthand for :meth:`.graph.GP.stretch`."""
+        return self.stretch(stretch)
+
     def transform(self, f):
         """Input transform the GP. See :meth:`.graph.Graph.transform`."""
         return self.graph.transform(self, f)
@@ -613,6 +617,10 @@ class GP(GPPrimitive, Referentiable):
     def select(self, *dims):
         """Select dimensions from the input. See :meth:`.graph.Graph.select`."""
         return self.graph.select(self, *dims)
+
+    def __getitem__(self, *dims):
+        """Shorthand for :meth:`.graph.GP.select`."""
+        return self.select(*dims)
 
     def diff(self, dim=0):
         """Differentiate the GP. See :meth:`.graph.Graph.diff`."""

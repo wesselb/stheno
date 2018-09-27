@@ -37,6 +37,10 @@ def test_corner_cases():
           lambda: JoinElement(1, 2).display(1, 2, lambda x: x)
 
 
+def test_stretch_shorthand():
+    yield eq, str(EQ() > 2), str(EQ().stretch(2))
+
+
 def test_equality_field():
     one, zero = OneElement(), ZeroElement()
 

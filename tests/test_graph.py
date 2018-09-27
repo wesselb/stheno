@@ -125,6 +125,13 @@ def test_at_shorthand():
     yield raises, RuntimeError, lambda: p1 | (x, 1)
 
 
+def test_gp_shorthands():
+    p = GP(EQ(), graph=Graph())
+
+    yield eq, str(p > 2), str(p.stretch(2))
+    yield eq, str(p[0]), str(p.select(0))
+
+
 def test_properties():
     model = Graph()
 
