@@ -258,6 +258,18 @@ class Normal(RandomVector, At, Referentiable):
         return Normal(B.dot(B.dot(other, self.var), other, tr_b=True),
                       B.dot(other, self.mean))
 
+    def __repr__(self):
+        if self.p is None:
+            return RandomVector.__repr__(self)
+        else:
+            return '{!r}({!r})'.format(self.p, self.x)
+
+    def __str__(self):
+        if self.p is None:
+            return RandomVector.__str__(self)
+        else:
+            return '{!s}({!s})'.format(self.p, self.x)
+
 
 # Make sure the type parameter can be extracted from a `Normal`.
 @type_parameter.extend(Normal)

@@ -9,7 +9,7 @@ from lab import B
 
 from stheno.kernel import EQ, RQ, ScaledKernel
 from stheno.mean import TensorProductMean, ZeroMean, ScaledMean
-from stheno.random import Normal, GPPrimitive, Normal1D
+from stheno.random import Normal, GPPrimitive, Normal1D, RandomVector
 from stheno.matrix import UniformlyDiagonal, Diagonal, dense
 # noinspection PyUnresolvedReferences
 from . import eq, neq, lt, le, ge, gt, raises, call, ok, eprint, allclose
@@ -102,6 +102,10 @@ def test_normal():
     yield le, np.abs(np.std(dist.sample(1000)) ** 2 - 3), 5e-2, 'unif'
     yield le, np.abs(np.std(dist.sample(1000, noise=2)) ** 2 - 5), 5e-2, \
           'unif 2'
+
+    # Test `__str__` and `__repr__`.
+    yield eq, str(dist), RandomVector.__str__(dist)
+    yield eq, repr(dist), RandomVector.__repr__(dist)
 
 
 def test_normal_1d():

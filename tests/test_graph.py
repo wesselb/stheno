@@ -110,19 +110,21 @@ def test_mul_other():
 
 def test_at_shorthand():
     model = Graph()
-    p1 = GP(EQ(), graph=model)
+    p = GP(EQ(), graph=model)
 
     # Construct a normal distribution that serves as in input.
-    x = p1(1)
+    x = p(1)
     yield assert_instance, x, At
-    yield ok, type_parameter(x) is p1
+    yield ok, type_parameter(x) is p
     yield eq, x.get(), 1
+    yield eq, str(p(x)), '{}({})'.format(str(p), str(x))
+    yield eq, repr(p(x)), '{}({})'.format(repr(p), repr(x))
 
     # Construct a normal distribution that does not serve as an input.
     x = Normal(np.ones((1, 1)))
     yield raises, RuntimeError, lambda: type_parameter(x)
     yield raises, RuntimeError, lambda: x.get()
-    yield raises, RuntimeError, lambda: p1 | (x, 1)
+    yield raises, RuntimeError, lambda: p | (x, 1)
 
 
 def test_gp_shorthands():
