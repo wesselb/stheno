@@ -14,7 +14,7 @@ from .input import Input, At, MultiInput
 from .kernel import ZeroKernel, PosteriorKernel, TensorProductKernel, \
     CorrectiveKernel, OneKernel
 from .lazy import LazyVector, LazyMatrix
-from .matrix import matrix, Diagonal
+from .matrix import matrix, Diagonal, dense
 from .mean import PosteriorMean, ZeroMean, OneMean
 from .mokernel import MultiOutputKernel as MOK
 from .momean import MultiOutputMean as MOM

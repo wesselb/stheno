@@ -137,7 +137,7 @@ def test_mul_other():
     yield raises, NotImplementedError, lambda: Normal(np.eye(3)) * p1
 
 
-def test_at_shorthand():
+def test_shorthands():
     model = Graph()
     p = GP(EQ(), graph=model)
 
@@ -155,10 +155,8 @@ def test_at_shorthand():
     yield raises, RuntimeError, lambda: x.get()
     yield raises, RuntimeError, lambda: p | (x, 1)
 
-
-def test_gp_shorthands():
+    # Test shorthands for stretching and selection.
     p = GP(EQ(), graph=Graph())
-
     yield eq, str(p > 2), str(p.stretch(2))
     yield eq, str(p[0]), str(p.select(0))
 
@@ -189,6 +187,29 @@ def test_properties():
     p = p + GP(Linear(), graph=model)
 
     yield eq, p.stationary, False, 'stationary 3'
+
+
+def test_predict():
+    model = Graph()
+    p = GP(EQ(), TensorProductMean(lambda x: x ** 2), graph=model)
+    x = np.linspace(0, 5, 10)
+
+    # Check that `predict` outputs the right thing.
+    mean, lower, upper = p.predict(x)
+    var = B.diag(p.kernel(x))
+    yield assert_allclose, mean, p.mean(x)[:, 0]
+    yield assert_allclose, lower, p.mean(x)[:, 0] - 2 * var ** .5
+    yield assert_allclose, upper, p.mean(x)[:, 0] + 2 * var ** .5
+
+    # Test correctness.
+    y = p(x).sample()
+    mean, lower, upper = (p | (x, y)).predict(x)
+    yield assert_allclose, mean, y[:, 0]
+    yield le, B.mean(B.abs(upper - lower)), 1e-5
+
+    mean, lower, upper = (p | (x, y)).predict(x + 100)
+    yield assert_allclose, mean, p.mean(x + 100)[:, 0]
+    yield assert_allclose, upper - lower, 4 * np.ones(10)
 
 
 def test_observations_and_conditioning():
