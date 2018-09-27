@@ -33,6 +33,7 @@ also [Stheno.jl](https://github.com/willtebbutt/Stheno.jl).
     - [GPAR](#gpar)
     - [A GP–RNN Model](#a-gprnn-model)
     - [Approximate Multiplication Between GPs](#approximate-multiplication-between-gps)
+    - [Sparse Regression](#sparse-regression)
 
 ## Nonlinear Regression in 20 Seconds
 
@@ -823,10 +824,10 @@ e = GP(Delta())  # Noise.
 y = f + .5 * e
 
 # Sample a true, underlying function and observations.
-f_true, y_obs = model.sample(f @ x, y @ x_obs)
+f_true, y_obs = model.sample(f(x), y(x_obs))
 
 # Now condition on the observations to make predictions.
-mean, lower, upper = f.condition(y @ x_obs, y_obs).predict(x)
+mean, lower, upper = (f | (y(x_obs), y_obs)).predict(x)
 
 # Plot result.
 plt.plot(x, f_true, label='True', c='tab:blue')
@@ -846,7 +847,7 @@ plt.show()
 import matplotlib.pyplot as plt
 import numpy as np
 
-from stheno import GP, model, EQ, RQ, Linear, Delta, Exp
+from stheno import GP, model, EQ, RQ, Linear, Delta, Exp, Obs
 
 # Define points to predict at.
 x = np.linspace(0, 10, 200)
@@ -872,16 +873,17 @@ y = f + .5 * e
 
 # Sample a true, underlying function and observations.
 f_true_smooth, f_true_wiggly, f_true_periodic, f_true_linear, f_true, y_obs = \
-    model.sample(f_smooth @ x,
-                 f_wiggly @ x,
-                 f_periodic @ x,
-                 f_linear @ x,
-                 f @ x,
-                 y @ x_obs)
+    model.sample(f_smooth(x),
+                 f_wiggly(x),
+                 f_periodic(x),
+                 f_linear(x),
+                 f(x),
+                 y(x_obs))
 
 # Now condition on the observations and make predictions for the latent
 # function and its various components.
-model.condition(y @ x_obs, y_obs)
+f_smooth, f_wiggly, f_periodic, f_linear, f = \
+    (f_smooth, f_wiggly, f_periodic, f_linear, f) | Obs(y(x_obs), y_obs)
 
 pred_smooth = f_smooth.predict(x)
 pred_wiggly = f_wiggly.predict(x)
@@ -938,7 +940,7 @@ import tensorflow as tf
 from tensorflow.contrib.opt import ScipyOptimizerInterface as SOI
 from wbml import vars64 as vs
 
-from stheno.tf import GP, EQ, Delta, model
+from stheno.tf import GP, EQ, Delta
 
 s = tf.Session()
 
@@ -957,8 +959,7 @@ y = f + e
 
 # Sample a true, underlying function and observations.
 f_true = x ** 1.8
-y_obs = s.run(y.condition(f @ x, f_true)(x_obs).sample())
-model.revert_prior()
+y_obs = s.run((y | (f(x), f_true))(x_obs).sample())
 
 # Learn.
 lml = y(x_obs).logpdf(y_obs)
@@ -966,16 +967,14 @@ SOI(-lml).minimize(s)
 
 # Print the learned parameters.
 print('alpha', s.run(alpha))
-print('noise', s.run(e.var))
-print('u scale', s.run(u.length_scale))
-print('u variance', s.run(u.var))
+print('prior', y.display(s.run))
 
 # Condition on the observations to make predictions.
-mean, lower, upper = s.run(f.condition(y @ x_obs, y_obs).predict(x))
+mean, lower, upper = s.run((f | (y(x_obs), y_obs)).predict(x))
 
 # Plot result.
-plt.plot(x, f_true, label='True', c='tab:blue')
-plt.scatter(x_obs, y_obs, label='Observations', c='tab:red')
+plt.plot(x, f_true.squeeze(), label='True', c='tab:blue')
+plt.scatter(x_obs, y_obs.squeeze(), label='Observations', c='tab:red')
 plt.plot(x, mean, label='Prediction', c='tab:green')
 plt.plot(x, lower, ls='--', c='tab:green')
 plt.plot(x, upper, ls='--', c='tab:green')
@@ -992,7 +991,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from plum import Dispatcher, Referentiable, Self
 
-from stheno import GP, EQ, Delta, model, Kernel
+from stheno import GP, EQ, Delta, model, Kernel, Obs
 
 
 class VGP(Referentiable):
@@ -1019,18 +1018,20 @@ class VGP(Referentiable):
     @dispatch(np.ndarray)
     def lmatmul(self, A):
         m, n = A.shape
-        ps = [0 for i in range(m)]
+        ps = [0 for _ in range(m)]
         for i in range(m):
             for j in range(n):
                 ps[i] += A[i, j] * self.ps[j]
         return VGP(*ps)
 
     def sample(self, x):
-        return model.sample(*(p @ x for p in self.ps))
+        return model.sample(*(p(x) for p in self.ps))
 
-    def condition(self, x, ys):
-        model.condition(*((p @ x, y) for p, y in zip(self.ps, ys)))
-        return self
+    def __or__(self, obs):
+        return VGP(*(p | obs for p in self.ps))
+
+    def obs(self, x, ys):
+        return Obs(*((p(x), y) for p, y in zip(self.ps, ys)))
 
     def predict(self, x):
         return [p.predict(x) for p in self.ps]
@@ -1055,15 +1056,12 @@ e = VGP(p, 0.5 * Delta())
 # Construct observation model.
 ys = e + fs
 
-# Sample observations and a true, underlying function.
-ys_obs = ys.sample(x_obs)
-ys.condition(x_obs, ys_obs)
+# Sample a true, underlying function and observations.
 fs_true = fs.sample(x)
-model.revert_prior()
+ys_obs = (ys | fs.obs(x, fs_true)).sample(x_obs)
 
 # Condition the model on the observations to make predictions.
-ys.condition(x_obs, ys_obs)
-preds = fs.predict(x)
+preds = (fs | ys.obs(x_obs, ys_obs)).predict(x)
 
 
 # Plot results.
@@ -1096,7 +1094,7 @@ plt.show()
 import matplotlib.pyplot as plt
 import numpy as np
 
-from stheno import GP, EQ, Delta, model
+from stheno import GP, EQ, Delta, Obs
 
 # Define points to predict at.
 x = np.linspace(0, 10, 200)
@@ -1112,13 +1110,13 @@ ddf = f.diff_approx(2)
 dddf = f.diff_approx(3) + e
 
 # Fix the integration constants.
-model.condition((f @ 0, 1), (df @ 0, 0), (ddf @ 0, -1))
+f, df, ddf, dddf = (f, df, ddf, dddf) | Obs((f(0), 1), (df(0), 0), (ddf(0), -1))
 
 # Sample observations.
 y_obs = np.sin(x_obs) + 0.2 * np.random.randn(*x_obs.shape)
 
 # Condition on the observations to make predictions.
-model.condition(dddf @ x_obs, y_obs)
+f, df, ddf, dddf = (f, df, ddf, dddf) | Obs(dddf(x_obs), y_obs)
 
 # And make predictions.
 pred_iiif = f.predict(x)
@@ -1172,7 +1170,7 @@ plt.show()
 import matplotlib.pyplot as plt
 import numpy as np
 
-from stheno import GP, Delta, model
+from stheno import GP, Delta, model, Obs, dense
 
 # Define points to predict at.
 x = np.linspace(0, 10, 200)
@@ -1189,16 +1187,16 @@ y = f + e  # Observation model
 
 # Sample a slope, intercept, underlying function, and observations.
 true_slope, true_intercept, f_true, y_obs = \
-    model.sample(slope @ 0, intercept @ 0, f @ x, y @ x_obs)
+    model.sample(slope(0), intercept(0), f(x), y(x_obs))
 
 # Condition on the observations to make predictions.
-mean, lower, upper = f.condition(y @ x_obs, y_obs).predict(x)
-mean_slope, mean_intercept = slope(0).mean, intercept(0).mean
+slope, intercept, f = (slope, intercept, f) | Obs(y(x_obs), y_obs)
+mean, lower, upper = f.predict(x)
 
 print('true slope', true_slope)
-print('predicted slope', mean_slope)
+print('predicted slope', slope(0).mean)
 print('true intercept', true_intercept)
-print('predicted intercept', mean_intercept)
+print('predicted intercept', intercept(0).mean)
 
 # Plot result.
 plt.plot(x, f_true, label='True', c='tab:blue')
@@ -1270,10 +1268,11 @@ lml2 = y2(np.stack((x_obs2, y1_obs[inds2]), axis=1)).logpdf(y2_obs)
 SOI(-lml2, var_list=vs2.vars).minimize(s)
 
 # Predict first output.
-mean1, lower1, upper1 = s.run(f1.condition(y1 @ x_obs1, y1_obs).predict(x))
+f1 = f1 | (y1(x_obs1), y1_obs)
+mean1, lower1, upper1 = s.run(f1.predict(x))
 
 # Predict second output with Monte Carlo.
-m2.condition(y2 @ np.stack((x_obs2, y1_obs[inds2]), axis=1), y2_obs)
+f2 = f2 | (y2(np.stack((x_obs2, y1_obs[inds2]), axis=1)), y2_obs)
 sample = f2(B.concat([x[:, None], f1(x).sample()], axis=1)).sample()
 samples = [s.run(sample).squeeze() for _ in range(100)]
 mean2 = np.mean(samples, axis=0)
@@ -1312,10 +1311,9 @@ plt.show()
 import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
-from tensorflow.contrib.opt import ScipyOptimizerInterface as SOI
 from wbml import Vars, rnn as rnn_constructor
 
-from stheno.tf import GP, Delta, model, EQ, RQ
+from stheno.tf import GP, Delta, EQ, RQ, Obs
 
 # Construct variable storages.
 vs_gp = Vars(np.float32)
@@ -1391,7 +1389,7 @@ for i in range(5000):
         print(i, val)
 
 # Condition.
-model.condition(y_gp_rnn @ x_obs, y_obs)
+f_gp_rnn, a, b = (f_gp_rnn, a, b) | Obs(y_gp_rnn(x_obs), y_obs)
 
 # Predict and plot results.
 plt.figure(figsize=(10, 6))
@@ -1433,7 +1431,7 @@ plt.show()
 import matplotlib.pyplot as plt
 import numpy as np
 
-from stheno import GP, EQ, model
+from stheno import GP, EQ, model, Obs
 
 # Define points to predict at.
 x = np.linspace(0, 10, 100)
@@ -1446,16 +1444,59 @@ f2 = GP(EQ(), 3)
 f_prod = f1 * f2
 
 # Sample two functions.
-s1, s2 = model.sample(f1 @ x, f2 @ x)
+s1, s2 = model.sample(f1(x), f2(x))
 
 # Predict.
-mean, lower, upper = f_prod.condition((f1 @ x, s1), (f2 @ x, s2)).predict(x)
+mean, lower, upper = (f_prod | ((f1(x), s1), (f2(x), s2))).predict(x)
 
 # Plot result.
 plt.plot(x, s1, label='Sample 1', c='tab:red')
 plt.plot(x, s2, label='Sample 2', c='tab:blue')
 plt.plot(x, s1 * s2, label='True product', c='tab:orange')
 plt.plot(x, mean, label='Approximate posterior', c='tab:green')
+plt.plot(x, lower, ls='--', c='tab:green')
+plt.plot(x, upper, ls='--', c='tab:green')
+plt.legend()
+plt.show()
+```
+
+### Sparse Regression
+
+![Prediction](https://raw.githubusercontent.com/wesselb/stheno/master/readme_prediction10_sparse.png)
+
+```python
+import matplotlib.pyplot as plt
+import numpy as np
+
+from stheno import GP, EQ, Delta, SparseObs
+
+# Define points to predict at.
+x = np.linspace(0, 10, 100)
+x_obs = np.linspace(0, 7, 50_000)
+x_ind = np.linspace(0, 10, 20)
+
+# Construct a prior.
+f = GP(EQ().periodic(2 * np.pi))  # Latent function.
+e = GP(Delta())  # Noise.
+y = f + .5 * e
+
+# Sample a true, underlying function and observations.
+f_true = np.sin(x)
+y_obs = np.sin(x_obs) + .5 * np.random.randn(*x_obs.shape)
+
+# Now condition on the observations to make predictions.
+obs = SparseObs(f(x_ind),  # Inducing points.
+                .5 * e,  # Noise process.
+                # Observations _without_ the noise process added on.
+                f(x_obs), y_obs)
+print('elbo', obs.elbo)
+mean, lower, upper = (f | obs).predict(x)
+
+# Plot result.
+plt.plot(x, f_true, label='True', c='tab:blue')
+plt.scatter(x_obs, y_obs, label='Observations', c='tab:red')
+plt.scatter(x_ind, 0 * x_ind, label='Inducing Points', c='black')
+plt.plot(x, mean, label='Prediction', c='tab:green')
 plt.plot(x, lower, ls='--', c='tab:green')
 plt.plot(x, upper, ls='--', c='tab:green')
 plt.legend()
