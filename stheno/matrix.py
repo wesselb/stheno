@@ -234,13 +234,16 @@ class Woodbury(Dense, Referentiable):
     Args:
         lr (:class:`.matrix.LowRank`): Low-rank part.
         diag (:class:`.matrix.Diagonal`): Diagonal part.
+        lr_pd (bool, optional): Specify that the low-rank part is PD. Defaults
+            to `True`.
     """
     _dispatch = Dispatcher(in_class=Self)
 
-    def __init__(self, lr, diag):
+    def __init__(self, lr, diag, lr_pd=True, lr_nd=False):
         Dense.__init__(self, None)
-        self.lr = lr
         self.diag = diag
+        self.lr = lr
+        self.lr_pd = lr_pd
 
         # Caching:
         self.schur = None
@@ -614,15 +617,18 @@ def inverse(a):
 def inverse(a): return Diagonal(1 / B.diag(a), *reversed(B.shape(a)))
 
 
-@B.inverse.extend_multi((Woodbury,), (Woodbury, bool))
-def inverse(a, lr_psd=True):
+@B.inverse.extend(Woodbury)
+def inverse(a):
     # Use the Woodbury matrix identity.
     if a.inverse is None:
         inv_diag = B.inverse(a.diag)
         lr = LowRank(left=B.matmul(inv_diag, a.lr.left),
                      right=B.matmul(inv_diag, a.lr.right),
                      middle=B.inverse(B.schur(a)))
-        a.inverse = inv_diag - lr if lr_psd else inv_diag + lr
+        if a.lr_pd:
+            a.inverse = Woodbury(diag=inv_diag, lr=-lr, lr_pd=False)
+        else:
+            a.inverse = Woodbury(diag=inv_diag, lr=lr, lr_pd=True)
     return a.inverse
 
 
@@ -639,12 +645,14 @@ def lr_diff(a, b):
         :class:`.matrix.LowRank`: Difference between `a` and `b`.
     """
     diff = a - b
-    ul, sl, vl = B.svd(diff.left)
-    ur, sr, vr = B.svd(diff.right)
-    middle = B.matmul(Diagonal(sl),
-                      B.matmul(vl, diff.m, vr, tr_a=True),
-                      Diagonal(sr))
-    return LowRank(left=ul, right=ur, middle=middle)
+    u_left, s_left, v_left = B.svd(diff.left)
+    u_right, s_right, v_right = B.svd(diff.right)
+    middle = B.matmul(Diagonal(s_left, *B.shape(diff.left)),
+                      B.matmul(v_left, diff.middle, v_right, tr_a=True),
+                      Diagonal(s_right, *B.shape(diff.right)).T)
+    return LowRank(left=u_left,
+                   right=u_right,
+                   middle=middle)
 
 
 @B.inverse.extend(LowRank)
@@ -669,7 +677,7 @@ def logdet(a): return B.sum(B.log(a.diag))
 def logdet(a):
     return B.logdet(B.schur(a)) + \
            B.logdet(a.diag) + \
-           B.logdet(a.lr.middle)
+           B.logdet(a.lr.middle if a.lr_pd else -a.lr.middle)
 
 
 @B.logdet.extend(LowRank)
@@ -744,12 +752,14 @@ def schur(a, b, c, d):
     return dense(B.subtract(a, B.qf(c, b, d)))
 
 
-@B.schur.extend(Woodbury, [bool])
-def schur(a, lr_psd=True):
+@B.schur.extend(Woodbury)
+def schur(a):
     if a.schur is None:
-        inv_middle = B.inverse(a.lr.middle)
         prod = B.matmul(a.lr.right, B.inverse(a.diag), a.lr.left, tr_a=True)
-        a.schur = inv_middle + prod if lr_psd else inv_middle - prod
+        if a.lr_pd:
+            a.schur = B.inverse(a.lr.middle) + prod
+        else:
+            a.schur = B.inverse(-a.lr.middle) - prod
     return a.schur
 
 
@@ -782,7 +792,7 @@ def schur(a, b, c, d):
 @B.convert.extend(LowRank, Woodbury)
 def convert(a, _):
     diag = Diagonal(B.zeros([B.diag_len(a)], dtype=B.dtype(a)), *B.shape(a))
-    return Woodbury(lr=a, diag=diag)
+    return Woodbury(diag=diag, lr=a)
 
 
 @B.schur.extend({Woodbury, LowRank},
@@ -922,7 +932,8 @@ def transpose(a): return Constant(a.constant, *reversed(B.shape(a)))
 
 @B.transpose.extend(Woodbury)
 def transpose(a): return Woodbury(lr=B.transpose(a.lr),
-                                  diag=B.transpose(a.diag))
+                                  diag=B.transpose(a.diag),
+                                  lr_pd=a.lr_pd)
 
 
 # Extend LAB to the field of matrices.

@@ -342,11 +342,13 @@ def test_inverse_and_logdet():
 
     # Test `Woodbury`.
     a = np.random.randn(3, 2)
-    b = np.random.randn(2, 2)
-    wb = d + LowRank(left=a, right=a, middle=b.dot(b.T))
-    yield assert_allclose, B.matmul(wb, B.inverse(wb)), np.eye(3)
-    yield assert_allclose, B.matmul(B.inverse(wb), wb), np.eye(3)
-    yield assert_allclose, B.logdet(wb), np.log(np.linalg.det(dense(wb)))
+    b = np.random.randn(2, 2) + 1e-2 * np.eye(2)
+    wb = d + LowRank(left=a, middle=b.dot(b.T))
+    for _ in range(4):
+        yield assert_allclose, B.matmul(wb, B.inverse(wb)), np.eye(3)
+        yield assert_allclose, B.matmul(B.inverse(wb), wb), np.eye(3)
+        yield assert_allclose, B.logdet(wb), np.log(np.linalg.det(dense(wb)))
+        wb = B.inverse(wb)
 
     # Test `LowRank`.
     yield raises, RuntimeError, lambda: B.inverse(wb.lr)
