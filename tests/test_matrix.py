@@ -142,7 +142,7 @@ def test_dense():
 
     # Test Woodbury matrices.
     diag = Diagonal([1, 2, 3, 4], 5, 10)
-    wb = Woodbury(lr, diag)
+    wb = Woodbury(diag=diag, lr=lr)
     yield assert_allclose, dense(wb), dense(diag) + dense(lr)
 
 
@@ -172,8 +172,8 @@ def test_dtype():
     yield eq, B.dtype(Constant(1.0, rows=1)), float
 
     # Test `Woodbury`.
-    yield eq, B.dtype(Woodbury(lr_int, diag_int)), int
-    yield eq, B.dtype(Woodbury(lr_float, diag_float)), float
+    yield eq, B.dtype(Woodbury(diag_int, lr_int)), int
+    yield eq, B.dtype(Woodbury(diag_float, lr_float)), float
 
 
 def test_sum():
@@ -217,8 +217,8 @@ def test_diag():
 
     # Test `Woodbury`.
     yield assert_allclose, \
-          B.diag(Woodbury(LowRank(left=a, right=b),
-                          Diagonal([1, 2, 3], rows=5, cols=10))), \
+          B.diag(Woodbury(Diagonal([1, 2, 3], rows=5, cols=10),
+                          LowRank(left=a, right=b))), \
           np.diag(a.dot(b.T) + np.concatenate((np.diag([1, 2, 3, 0, 0]),
                                                np.zeros((5, 5))), axis=1))
 

@@ -232,14 +232,14 @@ class Woodbury(Dense, Referentiable):
     """Sum of a low-rank and diagonal symmetric positive-definite matrix.
 
     Args:
-        lr (:class:`.matrix.LowRank`): Low-rank part.
         diag (:class:`.matrix.Diagonal`): Diagonal part.
+        lr (:class:`.matrix.LowRank`): Low-rank part.
         lr_pd (bool, optional): Specify that the low-rank part is PD. Defaults
             to `True`.
     """
     _dispatch = Dispatcher(in_class=Self)
 
-    def __init__(self, lr, diag, lr_pd=True, lr_nd=False):
+    def __init__(self, diag, lr, lr_pd=True):
         Dense.__init__(self, None)
         self.diag = diag
         self.lr = lr
@@ -931,8 +931,8 @@ def transpose(a): return Constant(a.constant, *reversed(B.shape(a)))
 
 
 @B.transpose.extend(Woodbury)
-def transpose(a): return Woodbury(lr=B.transpose(a.lr),
-                                  diag=B.transpose(a.diag),
+def transpose(a): return Woodbury(diag=B.transpose(a.diag),
+                                  lr=B.transpose(a.lr),
                                   lr_pd=a.lr_pd)
 
 
@@ -1060,31 +1060,31 @@ def add(a, b):
 # Woodbury matrices:
 
 @add.extend(LowRank, Diagonal)
-def add(a, b): return Woodbury(a, b)
+def add(a, b): return Woodbury(diag=b, lr=a)
 
 
 @add.extend(Diagonal, LowRank)
-def add(a, b): return Woodbury(b, a)
+def add(a, b): return Woodbury(diag=a, lr=b)
 
 
 @add.extend(LowRank, Woodbury)
-def add(a, b): return Woodbury(a + b.lr, b.diag)
+def add(a, b): return Woodbury(diag=b.diag, lr=a + b.lr)
 
 
 @add.extend(Woodbury, LowRank)
-def add(a, b): return Woodbury(a.lr + b, a.diag)
+def add(a, b): return Woodbury(diag=a.diag, lr=a.lr + b)
 
 
 @add.extend(Diagonal, Woodbury)
-def add(a, b): return Woodbury(b.lr, a + b.diag)
+def add(a, b): return Woodbury(diag=a + b.diag, lr=b.lr)
 
 
 @add.extend(Woodbury, Diagonal)
-def add(a, b): return Woodbury(a.lr, a.diag + b)
+def add(a, b): return Woodbury(diag=a.diag + b, lr=a.lr)
 
 
 @add.extend(Woodbury, Woodbury)
-def add(a, b): return Woodbury(a.lr + b.lr, a.diag + b.diag)
+def add(a, b): return Woodbury(diag=a.diag + b.diag,lr=a.lr + b.lr)
 
 
 # Multiplication between matrices and constants.
