@@ -37,38 +37,38 @@ def test_mokernel():
                          axis=0)
 
     # `B.Numeric` versus `At`:
-    yield assert_allclose, mok(At(p1)(x1), x2), \
+    yield assert_allclose, mok(p1(x1), x2), \
           np.concatenate([dense(ks[p1, p1](x1, x2)),
                           dense(ks[p1, p2](x1, x2))], axis=1)
-    yield assert_allclose, mok(At(p2)(x1), x2), \
+    yield assert_allclose, mok(p2(x1), x2), \
           np.concatenate([dense(ks[p2, p1](x1, x2)),
                           dense(ks[p2, p2](x1, x2))], axis=1)
-    yield assert_allclose, mok(x1, At(p1)(x2)), \
+    yield assert_allclose, mok(x1, p1(x2)), \
           np.concatenate([dense(ks[p1, p1](x1, x2)),
                           dense(ks[p2, p1](x1, x2))], axis=0)
-    yield assert_allclose, mok(x1, At(p2)(x2)), \
+    yield assert_allclose, mok(x1, p2(x2)), \
           np.concatenate([dense(ks[p1, p2](x1, x2)),
                           dense(ks[p2, p2](x1, x2))], axis=0)
 
     # `At` versus `At`:
-    yield assert_allclose, mok(At(p1)(x1), At(p1)(x2)), ks[p1](x1, x2)
-    yield assert_allclose, mok(At(p1)(x1), At(p2)(x2)), ks[p1, p2](x1, x2)
+    yield assert_allclose, mok(p1(x1), p1(x2)), ks[p1](x1, x2)
+    yield assert_allclose, mok(p1(x1), p2(x2)), ks[p1, p2](x1, x2)
 
     # `MultiInput` versus `MultiInput`:
-    yield assert_allclose, mok(MultiInput(At(p2)(x1), At(p1)(x2)),
-                               MultiInput(At(p2)(x1))), \
+    yield assert_allclose, mok(MultiInput(p2(x1), p1(x2)),
+                               MultiInput(p2(x1))), \
           np.concatenate([dense(ks[p2, p2](x1, x1)),
                           dense(ks[p1, p2](x2, x1))],
                          axis=0)
 
     # `MultiInput` versus `At`:
-    yield assert_allclose, mok(MultiInput(At(p2)(x1), At(p1)(x2)),
-                               At(p2)(x1)), \
+    yield assert_allclose, mok(MultiInput(p2(x1), p1(x2)),
+                               p2(x1)), \
           np.concatenate([dense(ks[p2, p2](x1, x1)),
                           dense(ks[p1, p2](x2, x1))],
                          axis=0)
-    yield assert_allclose, mok(At(p2)(x1),
-                               MultiInput(At(p2)(x1), At(p1)(x2))), \
+    yield assert_allclose, mok(p2(x1),
+                               MultiInput(p2(x1), p1(x2))), \
           np.concatenate([dense(ks[p2, p2](x1, x1)),
                           dense(ks[p2, p1](x1, x2))],
                          axis=1)

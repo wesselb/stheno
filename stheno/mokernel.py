@@ -33,18 +33,18 @@ class MultiOutputKernel(Kernel, Referentiable):
     @_dispatch(B.Numeric, B.Numeric, Cache)
     @cache
     def __call__(self, x, y, B):
-        return self(MultiInput(*(At(p)(x) for p in self.ps)),
-                    MultiInput(*(At(p)(y) for p in self.ps)), B)
+        return self(MultiInput(*(p(x) for p in self.ps)),
+                    MultiInput(*(p(y) for p in self.ps)), B)
 
     @_dispatch(At, B.Numeric, Cache)
     @cache
     def __call__(self, x, y, B):
-        return self(MultiInput(x), MultiInput(*(At(p)(y) for p in self.ps)), B)
+        return self(MultiInput(x), MultiInput(*(p(y) for p in self.ps)), B)
 
     @_dispatch(B.Numeric, At, Cache)
     @cache
     def __call__(self, x, y, B):
-        return self(MultiInput(*(At(p)(x) for p in self.ps)), MultiInput(y), B)
+        return self(MultiInput(*(p(x) for p in self.ps)), MultiInput(y), B)
 
     @_dispatch(At, At, Cache)
     @cache

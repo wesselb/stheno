@@ -32,7 +32,7 @@ class MultiOutputMean(Mean, Referentiable):
     @_dispatch(B.Numeric, Cache)
     @cache
     def __call__(self, x, B):
-        return self(MultiInput(*(At(p)(x) for p in self.ps)), B)
+        return self(MultiInput(*(p(x) for p in self.ps)), B)
 
     @_dispatch(At, Cache)
     @cache

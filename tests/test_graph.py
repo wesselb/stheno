@@ -3,16 +3,16 @@
 from __future__ import absolute_import, division, print_function
 
 import numpy as np
-from numpy.testing import assert_array_almost_equal
 from lab import B
+from plum import type_parameter
 
-from stheno.graph import Graph, GP
+from stheno.cache import Cache
+from stheno.graph import Graph, GP, Obs, SparseObs
 from stheno.input import At
 from stheno.kernel import Linear, EQ, Delta, Exp, RQ
 from stheno.mean import TensorProductMean
-from stheno.cache import Cache
 # noinspection PyUnresolvedReferences,
-from . import eq, raises, ok, le, eprint, lam, assert_allclose
+from . import eq, raises, ok, le, assert_allclose, assert_instance
 
 
 def abs_err(x1, x2=0):
@@ -42,35 +42,35 @@ def test_construction():
     c = Cache()
 
     yield p.mean, x
-    yield p.mean, At(p)(x)
+    yield p.mean, p(x)
     yield p.mean, x, c
-    yield p.mean, At(p)(x), c
+    yield p.mean, p(x), c
 
     yield p.kernel, x
-    yield p.kernel, At(p)(x)
+    yield p.kernel, p(x)
     yield p.kernel, x, c
-    yield p.kernel, At(p)(x), c
+    yield p.kernel, p(x), c
     yield p.kernel, x, x
-    yield p.kernel, At(p)(x), x
-    yield p.kernel, x, At(p)(x)
-    yield p.kernel, At(p)(x), At(p)(x)
+    yield p.kernel, p(x), x
+    yield p.kernel, x, p(x)
+    yield p.kernel, p(x), p(x)
     yield p.kernel, x, x, c
-    yield p.kernel, At(p)(x), x, c
-    yield p.kernel, x, At(p)(x), c
-    yield p.kernel, At(p)(x), At(p)(x), c
+    yield p.kernel, p(x), x, c
+    yield p.kernel, x, p(x), c
+    yield p.kernel, p(x), p(x), c
 
     yield p.kernel.elwise, x
-    yield p.kernel.elwise, At(p)(x)
+    yield p.kernel.elwise, p(x)
     yield p.kernel.elwise, x, c
-    yield p.kernel.elwise, At(p)(x), c
+    yield p.kernel.elwise, p(x), c
     yield p.kernel.elwise, x, x
-    yield p.kernel.elwise, At(p)(x), x
-    yield p.kernel.elwise, x, At(p)(x)
-    yield p.kernel.elwise, At(p)(x), At(p)(x)
+    yield p.kernel.elwise, p(x), x
+    yield p.kernel.elwise, x, p(x)
+    yield p.kernel.elwise, p(x), p(x)
     yield p.kernel.elwise, x, x, c
-    yield p.kernel.elwise, At(p)(x), x, c
-    yield p.kernel.elwise, x, At(p)(x), c
-    yield p.kernel.elwise, At(p)(x), At(p)(x), c
+    yield p.kernel.elwise, p(x), x, c
+    yield p.kernel.elwise, x, p(x), c
+    yield p.kernel.elwise, p(x), p(x), c
 
 
 def test_sum_other():
@@ -87,9 +87,9 @@ def test_sum_other():
     yield assert_allclose, p1.kernel(x), p2.kernel(x)
     yield assert_allclose, p1.kernel(x), p3.kernel(x)
     yield assert_allclose, p1.kernel(x), p4.kernel(x)
-    yield assert_allclose, p1.kernel(At(p2)(x), At(p3)(x)), \
+    yield assert_allclose, p1.kernel(p2(x), p3(x)), \
           p1.kernel(x)
-    yield assert_allclose, p1.kernel(At(p2)(x), At(p4)(x)), \
+    yield assert_allclose, p1.kernel(p2(x), p4(x)), \
           p1.kernel(x)
 
 
@@ -110,9 +110,10 @@ def test_mul_other():
 def test_at_shorthand():
     model = Graph()
     p1 = GP(EQ(), graph=model)
-    x = p1.__matmul__(1)
+    x = p1(1)
 
-    yield eq, type(x), At(p1)
+    yield assert_instance, x, At
+    yield ok, type_parameter(x) is p1
     yield eq, x.get(), 1
 
 
@@ -155,9 +156,70 @@ def test_case_summation_with_itself():
     yield assert_allclose, p2(x).mean, np.zeros((5, 1))
 
     y = np.random.randn(5, 1)
-    model.condition(At(p1)(x), y)
+    yield assert_allclose, p2.condition(p1(x), y)(x).mean, 5 * y
 
-    yield assert_allclose, p2(x).mean, 5 * y
+
+def test_observations_and_conditioning():
+    model = Graph()
+    p1 = GP(EQ(), graph=model)
+    p2 = GP(EQ(), graph=model)
+    p = p1 + p2
+    x = np.linspace(0, 5, 10)
+    y = p(x).sample()
+    y1 = p1(x).sample()
+
+    # Test all ways of conditioning, including shorthands.
+    obs1 = Obs(p(x), y)
+    obs2 = Obs(x, y, ref=p)
+    yield assert_allclose, obs1.y, obs2.y
+    yield assert_allclose, obs1.K_x, obs2.K_x
+
+    obs3 = Obs((p(x), y), (p1(x), y1))
+    obs4 = Obs((x, y), (p1(x), y1), ref=p)
+    yield assert_allclose, obs3.y, obs4.y
+    yield assert_allclose, obs3.K_x, obs4.K_x
+
+    def assert_equal_mean_var(x, *ys):
+        for y in ys:
+            yield assert_allclose, x.mean, y.mean
+            yield assert_allclose, x.var, y.var
+
+    for test in assert_equal_mean_var(p.condition(x, y)(x),
+                                      p.condition(p(x), y)(x),
+                                      (p | (x, y))(x),
+                                      (p | (p(x), y))(x),
+                                      p.condition(obs1)(x),
+                                      p.condition(obs2)(x),
+                                      (p | obs1)(x),
+                                      (p | obs2)(x)):
+        yield test
+
+    for test in assert_equal_mean_var(p.condition((x, y), (p1(x), y1))(x),
+                                      p.condition((p(x), y), (p1(x), y1))(x),
+                                      (p | [(x, y), (p1(x), y1)])(x),
+                                      (p | [(p(x), y), (p1(x), y1)])(x),
+                                      p.condition(obs3)(x),
+                                      p.condition(obs4)(x),
+                                      (p | obs3)(x),
+                                      (p | obs4)(x)):
+        yield test
+
+    # Check conditioning multiple processes at once.
+    p1_post, p2_post, p_post = (p1, p2, p) | obs1
+    p1_post, p2_post, p_post = p1_post(x), p2_post(x), p_post(x)
+    p1_post2, p2_post2, p_post2 = (p1 | obs1)(x), (p2 | obs1)(x), (p | obs1)(x)
+
+    yield assert_allclose, p1_post.mean, p1_post2.mean
+    yield assert_allclose, p1_post.var, p1_post2.var
+    yield assert_allclose, p2_post.mean, p2_post2.mean
+    yield assert_allclose, p2_post.var, p2_post2.var
+    yield assert_allclose, p_post.mean, p_post2.mean
+    yield assert_allclose, p_post.var, p_post2.var
+
+    # Test `At` check.
+    yield raises, ValueError, lambda: Obs(0, 0)
+    yield raises, ValueError, lambda: Obs((0, 0), (0, 0))
+    yield raises, ValueError, lambda: SparseObs(0, p, (0, 0))
 
 
 def test_case_additive_model():
@@ -179,49 +241,21 @@ def test_case_additive_model():
 
     # Now run through some test cases:
 
-    model.condition(At(p1)(x), y1)
-    model.condition(At(p2)(x), y2)
-    yield assert_allclose, p3(x).mean, y1 + y2
-    model.revert_prior()
+    obs = Obs(p1(x), y1)
+    post = (p3 | obs) | ((p2 | obs)(x), y2)
+    yield assert_allclose, post(x).mean, y1 + y2
 
-    model.condition(At(p2)(x), y2)
-    model.condition(At(p1)(x), y1)
-    yield assert_allclose, p3(x).mean, y1 + y2
-    model.revert_prior()
+    obs = Obs(p2(x), y2)
+    post = (p3 | obs) | ((p1 | obs)(x), y1)
+    yield assert_allclose, post(x).mean, y1 + y2
 
-    model.condition(At(p1)(x), y1)
-    model.condition(At(p3)(x), y1 + y2)
-    yield assert_allclose, p2(x).mean, y2
-    model.revert_prior()
+    obs = Obs(p1(x), y1)
+    post = (p2 | obs) | ((p3 | obs)(x), y1 + y2)
+    yield assert_allclose, post(x).mean, y2
 
-    model.condition(At(p3)(x), y1 + y2)
-    model.condition(At(p1)(x), y1)
-    yield assert_allclose, p2(x).mean, y2
-    model.revert_prior()
-
-    yield assert_allclose, p3 \
-        .condition(At(p1)(x), y1) \
-        .condition(At(p2)(x), y2)(x) \
-        .mean, y1 + y2
-    p3.revert_prior()
-
-    yield assert_allclose, p3 \
-        .condition(At(p2)(x), y2) \
-        .condition(At(p1)(x), y1)(x) \
-        .mean, y1 + y2
-    p3.revert_prior()
-
-    yield assert_allclose, p2 \
-        .condition(At(p3)(x), y1 + y2) \
-        .condition(At(p1)(x), y1)(x) \
-        .mean, y2
-    p3.revert_prior()
-
-    yield assert_allclose, p2 \
-        .condition(At(p1)(x), y1) \
-        .condition(At(p3)(x), y1 + y2)(x) \
-        .mean, y2
-    p3.revert_prior()
+    obs = Obs(p3(x), y1 + y2)
+    post = (p2 | obs) | ((p1 | obs)(x), y1)
+    yield assert_allclose, post(x).mean, y2
 
     yield assert_allclose, p3.condition(x, y1 + y2)(x).mean, y1 + y2
 
@@ -236,12 +270,13 @@ def test_shifting():
     x = np.linspace(0, 10, n)[:, None]
     y = p2(x).sample()
 
-    yield assert_allclose, p.condition(At(p2)(x), y)(x - 5).mean, y
-    yield le, abs_err(B.diag(p(x - 5).var)), 1e-10
-    p.revert_prior()
-    yield assert_allclose, p2.condition(At(p)(x), y)(x + 5).mean, y
-    yield le, abs_err(B.diag(p2(x + 5).var)), 1e-10
-    p.revert_prior()
+    post = p.condition(p2(x), y)
+    yield assert_allclose, post(x - 5).mean, y
+    yield le, abs_err(B.diag(post(x - 5).var)), 1e-10
+
+    post = p2.condition(p(x), y)
+    yield assert_allclose, post(x + 5).mean, y
+    yield le, abs_err(B.diag(post(x + 5).var)), 1e-10
 
 
 def test_stretching():
@@ -254,12 +289,13 @@ def test_stretching():
     x = np.linspace(0, 10, n)[:, None]
     y = p2(x).sample()
 
-    yield assert_allclose, p.condition(At(p2)(x), y)(x / 5).mean, y
-    yield le, abs_err(B.diag(p(x / 5).var)), 1e-10
-    p.revert_prior()
-    yield assert_allclose, p2.condition(At(p)(x), y)(x * 5).mean, y
-    yield le, abs_err(B.diag(p2(x * 5).var)), 1e-10
-    p.revert_prior()
+    post = p.condition(p2(x), y)
+    yield assert_allclose, post(x / 5).mean, y
+    yield le, abs_err(B.diag(post(x / 5).var)), 1e-10
+
+    post = p2.condition(p(x), y)
+    yield assert_allclose, post(x * 5).mean, y
+    yield le, abs_err(B.diag(post(x * 5).var)), 1e-10
 
 
 def test_input_transform():
@@ -272,12 +308,13 @@ def test_input_transform():
     x = np.linspace(0, 10, n)[:, None]
     y = p2(x).sample()
 
-    yield assert_allclose, p.condition(At(p2)(x), y)(x / 5).mean, y
-    yield le, abs_err(B.diag(p(x / 5).var)), 1e-10
-    p.revert_prior()
-    yield assert_allclose, p2.condition(At(p)(x), y)(x * 5).mean, y
-    yield le, abs_err(B.diag(p2(x * 5).var)), 1e-10
-    p.revert_prior()
+    post = p.condition(p2(x), y)
+    yield assert_allclose, post(x / 5).mean, y
+    yield le, abs_err(B.diag(post(x / 5).var)), 1e-10
+
+    post = p2.condition(p(x), y)
+    yield assert_allclose, post(x * 5).mean, y
+    yield le, abs_err(B.diag(post(x * 5).var)), 1e-10
 
 
 def test_selection():
@@ -292,19 +329,19 @@ def test_selection():
     x2 = np.concatenate((x, np.random.randn(n, 1)), axis=1)
     y = p2(x).sample()
 
-    yield assert_allclose, p.condition(At(p2)(x1), y)(x).mean, y
-    yield le, abs_err(B.diag(p(x).var)), 1e-10
-    p.revert_prior()
+    post = p.condition(p2(x1), y)
+    yield assert_allclose, post(x).mean, y
+    yield le, abs_err(B.diag(post(x).var)), 1e-10
 
-    yield assert_allclose, p.condition(At(p2)(x2), y)(x).mean, y
-    yield le, abs_err(B.diag(p(x).var)), 1e-10
-    p.revert_prior()
+    post = p.condition(p2(x2), y)
+    yield assert_allclose, post(x).mean, y
+    yield le, abs_err(B.diag(post(x).var)), 1e-10
 
-    yield assert_allclose, p2.condition(At(p)(x), y)(x1).mean, y
-    yield assert_allclose, p2(x2).mean, y
-    yield le, abs_err(B.diag(p2(x1).var)), 1e-10
-    yield le, abs_err(B.diag(p2(x2).var)), 1e-10
-    p.revert_prior()
+    post = p2.condition(p(x), y)
+    yield assert_allclose, post(x1).mean, y
+    yield assert_allclose, post(x2).mean, y
+    yield le, abs_err(B.diag(post(x1).var)), 1e-10
+    yield le, abs_err(B.diag(post(x2).var)), 1e-10
 
 
 def test_case_fd_derivative():
@@ -315,7 +352,7 @@ def test_case_fd_derivative():
     p = GP(.7 * EQ().stretch(1.), graph=model)
     dp = (p.shift(-1e-3) - p.shift(1e-3)) / 2e-3
 
-    yield le, abs_err(np.cos(x) - dp.condition(At(p)(x), y)(x).mean), 1e-4
+    yield le, abs_err(np.cos(x) - dp.condition(p(x), y)(x).mean), 1e-4
 
 
 def test_case_reflection():
@@ -326,12 +363,8 @@ def test_case_reflection():
     x = np.linspace(0, 1, 10)[:, None]
     y = p(x).sample()
 
-    model.condition(At(p)(x), y)
-    yield le, abs_err(p2(x).mean - (5 - y)), 1e-5
-    model.revert_prior()
-    model.condition(At(p2)(x), 5 - y)
-    yield le, abs_err(p(x).mean - y), 1e-5
-    model.revert_prior()
+    yield le, abs_err(p2.condition(p(x), y)(x).mean - (5 - y)), 1e-5
+    yield le, abs_err(p.condition(p2(x), 5 - y)(x).mean - y), 1e-5
 
     model = Graph()
     p = GP(EQ(), graph=model)
@@ -340,12 +373,8 @@ def test_case_reflection():
     x = np.linspace(0, 1, 10)[:, None]
     y = p(x).sample()
 
-    model.condition(At(p)(x), y)
-    yield le, abs_err(p2(x).mean + y), 1e-5
-    model.revert_prior()
-    model.condition(At(p2)(x), - y)
-    yield le, abs_err(p(x).mean - y), 1e-5
-    model.revert_prior()
+    yield le, abs_err(p2.condition(p(x), y)(x).mean + y), 1e-5
+    yield le, abs_err(p.condition(p2(x), -y)(x).mean - y), 1e-5
 
 
 def test_case_exact_derivative():
@@ -360,15 +389,12 @@ def test_case_exact_derivative():
     dp = p.diff()
 
     # Test conditioning on function.
-    p.condition(x, y)
-    yield le, abs_err(s.run(dp(x).mean - 2)), 1e-3
-    p.revert_prior()
+    yield le, abs_err(s.run(dp.condition(p(x), y)(x).mean - 2)), 1e-3
 
     # Test conditioning on derivative.
-    dp.condition(x, y)
-    p.condition(np.zeros((1, 1)), np.zeros((1, 1)))  # Fix integration constant.
-    yield le, abs_err(s.run(p(x).mean - x ** 2)), 1e-3
-    p.revert_prior()
+    post = p.condition((B.cast(0., np.float64), B.cast(0., np.float64)),
+                       (dp(x), y))
+    yield le, abs_err(s.run(post(x).mean - x ** 2)), 1e-3
 
     s.close()
     B.backend_to_np()
@@ -383,19 +409,15 @@ def test_case_approximate_derivative():
     dp = p.diff_approx()
 
     # Test conditioning on function.
-    p.condition(x, y)
-    yield le, abs_err(dp(x).mean - 2), 1e-3
-    p.revert_prior()
+    yield le, abs_err(dp.condition(p(x), y)(x).mean - 2), 1e-3
 
     # Add some regularisation for this test case.
     orig_epsilon = B.epsilon
     B.epsilon = 1e-10
 
     # Test conditioning on derivative.
-    dp.condition(x, y)
-    p.condition(0, 0)  # Fix integration constant.
-    yield le, abs_err(p(x).mean - x ** 2), 1e-3
-    p.revert_prior()
+    post = p.condition((0, 0), (dp(x), y))
+    yield le, abs_err(post(x).mean - x ** 2), 1e-3
 
     # Set regularisation back.
     B.epsilon = orig_epsilon
@@ -412,12 +434,11 @@ def test_case_blr():
 
     # Sample observations, true slope, and intercept.
     y_obs, true_slope, true_intercept = \
-        model.sample(At(y)(x), At(slope)(0), At(intercept)(0))
+        model.sample(y(x), slope(0), intercept(0))
 
     # Predict.
-    model.condition(At(y)(x), y_obs)
-    mean_slope, mean_intercept = slope(0).mean, intercept(0).mean
-    model.revert_prior()
+    post_slope, post_intercept = (slope, intercept) | Obs(y(x), y_obs)
+    mean_slope, mean_intercept = post_slope(0).mean, post_intercept(0).mean
 
     yield le, np.abs(true_slope[0, 0] - mean_slope[0, 0]), 5e-2
     yield le, np.abs(true_intercept[0, 0] - mean_intercept[0, 0]), 5e-2
@@ -433,12 +454,12 @@ def test_multi_sample():
     x2 = np.linspace(0, 1, 20)
     x3 = np.linspace(0, 1, 30)
 
-    s1, s2, s3 = model.sample(At(p1)(x1), At(p2)(x2), At(p3)(x3))
+    s1, s2, s3 = model.sample(p1(x1), p2(x2), p3(x3))
 
     yield eq, s1.shape, (10, 1)
     yield eq, s2.shape, (20, 1)
     yield eq, s3.shape, (30, 1)
-    yield eq, np.shape(model.sample(At(p1)(x1))), (10, 1)
+    yield eq, np.shape(model.sample(p1(x1))), (10, 1)
 
     yield le, abs_err(s1 - 1), 1e-4
     yield le, abs_err(s2 - 2), 1e-4
@@ -458,30 +479,16 @@ def test_multi_conditioning():
     x2 = np.linspace(1, 3, 10)
     x3 = np.linspace(0, 3, 10)
 
-    s1, s2 = model.sample(At(p1)(x1), At(p2)(x2))
+    s1, s2 = model.sample(p1(x1), p2(x2))
 
-    post1 = p.condition(At(p1)(x1), s1).condition(At(p2)(x2), s2)(x3)
-    model.revert_prior()
-
-    post2 = p.condition((At(p1)(x1), s1), (At(p2)(x2), s2))(x3)
-    model.revert_prior()
-
-    post3 = p.condition((At(p2)(x2), s2), (At(p1)(x1), s1))(x3)
-    model.revert_prior()
-
-    p2.condition((x2, s2), (At(p1)(x1), s1))
-    post4 = p(x3)
-    model.revert_prior()
+    post1 = ((p | (p1(x1), s1)) | ((p2 | (p1(x1), s1))(x2), s2))(x3)
+    post2 = (p | ((p1(x1), s1), (p2(x2), s2)))(x3)
+    post3 = (p | ((p2(x2), s2), (p1(x1), s1)))(x3)
 
     yield assert_allclose, post1.mean, post2.mean
     yield assert_allclose, post1.mean, post3.mean
-    yield assert_allclose, post1.mean, post4.mean
     yield assert_allclose, post1.var, post2.var
     yield assert_allclose, post1.var, post3.var
-    yield assert_allclose, post1.var, post4.var
-
-    # Test `At` check.
-    yield raises, ValueError, lambda: model.condition((0, 0))
 
 
 def test_approximate_multiplication():
@@ -494,19 +501,17 @@ def test_approximate_multiplication():
     x = np.linspace(0, 10, 50)
 
     # Sample functions.
-    s1, s2 = model.sample(At(p1)(x), At(p2)(x))
+    s1, s2 = model.sample(p1(x), p2(x))
 
     # Infer product.
-    model.condition((At(p1)(x), s1), (At(p2)(x), s2))
-    yield le, rel_err(p_prod(x).mean, s1 * s2), 1e-2
-    model.revert_prior()
+    post = p_prod.condition((p1(x), s1), (p2(x), s2))
+    yield le, rel_err(post(x).mean, s1 * s2), 1e-2
 
     # Perform division.
     cur_epsilon = B.epsilon
     B.epsilon = 1e-8
-    model.condition((At(p1)(x), s1), (At(p_prod)(x), s1 * s2))
-    yield le, rel_err(p2(x).mean, s2), 1e-2
-    model.revert_prior()
+    post = p2.condition((p1(x), s1), (p_prod(x), s1 * s2))
+    yield le, rel_err(post(x).mean, s2), 1e-2
     B.epsilon = cur_epsilon
 
     # Check graph check.
@@ -556,24 +561,8 @@ def test_naming():
 
 
 def test_formatting():
-    model = Graph()
-
-    yield eq, str((2 * GP(EQ(), 1, graph=model)).display(lambda x: x ** 2)), \
-          'GP(16 * EQ(), 4 * 1)'
-
-
-def test_checkpointing():
-    model = Graph()
-    p = GP(EQ(), graph=model)
-    x = np.linspace(0, 5, 10)
-    y = p(x).sample()
-
-    checkpoint = model.checkpoint()
-    yield assert_allclose, p(x).mean, np.zeros((10, 1))
-    p.condition(x, y)
-    yield assert_allclose, p(x).mean, y
-    model.revert(checkpoint)
-    yield assert_allclose, p(x).mean, np.zeros((10, 1))
+    p = 2 * GP(EQ(), 1, graph=Graph())
+    yield eq, str(p.display(lambda x: x ** 2)), 'GP(16 * EQ(), 4 * 1)'
 
 
 def test_sparse_conditioning():
@@ -585,27 +574,26 @@ def test_sparse_conditioning():
     y = f(x).sample()
 
     # Test that noise matrix must indeed be diagonal.
-    yield raises, RuntimeError, lambda: f.condition(x, y, x, f)
+    yield raises, RuntimeError, lambda: SparseObs(f(x), f, f(x), y)
 
     # Test posterior.
-    f.condition(x, y, x, e)
-    yield le, abs_err(f(x).mean, y), 1e-4
-    model.revert_prior()
+    post = f | SparseObs(f(x), e, f(x), y)
+    yield le, abs_err(post(x).mean, y), 1e-4
 
-    f.condition(At(2 * f + 2)(x), 2 * y + 2, x, e)
-    yield le, abs_err(f(x).mean, y), 1e-4
-    model.revert_prior()
+    post = f | SparseObs(f(x), e, (2 * f + 2)(x), 2 * y + 2)
+    yield le, abs_err(post(x).mean, y), 1e-4
 
-    f.condition(x, y, At(2 * f + 2)(x), e)
-    yield le, abs_err(f(x).mean, y), 1e-4
-    model.revert_prior()
+    post = f | SparseObs((2 * f + 2)(x), e, f(x), y)
+    yield le, abs_err(post(x).mean, y), 1e-4
 
     # Test ELBO.
     e = GP(1e-2 * Delta(), graph=model)
-    yield assert_allclose, f.elbo(x, y, x, e), (f + e)(x).logpdf(y)
     yield assert_allclose, \
-          f.elbo(At(2 * f + 2)(x), 2 * y + 2, At(f)(x), e), \
+          SparseObs(f(x), e, f(x), y).elbo, \
+          (f + e)(x).logpdf(y)
+    yield assert_allclose, \
+          SparseObs(f(x), e, (2 * f + 2)(x), 2 * y + 2).elbo, \
           (2 * f + 2 + e)(x).logpdf(2 * y + 2)
     yield assert_allclose, \
-          f.elbo(x, y, At(2 * f + 2)(x), e), \
+          SparseObs((2 * f + 2)(x), e, f(x), y).elbo, \
           (f + e)(x).logpdf(y)

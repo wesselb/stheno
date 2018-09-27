@@ -5,12 +5,14 @@ from __future__ import absolute_import, division, print_function
 from types import FunctionType
 
 from lab import B
-from plum import Self, Referentiable
+from plum import Self, Referentiable, PromisedType, type_parameter
 
 from .cache import Cache, uprank
 from .kernel import PosteriorKernel, OneKernel
-from .matrix import matrix, Dispatcher, UniformlyDiagonal, Diagonal, dense
+from .matrix import matrix, Dispatcher, UniformlyDiagonal, Diagonal, dense, \
+    Dense
 from .mean import ZeroMean, PosteriorMean, OneMean
+from .input import Input, At
 
 __all__ = ['Normal', 'GPPrimitive', 'Normal1D']
 
@@ -48,8 +50,14 @@ class RandomVector(Random):
     """A random vector."""
 
 
-class Normal(RandomVector, Referentiable):
+PromisedGPPrimitive = PromisedType()
+
+
+class Normal(RandomVector, At, Referentiable):
     """Normal random variable.
+
+    A normal random variable also acts as in instance of `At`, which can be
+    used to specify a process at particular points.
 
     Args:
         var (tensor or :class:`.matrix.Dense`): Variance of the
@@ -60,17 +68,86 @@ class Normal(RandomVector, Referentiable):
 
     _dispatch = Dispatcher(in_class=Self)
 
+    @_dispatch({B.Numeric, Dense}, [{B.Numeric, Dense, type(None)}])
     def __init__(self, var, mean=None):
-        self.var = matrix(var)
-        self.dtype = B.dtype(self.var)
-        self.dim = B.shape(self.var)[0]
+        # Ensure that the variance is stored as a structured matrix.
+        self._var = matrix(var)
+
+        # Resolve mean.
         if mean is None:
-            self.mean = B.zeros([self.dim, 1], dtype=self.dtype)
+            self._mean = B.zeros([self.dim, 1], dtype=self.dtype)
         else:
-            self.mean = dense(mean)  # Not useful to retain struture here.
+            self._mean = dense(mean)  # Not useful to retain structure here.
+
+        # Set `p`, `x`, and `cache` to `None`.
+        self.p = None
+        self.x = None
+        self.cache = None
+
+    @_dispatch(PromisedGPPrimitive, {B.Numeric, Input}, [{Cache, type(None)}])
+    def __init__(self, p, x, cache=None):
+        # Set variance and mean to `None` to signify that they have to be
+        # acquired from `p.kernel(x)` and `p.mean(x)`.
+        self._var = None
+        self._mean = None
+
+        # Save process, the point at which it was evaluated, and the provided
+        # cache.
+        self.p = p
+        self.x = x
+        self.cache = Cache() if cache is None else cache
+
+    def get(self):
+        """Get the point at which the the process was evaluated to construct
+        the distribution.
+
+        This method must be implemented to act as an instance of `Act`.
+
+        Returns:
+            input: Point at which the process was evaluated.
+        """
+        if self.p is None:
+            raise RuntimeError('Normal distribution is not a '
+                               'finite-dimensional distribution from a '
+                               'process.')
+        return self.x
+
+    def __new__(cls, *args, **kw_args):
+        # Since we have subtyped a parametric type, during instantiating the
+        # parametric type will attempt to generate a new parametric type.
+        # Prevent this. Simply redirect the call to `Normal.__new__` to that of
+        # its base: `RandomVector`.
+        return RandomVector.__new__(cls)
+
+    @property
+    def var(self):
+        """Variance."""
+        if self._var is None:
+            # Variance must be acquired from the saved process.
+            self._var = self.p.kernel(self.x, self.cache)
+        return self._var
+
+    @property
+    def mean(self):
+        """Mean."""
+        if self._mean is None:
+            # Mean must be acquired from the saved process. It is not useful
+            # to retain structure.
+            self._mean = dense(self.p.mean(self.x, self.cache))
+        return self._mean
+
+    @property
+    def dtype(self):
+        """Data type."""
+        return B.dtype(self.var)
+
+    @property
+    def dim(self):
+        """Dimensionality."""
+        return B.shape(self.var)[0]
 
     def m2(self):
-        """Second moment of the distribution."""
+        """Second moment."""
         return self.var + B.outer(self.mean)
 
     def logpdf(self, x):
@@ -182,6 +259,15 @@ class Normal(RandomVector, Referentiable):
                       B.dot(other, self.mean))
 
 
+# Make sure the type parameter can be extracted from a `Normal`.
+@type_parameter.extend(Normal)
+def type_parameter(a):
+    if a.p is None:
+        raise RuntimeError('Normal distribution is not a finite-dimensional '
+                           'distribution from a process.')
+    return a.p
+
+
 class Normal1D(Normal, Referentiable):
     """A one-dimensional version of :class:`.random.Normal` with convenient
     broadcasting behaviour.
@@ -251,28 +337,25 @@ class GPPrimitive(RandomProcess, Referentiable):
     _dispatch = Dispatcher(in_class=Self)
 
     def __init__(self, kernel, mean=None):
-        # Resolve `mean`.
-        if mean is None:
-            self._mean = ZeroMean()
-        elif isinstance(mean, B.Numeric) or isinstance(mean, FunctionType):
-            self._mean = mean * OneMean()
-        else:
-            self._mean = mean
-
-        # Resolve `kernel`.
-        if isinstance(kernel, B.Numeric) or isinstance(kernel, FunctionType):
-            self._kernel = kernel * OneKernel()
-        else:
-            self._kernel = kernel
+        self._kernel = kernel
+        self._mean = mean
 
     @property
     def kernel(self):
         """Kernel of the GP."""
+        # Resolve kernel lazily.
+        if isinstance(self._kernel, (B.Numeric, FunctionType)):
+            self._kernel = self._kernel * OneKernel()
         return self._kernel
 
     @property
     def mean(self):
         """Mean function of the GP."""
+        # Resolve mean lazily.
+        if self._mean is None:
+            self._mean = ZeroMean()
+        elif isinstance(self._mean, (B.Numeric, FunctionType)):
+            self._mean = self._mean * OneMean()
         return self._mean
 
     def __call__(self, x, cache=None):
@@ -286,7 +369,7 @@ class GPPrimitive(RandomProcess, Referentiable):
             :class:`.random.Normal`: Finite-dimensional distribution.
         """
         cache = Cache() if cache is None else cache
-        return Normal(self.kernel(x, cache), self.mean(x, cache))
+        return Normal(self, x, cache)
 
     @_dispatch(object, object)
     def condition(self, x, y):
@@ -407,3 +490,6 @@ class GPPrimitive(RandomProcess, Referentiable):
         """Differentiate the GP. See :meth:`.graph.Graph.diff`."""
         return GPPrimitive(self.kernel.diff(deriv),
                            self.mean.diff(deriv))
+
+
+PromisedGPPrimitive.deliver(GPPrimitive)

@@ -7,25 +7,206 @@ from types import FunctionType
 
 from fdm import central_fdm
 from lab import B
-from plum import Dispatcher, Self, Referentiable, type_parameter, PromisedType
+from plum import Dispatcher, Self, Referentiable, type_parameter, \
+    PromisedType, Union
 
-from .cache import Cache, uprank
-from .field import Formatter
+from .cache import uprank
 from .input import Input, At, MultiInput
-from .kernel import ZeroKernel, PosteriorKernel, Kernel, \
-    TensorProductKernel, CorrectiveKernel, Delta
+from .kernel import ZeroKernel, PosteriorKernel, TensorProductKernel, \
+    CorrectiveKernel
 from .lazy import LazyVector, LazyMatrix
 from .matrix import matrix, Diagonal
-from .mean import PosteriorMean, Mean
+from .mean import PosteriorMean
 from .mokernel import MultiOutputKernel as MOK
 from .momean import MultiOutputMean as MOM
 from .random import GPPrimitive, Random
 
-__all__ = ['GP', 'model', 'Graph']
+__all__ = ['GP', 'model', 'Graph', 'Observations', 'Obs', 'SparseObservations',
+           'SparseObs']
 
 log = logging.getLogger(__name__)
 
 PromisedGP = PromisedType()
+
+
+def ensure_at(x, ref=None):
+    """Ensure that an input location is typed with `At` to specify which
+    process it belongs to.
+
+    Args:
+        x (input): Input location.
+        ref (:class:`.graph.GP`, optional): Reference process. If provided and
+            `x` is not an instance of `At`, then it assumed to belong to `ref`.
+
+    Returns:
+        :class:`.input.At`: Input, instance of `At`.
+    """
+    if isinstance(x, At):
+        return x
+    elif ref is not None:
+        return ref(x)
+    else:
+        raise ValueError('Must explicitly specify the processes which to '
+                         'condition on.')
+
+
+class Observations(Referentiable):
+    """Observations.
+
+    Can alternatively construct an instance of `Observations` with tuples or
+    lists of valid constructors.
+
+    Args:
+        x (input): Locations of points to condition on.
+        y (tensor): Observations to condition on.
+        ref (:class:`.class.GP`, optional): Reference process. See
+            :func:`.graph.ensure_at`.
+    """
+
+    _dispatch = Dispatcher(in_class=Self)
+
+    @_dispatch({B.Numeric, Input}, B.Numeric, [PromisedGP])
+    def __init__(self, x, y, ref=None):
+        self._ref = ref
+        self.x = ensure_at(x, self._ref)
+        self.y = y
+        self.graph = type_parameter(self.x).graph
+        self._K_x = None
+
+    @_dispatch([Union(tuple, list, PromisedGP)])
+    def __init__(self, *pairs, **kw_args):
+        # Check whether there's a reference.
+        self._ref = kw_args['ref'] if 'ref' in kw_args else None
+
+        # Ensure `At` for all pairs.
+        pairs = [(ensure_at(x, self._ref), y) for x, y in pairs]
+
+        # Get the graph from the first pair.
+        self.graph = type_parameter(pairs[0][0]).graph
+
+        # Extend the graph by the Cartesian product `p` of all processes.
+        p = self.graph.cross(*self.graph.ps)
+
+        # Condition on the newly created vector-valued GP.
+        xs, ys = zip(*pairs)
+        self.x = p(MultiInput(*xs))
+        self.y = B.concat([uprank(y) for y in ys], axis=0)
+
+        self._K_x = None
+
+    @property
+    def K_x(self):
+        """Kernel matrix of the data."""
+        # Cache computation of the kernel matrix.
+        if self._K_x is None:
+            p_x, x = type_parameter(self.x), self.x.get()
+            self._K_x = matrix(self.graph.kernels[p_x](x))
+        return self._K_x
+
+    def posterior_kernel(self, p_i, p_j):
+        """Get the posterior kernel between two processes.
+
+        Args:
+            p_i (:class:`.graph.GP`): First process.
+            p_j (:class:`.graph.GP`): Second process.
+
+        Returns:
+            :class:`.kernel.Kernel`: Posterior kernel between the first and
+                second process.
+        """
+        p_x, x = type_parameter(self.x), self.x.get()
+        return PosteriorKernel(self.graph.kernels[p_i, p_j],
+                               self.graph.kernels[p_x, p_i],
+                               self.graph.kernels[p_x, p_j],
+                               x, self.K_x)
+
+    def posterior_mean(self, p):
+        """Get the posterior kernel of a process.
+
+        Args:
+            p (:class:`.graph.GP`): Process.
+
+        Returns:
+            :class:`.mean.Mean`: Posterior mean of `p`.
+        """
+        p_x, x = type_parameter(self.x), self.x.get()
+        return PosteriorMean(self.graph.means[p],
+                             self.graph.means[p_x],
+                             self.graph.kernels[p_x, p],
+                             x, self.K_x, self.y)
+
+    @_dispatch({tuple, list})
+    def __ror__(self, ps):
+        return self.graph.condition(ps, self)
+
+
+class SparseObservations(Observations, Referentiable):
+    """Observations through inducing points. Takes further arguments
+    according to the constructor of :class:`.graph.Observations`.
+
+    Attributes:
+        elbo (scalar): ELBO.
+
+    Args:
+        z (input): Locations of the inducing points.
+        e (:class:`.graph.GP`): Additive, independent noise process.
+    """
+
+    _dispatch = Dispatcher(in_class=Self)
+
+    @_dispatch({B.Numeric, Input}, PromisedGP, [object])
+    def __init__(self, z, e, *args, **kw_args):
+        Observations.__init__(self, *args, **kw_args)
+
+        # Extract processes.
+        p_x, x = type_parameter(self.x), self.x.get()
+        z = ensure_at(z, self._ref)
+        p_z, z = type_parameter(z), z.get()
+
+        # Construct the necessary kernel matrices.
+        K_zx = self.graph.kernels[p_z, p_x](z, x)
+        K_z = self.graph.kernels[p_z](z)
+        K_n = e.kernel(x)
+
+        # The approximation can only handle diagonal noise matrices.
+        if not isinstance(K_n, Diagonal):
+            raise RuntimeError('Kernel matrix of noise must be diagonal.')
+
+        # And construct the components for the inducing point approximation.
+        L_z = B.cholesky(matrix(K_z))
+        A = B.eye_from(K_z) + B.qf(K_n, B.transpose(B.trisolve(L_z, K_zx)))
+        y_bar = uprank(self.y) - e.mean(x) - self.graph.means[p_x](x)
+        prod_y_bar = B.trisolve(L_z, B.qf(K_n, B.transpose(K_zx), y_bar))
+
+        # Compute the optimal mean.
+        mean = self.graph.means[p_z](z) + \
+               B.qf(A, B.trisolve(L_z, K_z), prod_y_bar)
+
+        # Compute the ELBO.
+        trace_part = B.ratio(Diagonal(self.graph.kernels[p_x].elwise(x)[:, 0]) -
+                             Diagonal(B.qf_diag(K_z, K_zx)), K_n)
+        det_part = B.logdet(2 * B.pi * K_n) + B.logdet(A)
+        qf_part = B.qf(K_n, y_bar)[0, 0] - B.qf(A, prod_y_bar)[0, 0]
+        elbo = -0.5 * (trace_part + det_part + qf_part)
+
+        # Store relevant quantities.
+        self.elbo = elbo
+        self.A = A
+
+        # Update observations to reflect pseudo-points.
+        self.x = p_z(z)
+        self.y = mean
+
+    def posterior_kernel(self, p_i, p_j):
+        p_x, x = type_parameter(self.x), self.x.get()
+        return Observations.posterior_kernel(self, p_i, p_j) + \
+               CorrectiveKernel(self.graph.kernels[p_x, p_i],
+                                self.graph.kernels[p_x, p_j],
+                                x, self.A, self.K_x)
+
+
+Obs = Observations  #: Shorthand for `Observations`.
+SparseObs = SparseObservations  #: Shorthand for `SparseObservations`.
 
 
 class Graph(Referentiable):
@@ -37,10 +218,6 @@ class Graph(Referentiable):
         self.pids = set()
         self.kernels = LazyMatrix()
         self.means = LazyVector()
-
-        # Create storage for prior kernels and means.
-        self.prior_kernels = None
-        self.prior_means = None
 
         # Store named GPs in both ways.
         self.gps_by_name = {}
@@ -85,9 +262,8 @@ class Graph(Referentiable):
         self.means[p] = mean
         self.kernels.add_rule((p, p), self.pids, k_ii_generator)
         self.kernels.add_rule((p, None), self.pids, k_ij_generator)
-        kernels = self.kernels  # Careful with the closure!
         self.kernels.add_rule((None, p), self.pids,
-                              lambda pi: reversed(kernels[p, pi]))
+                              lambda pi: reversed(self.kernels[p, pi]))
         self._add_p(p)
         return p
 
@@ -126,10 +302,9 @@ class Graph(Referentiable):
 
     @_dispatch(PromisedGP, object)
     def sum(self, p, other):
-        kernels = self.kernels  # Careful with the closure!
         return self._update(self.means[p] + other,
-                            lambda: kernels[p],
-                            lambda pi: kernels[p, pi])
+                            lambda: self.kernels[p],
+                            lambda pi: self.kernels[p, pi])
 
     @_dispatch(PromisedGP, PromisedGP)
     def sum(self, p1, p2):
@@ -137,11 +312,13 @@ class Graph(Referentiable):
         if p1.graph != p2.graph:
             raise RuntimeError('Can only add GPs from the same graph.')
 
-        kernels = self.kernels  # Careful with the closure!
         return self._update(self.means[p1] + self.means[p2],
-                            (lambda: kernels[p1] + kernels[p2] +
-                                     kernels[p1, p2] + kernels[p2, p1]),
-                            lambda pi: kernels[p1, pi] + kernels[p2, pi])
+                            (lambda: self.kernels[p1] +
+                                     self.kernels[p2] +
+                                     self.kernels[p1, p2] +
+                                     self.kernels[p2, p1]),
+                            lambda pi: self.kernels[p1, pi] +
+                                       self.kernels[p2, pi])
 
     @_dispatch(PromisedGP, B.Numeric)
     def mul(self, p, other):
@@ -154,22 +331,19 @@ class Graph(Referentiable):
         Returns:
             :class:`.graph.GP`: The GP corresponding to the product.
         """
-        kernels = self.kernels  # Careful with the closure!
         return self._update(self.means[p] * other,
-                            lambda: kernels[p] * other ** 2,
-                            lambda pi: kernels[p, pi] * other)
+                            lambda: self.kernels[p] * other ** 2,
+                            lambda pi: self.kernels[p, pi] * other)
 
     @_dispatch(PromisedGP, FunctionType)
     def mul(self, p, f):
-        kernels = self.kernels  # Careful with the closure!
-
         def ones(x):
             return B.ones([B.shape(x)[0], 1], dtype=B.dtype(x))
 
         return self._update(f * self.means[p],
-                            lambda: f * kernels[p],
+                            lambda: f * self.kernels[p],
                             (lambda pi: TensorProductKernel(f, ones) *
-                                        kernels[p, pi]))
+                                        self.kernels[p, pi]))
 
     def shift(self, p, shift):
         """Shift a GP.
@@ -181,10 +355,9 @@ class Graph(Referentiable):
         Returns:
             :class:`.graph.GP`: The shifted GP.
         """
-        kernels = self.kernels
         return self._update(self.means[p].shift(shift),
-                            lambda: kernels[p].shift(shift),
-                            lambda pi: kernels[p, pi].shift(shift, 0))
+                            lambda: self.kernels[p].shift(shift),
+                            lambda pi: self.kernels[p, pi].shift(shift, 0))
 
     def stretch(self, p, stretch):
         """Stretch a GP.
@@ -196,10 +369,9 @@ class Graph(Referentiable):
         Returns:
             :class:`.graph.GP`: The stretched GP.
         """
-        kernels = self.kernels
         return self._update(self.means[p].stretch(stretch),
-                            lambda: kernels[p].stretch(stretch),
-                            lambda pi: kernels[p, pi].stretch(stretch, 1))
+                            lambda: self.kernels[p].stretch(stretch),
+                            lambda pi: self.kernels[p, pi].stretch(stretch, 1))
 
     def select(self, p, *dims):
         """Select input dimensions.
@@ -212,10 +384,9 @@ class Graph(Referentiable):
         Returns:
             :class:`.graph.GP`: GP with the specific input dimensions.
         """
-        kernels = self.kernels
         return self._update(self.means[p].select(dims),
-                            lambda: kernels[p].select(dims),
-                            lambda pi: kernels[p, pi].select(dims, None))
+                            lambda: self.kernels[p].select(dims),
+                            lambda pi: self.kernels[p, pi].select(dims, None))
 
     def transform(self, p, f):
         """Transform the inputs of a GP.
@@ -227,10 +398,9 @@ class Graph(Referentiable):
         Returns:
             :class:`.graph.GP`: Input-transformed GP.
         """
-        kernels = self.kernels
         return self._update(self.means[p].transform(f),
-                            lambda: kernels[p].transform(f),
-                            lambda pi: kernels[p, pi].transform(f, None))
+                            lambda: self.kernels[p].transform(f),
+                            lambda pi: self.kernels[p, pi].transform(f, None))
 
     def diff(self, p, dim=0):
         """Differentiate a GP.
@@ -243,151 +413,33 @@ class Graph(Referentiable):
         Returns:
             :class:`.graph.GP`: Derivative of GP.
         """
-        kernels = self.kernels
         return self._update(self.means[p].diff(dim),
-                            lambda: kernels[p].diff(dim),
-                            lambda pi: kernels[p, pi].diff(dim, None))
+                            lambda: self.kernels[p].diff(dim),
+                            lambda pi: self.kernels[p, pi].diff(dim, None))
 
-    @_dispatch(At, B.Numeric)
-    def condition(self, x, y):
-        """Condition the graph on data.
-
-        Can alternatively call this method with tuples `(x, y)` or lists
-        `[x, y]`.
+    @_dispatch({list, tuple}, Observations)
+    def condition(self, ps, obs):
+        """Condition the graph on observations.
 
         Args:
-            x (input): Locations of points to condition on.
-            y (tensor): Observations to condition on.
-        """
-        p_x, x = type_parameter(x), x.get()
-        K_x = matrix(self.kernels[p_x](x))
-
-        # Careful with the closure!
-        kernels = self.kernels
-        means = self.means
-
-        def build_posterior_kernel(pi, pj):
-            return PosteriorKernel(
-                kernels[pi, pj], kernels[p_x, pi], kernels[p_x, pj], x, K_x
-            )
-
-        def build_posterior_mean(pi):
-            return PosteriorMean(
-                means[pi], means[p_x], kernels[p_x, pi], x, K_x, y
-            )
-
-        self.condition(build_posterior_kernel, build_posterior_mean)
-
-    @_dispatch(At, B.Numeric, At, PromisedGP)
-    def condition(self, x, y, z, e):
-        """Sparsely condition the graph on data.
-
-        Args:
-            x (input): Locations of points to condition on.
-            y (tensor): Observations to condition on.
-            z (input): Locations of inducing points.
-            e (:class:`.graph.GP`): GP representing the additive, independent
-                noise process.
-        """
-        K_z, L_z, K_zx, K_n, A, y_bar, prod_y_bar = \
-            self._sparse_components(x, y, z, e)
-        p_z, z = type_parameter(z), z.get()
-
-        # Compute the optimal mean.
-        mu = self.means[p_z](z) + B.qf(A, B.trisolve(L_z, K_z), prod_y_bar)
-
-        # Careful with the closure!
-        kernels = self.kernels
-        means = self.means
-
-        def build_posterior_kernel(pi, pj):
-            return PosteriorKernel(
-                kernels[pi, pj], kernels[p_z, pi], kernels[p_z, pj], z, K_z
-            ) + CorrectiveKernel(
-                kernels[p_z, pi], kernels[p_z, pj], z, A, K_z
-            )
-
-        def build_posterior_mean(pi):
-            return PosteriorMean(
-                means[pi], means[p_z], kernels[p_z, pi], z, K_z, mu
-            )
-
-        self.condition(build_posterior_kernel, build_posterior_mean)
-
-    @_dispatch(At, B.Numeric, At, PromisedGP)
-    def elbo(self, x, y, z, e):
-        """Compute the ELBO.
-
-        Args:
-            x (input): Locations of points to condition on.
-            y (tensor): Observations to condition on.
-            z (input): Locations of inducing points.
-            e (:class:`.graph.GP`): GP representing the additive, independent
-                noise process.
+            ps (list[:class:`.graph.GP`]): Processes to condition.
+            obs (:class:`.graph.Observations`): Observations to condition on.
 
         Returns:
-            tensor: ELBO.
+            list[:class:`.graph.GP`]: Posterior processes.
         """
-        K_z, L_z, K_zx, K_n, A, y_bar, prod_y_bar = \
-            self._sparse_components(x, y, z, e)
-        p_x, x = type_parameter(x), x.get()
 
-        # Compute the ELBO.
-        trace_part = B.ratio(Diagonal(self.kernels[p_x].elwise(x)[:, 0]) -
-                             Diagonal(B.qf_diag(K_z, K_zx)), K_n)
-        det_part = B.logdet(2 * B.pi * K_n) + B.logdet(A)
-        qf_part = B.qf(K_n, y_bar)[0, 0] - B.qf(A, prod_y_bar)[0, 0]
-        return -0.5 * (trace_part + det_part + qf_part)
+        # A construction like this is necessary to properly close over `p`.
+        def build_gens(p):
+            def k_ij_generator(pi):
+                return obs.posterior_kernel(p, pi)
 
-    @_dispatch(At, B.Numeric, At, PromisedGP)
-    def _sparse_components(self, x, y, z, e):
-        p_x, x = type_parameter(x), x.get()
-        p_z, z = type_parameter(z), z.get()
+            def k_ii_generator():
+                return obs.posterior_kernel(p, p)
 
-        # TODO: Get `e` via graph analysis.
+            return k_ii_generator, k_ij_generator
 
-        # Construct the necessary kernel matrices.
-        K_zx = self.kernels[p_z, p_x](z, x)
-        K_z = self.kernels[p_z](z)
-        K_n = e.kernel(x)
-
-        if not isinstance(K_n, Diagonal):
-            raise RuntimeError('Kernel matrix of noise must be diagonal.')
-
-        # And construct the components for the inducing point approximation.
-        L_z = B.cholesky(matrix(K_z))
-        A = B.eye_from(K_z) + B.qf(K_n, B.transpose(B.trisolve(L_z, K_zx)))
-        y_bar = y - e.mean(x) - self.means[p_x](x)
-        prod_y_bar = B.trisolve(L_z, B.qf(K_n, B.transpose(K_zx), y_bar))
-
-        return K_z, L_z, K_zx, K_n, A, y_bar, prod_y_bar
-
-    @_dispatch([{tuple, list}])
-    def condition(self, *pairs):
-        if not all([isinstance(x, At) for x, y in pairs]):
-            raise ValueError('Must explicitly specify the processes which to '
-                             'condition on.')
-
-        # Extend the graph by the Cartesian product `p` of all processes.
-        p = self.cross(*self.ps)
-
-        # Condition the newly created vector-valued GP.
-        xs, ys = zip(*pairs)
-        y = B.concat([uprank(y) for y in ys], axis=0)
-        self.condition(At(p)(MultiInput(*xs)), y)
-
-    @_dispatch(FunctionType, FunctionType)
-    def condition(self, build_posterior_kernel, build_posterior_mean):
-        # Store prior if it isn't already.
-        if not self.prior_kernels and not self.prior_means:
-            self.prior_kernels = self.kernels
-            self.prior_means = self.means
-
-        # Update to posterior.
-        self.kernels = LazyMatrix()
-        self.kernels.add_rule((None, None), self.pids, build_posterior_kernel)
-        self.means = LazyVector()
-        self.means.add_rule((None,), self.pids, build_posterior_mean)
+        return [self._update(obs.posterior_mean(p), *build_gens(p)) for p in ps]
 
     def cross(self, *ps):
         """Construct the Cartesian product of a collection of processes.
@@ -403,33 +455,6 @@ class Graph(Referentiable):
         return self._update(MOM(*ps),
                             lambda: mok,
                             lambda pi: mok.transform(None, lambda y: At(pi)(y)))
-
-    def revert_prior(self):
-        """Revert the model back to the state before any conditioning
-        operations.
-        """
-        if self.prior_kernels and self.prior_means:
-            self.kernels = self.prior_kernels
-            self.means = self.prior_means
-
-    def checkpoint(self):
-        """Get a checkpoint of the current state of the graph, so that it can
-        be reverted to at a later point, say after conditioning.
-
-        Returns:
-            tuple: Checkpoint.
-        """
-        return self.kernels, self.means
-
-    def revert(self, checkpoint):
-        """Revert to a checkpoint.
-
-        Args:
-            checkpoint (tuple): Checkpoint to revert to.
-        """
-        kernels, means = checkpoint
-        self.kernels = kernels
-        self.means = means
 
     @_dispatch(int, [At])
     def sample(self, n, *xs):
@@ -555,45 +580,23 @@ class GP(GPPrimitive, Referentiable):
                        self.graph.means[other],
                   graph=self.graph)
 
-    def _ensure_at(self, x):
-        return x if isinstance(x, At) else At(self)(x)
-
-    @_dispatch({B.Numeric, Input}, B.Numeric)
-    def condition(self, x, y):
+    @_dispatch([object])
+    def condition(self, *args):
         """Condition the GP. See :meth:`.graph.Graph.condition`."""
-        self.graph.condition(self._ensure_at(x), y)
-        return self
+        return self.graph.condition((self,), Observations(*args, ref=self))[0]
 
-    @_dispatch([{tuple, list}])
-    def condition(self, *pairs):
-        # Set any unspecified locations to this process.
-        self.graph.condition(*[(self._ensure_at(x), y) for x, y in pairs])
-        return self
+    @_dispatch(Observations)
+    def condition(self, obs):
+        return self.graph.condition((self,), obs)[0]
 
-    @_dispatch({B.Numeric, Input}, B.Numeric, {B.Numeric, Input}, Self)
-    def condition(self, x, y, z, e):
-        """Sparsely condition the GP. See :meth:`.graph.Graph.condition`."""
-        self.graph.condition(self._ensure_at(x), y, self._ensure_at(z), e)
-        return self
-
-    @_dispatch({B.Numeric, Input}, B.Numeric, {B.Numeric, Input}, Self)
-    def elbo(self, x, y, z, e):
-        """Compute the ELBO. See :meth:`.graph.Graph.elbo`."""
-        return self.graph.elbo(self._ensure_at(x), y, self._ensure_at(z), e)
-
-    @_dispatch(tuple)
+    @_dispatch([object])
     def __or__(self, args):
-        return self.condition(*args)
+        """Shorthand for conditioning."""
+        return self.condition(Observations(*args, ref=self))
 
-    def __matmul__(self, other):
-        """Alternative to writing `At(self)(other)`."""
-        return At(self)(other)
-
-    def revert_prior(self):
-        """Revert the model back to the state before any conditioning
-        operations.
-        """
-        self.graph.revert_prior()
+    @_dispatch(Observations)
+    def __or__(self, obs):
+        return self.condition(obs)
 
     def shift(self, shift):
         """Shift the GP. See :meth:`.graph.Graph.shift`."""

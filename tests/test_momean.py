@@ -27,7 +27,7 @@ def test_momean():
 
     yield assert_allclose, mom(x), \
           np.concatenate([ms[p1](x), ms[p2](x)], axis=0)
-    yield assert_allclose, mom(At(p1)(x)), ms[p1](x)
-    yield assert_allclose, mom(At(p2)(x)), ms[p2](x)
-    yield assert_allclose, mom(MultiInput(At(p2)(x), At(p1)(x))), \
+    yield assert_allclose, mom(p1(x)), ms[p1](x)
+    yield assert_allclose, mom(p2(x)), ms[p2](x)
+    yield assert_allclose, mom(MultiInput(p2(x), p1(x))), \
           np.concatenate([ms[p2](x), ms[p1](x)], axis=0)
