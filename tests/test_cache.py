@@ -11,8 +11,8 @@ from stheno.cache import Cache, uprank
 from stheno.input import Component
 from stheno.kernel import ZeroKernel, OneKernel, EQ
 from stheno.mean import ZeroMean, OneMean
-from stheno.random import GPPrimitive
 from stheno.matrix import dense
+from stheno.graph import GP, Graph
 # noinspection PyUnresolvedReferences
 from . import eq, neq, ok, raises, benchmark, le, eprint, assert_allclose, \
     allclose
@@ -81,7 +81,7 @@ def test_uprank():
     yield eq, B.shape(m(np.ones(5))), (5, 1)
     yield eq, B.shape(m(np.ones((5, 2)))), (5, 1)
 
-    p = GPPrimitive(EQ())
+    p = GP(EQ(), graph=Graph())
     x = np.linspace(0, 10, 10)
 
     yield assert_approx_equal, p.condition(1, 1)(1).mean, np.array([[1]])

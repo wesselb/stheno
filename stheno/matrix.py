@@ -44,7 +44,7 @@ class Dense(Element, Referentiable):
         return B.divide(self, other)
 
     def __truediv__(self, other):
-        return B.divide(self, other)
+        return Dense.__div__(self, other)
 
     def __getitem__(self, item):
         return dense(self)[item]

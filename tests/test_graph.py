@@ -9,8 +9,9 @@ from plum import type_parameter
 from stheno.cache import Cache
 from stheno.graph import Graph, GP, Obs, SparseObs
 from stheno.input import At
-from stheno.kernel import Linear, EQ, Delta, Exp, RQ
-from stheno.mean import TensorProductMean
+from stheno.kernel import Linear, EQ, Delta, Exp, RQ, ZeroKernel, OneKernel, \
+    ScaledKernel
+from stheno.mean import TensorProductMean, ZeroMean, ScaledMean, OneMean
 from stheno.random import Normal
 # noinspection PyUnresolvedReferences,
 from . import eq, raises, ok, le, assert_allclose, assert_instance
@@ -37,7 +38,8 @@ def test_corner_cases():
 
 
 def test_construction():
-    p = GP(EQ(), graph=Graph())
+    model = Graph()
+    p = GP(EQ(), graph=model)
 
     x = np.random.randn(10, 1)
     c = Cache()
@@ -73,6 +75,25 @@ def test_construction():
     yield p.kernel.elwise, x, p(x), c
     yield p.kernel.elwise, p(x), p(x), c
 
+    # Test resolution of kernel and mean.
+    k = EQ()
+    m = TensorProductMean(lambda x: x ** 2)
+
+    yield assert_instance, GP(k, graph=model).mean, ZeroMean
+    yield assert_instance, GP(k, 5, graph=model).mean, ScaledMean
+    yield assert_instance, GP(k, 1, graph=model).mean, OneMean
+    yield assert_instance, GP(k, 0, graph=model).mean, ZeroMean
+    yield assert_instance, GP(k, m, graph=model).mean, TensorProductMean
+    yield assert_instance, GP(k, graph=model).kernel, EQ
+    yield assert_instance, GP(5, graph=model).kernel, ScaledKernel
+    yield assert_instance, GP(1, graph=model).kernel, OneKernel
+    yield assert_instance, GP(0, graph=model).kernel, ZeroKernel
+
+    # Test construction of finite-dimensional distribution.
+    d = GP(k, m, graph=model)(x)
+    yield assert_allclose, d.var, k(x)
+    yield assert_allclose, d.mean, m(x)
+
 
 def test_sum_other():
     model = Graph()
@@ -93,6 +114,10 @@ def test_sum_other():
     yield assert_allclose, p1.kernel(p2(x), p4(x)), \
           p1.kernel(x)
 
+    # Check that a `GP` cannot be summed with a `Normal`.
+    yield raises, NotImplementedError, lambda: p1 + Normal(np.eye(3))
+    yield raises, NotImplementedError, lambda: Normal(np.eye(3)) + p1
+
 
 def test_mul_other():
     model = Graph()
@@ -106,6 +131,10 @@ def test_mul_other():
     yield assert_allclose, 25. * p1.kernel(x), p2.kernel(x)
     yield assert_allclose, 25. * p1.kernel(x), p3.kernel(x)
     yield assert_allclose, model.kernels[p2, p3](x, x), 25. * p1.kernel(x)
+
+    # Check that a `GP` cannot be multiplied with a `Normal`.
+    yield raises, NotImplementedError, lambda: p1 * Normal(np.eye(3))
+    yield raises, NotImplementedError, lambda: Normal(np.eye(3)) * p1
 
 
 def test_at_shorthand():
@@ -160,20 +189,6 @@ def test_properties():
     p = p + GP(Linear(), graph=model)
 
     yield eq, p.stationary, False, 'stationary 3'
-
-
-def test_case_summation_with_itself():
-    # Test summing the same GP with itself.
-    model = Graph()
-    p1 = GP(EQ(), graph=model)
-    p2 = p1 + p1 + p1 + p1 + p1
-    x = np.linspace(0, 10, 5)[:, None]
-
-    yield assert_allclose, p2(x).var, 25 * p1(x).var
-    yield assert_allclose, p2(x).mean, np.zeros((5, 1))
-
-    y = np.random.randn(5, 1)
-    yield assert_allclose, p2.condition(p1(x), y)(x).mean, 5 * y
 
 
 def test_observations_and_conditioning():
@@ -239,66 +254,14 @@ def test_observations_and_conditioning():
     yield raises, ValueError, lambda: SparseObs(0, p, (0, 0))
 
 
-def test_case_additive_model():
-    # Test some additive model.
-
-    model = Graph()
-    p1 = GP(EQ(), graph=model)
-    p2 = GP(EQ(), graph=model)
-    p3 = p1 + p2
-
-    n = 5
-    x = np.linspace(0, 10, n)[:, None]
-    y1 = p1(x).sample()
-    y2 = p2(x).sample()
-
-    # First, test independence:
-    yield assert_allclose, model.kernels[p2, p1](x), np.zeros((n, n))
-    yield assert_allclose, model.kernels[p1, p2](x), np.zeros((n, n))
-
-    # Now run through some test cases:
-
-    obs = Obs(p1(x), y1)
-    post = (p3 | obs) | ((p2 | obs)(x), y2)
-    yield assert_allclose, post(x).mean, y1 + y2
-
-    obs = Obs(p2(x), y2)
-    post = (p3 | obs) | ((p1 | obs)(x), y1)
-    yield assert_allclose, post(x).mean, y1 + y2
-
-    obs = Obs(p1(x), y1)
-    post = (p2 | obs) | ((p3 | obs)(x), y1 + y2)
-    yield assert_allclose, post(x).mean, y2
-
-    obs = Obs(p3(x), y1 + y2)
-    post = (p2 | obs) | ((p1 | obs)(x), y1)
-    yield assert_allclose, post(x).mean, y2
-
-    yield assert_allclose, p3.condition(x, y1 + y2)(x).mean, y1 + y2
-
-
-def test_shifting():
-    model = Graph()
-
-    p = GP(EQ(), graph=model)
-    p2 = p.shift(5)
-
-    n = 5
-    x = np.linspace(0, 10, n)[:, None]
-    y = p2(x).sample()
-
-    post = p.condition(p2(x), y)
-    yield assert_allclose, post(x - 5).mean, y
-    yield le, abs_err(B.diag(post(x - 5).var)), 1e-10
-
-    post = p2.condition(p(x), y)
-    yield assert_allclose, post(x + 5).mean, y
-    yield le, abs_err(B.diag(post(x + 5).var)), 1e-10
-
-
 def test_stretching():
     model = Graph()
 
+    # Test construction:
+    p = GP(EQ(), TensorProductMean(lambda x: x ** 2), graph=model)
+    yield eq, str(p.stretch(1)), 'GP(EQ() > 1, <lambda> > 1)'
+
+    # Test case:
     p = GP(EQ(), graph=model)
     p2 = p.stretch(5)
 
@@ -315,9 +278,39 @@ def test_stretching():
     yield le, abs_err(B.diag(post(x * 5).var)), 1e-10
 
 
+def test_shifting():
+    model = Graph()
+
+    # Test construction:
+    p = GP(Linear(), TensorProductMean(lambda x: x ** 2), graph=model)
+    yield eq, str(p.shift(1)), 'GP(Linear() shift 1, <lambda> shift 1)'
+
+    # Test case:
+    p = GP(EQ(), graph=model)
+    p2 = p.shift(5)
+
+    n = 5
+    x = np.linspace(0, 10, n)[:, None]
+    y = p2(x).sample()
+
+    post = p.condition(p2(x), y)
+    yield assert_allclose, post(x - 5).mean, y
+    yield le, abs_err(B.diag(post(x - 5).var)), 1e-10
+
+    post = p2.condition(p(x), y)
+    yield assert_allclose, post(x + 5).mean, y
+    yield le, abs_err(B.diag(post(x + 5).var)), 1e-10
+
+
 def test_input_transform():
     model = Graph()
 
+    # Test construction:
+    p = GP(EQ(), TensorProductMean(lambda x: x ** 2), graph=model)
+    yield eq, str(p.transform(lambda x, c: x)), \
+          'GP(EQ() transform <lambda>, <lambda> transform <lambda>)'
+
+    # Test case:
     p = GP(EQ(), graph=model)
     p2 = p.transform(lambda x, B: x / 5)
 
@@ -337,6 +330,12 @@ def test_input_transform():
 def test_selection():
     model = Graph()
 
+    # Test construction:
+    p = GP(EQ(), TensorProductMean(lambda x: x ** 2), graph=model)
+    yield eq, str(p.select(1)), 'GP(EQ() : [1], <lambda> : [1])'
+    yield eq, str(p.select(1, 2)), 'GP(EQ() : [1, 2], <lambda> : [1, 2])'
+
+    # Test case:
     p = GP(EQ(), graph=model)  # 1D
     p2 = p.select(0)  # 2D
 
@@ -361,40 +360,12 @@ def test_selection():
     yield le, abs_err(B.diag(post(x2).var)), 1e-10
 
 
-def test_case_fd_derivative():
-    x = np.linspace(0, 10, 50)[:, None]
-    y = np.sin(x)
+def test_derivative():
+    # Test construction:
+    p = GP(EQ(), TensorProductMean(lambda x: x ** 2), graph=Graph())
+    yield eq, str(p.diff(1)), 'GP(d(1) EQ(), d(1) <lambda>)'
 
-    model = Graph()
-    p = GP(.7 * EQ().stretch(1.), graph=model)
-    dp = (p.shift(-1e-3) - p.shift(1e-3)) / 2e-3
-
-    yield le, abs_err(np.cos(x) - dp.condition(p(x), y)(x).mean), 1e-4
-
-
-def test_case_reflection():
-    model = Graph()
-    p = GP(EQ(), graph=model)
-    p2 = 5 - p
-
-    x = np.linspace(0, 1, 10)[:, None]
-    y = p(x).sample()
-
-    yield le, abs_err(p2.condition(p(x), y)(x).mean - (5 - y)), 1e-5
-    yield le, abs_err(p.condition(p2(x), 5 - y)(x).mean - y), 1e-5
-
-    model = Graph()
-    p = GP(EQ(), graph=model)
-    p2 = -p
-
-    x = np.linspace(0, 1, 10)[:, None]
-    y = p(x).sample()
-
-    yield le, abs_err(p2.condition(p(x), y)(x).mean + y), 1e-5
-    yield le, abs_err(p.condition(p2(x), -y)(x).mean - y), 1e-5
-
-
-def test_case_exact_derivative():
+    # Test case:
     B.backend_to_tf()
     s = B.Session()
 
@@ -415,50 +386,6 @@ def test_case_exact_derivative():
 
     s.close()
     B.backend_to_np()
-
-
-def test_case_approximate_derivative():
-    model = Graph()
-    x = np.linspace(0, 1, 100)[:, None]
-    y = 2 * x
-
-    p = GP(EQ().stretch(1.), graph=model)
-    dp = p.diff_approx()
-
-    # Test conditioning on function.
-    yield le, abs_err(dp.condition(p(x), y)(x).mean - 2), 1e-3
-
-    # Add some regularisation for this test case.
-    orig_epsilon = B.epsilon
-    B.epsilon = 1e-10
-
-    # Test conditioning on derivative.
-    post = p.condition((0, 0), (dp(x), y))
-    yield le, abs_err(post(x).mean - x ** 2), 1e-3
-
-    # Set regularisation back.
-    B.epsilon = orig_epsilon
-
-
-def test_case_blr():
-    model = Graph()
-    x = np.linspace(0, 10, 100)
-
-    slope = GP(1, graph=model)
-    intercept = GP(1, graph=model)
-    f = slope * (lambda x: x) + intercept
-    y = f + 1e-2 * GP(Delta(), graph=model)
-
-    # Sample observations, true slope, and intercept.
-    y_obs, true_slope, true_intercept = \
-        model.sample(y(x), slope(0), intercept(0))
-
-    # Predict.
-    post_slope, post_intercept = (slope, intercept) | Obs(y(x), y_obs)
-    mean_slope, mean_intercept = post_slope(0).mean, post_intercept(0).mean
-
-    yield le, np.abs(true_slope[0, 0] - mean_slope[0, 0]), 5e-2
-    yield le, np.abs(true_intercept[0, 0] - mean_intercept[0, 0]), 5e-2
 
 
 def test_multi_sample():
@@ -620,3 +547,132 @@ def test_sparse_conditioning():
     yield assert_allclose, \
           SparseObs((2 * f + 2)(x), e, f(x), y).elbo, \
           (f + e)(x).logpdf(y)
+
+
+def test_case_summation_with_itself():
+    # Test summing the same GP with itself.
+    model = Graph()
+    p1 = GP(EQ(), graph=model)
+    p2 = p1 + p1 + p1 + p1 + p1
+    x = np.linspace(0, 10, 5)[:, None]
+
+    yield assert_allclose, p2(x).var, 25 * p1(x).var
+    yield assert_allclose, p2(x).mean, np.zeros((5, 1))
+
+    y = np.random.randn(5, 1)
+    yield assert_allclose, p2.condition(p1(x), y)(x).mean, 5 * y
+
+
+def test_case_additive_model():
+    # Test some additive model.
+
+    model = Graph()
+    p1 = GP(EQ(), graph=model)
+    p2 = GP(EQ(), graph=model)
+    p3 = p1 + p2
+
+    n = 5
+    x = np.linspace(0, 10, n)[:, None]
+    y1 = p1(x).sample()
+    y2 = p2(x).sample()
+
+    # First, test independence:
+    yield assert_allclose, model.kernels[p2, p1](x), np.zeros((n, n))
+    yield assert_allclose, model.kernels[p1, p2](x), np.zeros((n, n))
+
+    # Now run through some test cases:
+
+    obs = Obs(p1(x), y1)
+    post = (p3 | obs) | ((p2 | obs)(x), y2)
+    yield assert_allclose, post(x).mean, y1 + y2
+
+    obs = Obs(p2(x), y2)
+    post = (p3 | obs) | ((p1 | obs)(x), y1)
+    yield assert_allclose, post(x).mean, y1 + y2
+
+    obs = Obs(p1(x), y1)
+    post = (p2 | obs) | ((p3 | obs)(x), y1 + y2)
+    yield assert_allclose, post(x).mean, y2
+
+    obs = Obs(p3(x), y1 + y2)
+    post = (p2 | obs) | ((p1 | obs)(x), y1)
+    yield assert_allclose, post(x).mean, y2
+
+    yield assert_allclose, p3.condition(x, y1 + y2)(x).mean, y1 + y2
+
+
+def test_case_fd_derivative():
+    x = np.linspace(0, 10, 50)[:, None]
+    y = np.sin(x)
+
+    model = Graph()
+    p = GP(.7 * EQ().stretch(1.), graph=model)
+    dp = (p.shift(-1e-3) - p.shift(1e-3)) / 2e-3
+
+    yield le, abs_err(np.cos(x) - dp.condition(p(x), y)(x).mean), 1e-4
+
+
+def test_case_reflection():
+    model = Graph()
+    p = GP(EQ(), graph=model)
+    p2 = 5 - p
+
+    x = np.linspace(0, 1, 10)[:, None]
+    y = p(x).sample()
+
+    yield le, abs_err(p2.condition(p(x), y)(x).mean - (5 - y)), 1e-5
+    yield le, abs_err(p.condition(p2(x), 5 - y)(x).mean - y), 1e-5
+
+    model = Graph()
+    p = GP(EQ(), graph=model)
+    p2 = -p
+
+    x = np.linspace(0, 1, 10)[:, None]
+    y = p(x).sample()
+
+    yield le, abs_err(p2.condition(p(x), y)(x).mean + y), 1e-5
+    yield le, abs_err(p.condition(p2(x), -y)(x).mean - y), 1e-5
+
+
+def test_case_approximate_derivative():
+    model = Graph()
+    x = np.linspace(0, 1, 100)[:, None]
+    y = 2 * x
+
+    p = GP(EQ().stretch(1.), graph=model)
+    dp = p.diff_approx()
+
+    # Test conditioning on function.
+    yield le, abs_err(dp.condition(p(x), y)(x).mean - 2), 1e-3
+
+    # Add some regularisation for this test case.
+    orig_epsilon = B.epsilon
+    B.epsilon = 1e-10
+
+    # Test conditioning on derivative.
+    post = p.condition((0, 0), (dp(x), y))
+    yield le, abs_err(post(x).mean - x ** 2), 1e-3
+
+    # Set regularisation back.
+    B.epsilon = orig_epsilon
+
+
+def test_case_blr():
+    model = Graph()
+    x = np.linspace(0, 10, 100)
+
+    slope = GP(1, graph=model)
+    intercept = GP(1, graph=model)
+    f = slope * (lambda x: x) + intercept
+    y = f + 1e-2 * GP(Delta(), graph=model)
+
+    # Sample observations, true slope, and intercept.
+    y_obs, true_slope, true_intercept = \
+        model.sample(y(x), slope(0), intercept(0))
+
+    # Predict.
+    post_slope, post_intercept = (slope, intercept) | Obs(y(x), y_obs)
+    mean_slope, mean_intercept = post_slope(0).mean, post_intercept(0).mean
+
+    yield le, np.abs(true_slope[0, 0] - mean_slope[0, 0]), 5e-2
+    yield le, np.abs(true_intercept[0, 0] - mean_intercept[0, 0]), 5e-2

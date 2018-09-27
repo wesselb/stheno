@@ -7,26 +7,23 @@ from types import FunctionType
 
 from fdm import central_fdm
 from lab import B
-from plum import Dispatcher, Self, Referentiable, type_parameter, \
-    PromisedType, Union
+from plum import Dispatcher, Self, Referentiable, type_parameter, Union
 
-from .cache import uprank
+from .cache import uprank, Cache
 from .input import Input, At, MultiInput
 from .kernel import ZeroKernel, PosteriorKernel, TensorProductKernel, \
-    CorrectiveKernel
+    CorrectiveKernel, OneKernel
 from .lazy import LazyVector, LazyMatrix
 from .matrix import matrix, Diagonal
-from .mean import PosteriorMean
+from .mean import PosteriorMean, ZeroMean, OneMean
 from .mokernel import MultiOutputKernel as MOK
 from .momean import MultiOutputMean as MOM
-from .random import GPPrimitive, Random
+from .random import Random, PromisedGP, RandomProcess, Normal
 
 __all__ = ['GP', 'model', 'Graph', 'Observations', 'Obs', 'SparseObservations',
            'SparseObs']
 
 log = logging.getLogger(__name__)
-
-PromisedGP = PromisedType()
 
 
 def ensure_at(x, ref=None):
@@ -467,8 +464,9 @@ class Graph(Referentiable):
         Returns:
             tuple: Tuple of samples.
         """
-        sample = GPPrimitive(MOK(*self.ps),
-                             MOM(*self.ps))(MultiInput(*xs)).sample(n)
+        sample = GP(MOK(*self.ps),
+                    MOM(*self.ps),
+                    graph=Graph())(MultiInput(*xs)).sample(n)
 
         # To unpack `x`, just keep `.get()`ing.
         def unpack(x):
@@ -492,7 +490,7 @@ class Graph(Referentiable):
 model = Graph()  #: A default graph provided for convenience
 
 
-class GP(GPPrimitive, Referentiable):
+class GP(RandomProcess, Referentiable):
     """Gaussian process.
 
     Args:
@@ -506,14 +504,19 @@ class GP(GPPrimitive, Referentiable):
 
     @_dispatch([object])
     def __init__(self, kernel, mean=None, graph=model, name=None):
-        # First resolve `kernel` and `mean` through `GPPrimitive`s constructor.
-        GPPrimitive.__init__(self, kernel, mean)
+        # Resolve kernel.
+        if isinstance(kernel, (B.Numeric, FunctionType)):
+            kernel *= OneKernel()
+
+        # Resolve mean.
+        if mean is None:
+            mean = ZeroMean()
+        elif isinstance(mean, (B.Numeric, FunctionType)):
+            mean *= OneMean()
 
         # Then add a new `GP` to the graph with the resolved kernel and mean.
         self.graph = graph
-        self.graph.add_independent_gp(self,
-                                      GPPrimitive.kernel.fget(self),
-                                      GPPrimitive.mean.fget(self))
+        self.graph.add_independent_gp(self, kernel, mean)
 
         # If a name is given, set the name.
         if name:
@@ -521,7 +524,6 @@ class GP(GPPrimitive, Referentiable):
 
     @_dispatch(Graph)
     def __init__(self, graph):
-        GPPrimitive.__init__(self, None)
         self.graph = graph
 
     @property
@@ -543,6 +545,44 @@ class GP(GPPrimitive, Referentiable):
     @_dispatch(str)
     def name(self, name):
         self.graph.name(self, name)
+
+    def __call__(self, x, cache=None):
+        """Construct a finite-dimensional distribution at specified locations.
+
+        Args:
+            x (input): Points to construct the distribution at.
+            cache (:class:`.cache.Cache`, optional): Cache.
+
+        Returns:
+            :class:`.random.Normal`: Finite-dimensional distribution.
+        """
+        cache = Cache() if cache is None else cache
+        return Normal(self, x, cache)
+
+    @_dispatch([object])
+    def condition(self, *args):
+        """Condition the GP. See :meth:`.graph.Graph.condition`."""
+        return self.graph.condition((self,), Observations(*args, ref=self))[0]
+
+    @_dispatch(Observations)
+    def condition(self, obs):
+        return self.graph.condition((self,), obs)[0]
+
+    def predict(self, x, cache=None):
+        """Predict at specified locations.
+
+        Args:
+            x (design matrix): Locations of the points to predict for.
+            cache (:class:`.cache.Cache`, optional): Cache.
+
+        Returns:
+            tuple: A tuple containing the predictive means and lower and
+            upper 95% central credible interval bounds.
+        """
+        cache = Cache() if cache is None else cache
+        mean = B.squeeze(dense(self.mean(x, cache)))
+        std = B.squeeze(dense(self.kernel.elwise(x, cache))) ** .5
+        return mean, mean - 2 * std, mean + 2 * std
 
     @_dispatch(object)
     def __add__(self, other):
@@ -579,15 +619,6 @@ class GP(GPPrimitive, Referentiable):
                   mean=-self.graph.means[self] *
                        self.graph.means[other],
                   graph=self.graph)
-
-    @_dispatch([object])
-    def condition(self, *args):
-        """Condition the GP. See :meth:`.graph.Graph.condition`."""
-        return self.graph.condition((self,), Observations(*args, ref=self))[0]
-
-    @_dispatch(Observations)
-    def condition(self, obs):
-        return self.graph.condition((self,), obs)[0]
 
     @_dispatch([object])
     def __or__(self, args):
@@ -650,6 +681,44 @@ class GP(GPPrimitive, Referentiable):
         for g, c in zip(fdm.grid, fdm.coefs):
             df += c * self.shift(-g * fdm.step)
         return df / fdm.step ** deriv
+
+    @property
+    def stationary(self):
+        """Stationarity of the GP."""
+        return self.kernel.stationary
+
+    @property
+    def var(self):
+        """Variance of the GP."""
+        return self.kernel.var
+
+    @property
+    def length_scale(self):
+        """Length scale of the GP."""
+        return self.kernel.length_scale
+
+    @property
+    def period(self):
+        """Period of the GP."""
+        return self.kernel.period
+
+    def __str__(self):
+        return self.display()
+
+    def __repr__(self):
+        return self.display()
+
+    def display(self, formatter=lambda x: x):
+        """Display the GP.
+
+        Args:
+            formatter (function, optional): Function to format values.
+
+        Returns:
+            str: GP as a string.
+        """
+        return 'GP({}, {})'.format(self.kernel.display(formatter),
+                                   self.mean.display(formatter))
 
 
 PromisedGP.deliver(GP)

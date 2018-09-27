@@ -2,19 +2,15 @@
 
 from __future__ import absolute_import, division, print_function
 
-from types import FunctionType
-
 from lab import B
 from plum import Self, Referentiable, PromisedType, type_parameter
 
 from .cache import Cache, uprank
-from .kernel import PosteriorKernel, OneKernel
+from .input import Input, At
 from .matrix import matrix, Dispatcher, UniformlyDiagonal, Diagonal, dense, \
     Dense
-from .mean import ZeroMean, PosteriorMean, OneMean
-from .input import Input, At
 
-__all__ = ['Normal', 'GPPrimitive', 'Normal1D']
+__all__ = ['Normal', 'Normal1D']
 
 
 class Random(object):
@@ -50,7 +46,7 @@ class RandomVector(Random):
     """A random vector."""
 
 
-PromisedGPPrimitive = PromisedType()
+PromisedGP = PromisedType()
 
 
 class Normal(RandomVector, At, Referentiable):
@@ -84,7 +80,7 @@ class Normal(RandomVector, At, Referentiable):
         self.x = None
         self.cache = None
 
-    @_dispatch(PromisedGPPrimitive, {B.Numeric, Input}, [{Cache, type(None)}])
+    @_dispatch(PromisedGP, {B.Numeric, Input}, [{Cache, type(None)}])
     def __init__(self, p, x, cache=None):
         # Set variance and mean to `None` to signify that they have to be
         # acquired from `p.kernel(x)` and `p.mean(x)`.
@@ -146,6 +142,7 @@ class Normal(RandomVector, At, Referentiable):
         """Dimensionality."""
         return B.shape(self.var)[0]
 
+    @property
     def m2(self):
         """Second moment."""
         return self.var + B.outer(self.mean)
@@ -334,174 +331,3 @@ class Normal1D(Normal, Referentiable):
                                  ''.format(B.rank(var)))
 
         Normal.__init__(self, var, mean)
-
-
-class GPPrimitive(RandomProcess, Referentiable):
-    """Gaussian process.
-
-    Args:
-        kernel (:class:`.kernel.Kernel`): Kernel of the
-            process.
-        mean (:class:`.mean.Mean`, optional): Mean function of the
-            process. Defaults to zero.
-    """
-
-    _dispatch = Dispatcher(in_class=Self)
-
-    def __init__(self, kernel, mean=None):
-        self._kernel = kernel
-        self._mean = mean
-
-    @property
-    def kernel(self):
-        """Kernel of the GP."""
-        # Resolve kernel lazily.
-        if isinstance(self._kernel, (B.Numeric, FunctionType)):
-            self._kernel = self._kernel * OneKernel()
-        return self._kernel
-
-    @property
-    def mean(self):
-        """Mean function of the GP."""
-        # Resolve mean lazily.
-        if self._mean is None:
-            self._mean = ZeroMean()
-        elif isinstance(self._mean, (B.Numeric, FunctionType)):
-            self._mean = self._mean * OneMean()
-        return self._mean
-
-    def __call__(self, x, cache=None):
-        """Construct a finite-dimensional distribution at specified locations.
-
-        Args:
-            x (input): Points to construct the distribution at.
-            cache (:class:`.cache.Cache`, optional): Cache.
-
-        Returns:
-            :class:`.random.Normal`: Finite-dimensional distribution.
-        """
-        cache = Cache() if cache is None else cache
-        return Normal(self, x, cache)
-
-    @_dispatch(object, object)
-    def condition(self, x, y):
-        """Condition the GP on a number of points.
-
-        Args:
-            x (input): Locations of the points to condition on.
-            y (tensor): Values of the points to condition on.
-
-        Returns:
-            :class:`.random.GP`: Conditioned GP.
-        """
-        K = matrix(self.kernel(x))
-        return GPPrimitive(PosteriorKernel(self.kernel,
-                                           self.kernel,
-                                           self.kernel, x, K),
-                           PosteriorMean(self.mean,
-                                         self.mean,
-                                         self.kernel, x, K, y))
-
-    def predict(self, x, cache=None):
-        """Predict at specified locations.
-
-        Args:
-            x (design matrix): Locations of the points to predict for.
-            cache (:class:`.cache.Cache`, optional): Cache.
-
-        Returns:
-            tuple: A tuple containing the predictive means and lower and
-            upper 95% central credible interval bounds.
-        """
-        cache = Cache() if cache is None else cache
-        mean = B.squeeze(dense(self.mean(x, cache)))
-        std = B.squeeze(dense(self.kernel.elwise(x, cache))) ** .5
-        return mean, mean - 2 * std, mean + 2 * std
-
-    @_dispatch(object)
-    def __add__(self, other):
-        return GPPrimitive(self.kernel, self.mean + other)
-
-    @_dispatch(Random)
-    def __add__(self, other):
-        raise NotImplementedError('Cannot add a GP and a {}.'
-                                  ''.format(type(other).__name__))
-
-    @_dispatch(Self)
-    def __add__(self, other):
-        return GPPrimitive(self.kernel + other.kernel, self.mean + other.mean)
-
-    @_dispatch(object)
-    def __mul__(self, other):
-        return GPPrimitive(other ** 2 * self.kernel, other * self.mean)
-
-    @_dispatch(Random)
-    def __mul__(self, other):
-        raise NotImplementedError('Cannot multiply a GP and a {}.'
-                                  ''.format(type(other).__name__))
-
-    @property
-    def stationary(self):
-        """Stationarity of the GP."""
-        return self.kernel.stationary
-
-    @property
-    def var(self):
-        """Variance of the GP."""
-        return self.kernel.var
-
-    @property
-    def length_scale(self):
-        """Length scale of the GP."""
-        return self.kernel.length_scale
-
-    @property
-    def period(self):
-        """Period of the GP."""
-        return self.kernel.period
-
-    def __str__(self):
-        return self.display()
-
-    def __repr__(self):
-        return self.display()
-
-    def display(self, formatter=lambda x: x):
-        """Display the GP.
-
-        Args:
-            formatter (function, optional): Function to format values.
-
-        Returns:
-            str: GP as a string.
-        """
-        return 'GP({}, {})'.format(self.kernel.display(formatter),
-                                   self.mean.display(formatter))
-
-    def stretch(self, stretch):
-        """Stretch the GP. See :meth:`.graph.Graph.stretch`."""
-        return GPPrimitive(self.kernel.stretch(stretch),
-                           self.mean.stretch(stretch))
-
-    def shift(self, shift):
-        """Shift the GP. See :meth:`.graph.Graph.shift`."""
-        return GPPrimitive(self.kernel.shift(shift),
-                           self.mean.shift(shift))
-
-    def select(self, *dims):
-        """Select dimensions from the input. See :meth:`.graph.Graph.select`."""
-        return GPPrimitive(self.kernel.select(dims),
-                           self.mean.select(dims))
-
-    def transform(self, f):
-        """Input transform the GP. See :meth:`.graph.Graph.transform`."""
-        return GPPrimitive(self.kernel.transform(f),
-                           self.mean.transform(f))
-
-    def diff(self, deriv=0):
-        """Differentiate the GP. See :meth:`.graph.Graph.diff`."""
-        return GPPrimitive(self.kernel.diff(deriv),
-                           self.mean.diff(deriv))
-
-
-PromisedGPPrimitive.deliver(GPPrimitive)
