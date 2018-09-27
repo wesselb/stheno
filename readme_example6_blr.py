@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-from stheno import GP, Delta, model
+from stheno import GP, Delta, model, Obs, dense
 
 # Define points to predict at.
 x = np.linspace(0, 10, 200)
@@ -18,16 +18,16 @@ y = f + e  # Observation model
 
 # Sample a slope, intercept, underlying function, and observations.
 true_slope, true_intercept, f_true, y_obs = \
-    model.sample(slope @ 0, intercept @ 0, f @ x, y @ x_obs)
+    model.sample(slope(0), intercept(0), f(x), y(x_obs))
 
 # Condition on the observations to make predictions.
-mean, lower, upper = f.condition(y @ x_obs, y_obs).predict(x)
-mean_slope, mean_intercept = slope(0).mean, intercept(0).mean
+slope, intercept, f = (slope, intercept, f) | Obs(y(x_obs), y_obs)
+mean, lower, upper = f.predict(x)
 
 print('true slope', true_slope)
-print('predicted slope', mean_slope)
+print('predicted slope', slope(0).mean)
 print('true intercept', true_intercept)
-print('predicted intercept', mean_intercept)
+print('predicted intercept', intercept(0).mean)
 
 # Plot result.
 plt.plot(x, f_true, label='True', c='tab:blue')

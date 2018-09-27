@@ -4,7 +4,7 @@ import tensorflow as tf
 from tensorflow.contrib.opt import ScipyOptimizerInterface as SOI
 from wbml import vars64 as vs
 
-from stheno.tf import GP, EQ, Delta, model
+from stheno.tf import GP, EQ, Delta
 
 s = tf.Session()
 
@@ -23,8 +23,7 @@ y = f + e
 
 # Sample a true, underlying function and observations.
 f_true = x ** 1.8
-y_obs = s.run(y.condition(f @ x, f_true)(x_obs).sample())
-model.revert_prior()
+y_obs = s.run((y | (f(x), f_true))(x_obs).sample())
 
 # Learn.
 lml = y(x_obs).logpdf(y_obs)
@@ -32,12 +31,10 @@ SOI(-lml).minimize(s)
 
 # Print the learned parameters.
 print('alpha', s.run(alpha))
-print('noise', s.run(e.var))
-print('u scale', s.run(u.length_scale))
-print('u variance', s.run(u.var))
+print('prior', y.display(s.run))
 
 # Condition on the observations to make predictions.
-mean, lower, upper = s.run(f.condition(y @ x_obs, y_obs).predict(x))
+mean, lower, upper = s.run((f | (y(x_obs), y_obs)).predict(x))
 
 # Plot result.
 plt.plot(x, f_true.squeeze(), label='True', c='tab:blue')

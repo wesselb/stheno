@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-from stheno import GP, EQ, Delta, model
+from stheno import GP, EQ, Delta, Obs
 
 # Define points to predict at.
 x = np.linspace(0, 10, 200)
@@ -17,13 +17,13 @@ ddf = f.diff_approx(2)
 dddf = f.diff_approx(3) + e
 
 # Fix the integration constants.
-model.condition((f @ 0, 1), (df @ 0, 0), (ddf @ 0, -1))
+f, df, ddf, dddf = (f, df, ddf, dddf) | Obs((f(0), 1), (df(0), 0), (ddf(0), -1))
 
 # Sample observations.
 y_obs = np.sin(x_obs) + 0.2 * np.random.randn(*x_obs.shape)
 
 # Condition on the observations to make predictions.
-model.condition(dddf @ x_obs, y_obs)
+f, df, ddf, dddf = (f, df, ddf, dddf) | Obs(dddf(x_obs), y_obs)
 
 # And make predictions.
 pred_iiif = f.predict(x)

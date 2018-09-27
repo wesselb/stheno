@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-from stheno import GP, model, EQ, RQ, Linear, Delta, Exp
+from stheno import GP, model, EQ, RQ, Linear, Delta, Exp, Obs
 
 # Define points to predict at.
 x = np.linspace(0, 10, 200)
@@ -27,16 +27,17 @@ y = f + .5 * e
 
 # Sample a true, underlying function and observations.
 f_true_smooth, f_true_wiggly, f_true_periodic, f_true_linear, f_true, y_obs = \
-    model.sample(f_smooth @ x,
-                 f_wiggly @ x,
-                 f_periodic @ x,
-                 f_linear @ x,
-                 f @ x,
-                 y @ x_obs)
+    model.sample(f_smooth(x),
+                 f_wiggly(x),
+                 f_periodic(x),
+                 f_linear(x),
+                 f(x),
+                 y(x_obs))
 
 # Now condition on the observations and make predictions for the latent
 # function and its various components.
-model.condition(y @ x_obs, y_obs)
+f_smooth, f_wiggly, f_periodic, f_linear, f = \
+    (f_smooth, f_wiggly, f_periodic, f_linear, f) | Obs(y(x_obs), y_obs)
 
 pred_smooth = f_smooth.predict(x)
 pred_wiggly = f_wiggly.predict(x)

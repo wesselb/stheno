@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-from stheno import GP, EQ, model
+from stheno import GP, EQ, model, Obs
 
 # Define points to predict at.
 x = np.linspace(0, 10, 100)
@@ -14,10 +14,10 @@ f2 = GP(EQ(), 3)
 f_prod = f1 * f2
 
 # Sample two functions.
-s1, s2 = model.sample(f1 @ x, f2 @ x)
+s1, s2 = model.sample(f1(x), f2(x))
 
 # Predict.
-mean, lower, upper = f_prod.condition((f1 @ x, s1), (f2 @ x, s2)).predict(x)
+mean, lower, upper = (f_prod | ((f1(x), s1), (f2(x), s2))).predict(x)
 
 # Plot result.
 plt.plot(x, s1, label='Sample 1', c='tab:red')

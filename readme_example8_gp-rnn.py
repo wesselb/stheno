@@ -1,10 +1,9 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
-from tensorflow.contrib.opt import ScipyOptimizerInterface as SOI
 from wbml import Vars, rnn as rnn_constructor
 
-from stheno.tf import GP, Delta, model, EQ, RQ
+from stheno.tf import GP, Delta, EQ, RQ, Obs
 
 # Construct variable storages.
 vs_gp = Vars(np.float32)
@@ -80,7 +79,7 @@ for i in range(5000):
         print(i, val)
 
 # Condition.
-model.condition(y_gp_rnn @ x_obs, y_obs)
+f_gp_rnn, a, b = (f_gp_rnn, a, b) | Obs(y_gp_rnn(x_obs), y_obs)
 
 # Predict and plot results.
 plt.figure(figsize=(10, 6))

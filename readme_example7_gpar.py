@@ -53,10 +53,11 @@ lml2 = y2(np.stack((x_obs2, y1_obs[inds2]), axis=1)).logpdf(y2_obs)
 SOI(-lml2, var_list=vs2.vars).minimize(s)
 
 # Predict first output.
-mean1, lower1, upper1 = s.run(f1.condition(y1 @ x_obs1, y1_obs).predict(x))
+f1 = f1 | (y1(x_obs1), y1_obs)
+mean1, lower1, upper1 = s.run(f1.predict(x))
 
 # Predict second output with Monte Carlo.
-m2.condition(y2 @ np.stack((x_obs2, y1_obs[inds2]), axis=1), y2_obs)
+f2 = f2 | (y2(np.stack((x_obs2, y1_obs[inds2]), axis=1)), y2_obs)
 sample = f2(B.concat([x[:, None], f1(x).sample()], axis=1)).sample()
 samples = [s.run(sample).squeeze() for _ in range(100)]
 mean2 = np.mean(samples, axis=0)

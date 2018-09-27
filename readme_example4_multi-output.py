@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from plum import Dispatcher, Referentiable, Self
 
-from stheno import GP, EQ, Delta, model, Kernel
+from stheno import GP, EQ, Delta, model, Kernel, Obs
 
 
 class VGP(Referentiable):
@@ -29,18 +29,20 @@ class VGP(Referentiable):
     @dispatch(np.ndarray)
     def lmatmul(self, A):
         m, n = A.shape
-        ps = [0 for i in range(m)]
+        ps = [0 for _ in range(m)]
         for i in range(m):
             for j in range(n):
                 ps[i] += A[i, j] * self.ps[j]
         return VGP(*ps)
 
     def sample(self, x):
-        return model.sample(*(p @ x for p in self.ps))
+        return model.sample(*(p(x) for p in self.ps))
 
-    def condition(self, x, ys):
-        model.condition(*((p @ x, y) for p, y in zip(self.ps, ys)))
-        return self
+    def __or__(self, obs):
+        return VGP(*(p | obs for p in self.ps))
+
+    def obs(self, x, ys):
+        return Obs(*((p(x), y) for p, y in zip(self.ps, ys)))
 
     def predict(self, x):
         return [p.predict(x) for p in self.ps]
@@ -65,15 +67,12 @@ e = VGP(p, 0.5 * Delta())
 # Construct observation model.
 ys = e + fs
 
-# Sample observations and a true, underlying function.
-ys_obs = ys.sample(x_obs)
-ys.condition(x_obs, ys_obs)
+# Sample a true, underlying function and observations.
 fs_true = fs.sample(x)
-model.revert_prior()
+ys_obs = (ys | fs.obs(x, fs_true)).sample(x_obs)
 
 # Condition the model on the observations to make predictions.
-ys.condition(x_obs, ys_obs)
-preds = fs.predict(x)
+preds = (fs | ys.obs(x_obs, ys_obs)).predict(x)
 
 
 # Plot results.
