@@ -11,6 +11,7 @@ from stheno.graph import Graph, GP, Obs, SparseObs
 from stheno.input import At
 from stheno.kernel import Linear, EQ, Delta, Exp, RQ
 from stheno.mean import TensorProductMean
+from stheno.random import Normal
 # noinspection PyUnresolvedReferences,
 from . import eq, raises, ok, le, assert_allclose, assert_instance
 
@@ -110,11 +111,18 @@ def test_mul_other():
 def test_at_shorthand():
     model = Graph()
     p1 = GP(EQ(), graph=model)
-    x = p1(1)
 
+    # Construct a normal distribution that serves as in input.
+    x = p1(1)
     yield assert_instance, x, At
     yield ok, type_parameter(x) is p1
     yield eq, x.get(), 1
+
+    # Construct a normal distribution that does not serve as an input.
+    x = Normal(np.ones((1, 1)))
+    yield raises, RuntimeError, lambda: type_parameter(x)
+    yield raises, RuntimeError, lambda: x.get()
+    yield raises, RuntimeError, lambda: p1 | (x, 1)
 
 
 def test_properties():
