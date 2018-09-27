@@ -26,6 +26,7 @@ also `Stheno.jl <https://github.com/willtebbutt/Stheno.jl>`__.
       -  `Naming GPs <#naming-gps>`__
 
    -  `Inference and Sampling <#inference-and-sampling>`__
+   -  `Inducing Points <#inducing-points>`__
    -  `NumPy, TensorFlow, or PyTorch? <#numpy-tensorflow-or-pytorch>`__
    -  `Undiscussed Features <#undiscussed-features>`__
 
@@ -257,11 +258,19 @@ Compositional Design
 
    .. code:: python
 
-       >>> EQ().stretch(1)
-       EQ() > 1
+       >>> EQ().stretch(2)
+       EQ() > 2
 
-       >>> EQ().stretch(1, 2)
-       EQ() > (1, 2)
+       >>> EQ().stretch(2, 3)
+       EQ() > (2, 3)
+
+   The ``>`` operator is implemented to provide a shorthand for
+   stretching:
+
+   .. code:: python
+
+       >>> EQ() > 2
+       EQ() > 2
 
 -  Select particular input dimensions of *kernels and means*.
 
@@ -565,6 +574,14 @@ Compositional Design
        >>> GP(EQ()).stretch(2)
        GP(EQ() > 2, 0)
 
+   The ``>`` operator is implemented to provide a shorthand for
+   stretching:
+
+   .. code:: python
+
+       >>> GP(EQ()) > 2
+       GP(EQ() > 2, 0)
+
 -  Select particular input dimensions.
 
    Example:
@@ -573,6 +590,14 @@ Compositional Design
 
        >>> GP(EQ()).select(1, 3)
        GP(EQ() : [1, 3], 0)
+
+   Indexing is implemented to provide a a shorthand for selecting input
+   dimensions:
+
+   .. code:: python
+
+       >>> GP(EQ())[1, 3]
+       GP(EQ() : [1, 3], 0) 
 
 -  Transform the input.
 
@@ -673,68 +698,29 @@ Inference and Sampling
 
 To condition on observations, use ``Graph.condition`` or
 ``GP.condition``. Syntax is much like the math: compare
-``f1.condition(f2 @ x, y)`` with :math:`f_1 \,|\, f_2(x) = y`.
+``f1_posterior = f1 | (f2(x), y)`` with :math:`f_1 \,|\, f_2(x) = y`.
 
-Definition, where ``f*`` are ``GP``\ s:
-
-.. code:: python
-
-    model.condition(f @ x, y)
-
-    model.condition((f1 @ x1, y1), (f2 @ x2, y2), ...)
-
-    f1_updated = f1.condition(x, y)
-
-    f1_updated = f1.condition((f1 @ x1, y1), (f2 @ x2, y2), ...)
-
-*Important:* both ``Graph.condition`` and ``GP.condition`` are
-*mutative*: once either is called, all further operations will be
-conditional on the given observations. If you want to undo the
-conditioning operation and revert to the state *just before the first
-conditioning operation*, use ``Graph.revert_prior`` or
-``GP.revert_prior``.
-
-Example:
+Definition, where ``f*`` and ``g*`` are ``GP``\ s:
 
 .. code:: python
 
-    >>> f.condition(x, y)
+    f_posterior = f | (x, y)
 
-    >>> # Anything here will be conditional on `f(x) = y`.
+    f_posterior = f | (g1(x), y)
 
-    >>> f.revert_prior()
+    f_posterior = f | ((g1(x1), y1), (g2(x2), y2), ...)
 
-Alternatively, or for more fine-grained constrol, use *checkpoints*.
+    f1_posterior, f2_posterior, ... = (f1, f2, ...) | Obs(g(x), y)
 
-Example:
+    f1_posterior, f2_posterior, ... = (f1, f2, ...) | Obs((g1(x1), y1), (g2(x2), y2), ...)
 
-.. code:: python
-
-    >>> prior = model.checkpoint()
-
-    >>> f1.condition(x, y)
-
-    >>> # Anything here will be conditional on `f1(x) = y`.
-
-    >>> conditional_on_f1 = model.checkpoint()
-
-    >>> f2.condition(x, y)
-
-    >>> # Anything here will be conditional on `f1(x) = y` and `f2(x) = y`.
-
-    >>> model.revert(conditional_on_f1)
-
-    >>> # Anything here will again be conditional on `f1(x) = y`.
-
-    >>> model.revert(prior)
-
-After conditioning, simply call a GP to construct its finite-dimensional
-distribution:
+After, or before, conditioning, simply call a GP to construct its
+finite-dimensional distribution:
 
 .. code:: python
 
-    >>> f(x)
-    <stheno.random.Normal at 0x10effa080>
+    >>> type(f(x))
+    stheno.random.Normal
 
     >>> f(x).mean
     array([[0.],
@@ -764,13 +750,33 @@ processes jointly:
 
 .. code:: python
 
-    >>> model.sample(f @ x, (2 * f) @ x)
+    >>> model.sample(f(x), (2 * f)(x))
     [array([[-0.35226314],
             [-0.15521219],
             [ 0.0752406 ]]),
      array([[-0.70452827],
             [-0.31042226],
             [ 0.15048168]])]
+
+Inducing Points
+~~~~~~~~~~~~~~~
+
+Stheno supports sparse approximations of posterior distributions. To
+construct a sparse approximation, use ``SparseObs`` instead of ``Obs``.
+
+Definition:
+
+.. code:: python
+
+    obs = SparseObs(u(x_inducing),  # Locations of inducing points.
+                    e,              # Independent, additive noise process.
+                    f(x_observed),  # Locations of observations _without_ the noise 
+                                    #   process added.
+                    y_observed)     # Observations.
+
+``SparseObs`` will also compute the value of the ELBO in ``obs.elbo``,
+which can be optimised to select hyperparameters and locations of the
+inducing points.
 
 NumPy, TensorFlow, or PyTorch?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -837,8 +843,8 @@ Undiscussed Features
 
    .. code:: python
 
-       >>> GP(EQ()) * GP(EQ())
-       GP((EQ() + (ZeroMean x ZeroMean)) * (EQ() + (ZeroMean x ZeroMean)) + (ZeroMean x ZeroMean) * (ZeroMean x ZeroMean) + -2 * (ZeroMean x ZeroMean), <lambda>)
+       >>> GP(EQ(), 1) * GP(EQ(), 1)
+       GP(<lambda> * EQ() + <lambda> * EQ() + EQ() * EQ(), <lambda> + <lambda> + -1 * 1)
 
 Examples
 --------
