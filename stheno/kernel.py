@@ -153,7 +153,7 @@ class Kernel(Function, Referentiable):
         Returns:
             :class:`.kernel.Kernel`: Periodic version of the kernel.
         """
-        return periodicise(self, to_tensor(period))
+        return periodicise(self, period)
 
     def __reversed__(self):
         """Reverse the arguments of the kernel."""
@@ -578,7 +578,7 @@ class PeriodicKernel(Kernel, WrappedFunction, Referentiable):
 
     def __init__(self, k, period):
         WrappedFunction.__init__(self, k)
-        self._period = period
+        self._period = to_tensor(period)
 
     @_dispatch(B.Numeric, B.Numeric, Cache)
     @cache

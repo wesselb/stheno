@@ -8,10 +8,10 @@ from types import FunctionType as PythonFunction
 from lab import B
 from numpy import all
 from plum import Dispatcher, Referentiable, Self
-
 from stheno.field import squeeze, mul, add, SumElement, ProductElement, \
     ScaledElement, OneElement, ZeroElement, WrappedElement, JoinElement, \
     Formatter
+
 from .field import Element, new, get_field, broadcast
 
 __all__ = []
@@ -67,7 +67,7 @@ class Function(Element, Referentiable):
         Returns:
             :class:`.function_field.Function`: Stretched function.
         """
-        return stretch(self, *(to_tensor(x) for x in stretches))
+        return stretch(self, *stretches)
 
     def __gt__(self, stretch):
         """Shorthand for :meth:`.function_field.Function.stretch`."""
@@ -82,9 +82,8 @@ class Function(Element, Referentiable):
         Returns:
             :class:`.function_field.Function`: Shifted function.
         """
-        return shift(self, *(to_tensor(x) for x in amounts))
+        return shift(self, *amounts)
 
-    @_dispatch([{tuple, list, type(None)}])
     def select(self, *dims):
         """Select particular dimensions of the input features.
 
@@ -97,10 +96,6 @@ class Function(Element, Referentiable):
                 input features selected.
         """
         return select(self, *dims)
-
-    @_dispatch([object])
-    def select(self, *dims):
-        return select(self, dims)
 
     def transform(self, *fs):
         """Transform the inputs of a function.
@@ -173,7 +168,7 @@ class StretchedFunction(WrappedFunction, Referentiable):
 
     def __init__(self, e, *stretches):
         WrappedFunction.__init__(self, e)
-        self.stretches = stretches
+        self.stretches = tuple(to_tensor(x) for x in stretches)
 
     @_dispatch(object, Formatter)
     def display(self, e, formatter):
@@ -197,7 +192,7 @@ class ShiftedFunction(WrappedFunction, Referentiable):
 
     def __init__(self, e, *shifts):
         WrappedFunction.__init__(self, e)
-        self.shifts = shifts
+        self.shifts = tuple(to_tensor(x) for x in shifts)
 
     @_dispatch(object, Formatter)
     def display(self, e, formatter):
@@ -208,6 +203,21 @@ class ShiftedFunction(WrappedFunction, Referentiable):
     def __eq__(self, other):
         return self[0] == other[0] and \
                tuple_equal(self.shifts, other.shifts)
+
+
+@_dispatch({tuple, list})
+def _to_list(x):
+    return list(x)
+
+
+@_dispatch(object)
+def _to_list(x):
+    if B.rank(x) == 0:
+        return [x]
+    elif B.rank(x) == 1:
+        return x
+    else:
+        raise ValueError('Could not convert "{}" to a list.')
 
 
 class SelectedFunction(WrappedFunction, Referentiable):
@@ -221,11 +231,11 @@ class SelectedFunction(WrappedFunction, Referentiable):
 
     def __init__(self, e, *dims):
         WrappedFunction.__init__(self, e)
-        self.dims = dims
+        self.dims = tuple(None if x is None else _to_list(x) for x in dims)
 
     @_dispatch(object, Formatter)
     def display(self, e, formatter):
-        return '{} : {}'.format(e, squeeze(tuple(list(ds) for ds in self.dims)))
+        return '{} : {}'.format(e, squeeze(tuple(self.dims)))
 
     @_dispatch(Self)
     def __eq__(self, other):

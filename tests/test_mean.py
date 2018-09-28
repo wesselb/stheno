@@ -118,7 +118,7 @@ def test_selected_mean():
     m = 5 * OneMean() + (lambda x: x ** 2)
     x = np.random.randn(10, 3)
 
-    yield assert_allclose, m.select(1, 2)(x), m(x[:, [1, 2]])
+    yield assert_allclose, m.select([1, 2])(x), m(x[:, [1, 2]])
 
 
 def test_shifting():

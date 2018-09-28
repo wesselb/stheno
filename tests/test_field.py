@@ -4,19 +4,21 @@ from __future__ import absolute_import, division, print_function
 
 import operator
 
+import numpy as np
 from stheno.field import mul, add, SumElement, new, get_field, broadcast, \
     WrappedElement, JoinElement, Element, OneElement, ZeroElement, \
     ScaledElement, ProductElement
 from stheno.function_field import stretch, differentiate, shift, transform, \
     select, Function, StretchedFunction, ShiftedFunction, SelectedFunction, \
     InputTransformedFunction, DerivativeFunction, TensorProductFunction, \
-    OneFunction, ZeroFunction
+    OneFunction, ZeroFunction, _to_list
 from stheno.kernel import EQ, RQ, Linear, OneKernel, ZeroKernel, Delta, \
     TensorProductKernel, Kernel
 from stheno.matrix import Dense
 from stheno.mean import TensorProductMean, ZeroMean, OneMean, Mean
+
 # noinspection PyUnresolvedReferences
-from . import eq, ok, raises, lam, neq
+from . import eq, ok, raises, lam, neq, assert_allclose
 
 
 def test_corner_cases():
@@ -291,8 +293,21 @@ def test_shifting():
 
 
 def test_selection():
+    yield assert_allclose, _to_list((1, 2)), [1, 2]
+    yield assert_allclose, _to_list([1, 2]), [1, 2]
+    yield assert_allclose, _to_list(1), [1]
+    yield raises, ValueError, lambda: _to_list(np.ones((1, 1)))
+
     yield eq, str(EQ().select(0)), 'EQ() : [0]'
-    yield eq, str(EQ().select(0, 2)), 'EQ() : [0, 2]'
+    yield eq, str(EQ().select([0, 2])), 'EQ() : [0, 2]'
+    yield eq, str(EQ().select(0, 2)), 'EQ() : ([0], [2])'
+    yield eq, str(EQ().select([0], 2)), 'EQ() : ([0], [2])'
+    yield eq, str(EQ().select(0, [2])), 'EQ() : ([0], [2])'
+    yield eq, str(EQ().select([0, 1], [2])), 'EQ() : ([0, 1], [2])'
+    yield eq, str(EQ().select(None, [2])), 'EQ() : (None, [2])'
+    yield eq, str(EQ().select(None)), 'EQ() : None'
+    yield eq, str(EQ().select(None, None)), 'EQ() : (None, None)'
+    yield eq, str(EQ().select([1], None)), 'EQ() : ([1], None)'
 
     yield eq, str(ZeroKernel().select(0)), '0'
     yield eq, str(OneMean().select(0)), '1'

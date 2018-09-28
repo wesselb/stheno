@@ -517,7 +517,7 @@ def test_product():
         yield x
 
 
-def test_selected():
+def test_selection():
     k = (2 * EQ().stretch(5)).select(0)
 
     yield eq, k.stationary, True
@@ -533,35 +533,35 @@ def test_selected():
     for x in kernel_generator(k):
         yield x
 
-    k = (2 * EQ().stretch(5)).select(2, 3)
+    k = (2 * EQ().stretch(5)).select([2, 3])
 
     yield eq, k.stationary, True
     yield eq, k.length_scale, 5
     yield eq, k.period, np.inf
     yield eq, k.var, 2
 
-    k = (2 * EQ().stretch([1, 2, 3])).select(0, 2)
+    k = (2 * EQ().stretch([1, 2, 3])).select([0, 2])
 
     yield eq, k.stationary, True
     yield assert_allclose, k.length_scale, [1, 3]
     yield assert_allclose, k.period, [np.inf, np.inf]
     yield eq, k.var, 2
 
-    k = (2 * EQ().periodic([1, 2, 3])).select(1, 2)
+    k = (2 * EQ().periodic([1, 2, 3])).select([1, 2])
 
     yield eq, k.stationary, True
     yield assert_allclose, k.length_scale, [1, 1]
     yield assert_allclose, k.period, [2, 3]
     yield eq, k.var, 2
 
-    k = (2 * EQ().stretch([1, 2, 3])).select((0, 2), (1, 2))
+    k = (2 * EQ().stretch([1, 2, 3])).select([0, 2], [1, 2])
 
     yield eq, k.stationary, False
     yield raises, RuntimeError, lambda: k.length_scale
     yield raises, RuntimeError, lambda: k.period
     yield eq, k.var, 2
 
-    k = (2 * EQ().periodic([1, 2, 3])).select((0, 2), (1, 2))
+    k = (2 * EQ().periodic([1, 2, 3])).select([0, 2], [1, 2])
 
     yield eq, k.stationary, False
     yield eq, k.length_scale, 1
@@ -569,7 +569,7 @@ def test_selected():
     yield eq, k.var, 2
 
     # Test that computation is valid.
-    k1 = EQ().select(1, 2)
+    k1 = EQ().select([1, 2])
     k2 = EQ()
     x = np.random.randn(10, 3)
     yield assert_allclose, k1(x), k2(x[:, [1, 2]])
