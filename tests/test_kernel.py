@@ -135,10 +135,10 @@ def test_reversal():
     yield eq, str(k), 'Reversed(Linear())'
 
     # Check equality.
-    k = reversed(Linear())
-    yield eq, k, k
-    yield neq, k, Linear()
-    yield neq, k, EQ()
+    yield eq, reversed(Linear()), reversed(Linear())
+    yield neq, reversed(Linear()), Linear()
+    yield neq, reversed(Linear()), reversed(EQ())
+    yield neq, reversed(Linear()), reversed(DecayingKernel(1, 1))
 
     # Standard tests:
     for x in kernel_generator(k):
@@ -158,9 +158,9 @@ def test_delta():
     yield eq, str(k), 'Delta()'
 
     # Check equality.
-    yield eq, k, k
-    yield neq, k, Delta(epsilon=k.epsilon * 10)
-    yield neq, k, EQ()
+    yield eq, Delta(), Delta()
+    yield neq, Delta(), Delta(epsilon=k.epsilon * 10)
+    yield neq, Delta(), EQ()
 
     # Check caching.
     yield ok, allclose(k(x1), np.eye(10)), 'same'
@@ -193,8 +193,8 @@ def test_eq():
     yield eq, str(k), 'EQ()'
 
     # Test equality.
-    yield eq, k, k
-    yield neq, k, Linear()
+    yield eq, EQ(), EQ()
+    yield neq, EQ(), Linear()
 
     # Standard tests:
     for x in kernel_generator(k):
@@ -213,9 +213,9 @@ def test_rq():
     yield eq, str(k), 'RQ(0.1)'
 
     # Test equality.
-    yield eq, k, k
-    yield neq, k, RQ(2e-1)
-    yield neq, k, Linear()
+    yield eq, RQ(1e-1), RQ(1e-1)
+    yield neq, RQ(1e-1), RQ(2e-1)
+    yield neq, RQ(1e-1), Linear()
 
     # Standard tests:
     for x in kernel_generator(k):
@@ -233,8 +233,8 @@ def test_exp():
     yield eq, str(k), 'Exp()'
 
     # Test equality.
-    yield eq, k, k
-    yield neq, k, Linear()
+    yield eq, Matern12(), Matern12()
+    yield neq, Matern12(), Linear()
 
     # Standard tests:
     for x in kernel_generator(k):
@@ -252,8 +252,8 @@ def test_mat32():
     yield eq, str(k), 'Matern32()'
 
     # Test equality.
-    yield eq, k, k
-    yield neq, k, Linear()
+    yield eq, Matern32(), Matern32()
+    yield neq, Matern32(), Linear()
 
     # Standard tests:
     for x in kernel_generator(k):
@@ -271,8 +271,8 @@ def test_mat52():
     yield eq, str(k), 'Matern52()'
 
     # Test equality.
-    yield eq, k, k
-    yield neq, k, Linear()
+    yield eq, Matern52(), Matern52()
+    yield neq, Matern52(), Linear()
 
     # Standard tests:
     for x in kernel_generator(k):
@@ -296,8 +296,8 @@ def test_one():
     yield eq, str(k), '1'
 
     # Test equality.
-    yield eq, k, k
-    yield neq, k, Linear()
+    yield eq, OneKernel(), OneKernel()
+    yield neq, OneKernel(), Linear()
 
     # Standard tests:
     for x in kernel_generator(k):
@@ -320,8 +320,8 @@ def test_zero():
     yield eq, str(k), '0'
 
     # Test equality.
-    yield eq, k, k
-    yield neq, k, Linear()
+    yield eq, ZeroKernel(), ZeroKernel()
+    yield neq, ZeroKernel(), Linear()
 
     # Standard tests:
     for x in kernel_generator(k):
@@ -339,8 +339,8 @@ def test_linear():
     yield eq, str(k), 'Linear()'
 
     # Test equality.
-    yield eq, k, k
-    yield neq, k, EQ()
+    yield eq, Linear(), Linear()
+    yield neq, Linear(), EQ()
 
     # Standard tests:
     for x in kernel_generator(k):
@@ -396,6 +396,11 @@ def test_sum():
     yield assert_allclose, (EQ() + EQ()).length_scale, 1
     yield assert_allclose, (EQ().stretch(2) + EQ().stretch(2)).length_scale, 2
 
+    yield eq, EQ() + Linear(), EQ() + Linear()
+    yield eq, EQ() + Linear(), Linear() + EQ()
+    yield neq, EQ() + Linear(), EQ() + RQ(1e-1)
+    yield neq, EQ() + Linear(), RQ(1e-1) + Linear()
+
     # Standard tests:
     for x in kernel_generator(k):
         yield x
@@ -412,6 +417,7 @@ def test_stretched():
     # Test equality.
     yield eq, EQ().stretch(2), EQ().stretch(2)
     yield neq, EQ().stretch(2), EQ().stretch(3)
+    yield neq, EQ().stretch(2), Matern12().stretch(2)
 
     # Standard tests:
     for x in kernel_generator(k):
@@ -440,6 +446,7 @@ def test_periodic():
     # Test equality.
     yield eq, EQ().periodic(2), EQ().periodic(2)
     yield neq, EQ().periodic(2), EQ().periodic(3)
+    yield neq, Matern12().periodic(2), EQ().periodic(2)
 
     # Standard tests:
     for x in kernel_generator(k):
@@ -465,6 +472,11 @@ def test_scaled():
     yield eq, k.period, np.inf
     yield eq, k.var, 2
 
+    # Test equality.
+    yield eq, 2 * EQ(), 2 * EQ()
+    yield neq, 2 * EQ(), 3 * EQ()
+    yield neq, 2 * EQ(), 2 * Matern12()
+
     # Standard tests:
     for x in kernel_generator(k):
         yield x
@@ -481,6 +493,7 @@ def test_shifted():
     # Test equality.
     yield eq, Linear().shift(2), Linear().shift(2)
     yield neq, Linear().shift(2), Linear().shift(3)
+    yield neq, Linear().shift(2), DecayingKernel(1, 1).shift(2)
 
     # Standard tests:
     for x in kernel_generator(k):
@@ -512,6 +525,12 @@ def test_product():
     yield eq, k.period, np.inf
     yield eq, k.var, 6
 
+    # Test equality.
+    yield eq, EQ() * Linear(), EQ() * Linear()
+    yield eq, EQ() * Linear(), Linear() * EQ()
+    yield neq, EQ() * Linear(), EQ() * RQ(1e-1)
+    yield neq, EQ() * Linear(), RQ(1e-1) * Linear()
+
     # Standard tests:
     for x in kernel_generator(k):
         yield x
@@ -528,6 +547,7 @@ def test_selection():
     # Test equality.
     yield eq, EQ().select(0), EQ().select(0)
     yield neq, EQ().select(0), EQ().select(1)
+    yield neq, EQ().select(0), Matern12().select(0)
 
     # Standard tests:
     for x in kernel_generator(k):
@@ -592,6 +612,7 @@ def test_input_transform():
     # Test equality.
     yield eq, EQ().transform(f1), EQ().transform(f1)
     yield neq, EQ().transform(f1), EQ().transform(f2)
+    yield neq, EQ().transform(f1), Matern12().transform(f1)
 
     # Standard tests:
     for x in kernel_generator(k):
@@ -649,8 +670,9 @@ def test_derivative():
     yield raises, RuntimeError, lambda: k.period
 
     # Test equality.
-    yield eq, k, k
-    yield neq, k, EQ().diff(1)
+    yield eq, EQ().diff(0), EQ().diff(0)
+    yield neq, EQ().diff(0), EQ().diff(1)
+    yield neq, Matern12().diff(0), EQ().diff(0)
 
     yield raises, RuntimeError, lambda: EQ().diff(None, None)(1)
 
@@ -726,6 +748,7 @@ def test_decaying_kernel():
         yield x
 
     # Test equality.
-    yield eq, k, k
-    yield neq, k, DecayingKernel(3.0, 5.0)
-    yield neq, k, EQ()
+    yield eq, DecayingKernel(3.0, 4.0), DecayingKernel(3.0, 4.0)
+    yield neq, DecayingKernel(3.0, 4.0), DecayingKernel(3.0, 5.0)
+    yield neq, DecayingKernel(3.0, 4.0), DecayingKernel(4.0, 4.0)
+    yield neq, DecayingKernel(3.0, 4.0), EQ()

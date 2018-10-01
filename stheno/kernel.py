@@ -421,7 +421,8 @@ class StretchedKernel(Kernel, StretchedFunction, Referentiable):
 
     @_dispatch(Self)
     def __eq__(self, other):
-        return tuple_equal(expand(self.stretches), expand(other.stretches))
+        return self[0] == other[0] and \
+               tuple_equal(expand(self.stretches), expand(other.stretches))
 
 
 class ShiftedKernel(Kernel, ShiftedFunction, Referentiable):
@@ -471,7 +472,8 @@ class ShiftedKernel(Kernel, ShiftedFunction, Referentiable):
 
     @_dispatch(Self)
     def __eq__(self, other):
-        return tuple_equal(expand(self.shifts), expand(other.shifts))
+        return self[0] == other[0] and \
+               tuple_equal(expand(self.shifts), expand(other.shifts))
 
 
 class SelectedKernel(Kernel, SelectedFunction, Referentiable):
@@ -535,7 +537,8 @@ class SelectedKernel(Kernel, SelectedFunction, Referentiable):
 
     @_dispatch(Self)
     def __eq__(self, other):
-        return tuple_equal(expand(self.dims), expand(other.dims))
+        return self[0] == other[0] and \
+               tuple_equal(expand(self.dims), expand(other.dims))
 
 
 class InputTransformedKernel(Kernel, InputTransformedFunction, Referentiable):
@@ -563,7 +566,8 @@ class InputTransformedKernel(Kernel, InputTransformedFunction, Referentiable):
 
     @_dispatch(Self)
     def __eq__(self, other):
-        return tuple_equal(expand(self.fs), expand(other.fs))
+        return self[0] == other[0] and \
+               tuple_equal(expand(self.fs), expand(other.fs))
 
 
 class PeriodicKernel(Kernel, WrappedFunction, Referentiable):
@@ -621,7 +625,7 @@ class PeriodicKernel(Kernel, WrappedFunction, Referentiable):
 
     @_dispatch(Self)
     def __eq__(self, other):
-        return all(self.period == other.period)
+        return self[0] == other[0] and all(self.period == other.period)
 
 
 class EQ(Kernel, Referentiable):
@@ -1166,7 +1170,8 @@ class DerivativeKernel(Kernel, DerivativeFunction, Referentiable):
 
     @_dispatch(Self)
     def __eq__(self, other):
-        return tuple_equal(expand(self.derivs), expand(other.derivs))
+        return self[0] == other[0] and \
+               tuple_equal(expand(self.derivs), expand(other.derivs))
 
 
 class TensorProductKernel(Kernel, TensorProductFunction, Referentiable):
