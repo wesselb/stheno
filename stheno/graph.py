@@ -470,7 +470,7 @@ class Graph(Referentiable):
 
         # To unpack `x`, just keep `.get()`ing.
         def unpack(x):
-            while isinstance(x, (At, Input)):
+            while isinstance(x, Input):
                 x = x.get()
             return x
 

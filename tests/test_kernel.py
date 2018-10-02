@@ -4,13 +4,13 @@ from __future__ import absolute_import, division, print_function
 
 import numpy as np
 from lab import B
-
 from stheno.cache import Cache
 from stheno.input import Observed, Unique
 from stheno.kernel import EQ, RQ, Matern12, Matern32, Matern52, Delta, Kernel, \
     Linear, OneKernel, ZeroKernel, PosteriorKernel, ShiftedKernel, \
     TensorProductKernel, CorrectiveKernel, DecayingKernel
 from stheno.matrix import matrix, dense, Zero, One, UniformlyDiagonal
+
 # noinspection PyUnresolvedReferences
 from . import eq, raises, ok, allclose, assert_allclose, assert_instance, neq
 
