@@ -431,14 +431,24 @@ def diag(diag, rows, cols=None):
 
     # Cut the diagonal to accommodate the size.
     diag = diag[:B.minimum(rows, cols)]
-
-    # Pad with extra zeros as specified.
     diag_len, dtype = B.shape(diag)[0], B.dtype(diag)
-    extra_rows, extra_cols = rows - diag_len, cols - diag_len
-    return B.concat2d([B.diag(diag),
-                       B.zeros([diag_len, extra_cols], dtype=dtype)],
-                      [B.zeros([extra_rows, diag_len], dtype=dtype),
-                       B.zeros([extra_rows, extra_cols], dtype=dtype)])
+
+    # Start with just a diagonal matrix.
+    res = B.diag(diag)
+
+    # Pad extra columns if necessary.
+    extra_cols = cols - diag_len
+    if extra_cols > 0:
+        zeros = B.zeros([diag_len, extra_cols], dtype=dtype)
+        res = B.concat([B.diag(diag), zeros], axis=1)
+
+    # Pad extra rows if necessary.
+    extra_rows = rows - diag_len
+    if extra_rows > 0:
+        zeros = B.zeros([extra_rows, diag_len + extra_cols], dtype=dtype)
+        res = B.concat([res, zeros], axis=0)
+
+    return res
 
 
 # Cholesky decompose matrices.
@@ -1084,7 +1094,7 @@ def add(a, b): return Woodbury(diag=a.diag + b, lr=a.lr)
 
 
 @add.extend(Woodbury, Woodbury)
-def add(a, b): return Woodbury(diag=a.diag + b.diag,lr=a.lr + b.lr)
+def add(a, b): return Woodbury(diag=a.diag + b.diag, lr=a.lr + b.lr)
 
 
 # Multiplication between matrices and constants.
