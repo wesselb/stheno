@@ -180,6 +180,8 @@ class SparseObservations(Observations, Referentiable):
                B.qf(A, B.trisolve(L_z, K_z), prod_y_bar)
 
         # Compute the ELBO.
+        # NOTE: The calculation of `trace_part` asserts that `K_n` is diagonal.
+        #       The rest, however, is completely generic.
         trace_part = B.ratio(Diagonal(self.graph.kernels[p_x].elwise(x)[:, 0]) -
                              Diagonal(B.qf_diag(K_z, K_zx)), K_n)
         det_part = B.logdet(2 * B.pi * K_n) + B.logdet(A)
