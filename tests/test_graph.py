@@ -450,8 +450,8 @@ def test_multi_conditioning():
     post2 = (p | ((p1(x1), s1), (p2(x2), s2)))(x3)
     post3 = (p | ((p2(x2), s2), (p1(x1), s1)))(x3)
 
-    yield assert_allclose, post1.mean, post2.mean
-    yield assert_allclose, post1.mean, post3.mean
+    yield assert_allclose, post1.mean, post2.mean, 'means 1', 1e-6, 1e-6
+    yield assert_allclose, post1.mean, post3.mean, 'means 2', 1e-6, 1e-6
     yield assert_allclose, post1.var, post2.var
     yield assert_allclose, post1.var, post3.var
 
