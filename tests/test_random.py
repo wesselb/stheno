@@ -5,11 +5,12 @@ from __future__ import absolute_import, division, print_function
 import numpy as np
 from lab import B
 from scipy.stats import multivariate_normal
-
 from stheno.matrix import UniformlyDiagonal, Diagonal, dense
 from stheno.random import Normal, Normal1D, RandomVector
+
 # noinspection PyUnresolvedReferences
-from . import eq, neq, lt, le, ge, gt, raises, call, ok, eprint, allclose
+from . import eq, neq, lt, le, ge, gt, raises, call, ok, eprint, allclose, \
+    assert_allclose
 
 
 def test_normal():
@@ -21,7 +22,13 @@ def test_normal():
     dist_sp = multivariate_normal(mean[:, 0], var)
 
     # Test second moment.
-    yield ok, allclose(dist.m2, var + mean.dot(mean.T))
+    yield assert_allclose, dist.m2, var + mean.dot(mean.T)
+
+    # Test marginals.
+    marg_mean, lower, upper = dist.marginals()
+    yield assert_allclose, mean.squeeze(), marg_mean
+    yield assert_allclose, lower, marg_mean - 2 * np.diag(var) ** .5
+    yield assert_allclose, upper, marg_mean + 2 * np.diag(var) ** .5
 
     # Test `logpdf` and `entropy`.
     for _ in range(5):
@@ -41,8 +48,10 @@ def test_normal():
     samples = dist.sample(50000)
     kl_est = np.mean(dist.logpdf(samples)) - np.mean(dist2.logpdf(samples))
     kl = dist.kl(dist2)
-    yield ok, np.abs(kl_est - kl) / np.abs(kl) < 5e-2, 'kl samples'
+    yield ok, np.abs(kl_est - kl) / np.abs(kl) < 5e-2, 'kl sampled'
 
+
+def test_normal_comparison():
     # Compare a diagonal normal and dense normal.
     mean = np.random.randn(3, 1)
     var_diag = np.random.randn(3) ** 2
@@ -81,6 +90,8 @@ def test_normal():
     yield le, dist2.w2(dist1), 5e-4, 'w2 3'
     yield le, dist2.w2(dist2), 5e-4, 'w2 4'
 
+
+def test_normal_sampling():
     # Test sampling and dtype conversion.
     dist = Normal(3 * np.eye(200, dtype=np.integer))
     yield le, np.abs(np.std(dist.sample(1000)) ** 2 - 3), 5e-2, 'full'

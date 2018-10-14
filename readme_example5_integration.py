@@ -26,10 +26,10 @@ y_obs = np.sin(x_obs) + 0.2 * np.random.randn(*x_obs.shape)
 f, df, ddf, dddf = (f, df, ddf, dddf) | Obs(dddf(x_obs), y_obs)
 
 # And make predictions.
-pred_iiif = f.predict(x)
-pred_iif = df.predict(x)
-pred_if = ddf.predict(x)
-pred_f = dddf.predict(x)
+pred_iiif = f(x).marginals()
+pred_iif = df(x).marginals()
+pred_if = ddf(x).marginals()
+pred_f = dddf(x).marginals()
 
 
 # Plot result.

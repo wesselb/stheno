@@ -705,11 +705,11 @@ array([[-0.47676132],
        [-0.77643117]])
 ```
 
-Alternatively, use `f.predict(x)` to efficiently compute the means and 
+Alternatively, use `f(x).marginals()` to efficiently compute the means and 
 the marginal lower and upper 95% central credible region bounds:
 
 ```python
->>> f.predict(x)
+>>> f(x).marginals()
 (array([0., 0., 0.]), array([-2., -2., -2.]), array([2., 2., 2.]))
 ```
 
@@ -789,7 +789,7 @@ design kernels in an alternative, flexible way.
     ```python
     >>> p = GP(NoisyKernel(EQ(), Delta()))
 
-    >>> prediction = p.condition(Observed(x), y).predict(Latent(x))
+    >>> prediction = p.condition(Observed(x), y)(Latent(x)).marginals()
     ```
     
 * `stheno.normal` offers an efficient implementation `Normal` of the normal 
@@ -834,7 +834,7 @@ y = f + .5 * e
 f_true, y_obs = model.sample(f(x), y(x_obs))
 
 # Now condition on the observations to make predictions.
-mean, lower, upper = (f | (y(x_obs), y_obs)).predict(x)
+mean, lower, upper = (f | (y(x_obs), y_obs))(x).marginals()
 
 # Plot result.
 plt.plot(x, f_true, label='True', c='tab:blue')
@@ -892,11 +892,11 @@ f_true_smooth, f_true_wiggly, f_true_periodic, f_true_linear, f_true, y_obs = \
 f_smooth, f_wiggly, f_periodic, f_linear, f = \
     (f_smooth, f_wiggly, f_periodic, f_linear, f) | Obs(y(x_obs), y_obs)
 
-pred_smooth = f_smooth.predict(x)
-pred_wiggly = f_wiggly.predict(x)
-pred_periodic = f_periodic.predict(x)
-pred_linear = f_linear.predict(x)
-pred_f = f.predict(x)
+pred_smooth = f_smooth(x).marginals()
+pred_wiggly = f_wiggly(x).marginals()
+pred_periodic = f_periodic(x).marginals()
+pred_linear = f_linear(x).marginals()
+pred_f = f(x).marginals()
 
 
 # Plot results.
@@ -977,7 +977,7 @@ print('alpha', s.run(alpha))
 print('prior', y.display(s.run))
 
 # Condition on the observations to make predictions.
-mean, lower, upper = s.run((f | (y(x_obs), y_obs)).predict(x))
+mean, lower, upper = s.run((f | (y(x_obs), y_obs))(x).marginals())
 
 # Plot result.
 plt.plot(x, f_true.squeeze(), label='True', c='tab:blue')
@@ -1040,8 +1040,8 @@ class VGP(Referentiable):
     def obs(self, x, ys):
         return Obs(*((p(x), y) for p, y in zip(self.ps, ys)))
 
-    def predict(self, x):
-        return [p.predict(x) for p in self.ps]
+    def marginals(self, x):
+        return [p(x).marginals() for p in self.ps]
 
 
 # Define points to predict at.
@@ -1068,7 +1068,7 @@ fs_true = fs.sample(x)
 ys_obs = (ys | fs.obs(x, fs_true)).sample(x_obs)
 
 # Condition the model on the observations to make predictions.
-preds = (fs | ys.obs(x_obs, ys_obs)).predict(x)
+preds = (fs | ys.obs(x_obs, ys_obs)).marginals(x)
 
 
 # Plot results.
@@ -1126,10 +1126,10 @@ y_obs = np.sin(x_obs) + 0.2 * np.random.randn(*x_obs.shape)
 f, df, ddf, dddf = (f, df, ddf, dddf) | Obs(dddf(x_obs), y_obs)
 
 # And make predictions.
-pred_iiif = f.predict(x)
-pred_iif = df.predict(x)
-pred_if = ddf.predict(x)
-pred_f = dddf.predict(x)
+pred_iiif = f(x).marginals()
+pred_iif = df(x).marginals()
+pred_if = ddf(x).marginals()
+pred_f = dddf(x).marginals()
 
 
 # Plot result.
@@ -1198,7 +1198,7 @@ true_slope, true_intercept, f_true, y_obs = \
 
 # Condition on the observations to make predictions.
 slope, intercept, f = (slope, intercept, f) | Obs(y(x_obs), y_obs)
-mean, lower, upper = f.predict(x)
+mean, lower, upper = f(x).marginals()
 
 print('true slope', true_slope)
 print('predicted slope', slope(0).mean)
@@ -1276,7 +1276,7 @@ SOI(-lml2, var_list=vs2.vars).minimize(s)
 
 # Predict first output.
 f1 = f1 | (y1(x_obs1), y1_obs)
-mean1, lower1, upper1 = s.run(f1.predict(x))
+mean1, lower1, upper1 = s.run(f1(x).marginals())
 
 # Predict second output with Monte Carlo.
 f2 = f2 | (y2(np.stack((x_obs2, y1_obs[inds2]), axis=1)), y2_obs)
@@ -1405,7 +1405,7 @@ plt.subplot(2, 1, 1)
 plt.title('$(1 + a) \\cdot $ RNN ${}+b$')
 plt.plot(x, f_true, label='True', c='tab:blue')
 plt.scatter(x_obs, y_obs, label='Observations', c='tab:red')
-mean, lower, upper = s.run(f_gp_rnn.predict(x))
+mean, lower, upper = s.run(f_gp_rnn(x).marginals())
 plt.plot(x, mean, label='Prediction', c='tab:green')
 plt.plot(x, lower, ls='--', c='tab:green')
 plt.plot(x, upper, ls='--', c='tab:green')
@@ -1413,7 +1413,7 @@ plt.legend()
 
 plt.subplot(2, 2, 3)
 plt.title('$a$')
-mean, lower, upper = s.run(a.predict(x))
+mean, lower, upper = s.run(a(x).marginals())
 plt.plot(x, mean, label='Prediction', c='tab:green')
 plt.plot(x, lower, ls='--', c='tab:green')
 plt.plot(x, upper, ls='--', c='tab:green')
@@ -1421,7 +1421,7 @@ plt.legend()
 
 plt.subplot(2, 2, 4)
 plt.title('$b$')
-mean, lower, upper = s.run(b.predict(x))
+mean, lower, upper = s.run(b(x).marginals())
 plt.plot(x, mean, label='Prediction', c='tab:green')
 plt.plot(x, lower, ls='--', c='tab:green')
 plt.plot(x, upper, ls='--', c='tab:green')
@@ -1454,7 +1454,7 @@ f_prod = f1 * f2
 s1, s2 = model.sample(f1(x), f2(x))
 
 # Predict.
-mean, lower, upper = (f_prod | ((f1(x), s1), (f2(x), s2))).predict(x)
+mean, lower, upper = (f_prod | ((f1(x), s1), (f2(x), s2)))(x).marginals()
 
 # Plot result.
 plt.plot(x, s1, label='Sample 1', c='tab:red')
@@ -1497,7 +1497,7 @@ obs = SparseObs(f(x_ind),  # Inducing points.
                 # Observations _without_ the noise process added on.
                 f(x_obs), y_obs)
 print('elbo', obs.elbo)
-mean, lower, upper = (f | obs).predict(x)
+mean, lower, upper = (f | obs)(x).marginals()
 
 # Plot result.
 plt.plot(x, f_true, label='True', c='tab:blue')

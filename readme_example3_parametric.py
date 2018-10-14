@@ -34,7 +34,7 @@ print('alpha', s.run(alpha))
 print('prior', y.display(s.run))
 
 # Condition on the observations to make predictions.
-mean, lower, upper = s.run((f | (y(x_obs), y_obs)).predict(x))
+mean, lower, upper = s.run((f | (y(x_obs), y_obs))(x).marginals())
 
 # Plot result.
 plt.plot(x, f_true.squeeze(), label='True', c='tab:blue')

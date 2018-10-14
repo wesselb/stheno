@@ -22,7 +22,7 @@ true_slope, true_intercept, f_true, y_obs = \
 
 # Condition on the observations to make predictions.
 slope, intercept, f = (slope, intercept, f) | Obs(y(x_obs), y_obs)
-mean, lower, upper = f.predict(x)
+mean, lower, upper = f(x).marginals()
 
 print('true slope', true_slope)
 print('predicted slope', slope(0).mean)

@@ -16,7 +16,7 @@ y = f + .5 * e
 f_true, y_obs = model.sample(f(x), y(x_obs))
 
 # Now condition on the observations to make predictions.
-mean, lower, upper = (f | (y(x_obs), y_obs)).predict(x)
+mean, lower, upper = (f | (y(x_obs), y_obs))(x).marginals()
 
 # Plot result.
 plt.plot(x, f_true, label='True', c='tab:blue')

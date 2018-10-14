@@ -617,22 +617,6 @@ class GP(RandomProcess, Referentiable):
     def condition(self, obs):
         return self.graph.condition((self,), obs)[0]
 
-    def predict(self, x, cache=None):
-        """Predict at specified locations.
-
-        Args:
-            x (design matrix): Locations of the points to predict for.
-            cache (:class:`.cache.Cache`, optional): Cache.
-
-        Returns:
-            tuple: A tuple containing the predictive means and lower and
-            upper 95% central credible interval bounds.
-        """
-        cache = Cache() if cache is None else cache
-        mean = B.squeeze(dense(self.mean(x, cache)))
-        std = B.squeeze(dense(self.kernel.elwise(x, cache))) ** .5
-        return mean, mean - 2 * std, mean + 2 * std
-
     @_dispatch(object)
     def __add__(self, other):
         return self.graph.sum(self, other)

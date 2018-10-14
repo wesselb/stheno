@@ -189,13 +189,13 @@ def test_properties():
     yield eq, p.stationary, False, 'stationary 3'
 
 
-def test_predict():
+def test_marginals():
     model = Graph()
     p = GP(EQ(), TensorProductMean(lambda x: x ** 2), graph=model)
     x = np.linspace(0, 5, 10)
 
-    # Check that `predict` outputs the right thing.
-    mean, lower, upper = p.predict(x)
+    # Check that `marginals` outputs the right thing.
+    mean, lower, upper = p(x).marginals()
     var = B.diag(p.kernel(x))
     yield assert_allclose, mean, p.mean(x)[:, 0]
     yield assert_allclose, lower, p.mean(x)[:, 0] - 2 * var ** .5
@@ -203,11 +203,11 @@ def test_predict():
 
     # Test correctness.
     y = p(x).sample()
-    mean, lower, upper = (p | (x, y)).predict(x)
+    mean, lower, upper = (p | (x, y))(x).marginals()
     yield assert_allclose, mean, y[:, 0]
     yield le, B.mean(B.abs(upper - lower)), 1e-5
 
-    mean, lower, upper = (p | (x, y)).predict(x + 100)
+    mean, lower, upper = (p | (x, y))(x + 100).marginals()
     yield assert_allclose, mean, p.mean(x + 100)[:, 0]
     yield assert_allclose, upper - lower, 4 * np.ones(10)
 

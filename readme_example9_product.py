@@ -17,7 +17,7 @@ f_prod = f1 * f2
 s1, s2 = model.sample(f1(x), f2(x))
 
 # Predict.
-mean, lower, upper = (f_prod | ((f1(x), s1), (f2(x), s2))).predict(x)
+mean, lower, upper = (f_prod | ((f1(x), s1), (f2(x), s2)))(x).marginals()
 
 # Plot result.
 plt.plot(x, s1, label='Sample 1', c='tab:red')

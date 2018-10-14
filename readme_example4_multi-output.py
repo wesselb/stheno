@@ -44,8 +44,8 @@ class VGP(Referentiable):
     def obs(self, x, ys):
         return Obs(*((p(x), y) for p, y in zip(self.ps, ys)))
 
-    def predict(self, x):
-        return [p.predict(x) for p in self.ps]
+    def marginals(self, x):
+        return [p(x).marginals() for p in self.ps]
 
 
 # Define points to predict at.
@@ -72,7 +72,7 @@ fs_true = fs.sample(x)
 ys_obs = (ys | fs.obs(x, fs_true)).sample(x_obs)
 
 # Condition the model on the observations to make predictions.
-preds = (fs | ys.obs(x_obs, ys_obs)).predict(x)
+preds = (fs | ys.obs(x_obs, ys_obs)).marginals(x)
 
 
 # Plot results.

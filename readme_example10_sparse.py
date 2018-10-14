@@ -23,7 +23,7 @@ obs = SparseObs(f(x_ind),  # Inducing points.
                 # Observations _without_ the noise process added on.
                 f(x_obs), y_obs)
 print('elbo', obs.elbo)
-mean, lower, upper = (f | obs).predict(x)
+mean, lower, upper = (f | obs)(x).marginals()
 
 # Plot result.
 plt.plot(x, f_true, label='True', c='tab:blue')

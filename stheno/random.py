@@ -147,6 +147,20 @@ class Normal(RandomVector, At, Referentiable):
         """Second moment."""
         return self.var + B.outer(self.mean)
 
+    def marginals(self):
+        """Get the marginals.
+
+        Returns:
+            tuple: A tuple containing the predictive means and lower and
+                upper 95% central credible interval bounds.
+        """
+        mean = B.squeeze(self.mean)
+        if self.p is None:
+            vars = B.diag(self.var)
+        else:
+            vars = B.squeeze(dense(self.p.kernel.elwise(self.x, self.cache)))
+        return mean, mean - 2 * vars ** .5, mean + 2 * vars ** .5
+
     def logpdf(self, x):
         """Compute the log-pdf.
 

@@ -39,11 +39,11 @@ f_true_smooth, f_true_wiggly, f_true_periodic, f_true_linear, f_true, y_obs = \
 f_smooth, f_wiggly, f_periodic, f_linear, f = \
     (f_smooth, f_wiggly, f_periodic, f_linear, f) | Obs(y(x_obs), y_obs)
 
-pred_smooth = f_smooth.predict(x)
-pred_wiggly = f_wiggly.predict(x)
-pred_periodic = f_periodic.predict(x)
-pred_linear = f_linear.predict(x)
-pred_f = f.predict(x)
+pred_smooth = f_smooth(x).marginals()
+pred_wiggly = f_wiggly(x).marginals()
+pred_periodic = f_periodic(x).marginals()
+pred_linear = f_linear(x).marginals()
+pred_f = f(x).marginals()
 
 
 # Plot results.

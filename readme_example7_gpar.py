@@ -54,7 +54,7 @@ SOI(-lml2, var_list=vs2.vars).minimize(s)
 
 # Predict first output.
 f1 = f1 | (y1(x_obs1), y1_obs)
-mean1, lower1, upper1 = s.run(f1.predict(x))
+mean1, lower1, upper1 = s.run(f1(x).marginals())
 
 # Predict second output with Monte Carlo.
 f2 = f2 | (y2(np.stack((x_obs2, y1_obs[inds2]), axis=1)), y2_obs)
