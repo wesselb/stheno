@@ -1,7 +1,9 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-from stheno import GP, model, EQ, RQ, Linear, Delta, Exp, Obs
+from stheno import GP, model, EQ, RQ, Linear, Delta, Exp, Obs, B
+
+B.epsilon = 1e-10
 
 # Define points to predict at.
 x = np.linspace(0, 10, 200)
