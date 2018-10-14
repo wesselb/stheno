@@ -320,9 +320,7 @@ def block_matrix(*rows):
         :class:`.matrix.Dense`: Assembled matrix as structured as possible.
     """
     # If the blocks form a grid, then might know how to preserve structure.
-    # Track whether the rows and columns can be concatenated.
-    row_consistency = True
-    col_consistency = True
+    grid = True
 
     # Check that all shapes line up.
     for r in range(1, len(rows)):
@@ -332,14 +330,14 @@ def block_matrix(*rows):
             # The previous block in the row must have an equal
             # number of rows.
             if block_shape[0] != B.shape_int(rows[r][c - 1])[0]:
-                row_consistency = False
+                grid = False
 
             # The previous block in the column must have an equal
             # number of columns.
             if block_shape[1] != B.shape_int(rows[r - 1][c])[1]:
-                col_consistency = False
+                grid = False
 
-    if row_consistency and col_consistency:
+    if grid:
         # We have a grid! First, determine the resulting shape.
         grid_rows = sum([B.shape_int(row[0])[0] for row in rows])
         grid_cols = sum([B.shape_int(K)[1] for K in rows[0]])
@@ -387,10 +385,7 @@ def block_matrix(*rows):
 
     # We could not preserve any structure. Simply concatenate them all
     # densely.
-    if row_consistency:
-        return Dense(B.concat2d(*[[dense(K) for K in row] for row in rows]))
-    else:
-        raise ValueError('Could not concatenate blocks of block matrix.')
+    return Dense(B.concat2d(*[[dense(K) for K in row] for row in rows]))
 
 
 # Get data type of matrices.
