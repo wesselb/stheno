@@ -29,6 +29,10 @@ def test_normal():
         yield ok, allclose(dist.logpdf(x), dist_sp.logpdf(x.T)), 'logpdf'
         yield ok, allclose(dist.entropy(), dist_sp.entropy()), 'entropy'
 
+    # Test the the output of `logpdf` is flattened appropriately.
+    yield eq, np.shape(dist.logpdf(np.ones((3, 1)))), ()
+    yield eq, np.shape(dist.logpdf(np.ones((3, 2)))), (2,)
+
     # Test KL with Monte Carlo estimate.
     mean2 = np.random.randn(3, 1)
     chol2 = np.random.randn(3, 3)

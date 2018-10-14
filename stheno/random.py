@@ -154,12 +154,15 @@ class Normal(RandomVector, At, Referentiable):
             x (input): Values to compute the log-pdf of.
             
         Returns:
-            list[tensor]: Log-pdf for every input in `x`.
+            list[tensor]: Log-pdf for every input in `x`. If it can be
+                determined that the list contains only a single log-pdf,
+                then the list is flattened to a scalar.
         """
-        return -(B.logdet(self.var) +
-                 B.cast(self.dim, dtype=self.dtype) *
-                 B.cast(B.log_2_pi, dtype=self.dtype) +
-                 B.qf_diag(self.var, uprank(x) - self.mean)) / 2
+        logpdfs = -(B.logdet(self.var) +
+                    B.cast(self.dim, dtype=self.dtype) *
+                    B.cast(B.log_2_pi, dtype=self.dtype) +
+                    B.qf_diag(self.var, uprank(x) - self.mean)) / 2
+        return logpdfs[0] if B.shape_int(logpdfs) == (1,) else logpdfs
 
     def entropy(self):
         """Compute the entropy.
