@@ -433,18 +433,23 @@ def diag(diag, rows, cols=None):
     diag = diag[:B.minimum(rows, cols)]
     diag_len, dtype = B.shape(diag)[0], B.dtype(diag)
 
+    # PyTorch incorrectly handles dimensions of size 0. Therefore, if the
+    # numbers of extra columns and rows are `Number`s, which will be the case if
+    # PyTorch is the backend, then perform a check to prevent appending tensors
+    # with dimensions of size 0.
+
     # Start with just a diagonal matrix.
     res = B.diag(diag)
 
     # Pad extra columns if necessary.
     extra_cols = cols - diag_len
-    if extra_cols > 0:
+    if not (isinstance(extra_cols, Number) and extra_cols == 0):
         zeros = B.zeros([diag_len, extra_cols], dtype=dtype)
         res = B.concat([B.diag(diag), zeros], axis=1)
 
     # Pad extra rows if necessary.
     extra_rows = rows - diag_len
-    if extra_rows > 0:
+    if not (isinstance(extra_rows, Number) and extra_rows == 0):
         zeros = B.zeros([extra_rows, diag_len + extra_cols], dtype=dtype)
         res = B.concat([res, zeros], axis=0)
 
@@ -491,10 +496,10 @@ def matmul(a, b, tr_a=False, tr_b=False):
     b = B.transpose(b) if tr_b else b
 
     # Get shape of `a`.
-    a_rows, a_cols = B.shape(a)
+    a_rows, a_cols = B.shape_int(a)
 
     # If `a` is square, don't do complicated things.
-    if a_rows is a_cols:
+    if a_rows == a_cols and a_rows is not None:
         return B.diag(a)[:, None] * dense(b)
 
     # Compute the core part.
@@ -513,10 +518,10 @@ def matmul(a, b, tr_a=False, tr_b=False):
     b = B.transpose(b) if tr_b else b
 
     # Get shape of `b`.
-    b_rows, b_cols = B.shape(b)
+    b_rows, b_cols = B.shape_int(b)
 
     # If `b` is square, don't do complicated things.
-    if b_rows is b_cols:
+    if b_rows == b_cols and b_rows is not None:
         return dense(a) * B.diag(b)[None, :]
 
     # Compute the core part.
