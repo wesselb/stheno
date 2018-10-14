@@ -73,20 +73,20 @@ def dense(a):
     return B.array(a)
 
 
-def allclose(a, b, desc=None):
-    return np.allclose(dense(a), dense(b), atol=1e-6, rtol=1e-6)
+def allclose(a, b, desc=None, atol=1e-8, rtol=1e-8):
+    return np.allclose(dense(a), dense(b), atol=atol, rtol=rtol)
 
 
 @dispatch({B.Numeric, Dense, list}, {B.Numeric, Dense, list}, [object])
-def assert_allclose(a, b, desc=None):
-    np.testing.assert_allclose(dense(a), dense(b), atol=1e-6, rtol=1e-6)
+def assert_allclose(a, b, desc=None, atol=1e-8, rtol=1e-8):
+    np.testing.assert_allclose(dense(a), dense(b), atol=atol, rtol=rtol)
 
 
 @dispatch(tuple, tuple, [object])
-def assert_allclose(a, b, desc=None):
+def assert_allclose(a, b, desc=None, atol=1e-8, rtol=1e-8):
     assert len(a) == len(b)
     for x, y in zip(a, b):
-        assert_allclose(x, y, desc)
+        assert_allclose(x, y, desc, atol=atol, rtol=rtol)
 
 
 def assert_instance(a, b, desc=None):

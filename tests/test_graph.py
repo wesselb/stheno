@@ -545,17 +545,20 @@ def test_sparse_conditioning():
     # Test posterior.
     post_sparse = (f | SparseObs(f(x), e, f(x), y))(x_new)
     post_ref = (f | ((f + e)(x), y))(x_new)
-    yield assert_allclose, post_sparse.mean, post_ref.mean
+    yield assert_allclose, post_sparse.mean, post_ref.mean, \
+          'means 1', 1e-6, 1e-6
     yield assert_allclose, post_sparse.var, post_ref.var
 
     post_sparse = (f | SparseObs(f(x), e, (2 * f + 2)(x), 2 * y + 2))(x_new)
     post_ref = (f | ((2 * f + 2 + e)(x), 2 * y + 2))(x_new)
-    yield assert_allclose, post_sparse.mean, post_ref.mean
+    yield assert_allclose, post_sparse.mean, post_ref.mean, \
+          'means 2', 1e-6, 1e-6
     yield assert_allclose, post_sparse.var, post_ref.var
 
     post_sparse = (f | SparseObs((2 * f + 2)(x), e, f(x), y))(x_new)
     post_ref = (f | ((f + e)(x), y))(x_new)
-    yield assert_allclose, post_sparse.mean, post_ref.mean
+    yield assert_allclose, post_sparse.mean, post_ref.mean, \
+          'means 3', 1e-6, 1e-6
     yield assert_allclose, post_sparse.var, post_ref.var
 
     # Test ELBO.
@@ -588,7 +591,8 @@ def test_sparse_conditioning():
     post_sparse = (f | SparseObs((f(x1), f(x2), f(x_new)),
                                  (e, f(Unique(x1)), y1),
                                  (e, f(Unique(x2)), y2)))(x_new)
-    yield assert_allclose, post_sparse.mean, post_ref.mean
+    yield assert_allclose, post_sparse.mean, post_ref.mean, \
+          'means 4', 1e-6, 1e-6
     yield assert_allclose, post_sparse.var, post_ref.var
 
     # Test multiple inducing points.
@@ -600,7 +604,8 @@ def test_sparse_conditioning():
 
     post_sparse = (f | SparseObs((f(x_ind1), f(x_ind2)), e, f(x), y))(x_new)
     post_ref = (f | ((f + e)(x), y))(x_new)
-    yield assert_allclose, post_sparse.mean, post_ref.mean
+    yield assert_allclose, post_sparse.mean, post_ref.mean, \
+          'means 5', 1e-4, 1e-4
     yield assert_allclose, post_sparse.var, post_ref.var
 
 
