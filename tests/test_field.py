@@ -295,6 +295,7 @@ def test_shifting():
 def test_selection():
     yield assert_allclose, _to_list((1, 2)), [1, 2]
     yield assert_allclose, _to_list([1, 2]), [1, 2]
+    yield assert_allclose, _to_list(np.array([1, 2])), [1, 2]
     yield assert_allclose, _to_list(1), [1]
     yield raises, ValueError, lambda: _to_list(np.ones((1, 1)))
 
