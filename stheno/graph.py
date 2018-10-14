@@ -151,7 +151,8 @@ class SparseObservations(Observations, Referentiable):
 
     _dispatch = Dispatcher(in_class=Self)
 
-    @_dispatch({B.Numeric, Input}, [{tuple, list}])
+    @_dispatch({B.Numeric, Input, tuple, list},
+               [Union(tuple, list, PromisedGP)])
     def __init__(self, z, *pairs, **kw_args):
         es, xs, ys = zip(*pairs)
         Observations.__init__(self, *zip(xs, ys), **kw_args)
@@ -159,11 +160,35 @@ class SparseObservations(Observations, Referentiable):
                                     z,
                                     self.graph.cross(*es),
                                     self.x,
-                                    self.y)
+                                    self.y,
+                                    **kw_args)
 
-    @_dispatch({B.Numeric, Input}, PromisedGP, [object])
-    def __init__(self, z, e, *args, **kw_args):
-        Observations.__init__(self, *args, **kw_args)
+    @_dispatch({list, tuple},
+               PromisedGP,
+               {B.Numeric, Input},
+               B.Numeric,
+               [PromisedGP])
+    def __init__(self, zs, e, x, y, ref=None):
+        # Ensure `At` everywhere.
+        zs = [ensure_at(z, ref=ref) for z in zs]
+
+        # Extract graph.
+        graph = type_parameter(zs[0]).graph
+
+        # Create a representative multi-output process.
+        p_z = graph.cross(*(type_parameter(z) for z in zs))
+
+        SparseObservations.__init__(self,
+                                    p_z(MultiInput(*zs)),
+                                    e, x, y, ref=ref)
+
+    @_dispatch({B.Numeric, Input},
+               PromisedGP,
+               {B.Numeric, Input},
+               B.Numeric,
+               [PromisedGP])
+    def __init__(self, z, e, x, y, ref=None):
+        Observations.__init__(self, x, y, ref=ref)
 
         # Extract processes.
         p_x, x = type_parameter(self.x), self.x.get()

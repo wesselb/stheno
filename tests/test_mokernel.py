@@ -74,15 +74,3 @@ def test_mokernel():
                           dense(ks[p2, p1](x1, x2))],
                          axis=1)
 
-
-def test_membership():
-    m = Graph()
-    p1 = GP(EQ(), graph=m)
-    p2 = GP(EQ(), graph=m)
-    p3 = GP(EQ(), graph=m)
-    mok = MultiOutputKernel(p1, p2)
-
-    yield lam, lambda: mok(p1(0), p2(0)), ()
-    yield raises, RuntimeError, lambda: mok(p1(0), p3(0))
-    yield raises, RuntimeError, lambda: mok(p3(0), p2(0))
-    yield raises, RuntimeError, lambda: mok(p3(0), p3(0))

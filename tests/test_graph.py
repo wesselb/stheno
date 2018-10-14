@@ -584,6 +584,25 @@ def test_sparse_conditioning():
     yield assert_allclose, post_sparse.mean, post_ref.mean
     yield assert_allclose, post_sparse.var, post_ref.var
 
+    # Test multiple observations and multiple inducing points.
+    post_sparse = (f | SparseObs((f(x1), f(x2), f(x_new)),
+                                 (e, f(Unique(x1)), y1),
+                                 (e, f(Unique(x2)), y2)))(x_new)
+    yield assert_allclose, post_sparse.mean, post_ref.mean
+    yield assert_allclose, post_sparse.var, post_ref.var
+
+    # Test multiple inducing points.
+    x = np.linspace(0, 5, 10)
+    x_new = np.linspace(6, 10, 10)
+    x_ind1 = x[:5]
+    x_ind2 = x[5:]
+    y = model.sample((f + e)(x))
+
+    post_sparse = (f | SparseObs((f(x_ind1), f(x_ind2)), e, f(x), y))(x_new)
+    post_ref = (f | ((f + e)(x), y))(x_new)
+    yield assert_allclose, post_sparse.mean, post_ref.mean
+    yield assert_allclose, post_sparse.var, post_ref.var
+
 
 def test_case_summation_with_itself():
     # Test summing the same GP with itself.
