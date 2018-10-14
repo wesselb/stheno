@@ -131,18 +131,18 @@ class Kernel(Function, Referentiable):
 
     @_dispatch(Input, Input, Cache)
     def elwise(self, x, y, cache):
-        # Both input types were not used. Fall back.
-        return B.expand_dims(B.diag(self(x, y, cache)), 1)
+        # Both input types were not used. Unwrap.
+        return self.elwise(x.get(), y.get(), Cache())
 
     @_dispatch(Input, object, Cache)
     def elwise(self, x, y, cache):
-        # Left input type as not used. Fall back.
-        return B.expand_dims(B.diag(self(x, y, cache)), 1)
+        # Left input type as not used. Unwrap.
+        return self.elwise(x.get(), y, Cache())
 
     @_dispatch(object, Input, Cache)
     def elwise(self, x, y, cache):
-        # Right input type was not used. Fall back.
-        return B.expand_dims(B.diag(self(x, y, cache)), 1)
+        # Right input type was not used. Unwrap.
+        return self.elwise(x, y.get(), Cache())
 
     def periodic(self, period=1):
         """Map to a periodic space.
