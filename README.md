@@ -734,11 +734,21 @@ a sparse approximation, use `SparseObs` instead of `Obs`.
 Definition:
 
 ```python
-obs = SparseObs(u(x_inducing),  # Locations of inducing points.
-                e,              # Independent, additive noise process.
-                f(x_observed),  # Locations of observations _without_ the noise 
-                                #   process added.
-                y_observed)     # Observations.
+obs = SparseObs(u(z),  # Locations of inducing points.
+                e,     # Independent, additive noise process.
+                f(x),  # Locations of observations _without_ the noise 
+                       #   process added.
+                y)     # Observations.
+                
+obs = SparseObs(u(z), e, f(x), y)
+
+obs = SparseObs(u(z), (e1, f1(x1), y1), (e2, f2(x2), y2), ...)
+
+obs = SparseObs((u1(z1), u2(z2), ...), e, f(x), y)
+
+obs = SparseObs(u(z), (e1, f1(x1), y1), (e2, f2(x2), y2), ...)
+
+obs = SparseObs((u1(z1), u2(z2), ...), (e1, f1(x1), y1), (e2, f2(x2), y2), ...)
 ```
 
 `SparseObs` will also compute the value of the ELBO in `obs.elbo`, which can be
