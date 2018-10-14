@@ -74,12 +74,12 @@ def dense(a):
 
 
 def allclose(a, b, desc=None):
-    return np.allclose(dense(a), dense(b), atol=1e-9)
+    return np.allclose(dense(a), dense(b), atol=1e-6, rtol=1e-6)
 
 
 @dispatch({B.Numeric, Dense, list}, {B.Numeric, Dense, list}, [object])
 def assert_allclose(a, b, desc=None):
-    np.testing.assert_allclose(dense(a), dense(b), atol=1e-9)
+    np.testing.assert_allclose(dense(a), dense(b), atol=1e-6, rtol=1e-6)
 
 
 @dispatch(tuple, tuple, [object])
