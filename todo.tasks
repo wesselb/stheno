@@ -2,17 +2,24 @@ Features:
     ☐ FITC approximation
     ☐ DTC approximation
 
-    ☐ Multi-argument sparse conditioning
-
     Multi Output Support:
         ☐ ICM
         ☐ (O)LMM
 
+Structured Matrices:
+    ☐ Block matrix
+    ☐ Kronecker product, and sum thereof
+    ☐ Toeplitz
+
 Refactor:
     ☐ Make RQ, Exp, Matern32, and Matern52 cache friendly.
 
+Important Issues:
+    ☐ https://github.com/pytorch/pytorch/issues/5014
+
 ＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿
 Archive:
+ ✓ Multi-argument sparse conditioning @done (18-10-14 16:51) @project(Features)
  ✓ Simply signatures in `field.py`. @done (18-07-04 16:52) @project(Refactor)
  ✓ Efficient multi-output kernels: low-rank SPDs returned by multi-output kernels @done (18-06-26 15:39) @project(Features)
  ✓ Write documentation. @started @done (18-06-26 15:38) @project(Documentation)

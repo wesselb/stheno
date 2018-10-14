@@ -307,6 +307,92 @@ def dense(a): return B.matmul(a.left, a.middle, a.right, tr_c=True)
 def dense(a): return dense(a.lr) + dense(a.diag)
 
 
+# Construct a matrix from blocks.
+
+@B.block_matrix.extend([{list, tuple}])
+def block_matrix(*rows):
+    """Construct a matrix from its blocks, preserving structure when possible.
+
+    Args:
+        *rows (list): Rows of the block matrix.
+
+    Returns:
+        :class:`.matrix.Dense`: Assembled matrix as structured as possible.
+    """
+    # If the blocks form a grid, then might know how to preserve structure.
+    # Track whether the rows and columns can be concatenated.
+    row_consistency = True
+    col_consistency = True
+
+    # Check that all shapes line up.
+    for r in range(1, len(rows)):
+        for c in range(1, len(rows[0])):
+            block_shape = B.shape_int(rows[r][c])
+
+            # The previous block in the row must have an equal
+            # number of rows.
+            if block_shape[0] != B.shape_int(rows[r][c - 1])[0]:
+                row_consistency = False
+
+            # The previous block in the column must have an equal
+            # number of columns.
+            if block_shape[1] != B.shape_int(rows[r - 1][c])[1]:
+                col_consistency = False
+
+    if row_consistency and col_consistency:
+        # We have a grid! First, determine the resulting shape.
+        grid_rows = sum([B.shape_int(row[0])[0] for row in rows])
+        grid_cols = sum([B.shape_int(K)[1] for K in rows[0]])
+
+        # Check whether the result is just zeros.
+        if all([all([isinstance(K, Zero) for K in row]) for row in rows]):
+            return Zero(B.dtype(rows[0][0]),
+                        rows=grid_rows,
+                        cols=grid_cols)
+
+        # Check whether the result is just ones.
+        if all([all([isinstance(K, One) for K in row]) for row in rows]):
+            return One(B.dtype(rows[0][0]),
+                       rows=grid_rows,
+                       cols=grid_cols)
+
+        # Check whether the result is diagonal.
+        diagonal = True
+        diagonal_blocks = []
+
+        for r in range(len(rows)):
+            for c in range(len(rows[0])):
+                block_shape = B.shape_int(rows[r][c])
+                if r == c:
+                    # Keep track of all the diagonal blocks.
+                    diagonal_blocks.append(rows[r][c])
+
+                    # All blocks on the diagonal must be diagonal or zero.
+                    if not isinstance(rows[r][c], (Diagonal, Zero)):
+                        diagonal = False
+
+                    # All blocks on the diagonal must be square.
+                    if not block_shape[0] == block_shape[1]:
+                        diagonal = False
+
+                # All blocks not on the diagonal must be zero.
+                if r != c and not isinstance(rows[r][c], Zero):
+                    diagonal = False
+
+        if diagonal:
+            return Diagonal(B.concat([B.diag(K) for K in diagonal_blocks],
+                                     axis=0),
+                            rows=grid_rows,
+                            cols=grid_cols)
+
+    # We could not preserve any structure. Simply concatenate them all
+    # densely.
+    if row_consistency:
+        return Dense(B.concat2d(*[[dense(K) for K in row] for row in rows]))
+    else:
+        raise ValueError('Could not concatenate blocks of block matrix.')
+
+
 # Get data type of matrices.
 
 @B.dtype.extend(Dense)

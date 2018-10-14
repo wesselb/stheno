@@ -146,6 +146,51 @@ def test_dense():
     yield assert_allclose, dense(wb), dense(diag) + dense(lr)
 
 
+def test_block_matrix():
+    dt = np.float64
+
+    # Check correctness.
+    rows = [[np.random.randn(4, 3), np.random.randn(4, 5)],
+            [np.random.randn(6, 3), np.random.randn(6, 5)]]
+    yield assert_allclose, B.block_matrix(*rows), B.concat2d(*rows)
+
+    # Check that grid is checked correctly.
+    yield eq, type(B.block_matrix([Zero(dt, 3, 7), Zero(dt, 3, 4)],
+                                  [Zero(dt, 4, 5), Zero(dt, 4, 6)])), Dense
+    yield raises, ValueError, \
+          lambda: B.block_matrix([Zero(dt, 5, 5), Zero(dt, 3, 6)],
+                                 [Zero(dt, 2, 5), Zero(dt, 4, 6)])
+
+    # Test zeros.
+    res = B.block_matrix([Zero(dt, 3, 5), Zero(dt, 3, 6)],
+                         [Zero(dt, 4, 5), Zero(dt, 4, 6)])
+    yield eq, type(res), Zero
+    yield assert_allclose, res, Zero(dt, 7, 11)
+
+    # Test ones.
+    res = B.block_matrix([One(dt, 3, 5), One(dt, 3, 6)],
+                         [One(dt, 4, 5), One(dt, 4, 6)])
+    yield eq, type(res), One
+    yield assert_allclose, res, One(dt, 7, 11)
+
+    # Test diagonal.
+    res = B.block_matrix([Diagonal([1, 2]), Zero(dt, 2, 3)],
+                         [Zero(dt, 3, 2), Diagonal([3, 4, 5])])
+    yield eq, type(res), Diagonal
+    yield assert_allclose, res, Diagonal([1, 2, 3, 4, 5])
+    # Check that all blocks on the diagonal must be diagonal or zero.
+    yield eq, type(B.block_matrix([Diagonal([1, 2]), Zero(dt, 2, 3)],
+                                  [Zero(dt, 3, 2), One(dt, 3)])), Dense
+    yield eq, type(B.block_matrix([Diagonal([1, 2]), Zero(dt, 2, 3)],
+                                  [Zero(dt, 3, 2), Zero(dt, 3)])), Diagonal
+    # Check that all blocks on the diagonal must be square.
+    yield eq, type(B.block_matrix([Diagonal([1, 2]), Zero(dt, 2, 4)],
+                                  [Zero(dt, 3, 2), Zero(dt, 3, 4)])), Dense
+    # Check that all other blocks must be zero.
+    yield eq, type(B.block_matrix([Diagonal([1, 2]), One(dt, 2, 3)],
+                                  [Zero(dt, 3, 2), Diagonal([3, 4, 5])])), Dense
+
+
 def test_dtype():
     # Test `Dense`.
     yield eq, B.dtype(Dense(np.array([[1]]))), int
