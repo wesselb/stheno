@@ -10,7 +10,8 @@ from stheno.matrix import dense
 from stheno.mokernel import MultiOutputKernel
 
 # noinspection PyUnresolvedReferences
-from . import eq, neq, lt, le, ge, gt, raises, call, ok, eprint, assert_allclose
+from . import eq, neq, lt, le, ge, gt, raises, call, ok, eprint, \
+    assert_allclose, lam
 
 
 def test_mokernel():
@@ -72,3 +73,17 @@ def test_mokernel():
           np.concatenate([dense(ks[p2, p2](x1, x1)),
                           dense(ks[p2, p1](x1, x2))],
                          axis=1)
+
+def test_membership():
+    m = Graph()
+    p1 = GP(EQ(), graph=m)
+    p2 = GP(EQ(), graph=m)
+    p3 = GP(EQ(), graph=m)
+    mok = MultiOutputKernel(p1, p2)
+
+    yield lam, lambda: mok(p1(0), p2(0)), ()
+    yield raises, RuntimeError, lambda: mok(p1(0), p3(0))
+    yield raises, RuntimeError, lambda: mok(p3(0), p2(0))
+    yield raises, RuntimeError, lambda: mok(p3(0), p3(0))
+
+

@@ -49,6 +49,18 @@ class MultiOutputKernel(Kernel, Referentiable):
     @_dispatch(At, At, Cache)
     @cache
     def __call__(self, x, y, B):
+        def resolve(x):
+            return x if isinstance(x, int) else id(x)
+
+        # Check that the processes attached to `x` and `y` are indeed part of
+        # the multi-output process.
+        if resolve(type_parameter(x)) not in map(resolve, self.ps):
+            raise RuntimeError('Process {} not part of multi-output process.'
+                               ''.format(type_parameter(x)))
+        if resolve(type_parameter(y)) not in map(resolve, self.ps):
+            raise RuntimeError('Process {} not part of multi-output process.'
+                               ''.format(type_parameter(y)))
+
         return self.kernels[type_parameter(x),
                             type_parameter(y)](x.get(), y.get(), B)
 
