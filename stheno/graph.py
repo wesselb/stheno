@@ -151,6 +151,16 @@ class SparseObservations(Observations, Referentiable):
 
     _dispatch = Dispatcher(in_class=Self)
 
+    @_dispatch({B.Numeric, Input}, [{tuple, list}])
+    def __init__(self, z, *pairs, **kw_args):
+        es, xs, ys = zip(*pairs)
+        Observations.__init__(self, *zip(xs, ys), **kw_args)
+        SparseObservations.__init__(self,
+                                    z,
+                                    self.graph.cross(*es),
+                                    self.x,
+                                    self.y)
+
     @_dispatch({B.Numeric, Input}, PromisedGP, [object])
     def __init__(self, z, e, *args, **kw_args):
         Observations.__init__(self, *args, **kw_args)
@@ -163,7 +173,19 @@ class SparseObservations(Observations, Referentiable):
         # Construct the necessary kernel matrices.
         K_zx = self.graph.kernels[p_z, p_x](z, x)
         K_z = self.graph.kernels[p_z](z)
-        K_n = e.kernel(x)
+
+        # Evaluating `e.kernel(x)` will yield incorrect results if `x` is a
+        # `MultiInput`, because `x` then still designates the particular
+        # components of `f`. Fix that by instead designating the elements of
+        # `e`.
+        if isinstance(x, MultiInput):
+            x_n = MultiInput(*(p(xi.get())
+                               for p, xi in zip(e.kernel.ps, x.get())))
+        else:
+            x_n = x
+
+        # Construct the noise kernel matrix.
+        K_n = e.kernel(x_n)
 
         # The approximation can only handle diagonal noise matrices.
         if not isinstance(K_n, Diagonal):
@@ -172,7 +194,7 @@ class SparseObservations(Observations, Referentiable):
         # And construct the components for the inducing point approximation.
         L_z = B.cholesky(matrix(K_z))
         A = B.eye_from(K_z) + B.qf(K_n, B.transpose(B.trisolve(L_z, K_zx)))
-        y_bar = uprank(self.y) - e.mean(x) - self.graph.means[p_x](x)
+        y_bar = uprank(self.y) - e.mean(x_n) - self.graph.means[p_x](x)
         prod_y_bar = B.trisolve(L_z, B.qf(K_n, B.transpose(K_zx), y_bar))
 
         # Compute the optimal mean.

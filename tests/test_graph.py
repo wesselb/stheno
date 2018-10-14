@@ -8,13 +8,13 @@ from plum import type_parameter
 
 from stheno.cache import Cache
 from stheno.graph import Graph, GP, Obs, SparseObs
-from stheno.input import At
+from stheno.input import At, Unique
 from stheno.kernel import Linear, EQ, Delta, Exp, RQ, ZeroKernel, OneKernel, \
     ScaledKernel
 from stheno.mean import TensorProductMean, ZeroMean, ScaledMean, OneMean
 from stheno.random import Normal
 # noinspection PyUnresolvedReferences,
-from . import eq, raises, ok, le, assert_allclose, assert_instance
+from . import eq, raises, ok, le, assert_allclose, assert_instance, eprint
 
 
 def abs_err(x1, x2=0):
@@ -532,9 +532,10 @@ def test_formatting():
 
 def test_sparse_conditioning():
     model = Graph()
-    f = GP(EQ(), graph=model)
-    e = GP(1e-8 * Delta(), graph=model)
+    f = GP(EQ().stretch(3), graph=model)
+    e = GP(1e-2 * Delta(), graph=model)
     x = np.linspace(0, 5, 10)
+    x_new = np.linspace(6, 10, 10)
 
     y = f(x).sample()
 
@@ -542,18 +543,18 @@ def test_sparse_conditioning():
     yield raises, RuntimeError, lambda: SparseObs(f(x), f, f(x), y)
 
     # Test posterior.
-    post_sparse = (f | SparseObs(f(x), e, f(x), y))(x)
-    post_ref = (f | ((f + e)(x), y))(x)
+    post_sparse = (f | SparseObs(f(x), e, f(x), y))(x_new)
+    post_ref = (f | ((f + e)(x), y))(x_new)
     yield assert_allclose, post_sparse.mean, post_ref.mean
     yield assert_allclose, post_sparse.var, post_ref.var
 
-    post_sparse = (f | SparseObs(f(x), e, (2 * f + 2)(x), 2 * y + 2))(x)
-    post_ref = (f | ((2 * f + 2 + e)(x), 2 * y + 2))(x)
+    post_sparse = (f | SparseObs(f(x), e, (2 * f + 2)(x), 2 * y + 2))(x_new)
+    post_ref = (f | ((2 * f + 2 + e)(x), 2 * y + 2))(x_new)
     yield assert_allclose, post_sparse.mean, post_ref.mean
     yield assert_allclose, post_sparse.var, post_ref.var
 
-    post_sparse = (f | SparseObs((2 * f + 2)(x), e, f(x), y))(x)
-    post_ref = (f | ((f + e)(x), y))(x)
+    post_sparse = (f | SparseObs((2 * f + 2)(x), e, f(x), y))(x_new)
+    post_ref = (f | ((f + e)(x), y))(x_new)
     yield assert_allclose, post_sparse.mean, post_ref.mean
     yield assert_allclose, post_sparse.var, post_ref.var
 
@@ -568,6 +569,20 @@ def test_sparse_conditioning():
     yield assert_allclose, \
           SparseObs((2 * f + 2)(x), e, f(x), y).elbo, \
           (f + e)(x).logpdf(y)
+
+    # Test multiple observations.
+    x1 = np.linspace(0, 5, 10)
+    x2 = np.linspace(10, 15, 10)
+    x_new = np.linspace(6, 9, 10)
+    x_ind = np.concatenate((x1, x2, x_new), axis=0)
+    y1, y2 = model.sample((f + e)(x1), (f + e)(x2))
+
+    post_sparse = (f | SparseObs(f(x_ind),
+                                 (e, f(Unique(x1)), y1),
+                                 (e, f(Unique(x2)), y2)))(x_new)
+    post_ref = (f | Obs(((f + e)(x1), y1), ((f + e)(x2), y2)))(x_new)
+    yield assert_allclose, post_sparse.mean, post_ref.mean
+    yield assert_allclose, post_sparse.var, post_ref.var
 
 
 def test_case_summation_with_itself():

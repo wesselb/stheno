@@ -85,17 +85,17 @@ class Kernel(Function, Referentiable):
 
     @_dispatch(Input, Input, Cache)
     def __call__(self, x, y, cache):
-        # Both input types were not used. Attempt to unwrap.
+        # Both input types were not used. Unwrap.
         return self(x.get(), y.get(), cache)
 
     @_dispatch(Input, object, Cache)
     def __call__(self, x, y, cache):
-        # Left input type was not used. Attempt to unwrap.
+        # Left input type was not used. Unwrap.
         return self(x.get(), y, cache)
 
     @_dispatch(object, Input, Cache)
     def __call__(self, x, y, cache):
-        # Right input type was not used. Attempt to unwrap.
+        # Right input type was not used. Unwrap.
         return self(x, y.get(), cache)
 
     @_dispatch(object, object, Cache)
@@ -131,18 +131,18 @@ class Kernel(Function, Referentiable):
 
     @_dispatch(Input, Input, Cache)
     def elwise(self, x, y, cache):
-        # Both input types were not used. Attempt to unwrap.
-        return self.elwise(x.get(), y.get(), cache)
+        # Both input types were not used. Fall back.
+        return B.expand_dims(B.diag(self(x, y, cache)), 1)
 
     @_dispatch(Input, object, Cache)
     def elwise(self, x, y, cache):
-        # Left input type was not used. Attempt to unwrap.
-        return self.elwise(x.get(), y, cache)
+        # Left input type as not used. Fall back.
+        return B.expand_dims(B.diag(self(x, y, cache)), 1)
 
     @_dispatch(object, Input, Cache)
     def elwise(self, x, y, cache):
-        # Right input type was not used. Attempt to unwrap.
-        return self.elwise(x, y.get(), cache)
+        # Right input type was not used. Fall back.
+        return B.expand_dims(B.diag(self(x, y, cache)), 1)
 
     def periodic(self, period=1):
         """Map to a periodic space.
