@@ -68,6 +68,51 @@ class MultiOutputKernel(Kernel, Referentiable):
         return B.block_matrix(*[[self(xi, yi, B) for yi in y.get()]
                                 for xi in x.get()])
 
+    @_dispatch({B.Numeric, Input}, {B.Numeric, Input}, Cache)
+    @cache
+    def elwise(self, x, y, B):
+        return self.elwise(MultiInput(*(p(x) for p in self.ps)),
+                           MultiInput(*(p(y) for p in self.ps)), B)
+
+    @_dispatch(At, {B.Numeric, Input}, Cache)
+    @cache
+    def elwise(self, x, y, B):
+        raise ValueError('Unclear combination of arguments given to '
+                         'MultiOutputKernel.elwise.')
+
+    @_dispatch({B.Numeric, Input}, At, Cache)
+    @cache
+    def elwise(self, x, y, B):
+        raise ValueError('Unclear combination of arguments given to '
+                         'MultiOutputKernel.elwise.')
+
+    @_dispatch(At, At, Cache)
+    @cache
+    def elwise(self, x, y, B):
+        return self.kernels[type_parameter(x),
+                            type_parameter(y)].elwise(x.get(), y.get(), B)
+
+    @_dispatch(MultiInput, At, Cache)
+    @cache
+    def elwise(self, x, y, B):
+        raise ValueError('Unclear combination of arguments given to '
+                         'MultiOutputKernel.elwise.')
+
+    @_dispatch(At, MultiInput, Cache)
+    @cache
+    def elwise(self, x, y, B):
+        raise ValueError('Unclear combination of arguments given to '
+                         'MultiOutputKernel.elwise.')
+
+    @_dispatch(MultiInput, MultiInput, Cache)
+    @cache
+    def elwise(self, x, y, B):
+        if len(x.get()) != len(y.get()):
+            raise ValueError('MultiOutputKernel.elwise must be called with '
+                             'similarly sized MultiInputs.')
+        return B.concat([self.elwise(xi, yi, B)
+                         for xi, yi in zip(x.get(), y.get())], axis=0)
+
     def __str__(self):
         ks = [str(self.kernels[p]) for p in self.ps]
         return 'MultiOutputKernel({})'.format(', '.join(ks))

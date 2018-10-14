@@ -24,6 +24,7 @@ def test_mokernel():
 
     x1 = np.linspace(0, 1, 10)
     x2 = np.linspace(1, 2, 5)
+    x3 = np.linspace(1, 2, 10)
 
     yield eq, str(mok), 'MultiOutputKernel(EQ(), 2 * (EQ() > 2))'
 
@@ -34,8 +35,10 @@ def test_mokernel():
                                          axis=1),
                           np.concatenate([dense(ks[p2, p1](x1, x2)),
                                           dense(ks[p2, p2](x1, x2))],
-                                         axis=1)],
-                         axis=0)
+                                         axis=1)], axis=0)
+    yield assert_allclose, mok.elwise(x1, x3), \
+          np.concatenate([ks[p1, p1].elwise(x1, x3),
+                          ks[p2, p2].elwise(x1, x3)], axis=0)
 
     # `B.Numeric` versus `At`:
     yield assert_allclose, mok(p1(x1), x2), \
@@ -50,27 +53,37 @@ def test_mokernel():
     yield assert_allclose, mok(x1, p2(x2)), \
           np.concatenate([dense(ks[p1, p2](x1, x2)),
                           dense(ks[p2, p2](x1, x2))], axis=0)
+    yield raises, ValueError, lambda: mok.elwise(x1, p2(x3))
+    yield raises, ValueError, lambda: mok.elwise(p1(x1), x3)
 
     # `At` versus `At`:
     yield assert_allclose, mok(p1(x1), p1(x2)), ks[p1](x1, x2)
     yield assert_allclose, mok(p1(x1), p2(x2)), ks[p1, p2](x1, x2)
+    yield assert_allclose, mok.elwise(p1(x1), p1(x3)), ks[p1].elwise(x1, x3)
+    yield assert_allclose, mok.elwise(p1(x1), p2(x3)), ks[p1, p2].elwise(x1, x3)
 
     # `MultiInput` versus `MultiInput`:
     yield assert_allclose, mok(MultiInput(p2(x1), p1(x2)),
                                MultiInput(p2(x1))), \
           np.concatenate([dense(ks[p2, p2](x1, x1)),
-                          dense(ks[p1, p2](x2, x1))],
-                         axis=0)
+                          dense(ks[p1, p2](x2, x1))], axis=0)
+    yield raises, ValueError, \
+          lambda: mok.elwise(MultiInput(p2(x1), p1(x3)), MultiInput(p2(x1)))
+    yield assert_allclose, mok.elwise(MultiInput(p2(x1), p1(x3)),
+                                      MultiInput(p2(x1), p1(x3))), \
+          np.concatenate([ks[p2, p2].elwise(x1, x1),
+                          ks[p1, p1].elwise(x3, x3)], axis=0)
 
     # `MultiInput` versus `At`:
     yield assert_allclose, mok(MultiInput(p2(x1), p1(x2)),
                                p2(x1)), \
           np.concatenate([dense(ks[p2, p2](x1, x1)),
-                          dense(ks[p1, p2](x2, x1))],
-                         axis=0)
+                          dense(ks[p1, p2](x2, x1))], axis=0)
     yield assert_allclose, mok(p2(x1),
                                MultiInput(p2(x1), p1(x2))), \
           np.concatenate([dense(ks[p2, p2](x1, x1)),
-                          dense(ks[p2, p1](x1, x2))],
-                         axis=1)
-
+                          dense(ks[p2, p1](x1, x2))], axis=1)
+    yield raises, ValueError, \
+          lambda: mok.elwise(MultiInput(p2(x1), p1(x3)), p2(x1))
+    yield raises, ValueError, \
+          lambda: mok.elwise(p2(x1), MultiInput(p2(x1), p1(x3)))
