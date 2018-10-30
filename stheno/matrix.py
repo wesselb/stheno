@@ -4,9 +4,9 @@ from __future__ import print_function, division, absolute_import
 
 import logging
 from numbers import Number
-import numpy as np
 from string import ascii_lowercase
 
+import numpy as np
 from lab import B
 from plum import Referentiable, Self, Dispatcher
 
@@ -413,6 +413,7 @@ def dtype(a): return B.dtype(a.lr)
 # Sum over matrices.
 
 _builtin_sum = sum  # Save built-in function.
+
 
 @B.sum.extend(Dense, [object])
 def sum(a, axis=None): return B.sum(dense(a), axis=axis)
