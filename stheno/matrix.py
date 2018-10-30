@@ -339,8 +339,8 @@ def block_matrix(*rows):
 
     if grid:
         # We have a grid! First, determine the resulting shape.
-        grid_rows = sum([B.shape_int(row[0])[0] for row in rows])
-        grid_cols = sum([B.shape_int(K)[1] for K in rows[0]])
+        grid_rows = _builtin_sum([B.shape_int(row[0])[0] for row in rows])
+        grid_cols = _builtin_sum([B.shape_int(K)[1] for K in rows[0]])
 
         # Check whether the result is just zeros.
         if all([all([isinstance(K, Zero) for K in row]) for row in rows]):
@@ -411,6 +411,8 @@ def dtype(a): return B.dtype(a.lr)
 
 
 # Sum over matrices.
+
+_builtin_sum = sum  # Save built-in function.
 
 @B.sum.extend(Dense, [object])
 def sum(a, axis=None): return B.sum(dense(a), axis=axis)
