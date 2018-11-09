@@ -36,6 +36,14 @@ def test_normal():
         yield ok, allclose(dist.logpdf(x), dist_sp.logpdf(x.T)), 'logpdf'
         yield ok, allclose(dist.entropy(), dist_sp.entropy()), 'entropy'
 
+    # Test that inputs to `logpdf` are converted appropriately.
+    yield assert_allclose, \
+          dist.logpdf(np.array([0, 1, 2])), \
+          dist.logpdf([0, 1, 2])
+    yield assert_allclose, \
+          dist.logpdf(np.array([0, 1, 2])), \
+          dist.logpdf((0, 1, 2))
+
     # Test the the output of `logpdf` is flattened appropriately.
     yield eq, np.shape(dist.logpdf(np.ones((3, 1)))), ()
     yield eq, np.shape(dist.logpdf(np.ones((3, 2)))), (2,)

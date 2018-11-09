@@ -172,6 +172,8 @@ class Normal(RandomVector, At, Referentiable):
                 determined that the list contains only a single log-pdf,
                 then the list is flattened to a scalar.
         """
+        # Convert to numeric type if necessary.
+        x = B.array(x) if isinstance(x, (list, tuple)) else x
         logpdfs = -(B.logdet(self.var) +
                     B.cast(self.dim, dtype=self.dtype) *
                     B.cast(B.log_2_pi, dtype=self.dtype) +
