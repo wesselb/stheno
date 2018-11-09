@@ -16,7 +16,7 @@ setup(
     description='Implementation of Gaussian processes in Python',
     long_description=readme,
     author='Wessel Bruinsma',
-    author_email='skeleton_author_email',
+    author_email='wessel.p.bruinsma@gmail.com',
     url='https://github.com/wesselb/stheno',
     license=license,
     packages=find_packages(exclude=('tests', 'docs'))
