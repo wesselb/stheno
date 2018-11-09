@@ -693,29 +693,10 @@ Example:
     >>> model[p]
     'alternative_prior'
 
-Inference and Sampling
-~~~~~~~~~~~~~~~~~~~~~~
+Finite-Dimensional Distributions, Inference, and Sampling
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-To condition on observations, use ``Graph.condition`` or
-``GP.condition``. Syntax is much like the math: compare
-``f1_posterior = f1 | (f2(x), y)`` with :math:`f_1 \,|\, f_2(x) = y`.
-
-Definition, where ``f*`` and ``g*`` are ``GP``\ s:
-
-.. code:: python
-
-    f_posterior = f | (x, y)
-
-    f_posterior = f | (g1(x), y)
-
-    f_posterior = f | ((g1(x1), y1), (g2(x2), y2), ...)
-
-    f1_posterior, f2_posterior, ... = (f1, f2, ...) | Obs(g(x), y)
-
-    f1_posterior, f2_posterior, ... = (f1, f2, ...) | Obs((g1(x1), y1), (g2(x2), y2), ...)
-
-After, or before, conditioning, simply call a GP to construct its
-finite-dimensional distribution:
+Simply call a GP to construct its finite-dimensional distribution:
 
 .. code:: python
 
@@ -736,14 +717,53 @@ finite-dimensional distribution:
     array([[-0.47676132],
            [-0.51696144],
            [-0.77643117]])
+           
+    >>> y1 = f(x).sample(1)
 
-Alternatively, use ``f(x).marginals()`` to efficiently compute the means
+    >>> f(x).logpdf(y1)
+    -1.348196150807441
+
+    >>> y2 = f(x).sample(2)
+
+    >>> f(x).logpdf(y2)
+     array([-1.00581476, -1.67625465])
+
+If you wish to compute the evidence of multiple observations, then
+``Graph.logpdf`` can be used.
+
+Definition:
+
+.. code:: python
+
+    Graph.logpdf(f(x), y)
+
+    Graph.logpdf((f1(x1), y1), (f2(x2), y2), ...)
+
+Furthermore, use ``f(x).marginals()`` to efficiently compute the means
 and the marginal lower and upper 95% central credible region bounds:
 
 .. code:: python
 
     >>> f(x).marginals()
     (array([0., 0., 0.]), array([-2., -2., -2.]), array([2., 2., 2.]))
+
+To condition on observations, use ``Graph.condition`` or
+``GP.condition``. Syntax is much like the math: compare
+``f1_posterior = f1 | (f2(x), y)`` with :math:`f_1 \,|\, f_2(x) = y`.
+
+Definition, where ``f*`` and ``g*`` are ``GP``\ s:
+
+.. code:: python
+
+    f_posterior = f | (x, y)
+
+    f_posterior = f | (g1(x), y)
+
+    f_posterior = f | ((g1(x1), y1), (g2(x2), y2), ...)
+
+    f1_posterior, f2_posterior, ... = (f1, f2, ...) | Obs(g(x), y)
+
+    f1_posterior, f2_posterior, ... = (f1, f2, ...) | Obs((g1(x1), y1), (g2(x2), y2), ...)
 
 Finally, ``Graph.sample`` can be used to get samples from multiple
 processes jointly:
