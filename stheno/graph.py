@@ -535,6 +535,27 @@ class Graph(Referentiable):
     def sample(self, *xs):
         return self.sample(1, *xs)
 
+    @_dispatch([{list, tuple}])
+    def logpdf(self, *pairs):
+        xs, ys = zip(*pairs)
+
+        # Check that all processes are specified.
+        if not all([isinstance(x, At) for x in xs]):
+            raise ValueError('Must explicitly specify the processes which to '
+                             'compute the log-pdf for.')
+
+        # Uprank all outputs and concatenate.
+        y = B.concat([uprank(y) for y in ys], axis=0)
+
+        # Return composite log-pdf.
+        return GP(MOK(*self.ps),
+                  MOM(*self.ps),
+                  graph=Graph())(MultiInput(*xs)).logpdf(y)
+
+    @_dispatch(At, B.Numeric)
+    def logpdf(self, x, y):
+        return x.logpdf(y)
+
 
 model = Graph()  #: A default graph provided for convenience
 

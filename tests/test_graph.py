@@ -456,6 +456,35 @@ def test_multi_conditioning():
     yield assert_allclose, post1.var, post3.var
 
 
+def test_multi_logpdf():
+    model = Graph()
+
+    p1 = GP(EQ(), graph=model)
+    p2 = GP(2 * Exp(), graph=model)
+    p3 = p1 + p2
+
+    x1 = np.linspace(0, 2, 5)
+    x2 = np.linspace(1, 3, 6)
+    x3 = np.linspace(2, 4, 7)
+
+    y1, y2, y3 = model.sample(p1(x1), p2(x2), p3(x3))
+
+    # Test case that only one process is fed.
+    yield assert_allclose, p1(x1).logpdf(y1), model.logpdf(p1(x1), y1)
+    yield assert_allclose, p1(x1).logpdf(y1), model.logpdf((p1(x1), y1))
+
+    # Test that all inputs must be specified.
+    yield raises, ValueError, lambda: model.logpdf((x1, y1), (p2(x2), y2))
+    yield raises, ValueError, lambda: model.logpdf((p1(x1), y1), (x2, y2))
+
+    # Compute the logpdf with the product rule.
+    logpdf1 = p1(x1).logpdf(y1) + \
+              p2(x2).logpdf(y2) + \
+              (p3 | ((p1(x1), y1), (p2(x2), y2)))(x3).logpdf(y3)
+    logpdf2 = model.logpdf((p1(x1), y1), (p2(x2), y2), (p3(x3), y3))
+    yield assert_allclose, logpdf1, logpdf2
+
+
 def test_approximate_multiplication():
     model = Graph()
 
