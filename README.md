@@ -64,6 +64,9 @@ cd stheno
 pip install -r requirements.txt -e .
 ```
 
+Stheno is tested for Python 2.7 and 3.6.
+There are known issues with Python 3.5.
+
 ## Manual
 
 Note: [here](https://stheno.readthedocs.io/en/latest) is a nicely rendered 
