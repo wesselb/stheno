@@ -107,9 +107,9 @@ Inputs to kernels, means, and GPs, henceforth referred to simply as
 
 If ``k`` is a kernel, say ``k = EQ()``, then ``k(x, y)`` constructs the
 *kernel matrix* for all pairs of points between ``x`` and ``y``.
-``k(x)`` is shorthand for ``k (x, x)``. Furthermore, ``k.elwise(x, y)``
+``k(x)`` is shorthand for ``k(x, x)``. Furthermore, ``k.elwise(x, y)``
 constructs the *kernel vector* pairing the points in ``x`` and ``y``
-element-wise, which will be a *rank 2 column vector*.
+element wise, which will be a *rank 2 column vector*.
 
 Example:
 

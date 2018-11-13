@@ -91,9 +91,9 @@ interpreted as a separate input location. In this case inputs are
 multi-dimensional, and the columns correspond to the various input dimensions.
 
 If `k` is a kernel, say `k = EQ()`, then `k(x, y)` constructs the _kernel 
-matrix_ for all pairs of points between `x` and `y`. `k(x)` is shorthand for `k
-(x, x)`. Furthermore, `k.elwise(x, y)` constructs the _kernel vector_ pairing
-the points in `x` and `y` element-wise, which will be a _rank 2 column vector_.
+matrix_ for all pairs of points between `x` and `y`. `k(x)` is shorthand for
+`k(x, x)`. Furthermore, `k.elwise(x, y)` constructs the _kernel vector_ pairing
+the points in `x` and `y` element wise, which will be a _rank 2 column vector_.
 
 Example:
 
