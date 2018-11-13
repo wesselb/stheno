@@ -8,6 +8,7 @@ also `Stheno.jl <https://github.com/willtebbutt/Stheno.jl>`__.
 
 -  `Nonlinear Regression in 20
    Seconds <#nonlinear-regression-in-20-seconds>`__
+-  `Installation <#installation>`__
 -  `Manual <#manual>`__
 
    -  `Kernel and Mean Design <#kernel-and-mean-design>`__

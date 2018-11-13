@@ -8,6 +8,7 @@ Stheno is an implementation of Gaussian process modelling in Python. See
 also [Stheno.jl](https://github.com/willtebbutt/Stheno.jl).
 
 * [Nonlinear Regression in 20 Seconds](#nonlinear-regression-in-20-seconds)
+* [Installation](#installation)
 * [Manual](#manual)
     - [Kernel and Mean Design](#kernel-and-mean-design)
         * [Available Kernels](#available-kernels)
