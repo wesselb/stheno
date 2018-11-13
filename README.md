@@ -53,6 +53,17 @@ array([[8.48258669]])
 
 Moar?! Then read on!
 
+## Installation
+
+Clone this repository and run `pip install -r requirements.txt -e .` from the
+ repository root:
+ 
+```bash
+git clone https://github.com/wesselb/stheno.git
+cd stheno
+pip install -r requirements.txt -e .
+```
+
 ## Manual
 
 Note: [here](https://stheno.readthedocs.io/en/latest) is a nicely rendered 

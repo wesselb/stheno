@@ -63,6 +63,18 @@ Nonlinear Regression in 20 Seconds
 
 Moar?! Then read on!
 
+Installation
+------------
+
+Clone this repository and run ``pip install -r requirements.txt -e .``
+from the repository root:
+
+.. code:: bash
+
+    git clone https://github.com/wesselb/stheno.git
+    cd stheno
+    pip install -r requirements.txt -e .
+
 Manual
 ------
 
