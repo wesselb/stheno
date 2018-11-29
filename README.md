@@ -44,11 +44,11 @@ also [Stheno.jl](https://github.com/willtebbutt/Stheno.jl).
 
 >>> from stheno import GP, EQ
 
->>> x = np.linspace(0, 2, 10)         # Points to predict at
+>>> x = np.linspace(0, 2, 10)    # Points to predict at
 
->>> y = x ** 2                        # Observations
+>>> y = x ** 2                   # Observations
 
->>> GP(EQ()).condition(x, y)(3).mean  # Go GP!
+>>> (GP(EQ()) | (x, y))(3).mean  # Go GP!
 array([[8.48258669]])
 ```
 
