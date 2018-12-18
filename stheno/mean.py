@@ -101,6 +101,7 @@ class StretchedMean(Mean, StretchedFunction, Referentiable):
 
     @_dispatch(object, Cache)
     @cache
+    @uprank
     def __call__(self, x, B):
         return self[0](B.divide(x, self.stretches[0]), B)
 
@@ -112,6 +113,7 @@ class ShiftedMean(Mean, ShiftedFunction, Referentiable):
 
     @_dispatch(object, Cache)
     @cache
+    @uprank
     def __call__(self, x, B):
         return self[0](B.subtract(x, self.shifts[0]), B)
 
@@ -123,6 +125,7 @@ class SelectedMean(Mean, SelectedFunction, Referentiable):
 
     @_dispatch(object, Cache)
     @cache
+    @uprank
     def __call__(self, x, B):
         return self[0](B.take(x, self.dims[0], axis=1), B)
 
