@@ -662,10 +662,8 @@ class GP(RandomProcess, Referentiable):
 
     @_dispatch(Self)
     def __mul__(self, other):
-        # Careful with the closure!
-        self_mean, other_mean = self.graph.means[self], self.graph.means[other]
-        return (lambda x, B: self_mean(x, B)) * other + \
-               self * (lambda x, B: other_mean(x, B)) + \
+        return (lambda x, B: self.graph.means[self](x, B)) * other + \
+               self * (lambda x, B: self.graph.means[other](x, B)) + \
                GP(kernel=self.graph.kernels[self] *
                          self.graph.kernels[other] +
                          self.graph.kernels[self, other] *
