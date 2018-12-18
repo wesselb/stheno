@@ -6,7 +6,6 @@ import operator
 from types import FunctionType as PythonFunction
 
 from lab import B
-from numpy import all
 from plum import Dispatcher, Referentiable, Self
 from stheno.field import squeeze, mul, add, SumElement, ProductElement, \
     ScaledElement, OneElement, ZeroElement, WrappedElement, JoinElement, \
@@ -30,7 +29,8 @@ def tuple_equal(x, y):
     Returns:
         bool: `x` and `y` are equal.
     """
-    return len(x) == len(y) and all([all(xi == yi) for xi, yi in zip(x, y)])
+    return len(x) == len(y) and \
+           all([B.all_bool(xi == yi) for xi, yi in zip(x, y)])
 
 
 @_dispatch(B.Numeric)

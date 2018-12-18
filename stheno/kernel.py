@@ -7,7 +7,6 @@ import operator
 
 import numpy as np
 from lab import B
-from numpy import all
 from plum import Dispatcher, Self, Referentiable
 
 from stheno.function_field import StretchedFunction, ShiftedFunction, \
@@ -158,6 +157,13 @@ class Kernel(Function, Referentiable):
     def __reversed__(self):
         """Reverse the arguments of the kernel."""
         return reverse(self)
+
+    @_dispatch(int)
+    def __pow__(self, power, modulo=None):
+        k = 1
+        for _ in range(power):
+            k *= self
+        return k
 
     @property
     def stationary(self):
@@ -625,7 +631,7 @@ class PeriodicKernel(Kernel, WrappedFunction, Referentiable):
 
     @_dispatch(Self)
     def __eq__(self, other):
-        return self[0] == other[0] and all(self.period == other.period)
+        return self[0] == other[0] and B.all_bool(self.period == other.period)
 
 
 class EQ(Kernel, Referentiable):
@@ -719,7 +725,7 @@ class RQ(Kernel, Referentiable):
 
     @_dispatch(Self)
     def __eq__(self, other):
-        return all(self.alpha == other.alpha)
+        return B.all_bool(self.alpha == other.alpha)
 
 
 class Exp(Kernel, Referentiable):
@@ -1027,7 +1033,8 @@ class DecayingKernel(Kernel, Referentiable):
 
     @_dispatch(Self)
     def __eq__(self, other):
-        return all(self.alpha == other.alpha) and all(self.beta == other.beta)
+        return B.all_bool(self.alpha == other.alpha) and \
+               B.all_bool(self.beta == other.beta)
 
 
 class PosteriorKernel(Kernel, Referentiable):

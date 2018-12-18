@@ -2,7 +2,7 @@
 
 from __future__ import absolute_import, division, print_function
 
-from numpy import all
+from lab import B
 from plum import Dispatcher, Referentiable, Self, NotFoundLookupError
 
 __all__ = []
@@ -293,7 +293,7 @@ class ScaledElement(WrappedElement, Referentiable):
 
     @_dispatch(Self)
     def __eq__(self, other):
-        return all(self.scale == other.scale) and self[0] == other[0]
+        return B.all_bool(self.scale == other.scale) and self[0] == other[0]
 
 
 class ProductElement(JoinElement, Referentiable):
