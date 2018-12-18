@@ -10,12 +10,10 @@ x_obs = np.linspace(0, 10, 20)
 # Construct a prior.
 #   Window:
 w = lambda x: np.exp(-x ** 2 / 0.5)
-#   Basis function:
-b = GP(EQ()) * w
 #   Weighted and shifted basis functions:
-c = [(b * GP(1)).shift(xi) for xi in x_obs]
+b = [(GP(EQ()) * w).shift(xi) for xi in x_obs]
 #   Latent function:
-f = sum(c)
+f = sum(b)
 #   Noise:
 e = GP(Delta())
 #   Observation model:
@@ -26,11 +24,11 @@ f_true, y_obs = model.sample(f(x), y(x_obs))
 
 # Condition on the observations to make predictions.
 obs = Obs(y(x_obs), y_obs)
-f, c = (f | obs, c | obs)
+f, b = (f | obs, b | obs)
 
 # Plot result.
-for i, ci in enumerate(c):
-    mean, lower, upper = c[i](x).marginals()
+for i, bi in enumerate(b):
+    mean, lower, upper = bi(x).marginals()
     kw_args = {'label': 'Basis functions'} if i == 0 else {}
     plt.plot(x, mean, c='tab:orange', **kw_args)
 plt.plot(x, f_true, label='True', c='tab:blue')
