@@ -709,24 +709,20 @@ class GP(RandomProcess, Referentiable):
         """Differentiate the GP. See :meth:`.graph.Graph.diff`."""
         return self.graph.diff(self, dim)
 
-    def diff_approx(self, deriv=1, order=5, eps=1e-8, bound=1.):
+    def diff_approx(self, deriv=1, order=5):
         """Approximate the derivative of the GP by constructing a finite
         difference approximation.
 
         Args:
             deriv (int): Order of the derivative.
             order (int): Order of the estimate.
-            eps (float, optional): Absolute round-off error of the function
-                evaluation. This is used to estimate the step size.
-            bound (float, optional): Upper bound of the absolute value of the
-                function and all its derivatives. This is used to estimate
-                the step size.
 
         Returns:
             Approximation of the derivative of the GP.
         """
         # Use the FDM library to figure out the coefficients.
-        fdm = central_fdm(order, deriv, eps=eps, bound=bound)
+        fdm = central_fdm(order, deriv, condition=1)
+        fdm.estimate()  # Estimate step size.
 
         # Construct finite difference.
         df = 0
