@@ -1657,17 +1657,12 @@ Smoothing with Nonparametric Basis Functions
     x = np.linspace(0, 10, 100)
     x_obs = np.linspace(0, 10, 20)
 
-    # Construct a prior.
-    #   Window:
-    w = lambda x: np.exp(-x ** 2 / 0.5)
-    #   Weighted and shifted basis functions:
-    b = [(GP(EQ()) * w).shift(xi) for xi in x_obs]
-    #   Latent function:
-    f = sum(b)
-    #   Noise:
-    e = GP(Delta())
-    #   Observation model:
-    y = f + 0.2 * e
+    # Constuct a prior:
+    w = lambda x: np.exp(-x ** 2 / 0.5)  # Window
+    b = [(GP(EQ()) * w).shift(xi) for xi in x_obs]  # Weighted basis functions
+    f = sum(b)  # Latent function
+    e = GP(Delta())  # Noise
+    y = f + 0.2 * e  # Observation model
 
     # Sample a true, underlying function and observations.
     f_true, y_obs = model.sample(f(x), y(x_obs))
