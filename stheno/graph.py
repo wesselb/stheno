@@ -709,7 +709,7 @@ class GP(RandomProcess, Referentiable):
         """Differentiate the GP. See :meth:`.graph.Graph.diff`."""
         return self.graph.diff(self, dim)
 
-    def diff_approx(self, deriv=1, order=5):
+    def diff_approx(self, deriv=1, order=6):
         """Approximate the derivative of the GP by constructing a finite
         difference approximation.
 
@@ -720,8 +720,12 @@ class GP(RandomProcess, Referentiable):
         Returns:
             Approximation of the derivative of the GP.
         """
+        # Ensure that the order is higher than the derivative.
+        if order <= deriv:
+            order = deriv + 1
+
         # Use the FDM library to figure out the coefficients.
-        fdm = central_fdm(order, deriv, condition=1)
+        fdm = central_fdm(order, deriv, adapt=0, factor=1e8)
         fdm.estimate()  # Estimate step size.
 
         # Construct finite difference.
