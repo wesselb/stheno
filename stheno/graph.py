@@ -556,6 +556,14 @@ class Graph(Referentiable):
     def logpdf(self, x, y):
         return x.logpdf(y)
 
+    @_dispatch(Observations)
+    def logpdf(self, obs):
+        return obs.x.logpdf(obs.y)
+
+    @_dispatch(SparseObservations)
+    def logpdf(self, obs):
+        return obs.elbo
+
 
 model = Graph()  #: A default graph provided for convenience
 
