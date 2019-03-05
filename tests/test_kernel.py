@@ -630,7 +630,7 @@ def test_input_transform():
 
 
 def test_tensor_product():
-    k = TensorProductKernel(lambda x: B.sum(x ** 2, axis=1)[:, None])
+    k = TensorProductKernel(lambda x: B.sum(x ** 2, axis=1))
 
     yield eq, k.stationary, False
     yield raises, RuntimeError, lambda: k.length_scale

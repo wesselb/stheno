@@ -5,6 +5,8 @@ from __future__ import absolute_import, division, print_function
 from lab import B
 from plum import Dispatcher, Referentiable, Self, NotFoundLookupError
 
+from .cache import uprank
+
 __all__ = []
 
 _dispatch = Dispatcher()
@@ -25,11 +27,12 @@ def apply_optional_arg(f, arg1, arg2):
         object: Result of `f(arg1, arg2)` or `f(arg1)`.
     """
     try:
-        return f(arg1, arg2)
+        res = f(arg1, arg2)
     except TypeError:
-        return f(arg1)
+        res = f(arg1)
     except NotFoundLookupError:
-        return f(arg1)
+        res = f(arg1)
+    return uprank(res)
 
 
 def squeeze(xs):
