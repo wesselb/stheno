@@ -30,7 +30,8 @@ def tuple_equal(x, y):
         bool: `x` and `y` are equal.
     """
     return len(x) == len(y) and \
-           all([B.all_bool(xi == yi) for xi, yi in zip(x, y)])
+           all([B.shape(xi) == B.shape(yi) and B.all_bool(xi == yi)
+                for xi, yi in zip(x, y)])
 
 
 @_dispatch(B.Numeric)

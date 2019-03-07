@@ -11,7 +11,7 @@ from stheno.field import mul, add, SumElement, new, get_field, broadcast, \
 from stheno.function_field import stretch, differentiate, shift, transform, \
     select, Function, StretchedFunction, ShiftedFunction, SelectedFunction, \
     InputTransformedFunction, DerivativeFunction, TensorProductFunction, \
-    OneFunction, ZeroFunction, _to_list
+    OneFunction, ZeroFunction, _to_list, tuple_equal
 from stheno.kernel import EQ, RQ, Linear, OneKernel, ZeroKernel, Delta, \
     TensorProductKernel, Kernel
 from stheno.matrix import Dense
@@ -37,6 +37,17 @@ def test_corner_cases():
           lambda: WrappedElement(1).display(1, lambda x: x)
     yield raises, NotImplementedError, \
           lambda: JoinElement(1, 2).display(1, 2, lambda x: x)
+
+
+def test_tuple_equal():
+    yield ok, tuple_equal((1,), (1,))
+    yield ok, tuple_equal((1, [1]), (1, [1]))
+    yield ok, not tuple_equal((1,), ([1],))
+    yield ok, not tuple_equal(([1],), ([1], [1]))
+    yield ok, tuple_equal(([1],), ([1],))
+    yield ok, not tuple_equal(([1],), ([2],))
+    yield ok, not tuple_equal(([1], [1, 2]), ([1, 2], [1, 2]))
+    yield ok, not tuple_equal(([1], [1, 2]), ([1], [1, 3]))
 
 
 def test_stretch_shorthand():
