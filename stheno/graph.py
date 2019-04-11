@@ -47,18 +47,8 @@ def ensure_at(x, ref=None):
                          'condition on.')
 
 
-class Observations(Referentiable):
-    """Observations.
-
-    Can alternatively construct an instance of `Observations` with tuples or
-    lists of valid constructors.
-
-    Args:
-        x (input): Locations of points to condition on.
-        y (tensor): Observations to condition on.
-        ref (:class:`.class.GP`, optional): Reference process. See
-            :func:`.graph.ensure_at`.
-    """
+class AbstractObservations(Referentiable):
+    """Abstract base class for observations."""
 
     _dispatch = Dispatcher(in_class=Self)
 
@@ -68,7 +58,6 @@ class Observations(Referentiable):
         self.x = ensure_at(x, self._ref)
         self.y = y
         self.graph = type_parameter(self.x).graph
-        self._K_x = None
 
     @_dispatch([Union(tuple, list, PromisedGP)])
     def __init__(self, *pairs, **kw_args):
@@ -89,16 +78,9 @@ class Observations(Referentiable):
         self.x = p(MultiInput(*xs))
         self.y = B.concat([uprank(y) for y in ys], axis=0)
 
-        self._K_x = None
-
-    @property
-    def K_x(self):
-        """Kernel matrix of the data."""
-        # Cache computation of the kernel matrix.
-        if self._K_x is None:
-            p_x, x = type_parameter(self.x), self.x.get()
-            self._K_x = matrix(self.graph.kernels[p_x](x))
-        return self._K_x
+    @_dispatch({tuple, list})
+    def __ror__(self, ps):
+        return self.graph.condition(ps, self)
 
     def posterior_kernel(self, p_i, p_j):
         """Get the posterior kernel between two processes.
@@ -111,11 +93,8 @@ class Observations(Referentiable):
             :class:`.kernel.Kernel`: Posterior kernel between the first and
                 second process.
         """
-        p_x, x = type_parameter(self.x), self.x.get()
-        return PosteriorKernel(self.graph.kernels[p_i, p_j],
-                               self.graph.kernels[p_x, p_i],
-                               self.graph.kernels[p_x, p_j],
-                               x, self.K_x)
+        raise NotImplementedError('Posterior kernel construction not '
+                                  'implemented.')
 
     def posterior_mean(self, p):
         """Get the posterior kernel of a process.
@@ -126,18 +105,52 @@ class Observations(Referentiable):
         Returns:
             :class:`.mean.Mean`: Posterior mean of `p`.
         """
+        raise NotImplementedError('Posterior mean construction not '
+                                  'implemented.')
+
+
+class Observations(AbstractObservations, Referentiable):
+    """Observations.
+
+    Can alternatively construct an instance of `Observations` with tuples or
+    lists of valid constructors.
+
+    Args:
+        x (input): Locations of points to condition on.
+        y (tensor): Observations to condition on.
+        ref (:class:`.class.GP`, optional): Reference process. See
+            :func:`.graph.ensure_at`.
+    """
+    _dispatch = Dispatcher(in_class=Self)
+
+    def __init__(self, *args, **kw_args):
+        AbstractObservations.__init__(self, *args, **kw_args)
+        self._K_x = None
+
+    @property
+    def K_x(self):
+        """Kernel matrix of the data."""
+        if self._K_x is None:  # Cache computation.
+            p_x, x = type_parameter(self.x), self.x.get()
+            self._K_x = matrix(self.graph.kernels[p_x](x))
+        return self._K_x
+
+    def posterior_kernel(self, p_i, p_j):
+        p_x, x = type_parameter(self.x), self.x.get()
+        return PosteriorKernel(self.graph.kernels[p_i, p_j],
+                               self.graph.kernels[p_x, p_i],
+                               self.graph.kernels[p_x, p_j],
+                               x, self.K_x)
+
+    def posterior_mean(self, p):
         p_x, x = type_parameter(self.x), self.x.get()
         return PosteriorMean(self.graph.means[p],
                              self.graph.means[p_x],
                              self.graph.kernels[p_x, p],
                              x, self.K_x, self.y)
 
-    @_dispatch({tuple, list})
-    def __ror__(self, ps):
-        return self.graph.condition(ps, self)
 
-
-class SparseObservations(Observations, Referentiable):
+class SparseObservations(AbstractObservations, Referentiable):
     """Observations through inducing points. Takes further arguments
     according to the constructor of :class:`.graph.Observations`.
 
@@ -155,7 +168,7 @@ class SparseObservations(Observations, Referentiable):
                [Union(tuple, list, PromisedGP)])
     def __init__(self, z, *pairs, **kw_args):
         es, xs, ys = zip(*pairs)
-        Observations.__init__(self, *zip(xs, ys), **kw_args)
+        AbstractObservations.__init__(self, *zip(xs, ys), **kw_args)
         SparseObservations.__init__(self,
                                     z,
                                     self.graph.cross(*es),
@@ -188,16 +201,52 @@ class SparseObservations(Observations, Referentiable):
                B.Numeric,
                [PromisedGP])
     def __init__(self, z, e, x, y, ref=None):
-        Observations.__init__(self, x, y, ref=ref)
+        AbstractObservations.__init__(self, x, y, ref=ref)
+        self.z = ensure_at(z, self._ref)
+        self.e = e
 
+        self._K_z = None
+        self._elbo = None
+        self._mu = None
+        self._A = None
+
+    @property
+    def K_z(self):
+        """Kernel matrix of the data."""
+        if self._K_z is None:  # Cache computation.
+            self._compute()
+        return self._K_z
+
+    @property
+    def elbo(self):
+        """ELBO."""
+        if self._elbo is None:  # Cache computation.
+            self._compute()
+        return self._elbo
+
+    @property
+    def mu(self):
+        """Mean of optimal approximating distribution."""
+        if self._mu is None:  # Cache computation.
+            self._compute()
+        return self._mu
+
+    @property
+    def A(self):
+        """Parameter of the corrective variance of the kernel of the optimal
+        approximating distribution."""
+        if self._A is None:  # Cache computation.
+            self._compute()
+        return self._A
+
+    def _compute(self):
         # Extract processes.
         p_x, x = type_parameter(self.x), self.x.get()
-        z = ensure_at(z, self._ref)
-        p_z, z = type_parameter(z), z.get()
+        p_z, z = type_parameter(self.z), self.z.get()
 
         # Construct the necessary kernel matrices.
         K_zx = self.graph.kernels[p_z, p_x](z, x)
-        K_z = self.graph.kernels[p_z](z)
+        self._K_z = matrix(self.graph.kernels[p_z](z))
 
         # Evaluating `e.kernel(x)` will yield incorrect results if `x` is a
         # `MultiInput`, because `x` then still designates the particular
@@ -205,50 +254,53 @@ class SparseObservations(Observations, Referentiable):
         # `e`.
         if isinstance(x, MultiInput):
             x_n = MultiInput(*(p(xi.get())
-                               for p, xi in zip(e.kernel.ps, x.get())))
+                               for p, xi in zip(self.e.kernel.ps, x.get())))
         else:
             x_n = x
 
         # Construct the noise kernel matrix.
-        K_n = e.kernel(x_n)
+        K_n = self.e.kernel(x_n)
 
         # The approximation can only handle diagonal noise matrices.
         if not isinstance(K_n, Diagonal):
             raise RuntimeError('Kernel matrix of noise must be diagonal.')
 
         # And construct the components for the inducing point approximation.
-        L_z = B.cholesky(matrix(K_z))
-        A = B.eye_from(K_z) + B.qf(K_n, B.transpose(B.trisolve(L_z, K_zx)))
-        y_bar = uprank(self.y) - e.mean(x_n) - self.graph.means[p_x](x)
+        L_z = B.cholesky(self._K_z)
+        self._A = B.eye_from(self._K_z) + \
+                  B.qf(K_n, B.transpose(B.trisolve(L_z, K_zx)))
+        y_bar = uprank(self.y) - self.e.mean(x_n) - self.graph.means[p_x](x)
         prod_y_bar = B.trisolve(L_z, B.qf(K_n, B.transpose(K_zx), y_bar))
 
         # Compute the optimal mean.
-        mean = self.graph.means[p_z](z) + \
-               B.qf(A, B.trisolve(L_z, K_z), prod_y_bar)
+        self._mu = self.graph.means[p_z](z) + \
+                   B.qf(self._A, B.trisolve(L_z, self._K_z), prod_y_bar)
 
         # Compute the ELBO.
         # NOTE: The calculation of `trace_part` asserts that `K_n` is diagonal.
         #       The rest, however, is completely generic.
         trace_part = B.ratio(Diagonal(self.graph.kernels[p_x].elwise(x)[:, 0]) -
-                             Diagonal(B.qf_diag(K_z, K_zx)), K_n)
-        det_part = B.logdet(2 * B.pi * K_n) + B.logdet(A)
-        qf_part = B.qf(K_n, y_bar)[0, 0] - B.qf(A, prod_y_bar)[0, 0]
-        elbo = -0.5 * (trace_part + det_part + qf_part)
-
-        # Store relevant quantities.
-        self.elbo = elbo
-        self.A = A
-
-        # Update observations to reflect pseudo-points.
-        self.x = p_z(z)
-        self.y = mean
+                             Diagonal(B.qf_diag(self._K_z, K_zx)), K_n)
+        det_part = B.logdet(2 * B.pi * K_n) + B.logdet(self._A)
+        qf_part = B.qf(K_n, y_bar)[0, 0] - B.qf(self._A, prod_y_bar)[0, 0]
+        self._elbo = -0.5 * (trace_part + det_part + qf_part)
 
     def posterior_kernel(self, p_i, p_j):
-        p_x, x = type_parameter(self.x), self.x.get()
-        return Observations.posterior_kernel(self, p_i, p_j) + \
-               CorrectiveKernel(self.graph.kernels[p_x, p_i],
-                                self.graph.kernels[p_x, p_j],
-                                x, self.A, self.K_x)
+        p_z, z = type_parameter(self.z), self.z.get()
+        return PosteriorKernel(self.graph.kernels[p_i, p_j],
+                               self.graph.kernels[p_z, p_i],
+                               self.graph.kernels[p_z, p_j],
+                               z, self.K_z) + \
+               CorrectiveKernel(self.graph.kernels[p_z, p_i],
+                                self.graph.kernels[p_z, p_j],
+                                z, self.A, self.K_z)
+
+    def posterior_mean(self, p):
+        p_z, z = type_parameter(self.z), self.z.get()
+        return PosteriorMean(self.graph.means[p],
+                             self.graph.means[p_z],
+                             self.graph.kernels[p_z, p],
+                             z, self.K_z, self.mu)
 
 
 Obs = Observations  #: Shorthand for `Observations`.
@@ -463,13 +515,14 @@ class Graph(Referentiable):
                             lambda: self.kernels[p].diff(dim),
                             lambda pi: self.kernels[p, pi].diff(dim, None))
 
-    @_dispatch({list, tuple}, Observations)
+    @_dispatch({list, tuple}, AbstractObservations)
     def condition(self, ps, obs):
         """Condition the graph on observations.
 
         Args:
             ps (list[:class:`.graph.GP`]): Processes to condition.
-            obs (:class:`.graph.Observations`): Observations to condition on.
+            obs (:class:`.graph.AbstractObservations`): Observations to
+                condition on.
 
         Returns:
             list[:class:`.graph.GP`]: Posterior processes.
@@ -642,7 +695,7 @@ class GP(RandomProcess, Referentiable):
         """Condition the GP. See :meth:`.graph.Graph.condition`."""
         return self.graph.condition((self,), Observations(*args, ref=self))[0]
 
-    @_dispatch(Observations)
+    @_dispatch(AbstractObservations)
     def condition(self, obs):
         return self.graph.condition((self,), obs)[0]
 
@@ -685,7 +738,7 @@ class GP(RandomProcess, Referentiable):
         """Shorthand for conditioning."""
         return self.condition(Observations(*args, ref=self))
 
-    @_dispatch(Observations)
+    @_dispatch(AbstractObservations)
     def __or__(self, obs):
         return self.condition(obs)
 

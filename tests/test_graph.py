@@ -569,7 +569,7 @@ def test_sparse_conditioning():
     y = f(x).sample()
 
     # Test that noise matrix must indeed be diagonal.
-    yield raises, RuntimeError, lambda: SparseObs(f(x), f, f(x), y)
+    yield raises, RuntimeError, lambda: SparseObs(f(x), f, f(x), y).elbo
 
     # Test posterior.
     post_sparse = (f | SparseObs(f(x), e, f(x), y))(x_new)
