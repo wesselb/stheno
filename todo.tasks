@@ -14,9 +14,6 @@ Structured Matrices:
 Refactor:
     ☐ Make RQ, Exp, Matern32, and Matern52 cache friendly.
 
-Important Issues:
-    ☐ https://github.com/pytorch/pytorch/issues/5014
-
 ＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿
 Archive:
  ✓ Multi-argument sparse conditioning @done (18-10-14 16:51) @project(Features)
