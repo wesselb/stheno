@@ -9,7 +9,7 @@ from lab import B
 from plum import Dispatcher, Referentiable, Self
 from stheno.field import squeeze, mul, add, SumElement, ProductElement, \
     ScaledElement, OneElement, ZeroElement, WrappedElement, JoinElement, \
-    Formatter
+    Formatter, priority
 
 from .field import Element, new, get_field, broadcast
 
@@ -411,19 +411,19 @@ def differentiate(a, *derivs):
 
 # Handle conversion of Python functions.
 
-@mul.extend(Element, PythonFunction, precedence=10)
+@mul.extend(Element, PythonFunction, precedence=priority)
 def mul(a, b): return mul(a, new(a, TensorProductFunction)(b))
 
 
-@mul.extend(PythonFunction, Element, precedence=10)
+@mul.extend(PythonFunction, Element, precedence=priority)
 def mul(a, b): return mul(new(b, TensorProductFunction)(a), b)
 
 
-@add.extend(Element, PythonFunction, precedence=10)
+@add.extend(Element, PythonFunction, precedence=priority)
 def add(a, b): return add(a, new(a, TensorProductFunction)(b))
 
 
-@add.extend(PythonFunction, Element, precedence=10)
+@add.extend(PythonFunction, Element, precedence=priority)
 def add(a, b): return add(new(b, TensorProductFunction)(a), b)
 
 

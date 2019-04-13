@@ -12,6 +12,8 @@ __all__ = []
 _dispatch = Dispatcher()
 
 Formatter = object  #: A formatter can be any object.
+priority = 10  #: Priority precedence level.
+definite = 20  #: Highest precedence level.
 
 
 def apply_optional_arg(f, arg1, arg2):
@@ -510,12 +512,7 @@ def mul(a, b):
 
 @_dispatch(object, Element)
 def mul(a, b):
-    if a is 0:
-        return new(b, ZeroElement)()
-    elif a is 1:
-        return b
-    else:
-        return new(b, ScaledElement)(b, a)
+    return mul(b, a)
 
 
 @_dispatch(Element, Element)
@@ -550,31 +547,31 @@ def add(a, b):
 
 # Cancel redundant zeros and ones.
 
-@_dispatch(ZeroElement, object, precedence=20)
+@_dispatch(ZeroElement, object, precedence=definite)
 def mul(a, b): return a
 
 
-@_dispatch(object, ZeroElement, precedence=20)
+@_dispatch(object, ZeroElement, precedence=definite)
 def mul(a, b): return b
 
 
-@_dispatch(ZeroElement, ZeroElement, precedence=20)
+@_dispatch(ZeroElement, ZeroElement, precedence=definite)
 def mul(a, b): return a
 
 
-@_dispatch(OneElement, Element, precedence=10)
+@_dispatch(OneElement, Element, precedence=priority)
 def mul(a, b): return b
 
 
-@_dispatch(Element, OneElement, precedence=10)
+@_dispatch(Element, OneElement, precedence=priority)
 def mul(a, b): return a
 
 
-@_dispatch(OneElement, OneElement, precedence=10)
+@_dispatch(OneElement, OneElement, precedence=priority)
 def mul(a, b): return a
 
 
-@_dispatch(ZeroElement, object, precedence=20)
+@_dispatch(ZeroElement, object, precedence=definite)
 def add(a, b):
     if b is 0:
         return a
@@ -582,7 +579,7 @@ def add(a, b):
         return mul(new(a, OneElement)(), b)
 
 
-@_dispatch(object, ZeroElement, precedence=20)
+@_dispatch(object, ZeroElement, precedence=definite)
 def add(a, b):
     if a is 0:
         return b
@@ -590,15 +587,15 @@ def add(a, b):
         return mul(a, new(b, OneElement)())
 
 
-@_dispatch(ZeroElement, ZeroElement, precedence=20)
+@_dispatch(ZeroElement, ZeroElement, precedence=definite)
 def add(a, b): return a
 
 
-@_dispatch(Element, ZeroElement, precedence=10)
+@_dispatch(Element, ZeroElement, precedence=definite)
 def add(a, b): return a
 
 
-@_dispatch(ZeroElement, Element, precedence=10)
+@_dispatch(ZeroElement, Element, precedence=definite)
 def add(a, b): return b
 
 
