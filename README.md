@@ -57,17 +57,15 @@ Moar?! Then read on!
 
 ## Installation
 
-Clone this repository and run `pip install -r requirements.txt -e .` from the
- repository root:
- 
+The package is tested for Python 2.7 and Python 3.6, which are the versions 
+recommended to use.
+To install the package, use the following sequence of commands:
+
 ```bash
 git clone https://github.com/wesselb/stheno.git
 cd stheno
-pip install -r requirements.txt -e .
+make install
 ```
-
-Stheno is tested for Python 2.7 and 3.6.
-There are known issues with Python 3.5.
 
 ## Manual
 
