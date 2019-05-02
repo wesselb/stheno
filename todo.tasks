@@ -1,3 +1,6 @@
+TODO:
+    ☐ Fix examples: they use old versions of wbml and varz! @critical
+
 Features:
     ☐ FITC approximation
     ☐ DTC approximation
@@ -16,6 +19,8 @@ Refactor:
 
 ＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿
 Archive:
+ ✓ LogKernel @done (19-05-02 16:53) @project(TODO / Test)
+ ✓ Kernel powers @done (19-05-02 16:53) @project(TODO / Test)
  ✓ Multi-argument sparse conditioning @done (18-10-14 16:51) @project(Features)
  ✓ Simply signatures in `field.py`. @done (18-07-04 16:52) @project(Refactor)
  ✓ Efficient multi-output kernels: low-rank SPDs returned by multi-output kernels @done (18-06-26 15:39) @project(Features)
