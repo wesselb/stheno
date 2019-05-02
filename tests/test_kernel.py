@@ -3,12 +3,13 @@
 from __future__ import absolute_import, division, print_function
 
 import numpy as np
+import tensorflow as tf
 from lab import B
 from stheno.cache import Cache
 from stheno.input import Observed, Unique
 from stheno.kernel import EQ, RQ, Matern12, Matern32, Matern52, Delta, Kernel, \
     Linear, OneKernel, ZeroKernel, PosteriorKernel, ShiftedKernel, \
-    TensorProductKernel, CorrectiveKernel, DecayingKernel
+    TensorProductKernel, CorrectiveKernel, DecayingKernel, LogKernel
 from stheno.matrix import matrix, dense, Zero, One, UniformlyDiagonal
 
 # noinspection PyUnresolvedReferences
@@ -16,7 +17,7 @@ from . import eq, raises, ok, allclose, assert_allclose, assert_instance, neq
 
 
 def kernel_generator(k):
-    # Check that the kernel computes.
+    # # Check that the kernel computes.
     x1 = np.random.randn(10, 2)
     x2 = np.random.randn(5, 2)
 
@@ -28,8 +29,9 @@ def kernel_generator(k):
 
     yield assert_allclose, k.elwise(x1, x2)[:, 0], B.diag(k(x1, x2))
     yield assert_allclose, k.elwise(x1, x2), Kernel.elwise(k, x1, x2)
-    yield assert_allclose, k.elwise(x1)[:, 0], B.diag(k(x1))
-    yield assert_allclose, k.elwise(x1)[:, 0], B.diag(k(x1))
+    # The element-wise computation is more accurate, which is why we allow a
+    # discrepancy a bit larger than the square root of the machine epsilon.
+    yield assert_allclose, k.elwise(x1)[:, 0], B.diag(k(x1)), '', 1e-6, 1e-6
     yield assert_allclose, k.elwise(x1), Kernel.elwise(k, x1)
 
 
@@ -347,6 +349,45 @@ def test_linear():
         yield x
 
 
+def test_decaying_kernel():
+    k = DecayingKernel(3.0, 4.0)
+
+    yield eq, k.stationary, False
+    yield raises, RuntimeError, lambda: k.length_scale
+    yield raises, RuntimeError, lambda: k.var
+    yield eq, k.period, np.inf
+    yield eq, str(k), 'DecayingKernel(3.0, 4.0)'
+
+    # Standard tests:
+    for x in kernel_generator(k):
+        yield x
+
+    # Test equality.
+    yield eq, DecayingKernel(3.0, 4.0), DecayingKernel(3.0, 4.0)
+    yield neq, DecayingKernel(3.0, 4.0), DecayingKernel(3.0, 5.0)
+    yield neq, DecayingKernel(3.0, 4.0), DecayingKernel(4.0, 4.0)
+    yield neq, DecayingKernel(3.0, 4.0), EQ()
+
+
+def test_log_kernel():
+    k = LogKernel()
+
+    # Verify that the kernel has the right properties.
+    yield eq, k.stationary, True
+    yield eq, k.var, 1
+    yield eq, k.length_scale, np.inf
+    yield eq, k.period, np.inf
+    yield eq, str(k), 'LogKernel()'
+
+    # Test equality.
+    yield eq, LogKernel(), LogKernel()
+    yield neq, LogKernel(), EQ()
+
+    # Standard tests:
+    for x in kernel_generator(k):
+        yield x
+
+
 def test_posterior_kernel():
     k = PosteriorKernel(
         EQ(), EQ(), EQ(),
@@ -431,7 +472,7 @@ def test_stretched():
     yield eq, k.var, 1
 
     # Check passing in a list.
-    k = EQ().stretch([1, 2])
+    k = EQ().stretch(np.array([1, 2]))
     yield k, np.random.randn(10, 2)
 
 
@@ -460,7 +501,7 @@ def test_periodic():
     yield eq, k.var, 5
 
     # Check passing in a list.
-    k = EQ().periodic([1, 2])
+    k = EQ().periodic(np.array([1, 2]))
     yield k, np.random.randn(10, 2)
 
 
@@ -513,7 +554,7 @@ def test_shifted():
     yield assert_allclose, k.shift(5)(x1, x2), k(x1 - 5, x2 - 5)
 
     # Check passing in a list.
-    k = Linear().shift([1, 2])
+    k = Linear().shift(np.array([1, 2]))
     yield k, np.random.randn(10, 2)
 
 
@@ -560,28 +601,28 @@ def test_selection():
     yield eq, k.period, np.inf
     yield eq, k.var, 2
 
-    k = (2 * EQ().stretch([1, 2, 3])).select([0, 2])
+    k = (2 * EQ().stretch(np.array([1, 2, 3]))).select([0, 2])
 
     yield eq, k.stationary, True
     yield assert_allclose, k.length_scale, [1, 3]
     yield assert_allclose, k.period, [np.inf, np.inf]
     yield eq, k.var, 2
 
-    k = (2 * EQ().periodic([1, 2, 3])).select([1, 2])
+    k = (2 * EQ().periodic(np.array([1, 2, 3]))).select([1, 2])
 
     yield eq, k.stationary, True
     yield assert_allclose, k.length_scale, [1, 1]
     yield assert_allclose, k.period, [2, 3]
     yield eq, k.var, 2
 
-    k = (2 * EQ().stretch([1, 2, 3])).select([0, 2], [1, 2])
+    k = (2 * EQ().stretch(np.array([1, 2, 3]))).select([0, 2], [1, 2])
 
     yield eq, k.stationary, False
     yield raises, RuntimeError, lambda: k.length_scale
     yield raises, RuntimeError, lambda: k.period
     yield eq, k.var, 2
 
-    k = (2 * EQ().periodic([1, 2, 3])).select([0, 2], [1, 2])
+    k = (2 * EQ().periodic(np.array([1, 2, 3]))).select([0, 2], [1, 2])
 
     yield eq, k.stationary, False
     yield eq, k.length_scale, 1
@@ -677,13 +718,12 @@ def test_derivative():
     yield raises, RuntimeError, lambda: EQ().diff(None, None)(1)
 
     # Third, check computation.
-    B.backend_to_tf()
-    s = B.Session()
+    s = tf.Session()
 
     # Test derivative of kernel EQ.
     k = EQ()
-    x1 = B.array(np.random.randn(10, 1))
-    x2 = B.array(np.random.randn(5, 1))
+    x1 = tf.constant(np.random.randn(10, 1))
+    x2 = tf.constant(np.random.randn(5, 1))
 
     # Test derivative with respect to first input.
     ref = s.run(-dense(k(x1, x2)) * (x1 - B.transpose(x2)))
@@ -707,48 +747,27 @@ def test_derivative():
 
     # Test derivative of kernel Linear.
     k = Linear()
-    x1 = B.array(np.random.randn(10, 1))
-    x2 = B.array(np.random.randn(5, 1))
+    x1 = tf.constant(np.random.randn(10, 1))
+    x2 = tf.constant(np.random.randn(5, 1))
 
     # Test derivative with respect to first input.
-    ref = s.run(B.ones((10, 5), dtype=np.float64) * B.transpose(x2))
+    ref = s.run(B.ones((10, 5), tf.float64) * B.transpose(x2))
     yield assert_allclose, s.run(dense(k.diff(0, None)(x1, x2))), ref
-    ref = s.run(B.ones((10, 10), dtype=np.float64) * B.transpose(x1))
+    ref = s.run(B.ones((10, 10), tf.float64) * B.transpose(x1))
     yield assert_allclose, s.run(dense(k.diff(0, None)(x1))), ref
 
     # Test derivative with respect to second input.
-    ref = s.run(B.ones((10, 5), dtype=np.float64) * x1)
+    ref = s.run(B.ones((10, 5), tf.float64) * x1)
     yield assert_allclose, s.run(dense(k.diff(None, 0)(x1, x2))), ref
-    ref = s.run(B.ones((10, 10), dtype=np.float64) * x1)
+    ref = s.run(B.ones((10, 10), tf.float64) * x1)
     yield assert_allclose, s.run(dense(k.diff(None, 0)(x1))), ref
 
     # Test derivative with respect to both inputs.
-    ref = s.run(B.ones((10, 5), dtype=np.float64))
+    ref = s.run(B.ones((10, 5), tf.float64))
     yield assert_allclose, s.run(dense(k.diff(0, 0)(x1, x2))), ref
     yield assert_allclose, s.run(dense(k.diff(0)(x1, x2))), ref
-    ref = s.run(B.ones((10, 10), dtype=np.float64))
+    ref = s.run(B.ones((10, 10), tf.float64))
     yield assert_allclose, s.run(dense(k.diff(0, 0)(x1))), ref
     yield assert_allclose, s.run(dense(k.diff(0)(x1))), ref
 
     s.close()
-    B.backend_to_np()
-
-
-def test_decaying_kernel():
-    k = DecayingKernel(3.0, 4.0)
-
-    yield eq, k.stationary, False
-    yield raises, RuntimeError, lambda: k.length_scale
-    yield raises, RuntimeError, lambda: k.var
-    yield eq, k.period, np.inf
-    yield eq, str(k), 'DecayingKernel(3.0, 4.0)'
-
-    # Standard tests:
-    for x in kernel_generator(k):
-        yield x
-
-    # Test equality.
-    yield eq, DecayingKernel(3.0, 4.0), DecayingKernel(3.0, 4.0)
-    yield neq, DecayingKernel(3.0, 4.0), DecayingKernel(3.0, 5.0)
-    yield neq, DecayingKernel(3.0, 4.0), DecayingKernel(4.0, 4.0)
-    yield neq, DecayingKernel(3.0, 4.0), EQ()

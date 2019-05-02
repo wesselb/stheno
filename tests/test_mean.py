@@ -8,6 +8,7 @@ import numpy as np
 from lab import B
 from numpy.testing import assert_allclose
 from plum import Dispatcher
+import tensorflow as tf
 
 from stheno.cache import Cache
 from stheno.input import Observed
@@ -16,7 +17,7 @@ from stheno.matrix import matrix
 from stheno.mean import TensorProductMean, ZeroMean, Mean, OneMean, \
     PosteriorMean
 # noinspection PyUnresolvedReferences
-from . import eq, neq, lt, le, ge, gt, raises, call, ok, eprint
+from . import eq, neq, lt, le, ge, gt, raises, ok
 
 
 def test_corner_cases():
@@ -100,18 +101,16 @@ def test_function_mean():
 
 
 def test_derivative():
-    B.backend_to_tf()
-    s = B.Session()
+    s = tf.Session()
 
     m = TensorProductMean(lambda x: x ** 2)
     m2 = TensorProductMean(lambda x: x ** 3)
-    x = B.array(np.random.randn(10, 1))
+    x = tf.constant(np.random.randn(10, 1))
 
     yield assert_allclose, s.run(m.diff(0)(x)), s.run(2 * x)
     yield assert_allclose, s.run(m2.diff(0)(x)), s.run(3 * x ** 2)
 
     s.close()
-    B.backend_to_np()
 
 
 def test_selected_mean():

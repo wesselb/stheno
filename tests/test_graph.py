@@ -5,6 +5,7 @@ from __future__ import absolute_import, division, print_function
 import numpy as np
 from lab import B
 from plum import type_parameter
+import tensorflow as tf
 
 from stheno.cache import Cache
 from stheno.graph import Graph, GP, Obs, SparseObs
@@ -14,7 +15,7 @@ from stheno.kernel import Linear, EQ, Delta, Exp, RQ, ZeroKernel, OneKernel, \
 from stheno.mean import TensorProductMean, ZeroMean, ScaledMean, OneMean
 from stheno.random import Normal
 # noinspection PyUnresolvedReferences,
-from . import eq, raises, ok, le, assert_allclose, assert_instance, eprint
+from . import eq, raises, ok, le, assert_allclose, assert_instance
 
 
 def abs_err(x1, x2=0):
@@ -274,6 +275,10 @@ def test_observations_and_conditioning():
     yield raises, ValueError, lambda: Obs((0, 0), (0, 0))
     yield raises, ValueError, lambda: SparseObs(0, p, (0, 0))
 
+    # Test that `Graph.logpdf` takes an `Observations` object.
+    obs = Obs(p(x), y)
+    yield eq, model.logpdf(obs), p(x).logpdf(y)
+
 
 def test_stretching():
     model = Graph()
@@ -387,11 +392,10 @@ def test_derivative():
     yield eq, str(p.diff(1)), 'GP(d(1) EQ(), d(1) <lambda>)'
 
     # Test case:
-    B.backend_to_tf()
-    s = B.Session()
+    s = tf.Session()
 
     model = Graph()
-    x = np.linspace(0, 1, 100)[:, None]
+    x = tf.constant(np.linspace(0, 1, 100))[:, None]
     y = 2 * x
 
     p = GP(EQ(), graph=model)
@@ -401,12 +405,11 @@ def test_derivative():
     yield le, abs_err(s.run(dp.condition(p(x), y)(x).mean - 2)), 1e-3
 
     # Test conditioning on derivative.
-    post = p.condition((B.cast(0., np.float64), B.cast(0., np.float64)),
+    post = p.condition((B.cast(0., tf.float64), B.cast(0., tf.float64)),
                        (dp(x), y))
     yield le, abs_err(s.run(post(x).mean - x ** 2)), 1e-3
 
     s.close()
-    B.backend_to_np()
 
 
 def test_multi_sample():
@@ -636,6 +639,25 @@ def test_sparse_conditioning():
     yield assert_allclose, post_sparse.mean, post_ref.mean, \
           'means 5', 1e-4, 1e-4
     yield assert_allclose, post_sparse.var, post_ref.var
+
+    # Test caching of mean.
+    obs = SparseObs(f(x), e, f(x), y)
+    mu = obs.mu
+    yield assert_allclose, mu, obs.mu
+
+    # Test caching of corrective kernel parameter.
+    obs = SparseObs(f(x), e, f(x), y)
+    A = obs.A
+    yield assert_allclose, A, obs.A
+
+    # Test caching of elbo.
+    obs = SparseObs(f(x), e, f(x), y)
+    elbo = obs.elbo
+    yield assert_allclose, elbo, obs.elbo
+
+    # Test that `Graph.logpdf` takes an `SparseObservations` object.
+    obs = SparseObs(f(x), e, f(x), y)
+    yield assert_allclose, model.logpdf(obs), (f + e)(x).logpdf(y)
 
 
 def test_case_summation_with_itself():

@@ -3,8 +3,10 @@
 from __future__ import absolute_import, division, print_function
 
 import operator
+from plum import NotFoundLookupError
 
 import numpy as np
+from stheno.function_field import to_tensor
 from stheno.field import mul, add, SumElement, new, get_field, broadcast, \
     WrappedElement, JoinElement, Element, OneElement, ZeroElement, \
     ScaledElement, ProductElement
@@ -18,7 +20,7 @@ from stheno.matrix import Dense
 from stheno.mean import TensorProductMean, ZeroMean, OneMean, Mean
 
 # noinspection PyUnresolvedReferences
-from . import eq, ok, raises, lam, neq, assert_allclose
+from . import eq, ok, raises, neq, assert_allclose
 
 
 def test_corner_cases():
@@ -37,6 +39,11 @@ def test_corner_cases():
           lambda: WrappedElement(1).display(1, lambda x: x)
     yield raises, NotImplementedError, \
           lambda: JoinElement(1, 2).display(1, 2, lambda x: x)
+
+
+def test_to_tensor():  # From function field.
+    yield isinstance, to_tensor(np.array([1, 2])), np.ndarray
+    yield isinstance, to_tensor([1, 2]), np.ndarray
 
 
 def test_tuple_equal():
@@ -121,7 +128,7 @@ def test_registrations():
     # Test registration of fields and creation of new types.
     yield raises, RuntimeError, lambda: get_field(MyField())
     get_field.extend(MyField)(lambda _: MyField)
-    yield lam, lambda: get_field(MyField())
+    yield (lambda: ok(get_field(MyField())))
     yield raises, RuntimeError, lambda: new(MyField(), SumElement)
 
 
@@ -142,6 +149,15 @@ def test_subtraction_and_negation():
     yield eq, str(RQ(1) - EQ()), 'RQ(1) + -1 * EQ()'
     yield eq, str(1 - EQ()), '1 + -1 * EQ()'
     yield eq, str(EQ() - 1), 'EQ() + -1 * 1'
+
+
+def test_power():
+    yield raises, ValueError, lambda: EQ() ** -1
+    yield raises, NotFoundLookupError, lambda: EQ() ** .5
+    yield eq, str(EQ() ** 0), '1'
+    yield eq, str(EQ() ** 1), 'EQ()'
+    yield eq, str(EQ() ** 2), 'EQ() * EQ()'
+    yield eq, str(EQ() ** 3), 'EQ() * EQ() * EQ()'
 
 
 def test_cancellations_zero():

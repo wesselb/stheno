@@ -82,7 +82,7 @@ class AbstractObservations(Referentiable):
     def __ror__(self, ps):
         return self.graph.condition(ps, self)
 
-    def posterior_kernel(self, p_i, p_j):
+    def posterior_kernel(self, p_i, p_j):  # pragma: no cover
         """Get the posterior kernel between two processes.
 
         Args:
@@ -96,7 +96,7 @@ class AbstractObservations(Referentiable):
         raise NotImplementedError('Posterior kernel construction not '
                                   'implemented.')
 
-    def posterior_mean(self, p):
+    def posterior_mean(self, p):  # pragma: no cover
         """Get the posterior kernel of a process.
 
         Args:
@@ -267,7 +267,7 @@ class SparseObservations(AbstractObservations, Referentiable):
 
         # And construct the components for the inducing point approximation.
         L_z = B.cholesky(self._K_z)
-        self._A = B.eye_from(self._K_z) + \
+        self._A = B.eye(self._K_z) + \
                   B.qf(K_n, B.transpose(B.trisolve(L_z, K_zx)))
         y_bar = uprank(self.y) - self.e.mean(x_n) - self.graph.means[p_x](x)
         prod_y_bar = B.trisolve(L_z, B.qf(K_n, B.transpose(K_zx), y_bar))
@@ -436,7 +436,7 @@ class Graph(Referentiable):
     @_dispatch(PromisedGP, FunctionType)
     def mul(self, p, f):
         def ones(x):
-            return B.ones([B.shape(x)[0], 1], dtype=B.dtype(x))
+            return B.ones([B.shape(x)[0], 1], B.dtype(x))
 
         return self._update(f * self.means[p],
                             lambda: f * self.kernels[p],
@@ -781,10 +781,6 @@ class GP(RandomProcess, Referentiable):
         Returns:
             Approximation of the derivative of the GP.
         """
-        # Ensure that the order is higher than the derivative.
-        if order <= deriv:
-            order = deriv + 1
-
         # Use the FDM library to figure out the coefficients.
         fdm = central_fdm(order, deriv, adapt=0, factor=1e8)
         fdm.estimate()  # Estimate step size.

@@ -8,7 +8,7 @@ from stheno.eis import ComponentKernel, AdditiveComponentKernel, NoisyKernel
 from stheno.input import Component, Latent, Observed
 from stheno.kernel import EQ, RQ, ZeroKernel
 # noinspection PyUnresolvedReferences
-from . import eq, neq, lt, le, ge, gt, raises, call, ok, eprint, allclose
+from . import eq, neq, lt, le, ge, gt, raises, ok, allclose
 
 
 def test_component_kernel():

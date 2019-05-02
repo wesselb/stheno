@@ -10,8 +10,7 @@ from stheno.matrix import dense
 from stheno.mokernel import MultiOutputKernel
 
 # noinspection PyUnresolvedReferences
-from . import eq, neq, lt, le, ge, gt, raises, call, ok, eprint, \
-    assert_allclose, lam
+from . import eq, neq, lt, le, ge, gt, raises, ok, assert_allclose
 
 
 def test_mokernel():

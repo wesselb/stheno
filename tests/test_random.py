@@ -9,8 +9,7 @@ from stheno.matrix import UniformlyDiagonal, Diagonal, dense
 from stheno.random import Normal, Normal1D, RandomVector
 
 # noinspection PyUnresolvedReferences
-from . import eq, neq, lt, le, ge, gt, raises, call, ok, eprint, allclose, \
-    assert_allclose
+from . import eq, neq, lt, le, ge, gt, raises, ok, allclose, assert_allclose
 
 
 def test_normal():
@@ -35,14 +34,6 @@ def test_normal():
         x = np.random.randn(3, 10)
         yield ok, allclose(dist.logpdf(x), dist_sp.logpdf(x.T)), 'logpdf'
         yield ok, allclose(dist.entropy(), dist_sp.entropy()), 'entropy'
-
-    # Test that inputs to `logpdf` are converted appropriately.
-    yield assert_allclose, \
-          dist.logpdf(np.array([0, 1, 2])), \
-          dist.logpdf([0, 1, 2])
-    yield assert_allclose, \
-          dist.logpdf(np.array([0, 1, 2])), \
-          dist.logpdf((0, 1, 2))
 
     # Test the the output of `logpdf` is flattened appropriately.
     yield eq, np.shape(dist.logpdf(np.ones((3, 1)))), ()
@@ -128,17 +119,17 @@ def test_normal_1d():
     yield eq, B.shape(d.var), (1, 1)
     yield eq, B.shape(d.mean), (1, 1)
 
-    d = Normal1D(1, [0, 0, 0])
+    d = Normal1D(1, np.array([0, 0, 0]))
     yield eq, type(d.var), UniformlyDiagonal
     yield eq, B.shape(d.var), (3, 3)
     yield eq, B.shape(d.mean), (3, 1)
 
-    d = Normal1D([1, 2, 3], 0)
+    d = Normal1D(np.array([1, 2, 3]), 0)
     yield eq, type(d.var), Diagonal
     yield eq, B.shape(d.var), (3, 3)
     yield eq, B.shape(d.mean), (3, 1)
 
-    d = Normal1D([1, 2, 3], [0, 0, 0])
+    d = Normal1D(np.array([1, 2, 3]), np.array([0, 0, 0]))
     yield eq, type(d.var), Diagonal
     yield eq, B.shape(d.var), (3, 3)
     yield eq, B.shape(d.mean), (3, 1)
@@ -148,7 +139,7 @@ def test_normal_1d():
     yield eq, B.shape(d.var), (1, 1)
     yield eq, B.shape(d.mean), (1, 1)
 
-    d = Normal1D([1, 2, 3])
+    d = Normal1D(np.array([1, 2, 3]))
     yield eq, type(d.var), Diagonal
     yield eq, B.shape(d.var), (3, 3)
     yield eq, B.shape(d.mean), (3, 1)
@@ -156,7 +147,8 @@ def test_normal_1d():
     yield raises, ValueError, lambda: Normal1D(np.eye(3))
     yield raises, ValueError, lambda: Normal1D(np.eye(3), 0)
     yield raises, ValueError, lambda: Normal1D(1, np.ones((3, 1)))
-    yield raises, ValueError, lambda: Normal1D([1, 2], np.ones((3, 1)))
+    yield raises, ValueError, lambda: Normal1D(np.array([1, 2]),
+                                               np.ones((3, 1)))
 
 
 def test_normal_arithmetic():

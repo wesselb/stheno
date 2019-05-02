@@ -4,7 +4,7 @@ from __future__ import absolute_import, division, print_function
 
 from stheno.lazy import Rule, LazyMatrix, LazyVector
 # noinspection PyUnresolvedReferences
-from . import eq, neq, lt, le, ge, gt, raises, call, ok, eprint
+from . import eq, neq, lt, le, ge, gt, raises, ok
 
 
 def test_corner_cases():

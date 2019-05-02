@@ -164,10 +164,10 @@ def uprank(x, B=B):
     elif B.rank(x) == 2:
         return x
     elif B.rank(x) == 1:
-        return B.expand_dims(x, 1)
+        return B.expand_dims(x, axis=1)
     else:
         # Rank must be 0.
-        return B.expand_dims(B.expand_dims(x, 0), 1)
+        return B.expand_dims(B.expand_dims(x, axis=0), axis=1)
 
 
 @_dispatch(FunctionType)

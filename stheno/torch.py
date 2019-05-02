@@ -15,8 +15,6 @@ log = logging.getLogger(__name__)
 
 _dispatch = Dispatcher()
 
-B.backend_to_torch()  # pragma: no cover
-
 # Save original methods.
 __mul__tensor = Tensor.__mul__
 __imul__tensor = Tensor.__imul__

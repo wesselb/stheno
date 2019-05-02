@@ -4,6 +4,7 @@ from __future__ import absolute_import, division, print_function
 
 import operator
 from types import FunctionType as PythonFunction
+import numpy as np
 
 from lab import B
 from plum import Dispatcher, Referentiable, Self
@@ -18,6 +19,16 @@ __all__ = []
 _dispatch = Dispatcher()
 
 
+@_dispatch(B.Numeric)
+def _shape(x):
+    return B.shape(x)
+
+
+@_dispatch(object)
+def _shape(x):
+    return np.shape(x)
+
+
 @_dispatch(tuple, tuple)
 def tuple_equal(x, y):
     """Check tuples for equality.
@@ -30,7 +41,7 @@ def tuple_equal(x, y):
         bool: `x` and `y` are equal.
     """
     return len(x) == len(y) and \
-           all([B.shape(xi) == B.shape(yi) and B.all_bool(xi == yi)
+           all([_shape(xi) == _shape(yi) and B.all(xi == yi)
                 for xi, yi in zip(x, y)])
 
 

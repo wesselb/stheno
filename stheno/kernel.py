@@ -4,6 +4,7 @@ from __future__ import absolute_import, division, print_function
 
 import logging
 import operator
+import tensorflow as tf
 
 import numpy as np
 from lab import B
@@ -21,9 +22,21 @@ from .input import Input, Unique
 from .matrix import Dense, LowRank, UniformlyDiagonal, One, Zero, \
     dense, matrix
 
-__all__ = ['Kernel', 'OneKernel', 'ZeroKernel', 'ScaledKernel', 'EQ', 'RQ',
-           'Matern12', 'Exp', 'Matern32', 'Matern52', 'Delta', 'Linear',
-           'DerivativeKernel', 'DecayingKernel']
+__all__ = ['Kernel',
+           'OneKernel',
+           'ZeroKernel',
+           'ScaledKernel',
+           'EQ',
+           'RQ',
+           'Matern12',
+           'Exp',
+           'Matern32',
+           'Matern52',
+           'Delta',
+           'Linear',
+           'DerivativeKernel',
+           'DecayingKernel',
+           'LogKernel']
 
 log = logging.getLogger(__name__)
 
@@ -110,7 +123,7 @@ class Kernel(Function, Referentiable):
         Returns:
             tensor: Kernel vector as a rank 2 column vector.
         """
-        return B.expand_dims(B.diag(self(x, y, cache)), 1)
+        return B.expand_dims(B.diag(self(x, y, cache)), axis=1)
 
     @_dispatch(object)
     def elwise(self, x):
@@ -160,9 +173,14 @@ class Kernel(Function, Referentiable):
 
     @_dispatch(int)
     def __pow__(self, power, modulo=None):
-        k = 1
-        for _ in range(power):
-            k *= self
+        if power < 0:
+            raise ValueError('Cannot raise to a negative power.')
+        elif power == 0:
+            return 1
+        else:
+            k = self
+            for _ in range(power - 1):
+                k *= self
         return k
 
     @property
@@ -220,7 +238,7 @@ class OneKernel(Kernel, OneFunction, Referentiable):
     @cache
     @uprank
     def elwise(self, x, y, B):
-        return B.ones([B.shape(x)[0], 1], dtype=B.dtype(x))
+        return B.ones([B.shape_int(x)[0], 1], B.dtype(x))
 
     @property
     def _stationary(self):
@@ -257,7 +275,7 @@ class ZeroKernel(Kernel, ZeroFunction, Referentiable):
     @cache
     @uprank
     def elwise(self, x, y, B):
-        return B.zeros([B.shape(x)[0], 1], dtype=B.dtype(x))
+        return B.zeros([B.shape_int(x)[0], 1], B.dtype(x))
 
     @property
     def _stationary(self):
@@ -292,7 +310,7 @@ class ScaledKernel(Kernel, ScaledFunction, Referentiable):
         return self._compute(self[0].elwise(x, y, B), B)
 
     def _compute(self, K, B):
-        return B.multiply(B.cast(self.scale, dtype=B.dtype(K)), K)
+        return B.multiply(B.cast(self.scale, B.dtype(K)), K)
 
     @property
     def _stationary(self):
@@ -520,7 +538,7 @@ class SelectedKernel(Kernel, SelectedFunction, Referentiable):
     @property
     def length_scale(self):
         length_scale = self[0].length_scale
-        if B.is_scalar(length_scale):
+        if B.isscalar(length_scale):
             return length_scale
         else:
             if len(self.dims) == 1:
@@ -532,7 +550,7 @@ class SelectedKernel(Kernel, SelectedFunction, Referentiable):
     @property
     def period(self):
         period = self[0].period
-        if B.is_scalar(period):
+        if B.isscalar(period):
             return period
         else:
             if len(self.dims) == 1:
@@ -631,7 +649,7 @@ class PeriodicKernel(Kernel, WrappedFunction, Referentiable):
 
     @_dispatch(Self)
     def __eq__(self, other):
-        return self[0] == other[0] and B.all_bool(self.period == other.period)
+        return self[0] == other[0] and B.all(self.period == other.period)
 
 
 class EQ(Kernel, Referentiable):
@@ -652,7 +670,7 @@ class EQ(Kernel, Referentiable):
         return self._compute(B.ew_dists2(x, y), B)
 
     def _compute(self, dists2, B):
-        return B.exp(B.multiply(B.cast(-.5, dtype=B.dtype(dists2)), dists2))
+        return B.exp(B.multiply(B.cast(-.5, B.dtype(dists2)), dists2))
 
     @property
     def _stationary(self):
@@ -725,7 +743,7 @@ class RQ(Kernel, Referentiable):
 
     @_dispatch(Self)
     def __eq__(self, other):
-        return B.all_bool(self.alpha == other.alpha)
+        return B.all(self.alpha == other.alpha)
 
 
 class Exp(Kernel, Referentiable):
@@ -931,10 +949,11 @@ class Delta(Kernel, Referentiable):
             return self._compute(B.ew_dists2(x, y), B)
 
     def _eye(self, x, B):
-        return UniformlyDiagonal(B.cast(1, dtype=B.dtype(x)), B.shape(x)[0])
+        return UniformlyDiagonal(B.cast(1, B.dtype(x)), B.shape(x)[0])
 
     def _compute(self, dists2, B):
-        return B.cast(B.less(dists2, self.epsilon), B.dtype(dists2))
+        dtype = B.dtype(dists2)
+        return B.cast(B.lt(dists2, B.cast(self.epsilon, dtype)), dtype)
 
     @property
     def _stationary(self):
@@ -972,7 +991,7 @@ class Linear(Kernel, Referentiable):
     @cache
     @uprank
     def elwise(self, x, y, B):
-        return B.expand_dims(B.sum(B.multiply(x, y), axis=1), 1)
+        return B.expand_dims(B.sum(B.multiply(x, y), axis=1), axis=1)
 
     @property
     def _stationary(self):
@@ -1019,7 +1038,7 @@ class DecayingKernel(Kernel, Referentiable):
 
     def _compute_beta_raised(self, B):
         beta_norm = B.sqrt(B.maximum(B.sum(B.power(self.beta, 2)),
-                                     B.cast(1e-30, dtype=B.dtype(self.beta))))
+                                     B.cast(1e-30, B.dtype(self.beta))))
         return B.power(beta_norm, self.alpha)
 
     @_dispatch(Formatter)
@@ -1033,8 +1052,52 @@ class DecayingKernel(Kernel, Referentiable):
 
     @_dispatch(Self)
     def __eq__(self, other):
-        return B.all_bool(self.alpha == other.alpha) and \
-               B.all_bool(self.beta == other.beta)
+        return B.all(self.alpha == other.alpha) and \
+               B.all(self.beta == other.beta)
+
+
+class LogKernel(Kernel, Referentiable):
+    """Logarithm kernel."""
+
+    _dispatch = Dispatcher(in_class=Self)
+
+    @_dispatch(B.Numeric, B.Numeric, Cache)
+    @cache
+    @uprank
+    def __call__(self, x, y, B):
+        dists = B.maximum(B.pw_dists(x, y), 1e-10)
+        return B.divide(B.log(dists + 1), dists)
+
+    @_dispatch(B.Numeric, B.Numeric, Cache)
+    @cache
+    @uprank
+    def elwise(self, x, y, B):
+        dists = B.maximum(B.ew_dists(x, y), 1e-10)
+        return B.divide(B.log(dists + 1), dists)
+
+    @_dispatch(Formatter)
+    def display(self, formatter):
+        return 'LogKernel()'
+
+    @property
+    def _stationary(self):
+        return True
+
+    @property
+    def var(self):
+        return 1
+
+    @property
+    def length_scale(self):
+        return np.inf
+
+    @property
+    def period(self):
+        return np.inf
+
+    @_dispatch(Self)
+    def __eq__(self, other):
+        return True
 
 
 class PosteriorKernel(Kernel, Referentiable):
@@ -1074,7 +1137,8 @@ class PosteriorKernel(Kernel, Referentiable):
         qf_diag = B.qf_diag(self.K_z,
                             self.k_zi(self.z, x, B),
                             self.k_zj(self.z, y, B))
-        return B.subtract(self.k_ij.elwise(x, y, B), B.expand_dims(qf_diag, 1))
+        return B.subtract(self.k_ij.elwise(x, y, B),
+                          B.expand_dims(qf_diag, axis=1))
 
 
 class CorrectiveKernel(Kernel, Referentiable):
@@ -1134,7 +1198,7 @@ class DerivativeKernel(Kernel, DerivativeFunction, Referentiable):
                                  axis=1),
                         B.concat([y[:, :j], z[n:, None], y[:, j + 1:]],
                                  axis=1)))
-            return Dense(B.hessians(K, [z])[0][:n, n:])
+            return Dense(tf.hessians(K, [z])[0][:n, n:])
 
         # Derivative with respect to `x`.
         elif i is not None and j is None:
@@ -1146,9 +1210,10 @@ class DerivativeKernel(Kernel, DerivativeFunction, Referentiable):
                 return dense(k(B.concat([x[:, :i], z[0], x[:, i + 1:]],
                                         axis=1), z[1]))
 
-            res = B.map_fn(f, (B.stack(xis, axis=0), y[:, None, :]),
-                           dtype=B.dtype(x))
-            return Dense(B.concat(B.gradients(B.sum(res, axis=0), xis), axis=1))
+            res = tf.map_fn(f, (B.stack(xis, axis=0), y[:, None, :]),
+                            dtype=B.dtype(x))
+            return Dense(B.concat(tf.gradients(B.sum(res, axis=0), xis),
+                                  axis=1))
 
         # Derivative with respect to `y`.
         elif i is None and j is not None:
@@ -1161,9 +1226,9 @@ class DerivativeKernel(Kernel, DerivativeFunction, Referentiable):
                     k(z[0], B.concat([y[:, :j], z[1], y[:, j + 1:]], axis=1))
                 )
 
-            res = B.map_fn(f, (x[:, None, :], B.stack(yjs, axis=0)),
-                           dtype=B.dtype(x))
-            dKt = B.concat(B.gradients(B.sum(res, axis=0), yjs), axis=1)
+            res = tf.map_fn(f, (x[:, None, :], B.stack(yjs, axis=0)),
+                            dtype=B.dtype(x))
+            dKt = B.concat(tf.gradients(B.sum(res, axis=0), yjs), axis=1)
             return Dense(B.transpose(dKt))
 
         else:

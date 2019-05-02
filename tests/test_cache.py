@@ -14,8 +14,7 @@ from stheno.mean import ZeroMean, OneMean
 from stheno.matrix import dense
 from stheno.graph import GP, Graph
 # noinspection PyUnresolvedReferences
-from . import eq, neq, ok, raises, benchmark, le, eprint, assert_allclose, \
-    allclose
+from . import eq, neq, ok, raises, benchmark, le, assert_allclose, allclose
 
 
 def test_lab_cache():
@@ -104,10 +103,10 @@ def test_cache_performance():
     yield assert_allclose, y1, y3
 
     # Test performance of call cache.
-    yield le, dur2, dur1 / 500
+    yield le, dur2, dur1 / 100, 'call cache'
 
     # Test performance of LAB cache.
-    yield le, dur3, dur1 / 20
+    yield le, dur3, dur1 / 20, 'lab cache'
 
 
 def test_elwise_cache_aliasing():

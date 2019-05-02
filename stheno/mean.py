@@ -4,14 +4,14 @@ from __future__ import absolute_import, division, print_function
 
 import logging
 
+import tensorflow as tf
 from lab import B
-from numpy import all
 from plum import Dispatcher, Self, Referentiable
-
 from stheno.function_field import StretchedFunction, ShiftedFunction, \
     SelectedFunction, InputTransformedFunction, DerivativeFunction, \
     TensorProductFunction, ZeroFunction, OneFunction, \
     ScaledFunction, ProductFunction, SumFunction, Function
+
 from .cache import Cache, cache, uprank
 from .field import apply_optional_arg, get_field
 from .input import Input
@@ -150,7 +150,7 @@ class OneMean(Mean, OneFunction, Referentiable):
     @cache
     @uprank
     def __call__(self, x, B):
-        return B.ones([B.shape(x)[0], 1], dtype=B.dtype(x))
+        return B.ones([B.shape_int(x)[0], 1], B.dtype(x))
 
 
 class ZeroMean(Mean, ZeroFunction, Referentiable):
@@ -162,7 +162,7 @@ class ZeroMean(Mean, ZeroFunction, Referentiable):
     @cache
     @uprank
     def __call__(self, x, B):
-        return B.zeros([B.shape(x)[0], 1], dtype=B.dtype(x))
+        return B.zeros([B.shape_int(x)[0], 1], B.dtype(x))
 
 
 class TensorProductMean(Mean, TensorProductFunction, Referentiable):
@@ -184,7 +184,7 @@ class DerivativeMean(Mean, DerivativeFunction, Referentiable):
     @uprank
     def __call__(self, x, B):
         i = self.derivs[0]
-        return B.gradients(self[0](x, B), x)[0][:, i:i + 1]
+        return tf.gradients(self[0](x, B), x)[0][:, i:i + 1]
 
 
 class PosteriorMean(Mean, Referentiable):

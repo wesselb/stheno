@@ -2,7 +2,6 @@
 
 from __future__ import absolute_import, division, print_function
 
-import sys
 from time import time
 
 import numpy as np
@@ -11,7 +10,6 @@ from nose.tools import assert_raises, assert_equal, assert_less, \
     assert_less_equal, assert_not_equal, assert_greater, \
     assert_greater_equal, ok_
 from plum import dispatch
-
 from stheno.matrix import Dense, dense as _dense
 
 le = assert_less_equal
@@ -22,18 +20,6 @@ ge = assert_greater_equal
 gt = assert_greater
 raises = assert_raises
 ok = ok_
-
-
-def call(f, method, args=(), res=True):
-    assert_equal(getattr(f, method)(*args), res)
-
-
-def lam(f, args=()):
-    ok_(f(*args), 'Lambda returned False.')
-
-
-def eprint(*args, **kw_args):
-    print(*args, file=sys.stderr, **kw_args)
 
 
 def benchmark(f, args, n=1000, get_output=False):
@@ -70,7 +56,7 @@ def dense(a):
 
 @dispatch(list)
 def dense(a):
-    return B.array(a)
+    return np.array(a)
 
 
 def allclose(a, b, desc=None, atol=1e-8, rtol=1e-8):

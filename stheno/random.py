@@ -71,7 +71,7 @@ class Normal(RandomVector, At, Referentiable):
 
         # Resolve mean.
         if mean is None:
-            self._mean = B.zeros([self.dim, 1], dtype=self.dtype)
+            self._mean = B.zeros([self.dim, 1], self.dtype)
         else:
             self._mean = dense(mean)  # Not useful to retain structure here.
 
@@ -145,7 +145,7 @@ class Normal(RandomVector, At, Referentiable):
     @property
     def m2(self):
         """Second moment."""
-        return self.var + B.outer(self.mean)
+        return self.var + B.outer(B.squeeze(self.mean))
 
     def marginals(self):
         """Get the marginals.
@@ -172,11 +172,9 @@ class Normal(RandomVector, At, Referentiable):
                 determined that the list contains only a single log-pdf,
                 then the list is flattened to a scalar.
         """
-        # Convert to numeric type if necessary.
-        x = B.array(x) if isinstance(x, (list, tuple)) else x
         logpdfs = -(B.logdet(self.var) +
-                    B.cast(self.dim, dtype=self.dtype) *
-                    B.cast(B.log_2_pi, dtype=self.dtype) +
+                    B.cast(self.dim, self.dtype) *
+                    B.cast(B.log_2_pi, self.dtype) +
                     B.qf_diag(self.var, uprank(x) - self.mean)) / 2
         return logpdfs[0] if B.shape_int(logpdfs) == (1,) else logpdfs
 
@@ -187,8 +185,8 @@ class Normal(RandomVector, At, Referentiable):
             scalar: The entropy.
         """
         return (B.logdet(self.var) +
-                B.cast(self.dim, dtype=self.dtype) *
-                B.cast(B.log_2_pi + 1, dtype=self.dtype)) / 2
+                B.cast(self.dim, self.dtype) *
+                B.cast(B.log_2_pi + 1, self.dtype)) / 2
 
     @_dispatch(Self)
     def kl(self, other):
@@ -203,7 +201,7 @@ class Normal(RandomVector, At, Referentiable):
         """
         return (B.ratio(self.var, other.var) +
                 B.qf_diag(other.var, other.mean - self.mean)[0] -
-                B.cast(self.dim, dtype=self.dtype) +
+                B.cast(self.dim, self.dtype) +
                 B.logdet(other.var) - B.logdet(self.var)) / 2
 
     @_dispatch(Self)
@@ -308,17 +306,12 @@ class Normal1D(Normal, Referentiable):
     _dispatch = Dispatcher(in_class=Self)
 
     def __init__(self, var, mean=None):
-        var = B.array(var)
-
         # Consider all various ranks of `var` and `mean` for convenient
         # broadcasting behaviour.
         if mean is not None:
-            mean = B.array(mean)
-
             if B.rank(var) == 1:
                 if B.rank(mean) == 0:
-                    mean = mean * \
-                           B.ones([B.shape(var)[0], 1], dtype=B.dtype(var))
+                    mean = mean * B.ones([B.shape(var)[0], 1], B.dtype(var))
                 elif B.rank(mean) == 1:
                     mean = mean[:, None]
                 else:
@@ -328,7 +321,7 @@ class Normal1D(Normal, Referentiable):
 
             elif B.rank(var) == 0:
                 if B.rank(mean) == 0:
-                    mean = mean * B.ones([1, 1], dtype=B.dtype(var))
+                    mean = mean * B.ones([1, 1], B.dtype(var))
                     var = UniformlyDiagonal(var, 1)
                 elif B.rank(mean) == 1:
                     mean = mean[:, None]

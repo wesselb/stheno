@@ -298,7 +298,7 @@ class ScaledElement(WrappedElement, Referentiable):
 
     @_dispatch(Self)
     def __eq__(self, other):
-        return B.all_bool(self.scale == other.scale) and self[0] == other[0]
+        return B.all(self.scale == other.scale) and self[0] == other[0]
 
 
 class ProductElement(JoinElement, Referentiable):

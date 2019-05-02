@@ -10,7 +10,7 @@ from stheno.input import At, MultiInput
 from stheno.kernel import EQ
 from stheno.momean import MultiOutputMean
 # noinspection PyUnresolvedReferences
-from . import eq, neq, lt, le, ge, gt, raises, call, ok, eprint
+from . import eq, neq, lt, le, ge, gt, raises, ok
 
 
 def test_momean():
