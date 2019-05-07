@@ -62,7 +62,7 @@ recommended to use.
 To install the package, use the following sequence of commands:
 
 ```bash
-git clone https://github.com/wesselb/stheno.git
+git clone https://github.com/wesselb/stheno
 cd stheno
 make install
 ```
