@@ -310,7 +310,7 @@ class ScaledKernel(Kernel, ScaledFunction, Referentiable):
         return self._compute(self[0].elwise(x, y, B), B)
 
     def _compute(self, K, B):
-        return B.multiply(B.cast(self.scale, B.dtype(K)), K)
+        return B.multiply(self.scale, K)
 
     @property
     def _stationary(self):
