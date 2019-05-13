@@ -7,7 +7,7 @@ from lab import B
 from .matrix import *
 from .input import *
 from .field import *
-from .cache import *
+from .util import *
 from .mean import *
 from .momean import *
 from .kernel import *

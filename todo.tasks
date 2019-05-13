@@ -1,5 +1,6 @@
 TODO:
     ☐ Fix examples: they use old versions of wbml and varz! @critical
+    ☐ Throw warning at fallback for elwise!
 
 Features:
     ☐ FITC approximation

@@ -5,7 +5,6 @@ from __future__ import absolute_import, division, print_function
 import numpy as np
 import tensorflow as tf
 from lab import B
-from stheno.cache import Cache
 from stheno.input import Observed, Unique
 from stheno.kernel import EQ, RQ, Matern12, Matern32, Matern52, Delta, Kernel, \
     Linear, OneKernel, ZeroKernel, PosteriorKernel, ShiftedKernel, \
@@ -43,35 +42,22 @@ def test_construction():
     k = EQ()
 
     x = np.random.randn(10, 1)
-    c = Cache()
 
     yield k, x
-    yield k, x, c
     yield k, x, x
-    yield k, x, x, c
 
     yield k, Observed(x)
-    yield k, Observed(x), c
     yield k, Observed(x), Observed(x)
-    yield k, Observed(x), Observed(x), c
     yield k, x, Observed(x)
-    yield k, x, Observed(x), c
     yield k, Observed(x), x
-    yield k, Observed(x), x, c
 
     yield k.elwise, x
-    yield k.elwise, x, c
     yield k.elwise, x, x
-    yield k.elwise, x, x, c
 
     yield k.elwise, Observed(x)
-    yield k.elwise, Observed(x), c
     yield k.elwise, Observed(x), Observed(x)
-    yield k.elwise, Observed(x), Observed(x), c
     yield k.elwise, x, Observed(x)
-    yield k.elwise, x, Observed(x), c
     yield k.elwise, Observed(x), x
-    yield k.elwise, Observed(x), x, c
 
 
 def test_basic_arithmetic():
@@ -637,7 +623,7 @@ def test_selection():
 
 
 def test_input_transform():
-    k = Linear().transform(lambda x, c: x - 5)
+    k = Linear().transform(lambda x: x - 5)
 
     yield eq, k.stationary, False
     yield raises, RuntimeError, lambda: k.length_scale
@@ -663,8 +649,8 @@ def test_input_transform():
     k = Linear()
     x1, x2 = np.random.randn(10, 2), np.random.randn(10, 2)
 
-    k2 = k.transform(lambda x, c: x ** 2)
-    k3 = k.transform(lambda x, c: x ** 2, lambda x, c: x - 5)
+    k2 = k.transform(lambda x: x ** 2)
+    k3 = k.transform(lambda x: x ** 2, lambda x: x - 5)
 
     yield assert_allclose, k(x1 ** 2, x2 ** 2), k2(x1, x2)
     yield assert_allclose, k(x1 ** 2, x2 - 5), k3(x1, x2)

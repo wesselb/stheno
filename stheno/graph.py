@@ -9,7 +9,7 @@ from fdm import central_fdm
 from lab import B
 from plum import Dispatcher, Self, Referentiable, type_parameter, Union
 
-from .cache import uprank, Cache
+from .util import uprank
 from .input import Input, At, MultiInput
 from .kernel import ZeroKernel, PosteriorKernel, TensorProductKernel, \
     CorrectiveKernel, OneKernel
@@ -677,18 +677,16 @@ class GP(RandomProcess, Referentiable):
     def name(self, name):
         self.graph.name(self, name)
 
-    def __call__(self, x, cache=None):
+    def __call__(self, x):
         """Construct a finite-dimensional distribution at specified locations.
 
         Args:
             x (input): Points to construct the distribution at.
-            cache (:class:`.cache.Cache`, optional): Cache.
 
         Returns:
             :class:`.random.Normal`: Finite-dimensional distribution.
         """
-        cache = Cache() if cache is None else cache
-        return Normal(self, x, cache)
+        return Normal(self, x)
 
     @_dispatch([object])
     def condition(self, *args):
@@ -723,8 +721,8 @@ class GP(RandomProcess, Referentiable):
 
     @_dispatch(Self)
     def __mul__(self, other):
-        return (lambda x, B: self.graph.means[self](x, B)) * other + \
-               self * (lambda x, B: self.graph.means[other](x, B)) + \
+        return (lambda x: self.graph.means[self](x)) * other + \
+               self * (lambda x: self.graph.means[other](x)) + \
                GP(kernel=self.graph.kernels[self] *
                          self.graph.kernels[other] +
                          self.graph.kernels[self, other] *

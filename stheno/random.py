@@ -5,7 +5,7 @@ from __future__ import absolute_import, division, print_function
 from lab import B
 from plum import Self, Referentiable, PromisedType, type_parameter
 
-from .cache import Cache, uprank
+from .util import uprank
 from .input import Input, At
 from .matrix import matrix, Dispatcher, UniformlyDiagonal, Diagonal, dense, \
     Dense
@@ -75,23 +75,21 @@ class Normal(RandomVector, At, Referentiable):
         else:
             self._mean = dense(mean)  # Not useful to retain structure here.
 
-        # Set `p`, `x`, and `cache` to `None`.
+        # Set `p` and `x` to `None`.
         self.p = None
         self.x = None
-        self.cache = None
 
-    @_dispatch(PromisedGP, {B.Numeric, Input}, [{Cache, type(None)}])
-    def __init__(self, p, x, cache=None):
+    @_dispatch(PromisedGP, {B.Numeric, Input})
+    def __init__(self, p, x):
         # Set variance and mean to `None` to signify that they have to be
         # acquired from `p.kernel(x)` and `p.mean(x)`.
         self._var = None
         self._mean = None
 
-        # Save process, the point at which it was evaluated, and the provided
+        # Save process and the point at which it was evaluated.
         # cache.
         self.p = p
         self.x = x
-        self.cache = Cache() if cache is None else cache
 
     def get(self):
         """Get the point at which the the process was evaluated to construct
@@ -120,7 +118,7 @@ class Normal(RandomVector, At, Referentiable):
         """Variance."""
         if self._var is None:
             # Variance must be acquired from the saved process.
-            self._var = self.p.kernel(self.x, self.cache)
+            self._var = self.p.kernel(self.x)
         return self._var
 
     @property
@@ -129,7 +127,7 @@ class Normal(RandomVector, At, Referentiable):
         if self._mean is None:
             # Mean must be acquired from the saved process. It is not useful
             # to retain structure.
-            self._mean = dense(self.p.mean(self.x, self.cache))
+            self._mean = dense(self.p.mean(self.x))
         return self._mean
 
     @property
@@ -158,7 +156,7 @@ class Normal(RandomVector, At, Referentiable):
         if self.p is None:
             vars = B.diag(self.var)
         else:
-            vars = B.squeeze(dense(self.p.kernel.elwise(self.x, self.cache)))
+            vars = B.squeeze(dense(self.p.kernel.elwise(self.x)))
         return mean, mean - 2 * vars ** .5, mean + 2 * vars ** .5
 
     def logpdf(self, x):

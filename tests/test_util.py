@@ -7,7 +7,7 @@ from lab import B
 from numpy.testing import assert_approx_equal, assert_array_almost_equal
 
 from stheno import Kernel
-from stheno.cache import Cache, uprank
+from stheno.util import  uprank
 from stheno.input import Component
 from stheno.kernel import ZeroKernel, OneKernel, EQ
 from stheno.mean import ZeroMean, OneMean
@@ -15,40 +15,6 @@ from stheno.matrix import dense
 from stheno.graph import GP, Graph
 # noinspection PyUnresolvedReferences
 from . import eq, neq, ok, raises, benchmark, le, assert_allclose, allclose
-
-
-def test_lab_cache():
-    c = Cache()
-
-    x1, x2 = np.random.randn(10, 10), np.random.randn(10, 10)
-    x2 = np.random.randn(10, 10)
-
-    yield eq, id(c.pw_dists(x1, x2)), id(c.pw_dists(x1, x2))
-    yield neq, id(c.pw_dists(x1, x1)), id(c.pw_dists(x1, x2))
-    yield eq, id(c.matmul(x1, x2, tr_a=True)), id(c.matmul(x1, x2, tr_a=True))
-    yield neq, id(c.matmul(x1, x2, tr_a=True)), id(c.matmul(x1, x2))
-
-
-def test_ones_zeros():
-    c = Cache()
-
-    # Nothing to check for kernels:  ones and zeros are represented in a
-    # structured way.
-
-    # Test that ones and zeros are cached and that all signatures work.
-    m = ZeroMean()
-    yield eq, id(m(np.random.randn(10, 10), c)), \
-          id(m(np.random.randn(10, 10), c))
-    yield neq, id(m(np.random.randn(10, 10), c)), \
-          id(m(np.random.randn(5, 10), c))
-    yield eq, id(m(1, c)), id(m(1, c))
-
-    m = OneMean()
-    yield eq, id(m(np.random.randn(10, 10), c)), \
-          id(m(np.random.randn(10, 10), c))
-    yield neq, id(m(np.random.randn(10, 10), c)), \
-          id(m(np.random.randn(5, 10), c))
-    yield eq, id(m(1, c)), id(m(1, c))
 
 
 def test_uprank():
@@ -87,31 +53,3 @@ def test_uprank():
     yield assert_array_almost_equal, p.condition(x, x)(x).mean, x[:, None]
     yield assert_array_almost_equal, p.condition(x, x[:, None])(x).mean, \
           x[:, None]
-
-
-def test_cache_performance():
-    c = Cache()
-    k1 = EQ()
-    k2 = EQ()
-    x = np.linspace(0, 1, 2000)
-
-    dur1, y1 = benchmark(k1, (x, c), n=1, get_output=True)
-    dur2, y2 = benchmark(k1, (x, c), n=1, get_output=True)
-    dur3, y3 = benchmark(k2, (x, c), n=1, get_output=True)
-
-    yield assert_allclose, y1, y2
-    yield assert_allclose, y1, y3
-
-    # Test performance of call cache.
-    yield le, dur2, dur1 / 100, 'call cache'
-
-    # Test performance of LAB cache.
-    yield le, dur3, dur1 / 20, 'lab cache'
-
-
-def test_elwise_cache_aliasing():
-    c = Cache()
-    k = EQ()
-    x1 = np.random.randn(10, 2)
-    x2 = np.random.randn(10, 2)
-    yield assert_allclose, k.elwise(x1, x2, c), Kernel.elwise(k, x1, x2, c)

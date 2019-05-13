@@ -7,7 +7,6 @@ import logging
 from lab import B
 from plum import Dispatcher, Self, Referentiable, type_parameter
 
-from .cache import cache, Cache
 from .input import At, MultiInput, Input
 from .kernel import Kernel
 from .matrix import dense, Dense, Zero, Diagonal, One
@@ -30,87 +29,73 @@ class MultiOutputKernel(Kernel, Referentiable):
         self.kernels = ps[0].graph.kernels
         self.ps = ps
 
-    @_dispatch({B.Numeric, Input}, {B.Numeric, Input}, Cache)
-    @cache
-    def __call__(self, x, y, B):
+    @_dispatch({B.Numeric, Input}, {B.Numeric, Input})
+    def __call__(self, x, y):
         return self(MultiInput(*(p(x) for p in self.ps)),
-                    MultiInput(*(p(y) for p in self.ps)), B)
+                    MultiInput(*(p(y) for p in self.ps)))
 
-    @_dispatch(At, {B.Numeric, Input}, Cache)
-    @cache
-    def __call__(self, x, y, B):
-        return self(MultiInput(x), MultiInput(*(p(y) for p in self.ps)), B)
+    @_dispatch(At, {B.Numeric, Input})
+    def __call__(self, x, y):
+        return self(MultiInput(x), MultiInput(*(p(y) for p in self.ps)))
 
-    @_dispatch({B.Numeric, Input}, At, Cache)
-    @cache
-    def __call__(self, x, y, B):
-        return self(MultiInput(*(p(x) for p in self.ps)), MultiInput(y), B)
+    @_dispatch({B.Numeric, Input}, At)
+    def __call__(self, x, y):
+        return self(MultiInput(*(p(x) for p in self.ps)), MultiInput(y))
 
-    @_dispatch(At, At, Cache)
-    @cache
-    def __call__(self, x, y, B):
+    @_dispatch(At, At)
+    def __call__(self, x, y):
         return self.kernels[type_parameter(x),
-                            type_parameter(y)](x.get(), y.get(), B)
+                            type_parameter(y)](x.get(), y.get())
 
-    @_dispatch(MultiInput, At, Cache)
-    @cache
-    def __call__(self, x, y, B):
-        return self(x, MultiInput(y), B)
+    @_dispatch(MultiInput, At)
+    def __call__(self, x, y):
+        return self(x, MultiInput(y))
 
-    @_dispatch(At, MultiInput, Cache)
-    @cache
-    def __call__(self, x, y, B):
-        return self(MultiInput(x), y, B)
+    @_dispatch(At, MultiInput)
+    def __call__(self, x, y):
+        return self(MultiInput(x), y)
 
-    @_dispatch(MultiInput, MultiInput, Cache)
-    @cache
-    def __call__(self, x, y, B):
-        return B.block_matrix(*[[self(xi, yi, B) for yi in y.get()]
+    @_dispatch(MultiInput, MultiInput)
+    def __call__(self, x, y):
+        return B.block_matrix(*[[self(xi, yi) for yi in y.get()]
                                 for xi in x.get()])
 
-    @_dispatch({B.Numeric, Input}, {B.Numeric, Input}, Cache)
-    @cache
-    def elwise(self, x, y, B):
+    @_dispatch({B.Numeric, Input}, {B.Numeric, Input})
+    def elwise(self, x, y):
         return self.elwise(MultiInput(*(p(x) for p in self.ps)),
-                           MultiInput(*(p(y) for p in self.ps)), B)
+                           MultiInput(*(p(y) for p in self.ps)))
 
-    @_dispatch(At, {B.Numeric, Input}, Cache)
-    @cache
-    def elwise(self, x, y, B):
+    @_dispatch(At, {B.Numeric, Input})
+    def elwise(self, x, y):
         raise ValueError('Unclear combination of arguments given to '
                          'MultiOutputKernel.elwise.')
 
-    @_dispatch({B.Numeric, Input}, At, Cache)
-    @cache
-    def elwise(self, x, y, B):
+    @_dispatch({B.Numeric, Input}, At)
+    def elwise(self, x, y):
         raise ValueError('Unclear combination of arguments given to '
                          'MultiOutputKernel.elwise.')
 
-    @_dispatch(At, At, Cache)
-    @cache
-    def elwise(self, x, y, B):
+    @_dispatch(At, At)
+    def elwise(self, x, y):
         return self.kernels[type_parameter(x),
-                            type_parameter(y)].elwise(x.get(), y.get(), B)
+                            type_parameter(y)].elwise(x.get(), y.get())
 
-    @_dispatch(MultiInput, At, Cache)
-    @cache
-    def elwise(self, x, y, B):
+    @_dispatch(MultiInput, At)
+    def elwise(self, x, y):
         raise ValueError('Unclear combination of arguments given to '
                          'MultiOutputKernel.elwise.')
 
-    @_dispatch(At, MultiInput, Cache)
-    @cache
-    def elwise(self, x, y, B):
+    @_dispatch(At, MultiInput)
+    def elwise(self, x, y):
         raise ValueError('Unclear combination of arguments given to '
                          'MultiOutputKernel.elwise.')
 
-    @_dispatch(MultiInput, MultiInput, Cache)
-    @cache
-    def elwise(self, x, y, B):
+    @_dispatch(MultiInput, MultiInput)
+    def elwise(self, x, y):
         if len(x.get()) != len(y.get()):
             raise ValueError('MultiOutputKernel.elwise must be called with '
                              'similarly sized MultiInputs.')
-        return B.concat([self.elwise(xi, yi, B)
+        return B.concat([self.elwise(xi, yi)
                          for xi, yi in zip(x.get(), y.get())], axis=0)
 
     def __str__(self):

@@ -6,7 +6,6 @@ import logging
 
 from plum import Dispatcher, Self, Referentiable
 
-from .cache import cache, Cache
 from .input import Observed, Latent, Component
 from .kernel import Kernel, ZeroKernel
 
@@ -30,10 +29,9 @@ class ComponentKernel(Kernel, Referentiable):
     def __init__(self, ks):
         self.ks = ks
 
-    @_dispatch(Component, Component, Cache)
-    @cache
-    def __call__(self, x, y, cache):
-        return self.ks[type(x), type(y)](x.get(), y.get(), cache)
+    @_dispatch(Component, Component)
+    def __call__(self, x, y):
+        return self.ks[type(x), type(y)](x.get(), y.get())
 
     def __str__(self):
         ks = self.ks.values()
@@ -91,14 +89,12 @@ class NoisyKernel(Kernel, Referentiable):
         self.k_n = k_n
         self.k_y = k_f + k_n
 
-    @_dispatch({Latent, Observed}, {Latent, Observed}, Cache)
-    @cache
-    def __call__(self, x, y, cache):
+    @_dispatch({Latent, Observed}, {Latent, Observed})
+    def __call__(self, x, y):
         return self.k_f(x.get(), y.get())
 
-    @_dispatch(Observed, Observed, Cache)
-    @cache
-    def __call__(self, x, y, cache):
+    @_dispatch(Observed, Observed)
+    def __call__(self, x, y):
         return self.k_y(x.get(), y.get())
 
     def __str__(self):

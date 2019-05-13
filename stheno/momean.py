@@ -7,7 +7,6 @@ import logging
 from lab import B
 from plum import Dispatcher, Self, Referentiable, type_parameter
 
-from .cache import cache, Cache
 from .input import At, MultiInput
 from .mean import Mean
 
@@ -29,20 +28,17 @@ class MultiOutputMean(Mean, Referentiable):
         self.means = ps[0].graph.means
         self.ps = ps
 
-    @_dispatch(B.Numeric, Cache)
-    @cache
-    def __call__(self, x, B):
-        return self(MultiInput(*(p(x) for p in self.ps)), B)
+    @_dispatch(B.Numeric)
+    def __call__(self, x):
+        return self(MultiInput(*(p(x) for p in self.ps)))
 
-    @_dispatch(At, Cache)
-    @cache
-    def __call__(self, x, B):
-        return self.means[type_parameter(x)](x.get(), B)
+    @_dispatch(At)
+    def __call__(self, x):
+        return self.means[type_parameter(x)](x.get())
 
-    @_dispatch(MultiInput, Cache)
-    @cache
-    def __call__(self, x, B):
-        return B.concat([self(xi, B) for xi in x.get()], axis=0)
+    @_dispatch(MultiInput)
+    def __call__(self, x):
+        return B.concat([self(xi) for xi in x.get()], axis=0)
 
     def __str__(self):
         ks = [str(self.means[p]) for p in self.ps]

@@ -15,9 +15,8 @@ from stheno.function_field import StretchedFunction, ShiftedFunction, \
     TensorProductFunction, stretch, transform, Function, ZeroFunction, \
     OneFunction, ScaledFunction, ProductFunction, SumFunction, \
     WrappedFunction, JoinFunction, shift, select, to_tensor, tuple_equal
-from .cache import cache, Cache, uprank
-from .field import add, mul, broadcast, apply_optional_arg, get_field, \
-    Formatter, need_parens
+from .util import uprank
+from .field import add, mul, broadcast, get_field, Formatter, need_parens
 from .input import Input, Unique
 from .matrix import Dense, LowRank, UniformlyDiagonal, One, Zero, \
     dense, matrix
@@ -63,15 +62,14 @@ class Kernel(Function, Referentiable):
     """
     _dispatch = Dispatcher(in_class=Self)
 
-    @_dispatch(object, object, Cache)
-    def __call__(self, x, y, cache):
+    @_dispatch(object, object)
+    def __call__(self, x, y):
         """Construct the kernel matrix between all `x` and `y`.
 
         Args:
             x (input): First argument.
             y (input, optional): Second argument. Defaults to first
                 argument.
-            cache (:class:`.cache.Cache`, optional): Cache.
 
         Returns:
             :class:`.matrix.Dense:: Kernel matrix.
@@ -81,80 +79,56 @@ class Kernel(Function, Referentiable):
 
     @_dispatch(object)
     def __call__(self, x):
-        return self(x, x, Cache())
-
-    @_dispatch(object, Cache)
-    def __call__(self, x, cache):
-        return self(x, x, cache)
-
-    @_dispatch(object, object)
-    def __call__(self, x, y):
-        return self(x, y, Cache())
+        return self(x, x)
 
     @_dispatch(Input, Input)
     def __call__(self, x, y):
-        return self(x, y, Cache())
-
-    @_dispatch(Input, Input, Cache)
-    def __call__(self, x, y, cache):
         # Both input types were not used. Unwrap.
-        return self(x.get(), y.get(), cache)
+        return self(x.get(), y.get())
 
-    @_dispatch(Input, object, Cache)
-    def __call__(self, x, y, cache):
+    @_dispatch(Input, object)
+    def __call__(self, x, y):
         # Left input type was not used. Unwrap.
-        return self(x.get(), y, cache)
+        return self(x.get(), y)
 
-    @_dispatch(object, Input, Cache)
-    def __call__(self, x, y, cache):
+    @_dispatch(object, Input)
+    def __call__(self, x, y):
         # Right input type was not used. Unwrap.
-        return self(x, y.get(), cache)
+        return self(x, y.get())
 
-    @_dispatch(object, object, Cache)
-    def elwise(self, x, y, cache):
+    @_dispatch(object, object)
+    def elwise(self, x, y):
         """Construct the kernel vector `x` and `y` element-wise.
 
         Args:
             x (input): First argument.
             y (input, optional): Second argument. Defaults to first
                 argument.
-            cache (:class:`.cache.Cache`, optional): Cache.
 
         Returns:
             tensor: Kernel vector as a rank 2 column vector.
         """
-        return B.expand_dims(B.diag(self(x, y, cache)), axis=1)
+        # TODO: throw warning
+        return B.expand_dims(B.diag(self(x, y)), axis=1)
 
     @_dispatch(object)
     def elwise(self, x):
-        return self.elwise(x, x, Cache())
-
-    @_dispatch(object, Cache)
-    def elwise(self, x, cache):
-        return self.elwise(x, x, cache)
-
-    @_dispatch(object, object)
-    def elwise(self, x, y):
-        return self.elwise(x, y, Cache())
+        return self.elwise(x, x)
 
     @_dispatch(Input, Input)
     def elwise(self, x, y):
-        return self.elwise(x, y, Cache())
-
-    @_dispatch(Input, Input, Cache)
-    def elwise(self, x, y, cache):
         # Both input types were not used. Unwrap.
-        return self.elwise(x.get(), y.get(), Cache())
+        return self.elwise(x.get(), y.get())
 
-    @_dispatch(Input, object, Cache)
-    def elwise(self, x, y, cache):
+    @_dispatch(Input, object)
+    def elwise(self, x, y):
         # Left input type as not used. Unwrap.
-        return self.elwise(x.get(), y, Cache())
+        return self.elwise(x.get(), y)
 
-    @_dispatch(object, Input, Cache)
-    def elwise(self, x, y, cache):
+    @_dispatch(object, Input)
+    def elwise(self, x, y):
         # Right input type was not used. Unwrap.
-        return self.elwise(x, y.get(), Cache())
+        return self.elwise(x, y.get())
 
     def periodic(self, period=1):
         """Map to a periodic space.
@@ -225,19 +199,18 @@ class OneKernel(Kernel, OneFunction, Referentiable):
 
     _dispatch = Dispatcher(in_class=Self)
 
-    @_dispatch(B.Numeric, B.Numeric, Cache)
-    @cache
-    @uprank
-    def __call__(self, x, y, B):
+    @_dispatch(B.Numeric, B.Numeric)
+    def __call__(self, x, y):
         if x is y:
-            return One(B.dtype(x), B.shape(x)[0])
+            return One(B.dtype(x), B.shape(uprank(x))[0])
         else:
-            return One(B.dtype(x), B.shape(x)[0], B.shape(y)[0])
+            return One(B.dtype(x),
+                       B.shape(uprank(x))[0],
+                       B.shape(uprank(y))[0])
 
-    @_dispatch(B.Numeric, B.Numeric, Cache)
-    @cache
+    @_dispatch(B.Numeric, B.Numeric)
     @uprank
-    def elwise(self, x, y, B):
+    def elwise(self, x, y):
         return B.ones([B.shape_int(x)[0], 1], B.dtype(x))
 
     @property
@@ -262,19 +235,18 @@ class ZeroKernel(Kernel, ZeroFunction, Referentiable):
 
     _dispatch = Dispatcher(in_class=Self)
 
-    @_dispatch(B.Numeric, B.Numeric, Cache)
-    @cache
-    @uprank
-    def __call__(self, x, y, B):
+    @_dispatch(B.Numeric, B.Numeric)
+    def __call__(self, x, y):
         if x is y:
-            return Zero(B.dtype(x), B.shape(x)[0])
+            return Zero(B.dtype(x), B.shape(uprank(x))[0])
         else:
-            return Zero(B.dtype(x), B.shape(x)[0], B.shape(y)[0])
+            return Zero(B.dtype(x),
+                        B.shape(uprank(x))[0],
+                        B.shape(uprank(y))[0])
 
-    @_dispatch(B.Numeric, B.Numeric, Cache)
-    @cache
+    @_dispatch(B.Numeric, B.Numeric)
     @uprank
-    def elwise(self, x, y, B):
+    def elwise(self, x, y):
         return B.zeros([B.shape_int(x)[0], 1], B.dtype(x))
 
     @property
@@ -299,17 +271,15 @@ class ScaledKernel(Kernel, ScaledFunction, Referentiable):
 
     _dispatch = Dispatcher(in_class=Self)
 
-    @_dispatch(object, object, Cache)
-    @cache
-    def __call__(self, x, y, B):
-        return self._compute(self[0](x, y, B), B)
+    @_dispatch(object, object)
+    def __call__(self, x, y):
+        return self._compute(self[0](x, y))
 
-    @_dispatch(object, object, Cache)
-    @cache
-    def elwise(self, x, y, B):
-        return self._compute(self[0].elwise(x, y, B), B)
+    @_dispatch(object, object)
+    def elwise(self, x, y):
+        return self._compute(self[0].elwise(x, y))
 
-    def _compute(self, K, B):
+    def _compute(self, K):
         return B.multiply(self.scale, K)
 
     @property
@@ -334,15 +304,13 @@ class SumKernel(Kernel, SumFunction, Referentiable):
 
     _dispatch = Dispatcher(in_class=Self)
 
-    @_dispatch(object, object, Cache)
-    @cache
-    def __call__(self, x, y, B):
-        return B.add(self[0](x, y, B), self[1](x, y, B))
+    @_dispatch(object, object)
+    def __call__(self, x, y):
+        return B.add(self[0](x, y), self[1](x, y))
 
-    @_dispatch(object, object, Cache)
-    @cache
-    def elwise(self, x, y, B):
-        return B.add(self[0].elwise(x, y, B), self[1].elwise(x, y, B))
+    @_dispatch(object, object)
+    def elwise(self, x, y):
+        return B.add(self[0].elwise(x, y), self[1].elwise(x, y))
 
     @property
     def _stationary(self):
@@ -367,15 +335,13 @@ class ProductKernel(Kernel, ProductFunction, Referentiable):
 
     _dispatch = Dispatcher(in_class=Self)
 
-    @_dispatch(object, object, Cache)
-    @cache
-    def __call__(self, x, y, B):
-        return B.multiply(self[0](x, y, B), self[1](x, y, B))
+    @_dispatch(object, object)
+    def __call__(self, x, y):
+        return B.multiply(self[0](x, y), self[1](x, y))
 
-    @_dispatch(object, object, Cache)
-    @cache
-    def elwise(self, x, y, B):
-        return B.multiply(self[0].elwise(x, y, B), self[1].elwise(x, y, B))
+    @_dispatch(object, object)
+    def elwise(self, x, y):
+        return B.multiply(self[0].elwise(x, y), self[1].elwise(x, y))
 
     @property
     def _stationary(self):
@@ -399,21 +365,19 @@ class StretchedKernel(Kernel, StretchedFunction, Referentiable):
 
     _dispatch = Dispatcher(in_class=Self)
 
-    @_dispatch(B.Numeric, B.Numeric, Cache)
-    @cache
+    @_dispatch(B.Numeric, B.Numeric)
     @uprank
-    def __call__(self, x, y, B):
-        return self[0](*self._compute(x, y, B))
+    def __call__(self, x, y):
+        return self[0](*self._compute(x, y))
 
-    @_dispatch(B.Numeric, B.Numeric, Cache)
-    @cache
+    @_dispatch(B.Numeric, B.Numeric)
     @uprank
-    def elwise(self, x, y, B):
-        return self[0].elwise(*self._compute(x, y, B))
+    def elwise(self, x, y):
+        return self[0].elwise(*self._compute(x, y))
 
-    def _compute(self, x, y, B):
+    def _compute(self, x, y):
         stretches1, stretches2 = expand(self.stretches)
-        return B.divide(x, stretches1), B.divide(y, stretches2), B
+        return B.divide(x, stretches1), B.divide(y, stretches2)
 
     @property
     def _stationary(self):
@@ -454,21 +418,19 @@ class ShiftedKernel(Kernel, ShiftedFunction, Referentiable):
 
     _dispatch = Dispatcher(in_class=Self)
 
-    @_dispatch(B.Numeric, B.Numeric, Cache)
-    @cache
+    @_dispatch(B.Numeric, B.Numeric)
     @uprank
-    def __call__(self, x, y, B):
-        return self[0](*self._compute(x, y, B))
+    def __call__(self, x, y):
+        return self[0](*self._compute(x, y))
 
-    @_dispatch(B.Numeric, B.Numeric, Cache)
-    @cache
+    @_dispatch(B.Numeric, B.Numeric)
     @uprank
-    def elwise(self, x, y, B):
-        return self[0].elwise(*self._compute(x, y, B))
+    def elwise(self, x, y):
+        return self[0].elwise(*self._compute(x, y))
 
-    def _compute(self, x, y, B):
+    def _compute(self, x, y):
         shifts1, shifts2 = expand(self.shifts)
-        return B.subtract(x, shifts1), B.subtract(y, shifts2), B
+        return B.subtract(x, shifts1), B.subtract(y, shifts2)
 
     @property
     def _stationary(self):
@@ -505,23 +467,21 @@ class SelectedKernel(Kernel, SelectedFunction, Referentiable):
 
     _dispatch = Dispatcher(in_class=Self)
 
-    @_dispatch(B.Numeric, B.Numeric, Cache)
-    @cache
+    @_dispatch(B.Numeric, B.Numeric)
     @uprank
-    def __call__(self, x, y, B):
-        return self[0](*self._compute(x, y, B))
+    def __call__(self, x, y):
+        return self[0](*self._compute(x, y))
 
-    @_dispatch(B.Numeric, B.Numeric, Cache)
-    @cache
+    @_dispatch(B.Numeric, B.Numeric)
     @uprank
-    def elwise(self, x, y, B):
-        return self[0].elwise(*self._compute(x, y, B))
+    def elwise(self, x, y):
+        return self[0].elwise(*self._compute(x, y))
 
-    def _compute(self, x, y, B):
+    def _compute(self, x, y):
         dims1, dims2 = expand(self.dims)
         x = x if dims1 is None else B.take(x, dims1, axis=1)
         y = y if dims2 is None else B.take(y, dims2, axis=1)
-        return x, y, B
+        return x, y
 
     @property
     def _stationary(self):
@@ -570,23 +530,21 @@ class InputTransformedKernel(Kernel, InputTransformedFunction, Referentiable):
 
     _dispatch = Dispatcher(in_class=Self)
 
-    @_dispatch(object, object, Cache)
-    @cache
+    @_dispatch(object, object)
     @uprank
-    def __call__(self, x, y, B):
-        return self[0](*self._compute(x, y, B))
+    def __call__(self, x, y):
+        return self[0](*self._compute(x, y))
 
-    @_dispatch(object, object, Cache)
-    @cache
+    @_dispatch(object, object)
     @uprank
-    def elwise(self, x, y, B):
-        return self[0].elwise(*self._compute(x, y, B))
+    def elwise(self, x, y):
+        return self[0].elwise(*self._compute(x, y))
 
-    def _compute(self, x, y, B):
+    def _compute(self, x, y):
         f1, f2 = expand(self.fs)
-        x = x if f1 is None else apply_optional_arg(f1, x, B)
-        y = y if f2 is None else apply_optional_arg(f2, y, B)
-        return x, y, B
+        x = x if f1 is None else uprank(f1(x))
+        y = y if f2 is None else uprank(f2(y))
+        return x, y
 
     @_dispatch(Self)
     def __eq__(self, other):
@@ -608,24 +566,22 @@ class PeriodicKernel(Kernel, WrappedFunction, Referentiable):
         WrappedFunction.__init__(self, k)
         self._period = to_tensor(period)
 
-    @_dispatch(B.Numeric, B.Numeric, Cache)
-    @cache
+    @_dispatch(B.Numeric, B.Numeric)
     @uprank
-    def __call__(self, x, y, B):
-        return self[0](*self._compute(x, y, B))
+    def __call__(self, x, y):
+        return self[0](*self._compute(x, y))
 
-    @_dispatch(B.Numeric, B.Numeric, Cache)
-    @cache
+    @_dispatch(B.Numeric, B.Numeric)
     @uprank
-    def elwise(self, x, y, B):
-        return self[0].elwise(*self._compute(x, y, B))
+    def elwise(self, x, y):
+        return self[0].elwise(*self._compute(x, y))
 
-    def _compute(self, x, y, B):
+    def _compute(self, x, y):
         def feat_map(z):
             z = B.divide(B.multiply(B.multiply(z, 2), B.pi), self.period)
             return B.concat((B.sin(z), B.cos(z)), axis=1)
 
-        return feat_map(x), feat_map(y), B
+        return feat_map(x), feat_map(y)
 
     @property
     def _stationary(self):
@@ -657,19 +613,17 @@ class EQ(Kernel, Referentiable):
 
     _dispatch = Dispatcher(in_class=Self)
 
-    @_dispatch(B.Numeric, B.Numeric, Cache)
-    @cache
+    @_dispatch(B.Numeric, B.Numeric)
     @uprank
-    def __call__(self, x, y, B):
-        return Dense(self._compute(B.pw_dists2(x, y), B))
+    def __call__(self, x, y):
+        return Dense(self._compute(B.pw_dists2(x, y)))
 
-    @_dispatch(B.Numeric, B.Numeric, Cache)
-    @cache
+    @_dispatch(B.Numeric, B.Numeric)
     @uprank
-    def elwise(self, x, y, B):
-        return self._compute(B.ew_dists2(x, y), B)
+    def elwise(self, x, y):
+        return self._compute(B.ew_dists2(x, y))
 
-    def _compute(self, dists2, B):
+    def _compute(self, dists2):
         return B.exp(B.multiply(B.cast(-.5, B.dtype(dists2)), dists2))
 
     @property
@@ -706,19 +660,17 @@ class RQ(Kernel, Referentiable):
     def __init__(self, alpha):
         self.alpha = alpha
 
-    @_dispatch(B.Numeric, B.Numeric, Cache)
-    @cache
+    @_dispatch(B.Numeric, B.Numeric)
     @uprank
-    def __call__(self, x, y, B):
-        return Dense(self._compute(B.pw_dists2(x, y), B))
+    def __call__(self, x, y):
+        return Dense(self._compute(B.pw_dists2(x, y)))
 
-    @_dispatch(B.Numeric, B.Numeric, Cache)
-    @cache
+    @_dispatch(B.Numeric, B.Numeric)
     @uprank
-    def elwise(self, x, y, B):
-        return self._compute(B.ew_dists2(x, y), B)
+    def elwise(self, x, y):
+        return self._compute(B.ew_dists2(x, y))
 
-    def _compute(self, dists2, B):
+    def _compute(self, dists2):
         return (1 + .5 * dists2 / self.alpha) ** (-self.alpha)
 
     @_dispatch(Formatter)
@@ -751,16 +703,14 @@ class Exp(Kernel, Referentiable):
 
     _dispatch = Dispatcher(in_class=Self)
 
-    @_dispatch(B.Numeric, B.Numeric, Cache)
-    @cache
+    @_dispatch(B.Numeric, B.Numeric)
     @uprank
-    def __call__(self, x, y, B):
+    def __call__(self, x, y):
         return Dense(B.exp(-B.pw_dists(x, y)))
 
-    @_dispatch(B.Numeric, B.Numeric, Cache)
-    @cache
+    @_dispatch(B.Numeric, B.Numeric)
     @uprank
-    def elwise(self, x, y, B):
+    def elwise(self, x, y):
         return B.exp(-B.ew_dists(x, y))
 
     @property
@@ -792,19 +742,17 @@ class Matern32(Kernel, Referentiable):
 
     _dispatch = Dispatcher(in_class=Self)
 
-    @_dispatch(B.Numeric, B.Numeric, Cache)
-    @cache
+    @_dispatch(B.Numeric, B.Numeric)
     @uprank
-    def __call__(self, x, y, B):
-        return Dense(self._compute(B.pw_dists(x, y), B))
+    def __call__(self, x, y):
+        return Dense(self._compute(B.pw_dists(x, y)))
 
-    @_dispatch(B.Numeric, B.Numeric, Cache)
-    @cache
+    @_dispatch(B.Numeric, B.Numeric)
     @uprank
-    def elwise(self, x, y, B):
-        return self._compute(B.ew_dists(x, y), B)
+    def elwise(self, x, y):
+        return self._compute(B.ew_dists(x, y))
 
-    def _compute(self, dists, B):
+    def _compute(self, dists):
         r = 3 ** .5 * dists
         return (1 + r) * B.exp(-r)
 
@@ -834,19 +782,17 @@ class Matern52(Kernel, Referentiable):
 
     _dispatch = Dispatcher(in_class=Self)
 
-    @_dispatch(B.Numeric, B.Numeric, Cache)
-    @cache
+    @_dispatch(B.Numeric, B.Numeric)
     @uprank
-    def __call__(self, x, y, B):
-        return Dense(self._compute(B.pw_dists(x, y), B))
+    def __call__(self, x, y):
+        return Dense(self._compute(B.pw_dists(x, y)))
 
-    @_dispatch(B.Numeric, B.Numeric, Cache)
-    @cache
+    @_dispatch(B.Numeric, B.Numeric)
     @uprank
-    def elwise(self, x, y, B):
-        return self._compute(B.ew_dists(x, y), B)
+    def elwise(self, x, y):
+        return self._compute(B.ew_dists(x, y))
 
-    def _compute(self, dists, B):
+    def _compute(self, dists):
         r1 = 5 ** .5 * dists
         r2 = 5 * dists ** 2 / 3
         return (1 + r1 + r2) * B.exp(-r1)
@@ -885,73 +831,60 @@ class Delta(Kernel, Referentiable):
     def __init__(self, epsilon=1e-10):
         self.epsilon = epsilon
 
-    @_dispatch(B.Numeric, B.Numeric, Cache)
-    @cache
-    @uprank
-    def __call__(self, x, y, B):
+    @_dispatch(B.Numeric, B.Numeric)
+    def __call__(self, x, y):
         if x is y:
-            return self._eye(x, B)
+            return self._eye(uprank(x))
         else:
-            return Dense(self._compute(B.pw_dists2(x, y), B))
+            return Dense(self._compute(B.pw_dists2(uprank(x), uprank(y))))
 
-    @_dispatch(Unique, Unique, Cache)
-    @cache
-    def __call__(self, x, y, B):
-        x, y = uprank(x.get(), B), uprank(y.get(), B)
+    @_dispatch(Unique, Unique)
+    def __call__(self, x, y):
+        x, y = x.get(), y.get()
         if x is y:
-            return self._eye(x, B)
+            return self._eye(uprank(x))
         else:
+            x, y = uprank(x), uprank(y)
             return Zero(B.dtype(x), B.shape(x)[0], B.shape(y)[0])
 
-    @_dispatch(Unique, object, Cache)
-    @cache
-    @uprank
-    def __call__(self, x, y, B):
-        x = uprank(x.get(), B)
+    @_dispatch(Unique, object)
+    def __call__(self, x, y):
+        x, y = uprank(x.get()), uprank(y)
         return Zero(B.dtype(x), B.shape(x)[0], B.shape(y)[0])
 
-    @_dispatch(object, Unique, Cache)
-    @cache
-    @uprank
-    def __call__(self, x, y, B):
-        y = uprank(y.get(), B)
+    @_dispatch(object, Unique)
+    def __call__(self, x, y):
+        x, y = uprank(x), uprank(y.get())
         return Zero(B.dtype(x), B.shape(x)[0], B.shape(y)[0])
 
-    @_dispatch(Unique, Unique, Cache)
-    @cache
-    def elwise(self, x, y, B):
-        x, y = uprank(x.get(), B), uprank(y.get(), B)
+    @_dispatch(Unique, Unique)
+    def elwise(self, x, y):
+        x, y = x.get(), y.get()
         if x is y:
-            return One(B.dtype(x), B.shape(x)[0], 1)
+            return One(B.dtype(x), B.shape(uprank(x))[0], 1)
         else:
-            return Zero(B.dtype(x), B.shape(x)[0], 1)
+            return Zero(B.dtype(x), B.shape(uprank(x))[0], 1)
 
-    @_dispatch(Unique, object, Cache)
-    @cache
-    @uprank
-    def elwise(self, x, y, B):
-        x = uprank(x.get(), B)
-        return Zero(B.dtype(x), B.shape(x)[0], 1)
+    @_dispatch(Unique, object)
+    def elwise(self, x, y):
+        x = x.get()
+        return Zero(B.dtype(x), B.shape(uprank(x))[0], 1)
 
-    @_dispatch(object, Unique, Cache)
-    @cache
-    @uprank
-    def elwise(self, x, y, B):
-        return Zero(B.dtype(x), B.shape(x)[0], 1)
+    @_dispatch(object, Unique)
+    def elwise(self, x, y):
+        return Zero(B.dtype(x), B.shape(uprank(x))[0], 1)
 
-    @_dispatch(B.Numeric, B.Numeric, Cache)
-    @cache
-    @uprank
-    def elwise(self, x, y, B):
+    @_dispatch(B.Numeric, B.Numeric)
+    def elwise(self, x, y):
         if x is y:
-            return One(B.dtype(x), B.shape(x)[0], 1)
+            return One(B.dtype(x), B.shape(uprank(x))[0], 1)
         else:
-            return self._compute(B.ew_dists2(x, y), B)
+            return self._compute(B.ew_dists2(uprank(x), uprank(y)))
 
-    def _eye(self, x, B):
+    def _eye(self, x):
         return UniformlyDiagonal(B.cast(1, B.dtype(x)), B.shape(x)[0])
 
-    def _compute(self, dists2, B):
+    def _compute(self, dists2):
         dtype = B.dtype(dists2)
         return B.cast(B.lt(dists2, B.cast(self.epsilon, dtype)), dtype)
 
@@ -981,16 +914,17 @@ class Linear(Kernel, Referentiable):
 
     _dispatch = Dispatcher(in_class=Self)
 
-    @_dispatch(B.Numeric, B.Numeric, Cache)
-    @cache
-    @uprank
-    def __call__(self, x, y, B):
-        return LowRank(x) if x is y else LowRank(left=x, right=y)
+    @_dispatch(B.Numeric, B.Numeric)
+    def __call__(self, x, y):
+        if x is y:
+            return LowRank(uprank(x))
+        else:
+            return LowRank(left=uprank(x),
+                           right=uprank(y))
 
-    @_dispatch(B.Numeric, B.Numeric, Cache)
-    @cache
+    @_dispatch(B.Numeric, B.Numeric)
     @uprank
-    def elwise(self, x, y, B):
+    def elwise(self, x, y):
         return B.expand_dims(B.sum(B.multiply(x, y), axis=1), axis=1)
 
     @property
@@ -1022,21 +956,19 @@ class DecayingKernel(Kernel, Referentiable):
         self.alpha = alpha
         self.beta = beta
 
-    @_dispatch(B.Numeric, B.Numeric, Cache)
-    @cache
+    @_dispatch(B.Numeric, B.Numeric)
     @uprank
-    def __call__(self, x, y, B):
-        return B.divide(self._compute_beta_raised(B),
+    def __call__(self, x, y):
+        return B.divide(self._compute_beta_raised(),
                         B.power(B.pw_sums(B.add(x, self.beta), y), self.alpha))
 
-    @_dispatch(B.Numeric, B.Numeric, Cache)
-    @cache
+    @_dispatch(B.Numeric, B.Numeric)
     @uprank
-    def elwise(self, x, y, B):
-        return B.divide(self._compute_beta_raised(B),
+    def elwise(self, x, y):
+        return B.divide(self._compute_beta_raised(),
                         B.power(B.ew_sums(B.add(x, self.beta), y), self.alpha))
 
-    def _compute_beta_raised(self, B):
+    def _compute_beta_raised(self):
         beta_norm = B.sqrt(B.maximum(B.sum(B.power(self.beta, 2)),
                                      B.cast(1e-30, B.dtype(self.beta))))
         return B.power(beta_norm, self.alpha)
@@ -1061,17 +993,15 @@ class LogKernel(Kernel, Referentiable):
 
     _dispatch = Dispatcher(in_class=Self)
 
-    @_dispatch(B.Numeric, B.Numeric, Cache)
-    @cache
+    @_dispatch(B.Numeric, B.Numeric)
     @uprank
-    def __call__(self, x, y, B):
+    def __call__(self, x, y):
         dists = B.maximum(B.pw_dists(x, y), 1e-10)
         return B.divide(B.log(dists + 1), dists)
 
-    @_dispatch(B.Numeric, B.Numeric, Cache)
-    @cache
+    @_dispatch(B.Numeric, B.Numeric)
     @uprank
-    def elwise(self, x, y, B):
+    def elwise(self, x, y):
         dists = B.maximum(B.ew_dists(x, y), 1e-10)
         return B.divide(B.log(dists + 1), dists)
 
@@ -1123,21 +1053,19 @@ class PosteriorKernel(Kernel, Referentiable):
         self.z = z
         self.K_z = matrix(K_z)
 
-    @_dispatch(object, object, Cache)
-    @cache
-    def __call__(self, x, y, B):
-        return B.schur(self.k_ij(x, y, B),
-                       self.k_zi(self.z, x, B),
+    @_dispatch(object, object)
+    def __call__(self, x, y):
+        return B.schur(self.k_ij(x, y),
+                       self.k_zi(self.z, x),
                        self.K_z,
-                       self.k_zj(self.z, y, B))
+                       self.k_zj(self.z, y))
 
-    @_dispatch(object, object, Cache)
-    @cache
-    def elwise(self, x, y, B):
+    @_dispatch(object, object)
+    def elwise(self, x, y):
         qf_diag = B.qf_diag(self.K_z,
-                            self.k_zi(self.z, x, B),
-                            self.k_zj(self.z, y, B))
-        return B.subtract(self.k_ij.elwise(x, y, B),
+                            self.k_zi(self.z, x),
+                            self.k_zj(self.z, y))
+        return B.subtract(self.k_ij.elwise(x, y),
                           B.expand_dims(qf_diag, axis=1))
 
 
@@ -1164,16 +1092,14 @@ class CorrectiveKernel(Kernel, Referentiable):
         self.A = A
         self.L = B.cholesky(matrix(K_z))
 
-    @_dispatch(object, object, Cache)
-    @cache
-    def __call__(self, x, y, B):
+    @_dispatch(object, object)
+    def __call__(self, x, y):
         return B.qf(self.A,
                     B.trisolve(self.L, self.k_zi(self.z, x)),
                     B.trisolve(self.L, self.k_zj(self.z, y)))
 
-    @_dispatch(object, object, Cache)
-    @cache
-    def elwise(self, x, y, B):
+    @_dispatch(object, object)
+    def elwise(self, x, y):
         return B.qf_diag(self.A,
                          B.trisolve(self.L, self.k_zi(self.z, x)),
                          B.trisolve(self.L, self.k_zj(self.z, y)))[:, None]
@@ -1183,10 +1109,9 @@ class DerivativeKernel(Kernel, DerivativeFunction, Referentiable):
     """Derivative of kernel."""
     _dispatch = Dispatcher(in_class=Self)
 
-    @_dispatch(B.Numeric, B.Numeric, Cache)
-    @cache
+    @_dispatch(B.Numeric, B.Numeric)
     @uprank
-    def __call__(self, x, y, B):
+    def __call__(self, x, y):
         i, j = expand(self.derivs)
         k = self[0]
 
@@ -1203,8 +1128,7 @@ class DerivativeKernel(Kernel, DerivativeFunction, Referentiable):
         # Derivative with respect to `x`.
         elif i is not None and j is None:
             xi = x[:, i:i + 1]
-            # Give every `B.identity` a unique cache ID to prevent caching.
-            xis = [B.identity(xi, cache_id=n) for n in range(B.shape_int(y)[0])]
+            xis = [B.identity(xi) for _ in range(B.shape_int(y)[0])]
 
             def f(z):
                 return dense(k(B.concat([x[:, :i], z[0], x[:, i + 1:]],
@@ -1218,8 +1142,7 @@ class DerivativeKernel(Kernel, DerivativeFunction, Referentiable):
         # Derivative with respect to `y`.
         elif i is None and j is not None:
             yj = y[:, j:j + 1]
-            # Give every `B.identity` a unique cache ID to prevent caching.
-            yjs = [B.identity(yj, cache_id=n) for n in range(B.shape_int(x)[0])]
+            yjs = [B.identity(yj) for _ in range(B.shape_int(x)[0])]
 
             def f(z):
                 return dense(
@@ -1250,24 +1173,20 @@ class TensorProductKernel(Kernel, TensorProductFunction, Referentiable):
     """Tensor product kernel."""
     _dispatch = Dispatcher(in_class=Self)
 
-    @_dispatch(B.Numeric, B.Numeric, Cache)
-    @cache
-    @uprank
-    def __call__(self, x, y, B):
+    @_dispatch(B.Numeric, B.Numeric)
+    def __call__(self, x, y):
         f1, f2 = expand(self.fs)
         if x is y and f1 is f2:
-            return LowRank(apply_optional_arg(f1, x, B))
+            return LowRank(uprank(f1(uprank(x))))
         else:
-            return LowRank(left=apply_optional_arg(f1, x, B),
-                           right=apply_optional_arg(f2, y, B))
+            return LowRank(left=uprank(f1(uprank(x))),
+                           right=uprank(f2(uprank(y))))
 
-    @_dispatch(B.Numeric, B.Numeric, Cache)
-    @cache
+    @_dispatch(B.Numeric, B.Numeric)
     @uprank
-    def elwise(self, x, y, B):
+    def elwise(self, x, y):
         f1, f2 = expand(self.fs)
-        return B.multiply(apply_optional_arg(f1, x, B),
-                          apply_optional_arg(f2, y, B))
+        return B.multiply(uprank(f1(x)), uprank(f2(y)))
 
     @_dispatch(Self)
     def __eq__(self, other):
@@ -1281,15 +1200,13 @@ class ReversedKernel(Kernel, WrappedFunction, Referentiable):
     """
     _dispatch = Dispatcher(in_class=Self)
 
-    @_dispatch(object, object, Cache)
-    @cache
-    def __call__(self, x, y, B):
-        return B.transpose(self[0](y, x, B))
+    @_dispatch(object, object)
+    def __call__(self, x, y):
+        return B.transpose(self[0](y, x))
 
-    @_dispatch(object, object, Cache)
-    @cache
-    def elwise(self, x, y, B):
-        return self[0].elwise(y, x, B)
+    @_dispatch(object, object)
+    def elwise(self, x, y):
+        return self[0].elwise(y, x)
 
     @property
     def _stationary(self):

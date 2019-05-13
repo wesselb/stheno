@@ -5,7 +5,7 @@ from __future__ import absolute_import, division, print_function
 from lab import B
 from plum import Dispatcher, Referentiable, Self, NotFoundLookupError
 
-from .cache import uprank
+from .util import uprank
 
 __all__ = []
 
@@ -14,27 +14,6 @@ _dispatch = Dispatcher()
 Formatter = object  #: A formatter can be any object.
 priority = 10  #: Priority precedence level.
 definite = 20  #: Highest precedence level.
-
-
-def apply_optional_arg(f, arg1, arg2):
-    """If `f` takes in two or more arguments, run `f(arg1, arg2)`; otherwise,
-    run `f(arg1)`.
-
-    Args:
-        f (function): Function to run.
-        arg1 (object): First argument for `f`.
-        arg2 (object): Optional argument for `f`.
-
-    Returns:
-        object: Result of `f(arg1, arg2)` or `f(arg1)`.
-    """
-    try:
-        res = f(arg1, arg2)
-    except TypeError:
-        res = f(arg1)
-    except NotFoundLookupError:
-        res = f(arg1)
-    return uprank(res)
 
 
 def squeeze(xs):

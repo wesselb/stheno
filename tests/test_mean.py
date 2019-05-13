@@ -10,7 +10,6 @@ from numpy.testing import assert_allclose
 from plum import Dispatcher
 import tensorflow as tf
 
-from stheno.cache import Cache
 from stheno.input import Observed
 from stheno.kernel import EQ
 from stheno.matrix import matrix
@@ -26,15 +25,10 @@ def test_corner_cases():
 
 def test_construction():
     m = TensorProductMean(lambda x: x ** 2)
-
     x = np.random.randn(10, 1)
-    c = Cache()
 
     yield m, x
-    yield m, x, c
-
     yield m, Observed(x)
-    yield m, Observed(x), c
 
 
 def test_basic_arithmetic():
@@ -138,4 +132,4 @@ def test_input_transform():
     m = 5 * OneMean() + (lambda x: x ** 2)
     x = np.random.randn(10, 3)
 
-    yield assert_allclose, m.transform(lambda x, c: x - 5)(x), m(x - 5)
+    yield assert_allclose, m.transform(lambda x: x - 5)(x), m(x - 5)

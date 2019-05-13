@@ -7,7 +7,6 @@ from lab import B
 from plum import type_parameter
 import tensorflow as tf
 
-from stheno.cache import Cache
 from stheno.graph import Graph, GP, Obs, SparseObs
 from stheno.input import At, Unique
 from stheno.kernel import Linear, EQ, Delta, Exp, RQ, ZeroKernel, OneKernel, \
@@ -43,38 +42,23 @@ def test_construction():
     p = GP(EQ(), graph=model)
 
     x = np.random.randn(10, 1)
-    c = Cache()
 
     yield p.mean, x
     yield p.mean, p(x)
-    yield p.mean, x, c
-    yield p.mean, p(x), c
 
     yield p.kernel, x
     yield p.kernel, p(x)
-    yield p.kernel, x, c
-    yield p.kernel, p(x), c
     yield p.kernel, x, x
     yield p.kernel, p(x), x
     yield p.kernel, x, p(x)
     yield p.kernel, p(x), p(x)
-    yield p.kernel, x, x, c
-    yield p.kernel, p(x), x, c
-    yield p.kernel, x, p(x), c
-    yield p.kernel, p(x), p(x), c
 
     yield p.kernel.elwise, x
     yield p.kernel.elwise, p(x)
-    yield p.kernel.elwise, x, c
-    yield p.kernel.elwise, p(x), c
     yield p.kernel.elwise, x, x
     yield p.kernel.elwise, p(x), x
     yield p.kernel.elwise, x, p(x)
     yield p.kernel.elwise, p(x), p(x)
-    yield p.kernel.elwise, x, x, c
-    yield p.kernel.elwise, p(x), x, c
-    yield p.kernel.elwise, x, p(x), c
-    yield p.kernel.elwise, p(x), p(x), c
 
     # Test resolution of kernel and mean.
     k = EQ()
@@ -333,12 +317,12 @@ def test_input_transform():
 
     # Test construction:
     p = GP(EQ(), TensorProductMean(lambda x: x ** 2), graph=model)
-    yield eq, str(p.transform(lambda x, c: x)), \
+    yield eq, str(p.transform(lambda x: x)), \
           'GP(EQ() transform <lambda>, <lambda> transform <lambda>)'
 
     # Test case:
     p = GP(EQ(), graph=model)
-    p2 = p.transform(lambda x, B: x / 5)
+    p2 = p.transform(lambda x: x / 5)
 
     n = 5
     x = np.linspace(0, 10, n)[:, None]
