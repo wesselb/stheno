@@ -71,7 +71,7 @@ class Normal(RandomVector, At, Referentiable):
 
         # Resolve mean.
         if mean is None:
-            self._mean = B.zeros([self.dim, 1], self.dtype)
+            self._mean = B.zeros(self.dtype, self.dim, 1)
         else:
             self._mean = dense(mean)  # Not useful to retain structure here.
 
@@ -309,7 +309,7 @@ class Normal1D(Normal, Referentiable):
         if mean is not None:
             if B.rank(var) == 1:
                 if B.rank(mean) == 0:
-                    mean = mean * B.ones([B.shape(var)[0], 1], B.dtype(var))
+                    mean = mean * B.ones(B.dtype(var), B.shape(var)[0], 1)
                 elif B.rank(mean) == 1:
                     mean = mean[:, None]
                 else:
@@ -319,7 +319,7 @@ class Normal1D(Normal, Referentiable):
 
             elif B.rank(var) == 0:
                 if B.rank(mean) == 0:
-                    mean = mean * B.ones([1, 1], B.dtype(var))
+                    mean = mean * B.ones(B.dtype(var), 1, 1)
                     var = UniformlyDiagonal(var, 1)
                 elif B.rank(mean) == 1:
                     mean = mean[:, None]
