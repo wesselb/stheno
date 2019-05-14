@@ -1,5 +1,5 @@
 TODO:
-    ☐ Fix examples: they use old versions of wbml and varz! @critical
+    ☐ Fix examples: they use old versions of wbml, varz, and LAB! @critical
     ☐ Throw warning at fallback for elwise!
 
 Features:
