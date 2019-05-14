@@ -182,8 +182,8 @@ class Normal(RandomVector, At, Referentiable):
                 then the list is flattened to a scalar.
         """
         logpdfs = -(B.logdet(self.var) +
-                    B.cast(self.dim, self.dtype) *
-                    B.cast(B.log_2_pi, self.dtype) +
+                    B.cast(self.dtype, self.dim) *
+                    B.cast(self.dtype, B.log_2_pi) +
                     B.qf_diag(self.var, uprank(x) - self.mean)) / 2
         return logpdfs[0] if B.shape_int(logpdfs) == (1,) else logpdfs
 
@@ -194,8 +194,8 @@ class Normal(RandomVector, At, Referentiable):
             scalar: The entropy.
         """
         return (B.logdet(self.var) +
-                B.cast(self.dim, self.dtype) *
-                B.cast(B.log_2_pi + 1, self.dtype)) / 2
+                B.cast(self.dtype, self.dim) *
+                B.cast(self.dtype, B.log_2_pi + 1)) / 2
 
     @_dispatch(Self)
     def kl(self, other):
@@ -210,7 +210,7 @@ class Normal(RandomVector, At, Referentiable):
         """
         return (B.ratio(self.var, other.var) +
                 B.qf_diag(other.var, other.mean - self.mean)[0] -
-                B.cast(self.dim, self.dtype) +
+                B.cast(self.dtype, self.dim) +
                 B.logdet(other.var) - B.logdet(self.var)) / 2
 
     @_dispatch(Self)

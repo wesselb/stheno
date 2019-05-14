@@ -882,11 +882,11 @@ class Delta(Kernel, Referentiable):
             return self._compute(B.ew_dists2(uprank(x), uprank(y)))
 
     def _eye(self, x):
-        return UniformlyDiagonal(B.cast(1, B.dtype(x)), B.shape(x)[0])
+        return UniformlyDiagonal(B.cast(B.dtype(x), 1), B.shape(x)[0])
 
     def _compute(self, dists2):
         dtype = B.dtype(dists2)
-        return B.cast(B.lt(dists2, B.cast(self.epsilon, dtype)), dtype)
+        return B.cast(dtype, B.lt(dists2, B.cast(dtype, self.epsilon)))
 
     @property
     def _stationary(self):
@@ -970,7 +970,7 @@ class DecayingKernel(Kernel, Referentiable):
 
     def _compute_beta_raised(self):
         beta_norm = B.sqrt(B.maximum(B.sum(B.power(self.beta, 2)),
-                                     B.cast(1e-30, B.dtype(self.beta))))
+                                     B.cast(B.dtype(self.beta), 1e-30)))
         return B.power(beta_norm, self.alpha)
 
     @_dispatch(Formatter)

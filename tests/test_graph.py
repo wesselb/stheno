@@ -389,7 +389,7 @@ def test_derivative():
     yield le, abs_err(s.run(dp.condition(p(x), y)(x).mean - 2)), 1e-3
 
     # Test conditioning on derivative.
-    post = p.condition((B.cast(0., tf.float64), B.cast(0., tf.float64)),
+    post = p.condition((B.cast(tf.float64, 0), B.cast(tf.float64, 0)),
                        (dp(x), y))
     yield le, abs_err(s.run(post(x).mean - x ** 2)), 1e-3
 

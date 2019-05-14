@@ -39,7 +39,7 @@ class Dense(Element, Referentiable):
         self.inverse = None
 
     def __neg__(self):
-        return mul(B.cast(-1, B.dtype(self)), self)
+        return mul(B.cast(B.dtype(self), -1), self)
 
     def __div__(self, other):
         return B.divide(self, other)
@@ -115,7 +115,7 @@ class UniformlyDiagonal(Diagonal, Referentiable):
 
     @classmethod
     def from_(cls, diag_scale, ref):
-        return cls(B.cast(diag_scale, B.dtype(ref)),
+        return cls(B.cast(B.dtype(ref), diag_scale),
                    B.diag_len(ref),
                    *B.shape(ref))
 
@@ -181,7 +181,7 @@ class Constant(LowRank, Referentiable):
 
     @classmethod
     def from_(cls, constant, ref):
-        return cls(B.cast(constant, B.dtype(ref)), *B.shape(ref))
+        return cls(B.cast(B.dtype(ref), constant), *B.shape(ref))
 
     def __eq__(self, other):
         return B.shape(self) == B.shape(other) \
@@ -200,7 +200,7 @@ class One(Constant, OneElement, Referentiable):
     _dispatch = Dispatcher(in_class=Self)
 
     def __init__(self, dtype, rows, cols=None):
-        Constant.__init__(self, B.cast(1, dtype), rows=rows, cols=cols)
+        Constant.__init__(self, B.cast(dtype, 1), rows=rows, cols=cols)
 
     @classmethod
     def from_(cls, ref):
@@ -224,7 +224,7 @@ class Zero(Constant, ZeroElement, Referentiable):
 
     @_dispatch(B.DType, [object])
     def __init__(self, dtype, rows, cols=None):
-        Constant.__init__(self, B.cast(0, dtype), rows=rows, cols=cols)
+        Constant.__init__(self, B.cast(dtype, 0), rows=rows, cols=cols)
 
     @classmethod
     def from_(cls, ref):
