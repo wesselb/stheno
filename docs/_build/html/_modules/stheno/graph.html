@@ -1,0 +1,1024 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>stheno.graph &mdash; stheno 0.1.0 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../../_static/jquery.js"></script>
+        <script type="text/javascript" src="../../_static/underscore.js"></script>
+        <script type="text/javascript" src="../../_static/doctools.js"></script>
+        <script type="text/javascript" src="../../_static/language_data.js"></script>
+        <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../index.html" class="icon icon-home"> stheno
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.1
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../readme.html">Stheno</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api.html">Application Programming Interface</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">stheno</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+        
+      <li>stheno.graph</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for stheno.graph</h1><div class="highlight"><pre>
+<span></span><span class="c1"># -*- coding: utf-8 -*-</span>
+
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">absolute_import</span><span class="p">,</span> <span class="n">division</span><span class="p">,</span> <span class="n">print_function</span>
+
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">from</span> <span class="nn">types</span> <span class="k">import</span> <span class="n">FunctionType</span>
+
+<span class="kn">from</span> <span class="nn">fdm</span> <span class="k">import</span> <span class="n">central_fdm</span>
+<span class="kn">from</span> <span class="nn">lab</span> <span class="k">import</span> <span class="n">B</span>
+<span class="kn">from</span> <span class="nn">plum</span> <span class="k">import</span> <span class="n">Dispatcher</span><span class="p">,</span> <span class="n">Self</span><span class="p">,</span> <span class="n">Referentiable</span><span class="p">,</span> <span class="n">type_parameter</span><span class="p">,</span> <span class="n">Union</span>
+
+<span class="kn">from</span> <span class="nn">.util</span> <span class="k">import</span> <span class="n">uprank</span>
+<span class="kn">from</span> <span class="nn">.input</span> <span class="k">import</span> <span class="n">Input</span><span class="p">,</span> <span class="n">At</span><span class="p">,</span> <span class="n">MultiInput</span>
+<span class="kn">from</span> <span class="nn">.kernel</span> <span class="k">import</span> <span class="n">ZeroKernel</span><span class="p">,</span> <span class="n">PosteriorKernel</span><span class="p">,</span> <span class="n">TensorProductKernel</span><span class="p">,</span> \
+    <span class="n">CorrectiveKernel</span><span class="p">,</span> <span class="n">OneKernel</span>
+<span class="kn">from</span> <span class="nn">.lazy</span> <span class="k">import</span> <span class="n">LazyVector</span><span class="p">,</span> <span class="n">LazyMatrix</span>
+<span class="kn">from</span> <span class="nn">.matrix</span> <span class="k">import</span> <span class="n">matrix</span><span class="p">,</span> <span class="n">Diagonal</span><span class="p">,</span> <span class="n">dense</span>
+<span class="kn">from</span> <span class="nn">.mean</span> <span class="k">import</span> <span class="n">PosteriorMean</span><span class="p">,</span> <span class="n">ZeroMean</span><span class="p">,</span> <span class="n">OneMean</span>
+<span class="kn">from</span> <span class="nn">.mokernel</span> <span class="k">import</span> <span class="n">MultiOutputKernel</span> <span class="k">as</span> <span class="n">MOK</span>
+<span class="kn">from</span> <span class="nn">.momean</span> <span class="k">import</span> <span class="n">MultiOutputMean</span> <span class="k">as</span> <span class="n">MOM</span>
+<span class="kn">from</span> <span class="nn">.random</span> <span class="k">import</span> <span class="n">Random</span><span class="p">,</span> <span class="n">PromisedGP</span><span class="p">,</span> <span class="n">RandomProcess</span><span class="p">,</span> <span class="n">Normal</span>
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;GP&#39;</span><span class="p">,</span> <span class="s1">&#39;model&#39;</span><span class="p">,</span> <span class="s1">&#39;Graph&#39;</span><span class="p">,</span> <span class="s1">&#39;Observations&#39;</span><span class="p">,</span> <span class="s1">&#39;Obs&#39;</span><span class="p">,</span> <span class="s1">&#39;SparseObservations&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;SparseObs&#39;</span><span class="p">]</span>
+
+<span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">ensure_at</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">ref</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Ensure that an input location is typed with `At` to specify which</span>
+<span class="sd">    process it belongs to.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        x (input): Input location.</span>
+<span class="sd">        ref (:class:`.graph.GP`, optional): Reference process. If provided and</span>
+<span class="sd">            `x` is not an instance of `At`, then it assumed to belong to `ref`.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        :class:`.input.At`: Input, instance of `At`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">At</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">x</span>
+    <span class="k">elif</span> <span class="n">ref</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">ref</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Must explicitly specify the processes which to &#39;</span>
+                         <span class="s1">&#39;condition on.&#39;</span><span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">AbstractObservations</span><span class="p">(</span><span class="n">Referentiable</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Abstract base class for observations.&quot;&quot;&quot;</span>
+
+    <span class="n">_dispatch</span> <span class="o">=</span> <span class="n">Dispatcher</span><span class="p">(</span><span class="n">in_class</span><span class="o">=</span><span class="n">Self</span><span class="p">)</span>
+
+    <span class="nd">@_dispatch</span><span class="p">({</span><span class="n">B</span><span class="o">.</span><span class="n">Numeric</span><span class="p">,</span> <span class="n">Input</span><span class="p">},</span> <span class="n">B</span><span class="o">.</span><span class="n">Numeric</span><span class="p">,</span> <span class="p">[</span><span class="n">PromisedGP</span><span class="p">])</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">ref</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_ref</span> <span class="o">=</span> <span class="n">ref</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x</span> <span class="o">=</span> <span class="n">ensure_at</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ref</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">y</span> <span class="o">=</span> <span class="n">y</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">graph</span> <span class="o">=</span> <span class="n">type_parameter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">)</span><span class="o">.</span><span class="n">graph</span>
+
+    <span class="nd">@_dispatch</span><span class="p">([</span><span class="n">Union</span><span class="p">(</span><span class="nb">tuple</span><span class="p">,</span> <span class="nb">list</span><span class="p">,</span> <span class="n">PromisedGP</span><span class="p">)])</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">pairs</span><span class="p">,</span> <span class="o">**</span><span class="n">kw_args</span><span class="p">):</span>
+        <span class="c1"># Check whether there&#39;s a reference.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_ref</span> <span class="o">=</span> <span class="n">kw_args</span><span class="p">[</span><span class="s1">&#39;ref&#39;</span><span class="p">]</span> <span class="k">if</span> <span class="s1">&#39;ref&#39;</span> <span class="ow">in</span> <span class="n">kw_args</span> <span class="k">else</span> <span class="kc">None</span>
+
+        <span class="c1"># Ensure `At` for all pairs.</span>
+        <span class="n">pairs</span> <span class="o">=</span> <span class="p">[(</span><span class="n">ensure_at</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ref</span><span class="p">),</span> <span class="n">y</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="ow">in</span> <span class="n">pairs</span><span class="p">]</span>
+
+        <span class="c1"># Get the graph from the first pair.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">graph</span> <span class="o">=</span> <span class="n">type_parameter</span><span class="p">(</span><span class="n">pairs</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">graph</span>
+
+        <span class="c1"># Extend the graph by the Cartesian product `p` of all processes.</span>
+        <span class="n">p</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">cross</span><span class="p">(</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">ps</span><span class="p">)</span>
+
+        <span class="c1"># Condition on the newly created vector-valued GP.</span>
+        <span class="n">xs</span><span class="p">,</span> <span class="n">ys</span> <span class="o">=</span> <span class="nb">zip</span><span class="p">(</span><span class="o">*</span><span class="n">pairs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x</span> <span class="o">=</span> <span class="n">p</span><span class="p">(</span><span class="n">MultiInput</span><span class="p">(</span><span class="o">*</span><span class="n">xs</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">y</span> <span class="o">=</span> <span class="n">B</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="o">*</span><span class="p">[</span><span class="n">uprank</span><span class="p">(</span><span class="n">y</span><span class="p">)</span> <span class="k">for</span> <span class="n">y</span> <span class="ow">in</span> <span class="n">ys</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+    <span class="nd">@_dispatch</span><span class="p">({</span><span class="nb">tuple</span><span class="p">,</span> <span class="nb">list</span><span class="p">})</span>
+    <span class="k">def</span> <span class="nf">__ror__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ps</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">condition</span><span class="p">(</span><span class="n">ps</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">posterior_kernel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">p_i</span><span class="p">,</span> <span class="n">p_j</span><span class="p">):</span>  <span class="c1"># pragma: no cover</span>
+        <span class="sd">&quot;&quot;&quot;Get the posterior kernel between two processes.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            p_i (:class:`.graph.GP`): First process.</span>
+<span class="sd">            p_j (:class:`.graph.GP`): Second process.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            :class:`.kernel.Kernel`: Posterior kernel between the first and</span>
+<span class="sd">                second process.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s1">&#39;Posterior kernel construction not &#39;</span>
+                                  <span class="s1">&#39;implemented.&#39;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">posterior_mean</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">p</span><span class="p">):</span>  <span class="c1"># pragma: no cover</span>
+        <span class="sd">&quot;&quot;&quot;Get the posterior kernel of a process.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            p (:class:`.graph.GP`): Process.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            :class:`.mean.Mean`: Posterior mean of `p`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s1">&#39;Posterior mean construction not &#39;</span>
+                                  <span class="s1">&#39;implemented.&#39;</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="Observations"><a class="viewcode-back" href="../../source/stheno.graph.html#stheno.graph.Observations">[docs]</a><span class="k">class</span> <span class="nc">Observations</span><span class="p">(</span><span class="n">AbstractObservations</span><span class="p">,</span> <span class="n">Referentiable</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Observations.</span>
+
+<span class="sd">    Can alternatively construct an instance of `Observations` with tuples or</span>
+<span class="sd">    lists of valid constructors.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        x (input): Locations of points to condition on.</span>
+<span class="sd">        y (tensor): Observations to condition on.</span>
+<span class="sd">        ref (:class:`.class.GP`, optional): Reference process. See</span>
+<span class="sd">            :func:`.graph.ensure_at`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">_dispatch</span> <span class="o">=</span> <span class="n">Dispatcher</span><span class="p">(</span><span class="n">in_class</span><span class="o">=</span><span class="n">Self</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kw_args</span><span class="p">):</span>
+        <span class="n">AbstractObservations</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kw_args</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_K_x</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">K_x</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Kernel matrix of the data.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_K_x</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># Cache computation.</span>
+            <span class="n">p_x</span><span class="p">,</span> <span class="n">x</span> <span class="o">=</span> <span class="n">type_parameter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_K_x</span> <span class="o">=</span> <span class="n">matrix</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">kernels</span><span class="p">[</span><span class="n">p_x</span><span class="p">](</span><span class="n">x</span><span class="p">))</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_K_x</span>
+
+<div class="viewcode-block" id="Observations.posterior_kernel"><a class="viewcode-back" href="../../source/stheno.graph.html#stheno.graph.Observations.posterior_kernel">[docs]</a>    <span class="k">def</span> <span class="nf">posterior_kernel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">p_i</span><span class="p">,</span> <span class="n">p_j</span><span class="p">):</span>
+        <span class="n">p_x</span><span class="p">,</span> <span class="n">x</span> <span class="o">=</span> <span class="n">type_parameter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">PosteriorKernel</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">kernels</span><span class="p">[</span><span class="n">p_i</span><span class="p">,</span> <span class="n">p_j</span><span class="p">],</span>
+                               <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">kernels</span><span class="p">[</span><span class="n">p_x</span><span class="p">,</span> <span class="n">p_i</span><span class="p">],</span>
+                               <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">kernels</span><span class="p">[</span><span class="n">p_x</span><span class="p">,</span> <span class="n">p_j</span><span class="p">],</span>
+                               <span class="n">x</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">K_x</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Observations.posterior_mean"><a class="viewcode-back" href="../../source/stheno.graph.html#stheno.graph.Observations.posterior_mean">[docs]</a>    <span class="k">def</span> <span class="nf">posterior_mean</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">p</span><span class="p">):</span>
+        <span class="n">p_x</span><span class="p">,</span> <span class="n">x</span> <span class="o">=</span> <span class="n">type_parameter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">PosteriorMean</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">means</span><span class="p">[</span><span class="n">p</span><span class="p">],</span>
+                             <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">means</span><span class="p">[</span><span class="n">p_x</span><span class="p">],</span>
+                             <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">kernels</span><span class="p">[</span><span class="n">p_x</span><span class="p">,</span> <span class="n">p</span><span class="p">],</span>
+                             <span class="n">x</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">K_x</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">y</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="SparseObservations"><a class="viewcode-back" href="../../source/stheno.graph.html#stheno.graph.SparseObservations">[docs]</a><span class="k">class</span> <span class="nc">SparseObservations</span><span class="p">(</span><span class="n">AbstractObservations</span><span class="p">,</span> <span class="n">Referentiable</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Observations through inducing points. Takes further arguments</span>
+<span class="sd">    according to the constructor of :class:`.graph.Observations`.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        elbo (scalar): ELBO.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        z (input): Locations of the inducing points.</span>
+<span class="sd">        e (:class:`.graph.GP`): Additive, independent noise process.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">_dispatch</span> <span class="o">=</span> <span class="n">Dispatcher</span><span class="p">(</span><span class="n">in_class</span><span class="o">=</span><span class="n">Self</span><span class="p">)</span>
+
+    <span class="nd">@_dispatch</span><span class="p">({</span><span class="n">B</span><span class="o">.</span><span class="n">Numeric</span><span class="p">,</span> <span class="n">Input</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">,</span> <span class="nb">list</span><span class="p">},</span>
+               <span class="p">[</span><span class="n">Union</span><span class="p">(</span><span class="nb">tuple</span><span class="p">,</span> <span class="nb">list</span><span class="p">,</span> <span class="n">PromisedGP</span><span class="p">)])</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="o">*</span><span class="n">pairs</span><span class="p">,</span> <span class="o">**</span><span class="n">kw_args</span><span class="p">):</span>
+        <span class="n">es</span><span class="p">,</span> <span class="n">xs</span><span class="p">,</span> <span class="n">ys</span> <span class="o">=</span> <span class="nb">zip</span><span class="p">(</span><span class="o">*</span><span class="n">pairs</span><span class="p">)</span>
+        <span class="n">AbstractObservations</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="nb">zip</span><span class="p">(</span><span class="n">xs</span><span class="p">,</span> <span class="n">ys</span><span class="p">),</span> <span class="o">**</span><span class="n">kw_args</span><span class="p">)</span>
+        <span class="n">SparseObservations</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                                    <span class="n">z</span><span class="p">,</span>
+                                    <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">cross</span><span class="p">(</span><span class="o">*</span><span class="n">es</span><span class="p">),</span>
+                                    <span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">,</span>
+                                    <span class="bp">self</span><span class="o">.</span><span class="n">y</span><span class="p">,</span>
+                                    <span class="o">**</span><span class="n">kw_args</span><span class="p">)</span>
+
+    <span class="nd">@_dispatch</span><span class="p">({</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">},</span>
+               <span class="n">PromisedGP</span><span class="p">,</span>
+               <span class="p">{</span><span class="n">B</span><span class="o">.</span><span class="n">Numeric</span><span class="p">,</span> <span class="n">Input</span><span class="p">},</span>
+               <span class="n">B</span><span class="o">.</span><span class="n">Numeric</span><span class="p">,</span>
+               <span class="p">[</span><span class="n">PromisedGP</span><span class="p">])</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">zs</span><span class="p">,</span> <span class="n">e</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">ref</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="c1"># Ensure `At` everywhere.</span>
+        <span class="n">zs</span> <span class="o">=</span> <span class="p">[</span><span class="n">ensure_at</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="n">ref</span><span class="o">=</span><span class="n">ref</span><span class="p">)</span> <span class="k">for</span> <span class="n">z</span> <span class="ow">in</span> <span class="n">zs</span><span class="p">]</span>
+
+        <span class="c1"># Extract graph.</span>
+        <span class="n">graph</span> <span class="o">=</span> <span class="n">type_parameter</span><span class="p">(</span><span class="n">zs</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">graph</span>
+
+        <span class="c1"># Create a representative multi-output process.</span>
+        <span class="n">p_z</span> <span class="o">=</span> <span class="n">graph</span><span class="o">.</span><span class="n">cross</span><span class="p">(</span><span class="o">*</span><span class="p">(</span><span class="n">type_parameter</span><span class="p">(</span><span class="n">z</span><span class="p">)</span> <span class="k">for</span> <span class="n">z</span> <span class="ow">in</span> <span class="n">zs</span><span class="p">))</span>
+
+        <span class="n">SparseObservations</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                                    <span class="n">p_z</span><span class="p">(</span><span class="n">MultiInput</span><span class="p">(</span><span class="o">*</span><span class="n">zs</span><span class="p">)),</span>
+                                    <span class="n">e</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">ref</span><span class="o">=</span><span class="n">ref</span><span class="p">)</span>
+
+    <span class="nd">@_dispatch</span><span class="p">({</span><span class="n">B</span><span class="o">.</span><span class="n">Numeric</span><span class="p">,</span> <span class="n">Input</span><span class="p">},</span>
+               <span class="n">PromisedGP</span><span class="p">,</span>
+               <span class="p">{</span><span class="n">B</span><span class="o">.</span><span class="n">Numeric</span><span class="p">,</span> <span class="n">Input</span><span class="p">},</span>
+               <span class="n">B</span><span class="o">.</span><span class="n">Numeric</span><span class="p">,</span>
+               <span class="p">[</span><span class="n">PromisedGP</span><span class="p">])</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">e</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">ref</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">AbstractObservations</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">ref</span><span class="o">=</span><span class="n">ref</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">z</span> <span class="o">=</span> <span class="n">ensure_at</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ref</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">e</span> <span class="o">=</span> <span class="n">e</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_K_z</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_elbo</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_mu</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_A</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">K_z</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Kernel matrix of the data.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_K_z</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># Cache computation.</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_compute</span><span class="p">()</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_K_z</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">elbo</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;ELBO.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_elbo</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># Cache computation.</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_compute</span><span class="p">()</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_elbo</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">mu</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Mean of optimal approximating distribution.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mu</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># Cache computation.</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_compute</span><span class="p">()</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mu</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">A</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Parameter of the corrective variance of the kernel of the optimal</span>
+<span class="sd">        approximating distribution.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_A</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># Cache computation.</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_compute</span><span class="p">()</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_A</span>
+
+    <span class="k">def</span> <span class="nf">_compute</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># Extract processes.</span>
+        <span class="n">p_x</span><span class="p">,</span> <span class="n">x</span> <span class="o">=</span> <span class="n">type_parameter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+        <span class="n">p_z</span><span class="p">,</span> <span class="n">z</span> <span class="o">=</span> <span class="n">type_parameter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">z</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">z</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+
+        <span class="c1"># Construct the necessary kernel matrices.</span>
+        <span class="n">K_zx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">kernels</span><span class="p">[</span><span class="n">p_z</span><span class="p">,</span> <span class="n">p_x</span><span class="p">](</span><span class="n">z</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_K_z</span> <span class="o">=</span> <span class="n">matrix</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">kernels</span><span class="p">[</span><span class="n">p_z</span><span class="p">](</span><span class="n">z</span><span class="p">))</span>
+
+        <span class="c1"># Evaluating `e.kernel(x)` will yield incorrect results if `x` is a</span>
+        <span class="c1"># `MultiInput`, because `x` then still designates the particular</span>
+        <span class="c1"># components of `f`. Fix that by instead designating the elements of</span>
+        <span class="c1"># `e`.</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">MultiInput</span><span class="p">):</span>
+            <span class="n">x_n</span> <span class="o">=</span> <span class="n">MultiInput</span><span class="p">(</span><span class="o">*</span><span class="p">(</span><span class="n">p</span><span class="p">(</span><span class="n">xi</span><span class="o">.</span><span class="n">get</span><span class="p">())</span>
+                               <span class="k">for</span> <span class="n">p</span><span class="p">,</span> <span class="n">xi</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">e</span><span class="o">.</span><span class="n">kernel</span><span class="o">.</span><span class="n">ps</span><span class="p">,</span> <span class="n">x</span><span class="o">.</span><span class="n">get</span><span class="p">())))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">x_n</span> <span class="o">=</span> <span class="n">x</span>
+
+        <span class="c1"># Construct the noise kernel matrix.</span>
+        <span class="n">K_n</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">e</span><span class="o">.</span><span class="n">kernel</span><span class="p">(</span><span class="n">x_n</span><span class="p">)</span>
+
+        <span class="c1"># The approximation can only handle diagonal noise matrices.</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">K_n</span><span class="p">,</span> <span class="n">Diagonal</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s1">&#39;Kernel matrix of noise must be diagonal.&#39;</span><span class="p">)</span>
+
+        <span class="c1"># And construct the components for the inducing point approximation.</span>
+        <span class="n">L_z</span> <span class="o">=</span> <span class="n">B</span><span class="o">.</span><span class="n">cholesky</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_K_z</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_A</span> <span class="o">=</span> <span class="n">B</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_K_z</span><span class="p">)</span> <span class="o">+</span> \
+                  <span class="n">B</span><span class="o">.</span><span class="n">qf</span><span class="p">(</span><span class="n">K_n</span><span class="p">,</span> <span class="n">B</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">B</span><span class="o">.</span><span class="n">trisolve</span><span class="p">(</span><span class="n">L_z</span><span class="p">,</span> <span class="n">K_zx</span><span class="p">)))</span>
+        <span class="n">y_bar</span> <span class="o">=</span> <span class="n">uprank</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">y</span><span class="p">)</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">e</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">x_n</span><span class="p">)</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">means</span><span class="p">[</span><span class="n">p_x</span><span class="p">](</span><span class="n">x</span><span class="p">)</span>
+        <span class="n">prod_y_bar</span> <span class="o">=</span> <span class="n">B</span><span class="o">.</span><span class="n">trisolve</span><span class="p">(</span><span class="n">L_z</span><span class="p">,</span> <span class="n">B</span><span class="o">.</span><span class="n">qf</span><span class="p">(</span><span class="n">K_n</span><span class="p">,</span> <span class="n">B</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">K_zx</span><span class="p">),</span> <span class="n">y_bar</span><span class="p">))</span>
+
+        <span class="c1"># Compute the optimal mean.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_mu</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">means</span><span class="p">[</span><span class="n">p_z</span><span class="p">](</span><span class="n">z</span><span class="p">)</span> <span class="o">+</span> \
+                   <span class="n">B</span><span class="o">.</span><span class="n">qf</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_A</span><span class="p">,</span> <span class="n">B</span><span class="o">.</span><span class="n">trisolve</span><span class="p">(</span><span class="n">L_z</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_K_z</span><span class="p">),</span> <span class="n">prod_y_bar</span><span class="p">)</span>
+
+        <span class="c1"># Compute the ELBO.</span>
+        <span class="c1"># NOTE: The calculation of `trace_part` asserts that `K_n` is diagonal.</span>
+        <span class="c1">#       The rest, however, is completely generic.</span>
+        <span class="n">trace_part</span> <span class="o">=</span> <span class="n">B</span><span class="o">.</span><span class="n">ratio</span><span class="p">(</span><span class="n">Diagonal</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">kernels</span><span class="p">[</span><span class="n">p_x</span><span class="p">]</span><span class="o">.</span><span class="n">elwise</span><span class="p">(</span><span class="n">x</span><span class="p">)[:,</span> <span class="mi">0</span><span class="p">])</span> <span class="o">-</span>
+                             <span class="n">Diagonal</span><span class="p">(</span><span class="n">B</span><span class="o">.</span><span class="n">qf_diag</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_K_z</span><span class="p">,</span> <span class="n">K_zx</span><span class="p">)),</span> <span class="n">K_n</span><span class="p">)</span>
+        <span class="n">det_part</span> <span class="o">=</span> <span class="n">B</span><span class="o">.</span><span class="n">logdet</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">B</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">K_n</span><span class="p">)</span> <span class="o">+</span> <span class="n">B</span><span class="o">.</span><span class="n">logdet</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_A</span><span class="p">)</span>
+        <span class="n">qf_part</span> <span class="o">=</span> <span class="n">B</span><span class="o">.</span><span class="n">qf</span><span class="p">(</span><span class="n">K_n</span><span class="p">,</span> <span class="n">y_bar</span><span class="p">)[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">B</span><span class="o">.</span><span class="n">qf</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_A</span><span class="p">,</span> <span class="n">prod_y_bar</span><span class="p">)[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_elbo</span> <span class="o">=</span> <span class="o">-</span><span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">trace_part</span> <span class="o">+</span> <span class="n">det_part</span> <span class="o">+</span> <span class="n">qf_part</span><span class="p">)</span>
+
+<div class="viewcode-block" id="SparseObservations.posterior_kernel"><a class="viewcode-back" href="../../source/stheno.graph.html#stheno.graph.SparseObservations.posterior_kernel">[docs]</a>    <span class="k">def</span> <span class="nf">posterior_kernel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">p_i</span><span class="p">,</span> <span class="n">p_j</span><span class="p">):</span>
+        <span class="n">p_z</span><span class="p">,</span> <span class="n">z</span> <span class="o">=</span> <span class="n">type_parameter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">z</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">z</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">PosteriorKernel</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">kernels</span><span class="p">[</span><span class="n">p_i</span><span class="p">,</span> <span class="n">p_j</span><span class="p">],</span>
+                               <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">kernels</span><span class="p">[</span><span class="n">p_z</span><span class="p">,</span> <span class="n">p_i</span><span class="p">],</span>
+                               <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">kernels</span><span class="p">[</span><span class="n">p_z</span><span class="p">,</span> <span class="n">p_j</span><span class="p">],</span>
+                               <span class="n">z</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">K_z</span><span class="p">)</span> <span class="o">+</span> \
+               <span class="n">CorrectiveKernel</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">kernels</span><span class="p">[</span><span class="n">p_z</span><span class="p">,</span> <span class="n">p_i</span><span class="p">],</span>
+                                <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">kernels</span><span class="p">[</span><span class="n">p_z</span><span class="p">,</span> <span class="n">p_j</span><span class="p">],</span>
+                                <span class="n">z</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">A</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">K_z</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="SparseObservations.posterior_mean"><a class="viewcode-back" href="../../source/stheno.graph.html#stheno.graph.SparseObservations.posterior_mean">[docs]</a>    <span class="k">def</span> <span class="nf">posterior_mean</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">p</span><span class="p">):</span>
+        <span class="n">p_z</span><span class="p">,</span> <span class="n">z</span> <span class="o">=</span> <span class="n">type_parameter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">z</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">z</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">PosteriorMean</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">means</span><span class="p">[</span><span class="n">p</span><span class="p">],</span>
+                             <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">means</span><span class="p">[</span><span class="n">p_z</span><span class="p">],</span>
+                             <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">kernels</span><span class="p">[</span><span class="n">p_z</span><span class="p">,</span> <span class="n">p</span><span class="p">],</span>
+                             <span class="n">z</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">K_z</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">mu</span><span class="p">)</span></div></div>
+
+
+<span class="n">Obs</span> <span class="o">=</span> <span class="n">Observations</span>  <span class="c1">#: Shorthand for `Observations`.</span>
+<span class="n">SparseObs</span> <span class="o">=</span> <span class="n">SparseObservations</span>  <span class="c1">#: Shorthand for `SparseObservations`.</span>
+
+
+<div class="viewcode-block" id="Graph"><a class="viewcode-back" href="../../source/stheno.graph.html#stheno.graph.Graph">[docs]</a><span class="k">class</span> <span class="nc">Graph</span><span class="p">(</span><span class="n">Referentiable</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;A GP model.&quot;&quot;&quot;</span>
+    <span class="n">_dispatch</span> <span class="o">=</span> <span class="n">Dispatcher</span><span class="p">(</span><span class="n">in_class</span><span class="o">=</span><span class="n">Self</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ps</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pids</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">kernels</span> <span class="o">=</span> <span class="n">LazyMatrix</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">means</span> <span class="o">=</span> <span class="n">LazyVector</span><span class="p">()</span>
+
+        <span class="c1"># Store named GPs in both ways.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">gps_by_name</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">names_by_gp</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="nd">@_dispatch</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">__getitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">gps_by_name</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
+
+    <span class="nd">@_dispatch</span><span class="p">(</span><span class="n">PromisedGP</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">__getitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">p</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">names_by_gp</span><span class="p">[</span><span class="nb">id</span><span class="p">(</span><span class="n">p</span><span class="p">)]</span>
+
+<div class="viewcode-block" id="Graph.name"><a class="viewcode-back" href="../../source/stheno.graph.html#stheno.graph.Graph.name">[docs]</a>    <span class="nd">@_dispatch</span><span class="p">(</span><span class="n">PromisedGP</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">name</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">p</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Name a GP.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            p (:class:`.graph.GP`): GP to name.</span>
+<span class="sd">            name (str): Name. Must be unique.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Delete any existing names and back-references for the GP.</span>
+        <span class="k">if</span> <span class="nb">id</span><span class="p">(</span><span class="n">p</span><span class="p">)</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">names_by_gp</span><span class="p">:</span>
+            <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">gps_by_name</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">names_by_gp</span><span class="p">[</span><span class="nb">id</span><span class="p">(</span><span class="n">p</span><span class="p">)]]</span>
+            <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">names_by_gp</span><span class="p">[</span><span class="nb">id</span><span class="p">(</span><span class="n">p</span><span class="p">)]</span>
+
+        <span class="c1"># Check that name is not in use.</span>
+        <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">gps_by_name</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s1">&#39;Name &quot;</span><span class="si">{}</span><span class="s1">&quot; for &quot;</span><span class="si">{}</span><span class="s1">&quot; already taken by &quot;</span><span class="si">{}</span><span class="s1">&quot;.&#39;</span>
+                               <span class="s1">&#39;&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">p</span><span class="p">,</span> <span class="bp">self</span><span class="p">[</span><span class="n">name</span><span class="p">]))</span>
+
+        <span class="c1"># Set the name and the back-reference.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">gps_by_name</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">p</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">names_by_gp</span><span class="p">[</span><span class="nb">id</span><span class="p">(</span><span class="n">p</span><span class="p">)]</span> <span class="o">=</span> <span class="n">name</span></div>
+
+    <span class="k">def</span> <span class="nf">_add_p</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">p</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ps</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pids</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="nb">id</span><span class="p">(</span><span class="n">p</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">_update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mean</span><span class="p">,</span> <span class="n">k_ii_generator</span><span class="p">,</span> <span class="n">k_ij_generator</span><span class="p">):</span>
+        <span class="n">p</span> <span class="o">=</span> <span class="n">GP</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">means</span><span class="p">[</span><span class="n">p</span><span class="p">]</span> <span class="o">=</span> <span class="n">mean</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">kernels</span><span class="o">.</span><span class="n">add_rule</span><span class="p">((</span><span class="n">p</span><span class="p">,</span> <span class="n">p</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">pids</span><span class="p">,</span> <span class="n">k_ii_generator</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">kernels</span><span class="o">.</span><span class="n">add_rule</span><span class="p">((</span><span class="n">p</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">pids</span><span class="p">,</span> <span class="n">k_ij_generator</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">kernels</span><span class="o">.</span><span class="n">add_rule</span><span class="p">((</span><span class="kc">None</span><span class="p">,</span> <span class="n">p</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">pids</span><span class="p">,</span>
+                              <span class="k">lambda</span> <span class="n">pi</span><span class="p">:</span> <span class="nb">reversed</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">kernels</span><span class="p">[</span><span class="n">p</span><span class="p">,</span> <span class="n">pi</span><span class="p">]))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_add_p</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">p</span>
+
+<div class="viewcode-block" id="Graph.add_independent_gp"><a class="viewcode-back" href="../../source/stheno.graph.html#stheno.graph.Graph.add_independent_gp">[docs]</a>    <span class="k">def</span> <span class="nf">add_independent_gp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">p</span><span class="p">,</span> <span class="n">kernel</span><span class="p">,</span> <span class="n">mean</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Add an independent GP to the model.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            p (:class:`.graph.GP`): GP object to add.</span>
+<span class="sd">            kernel (:class:`.kernel.Kernel`): Kernel function of GP.</span>
+<span class="sd">            mean (:class:`.mean.Mean`): Mean function of GP.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            :class:`.graph.GP`: The newly added independent GP.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Update means.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">means</span><span class="p">[</span><span class="n">p</span><span class="p">]</span> <span class="o">=</span> <span class="n">mean</span>
+        <span class="c1"># Add rule to kernels.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">kernels</span><span class="p">[</span><span class="n">p</span><span class="p">]</span> <span class="o">=</span> <span class="n">kernel</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">kernels</span><span class="o">.</span><span class="n">add_rule</span><span class="p">((</span><span class="n">p</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">pids</span><span class="p">,</span> <span class="k">lambda</span> <span class="n">pi</span><span class="p">:</span> <span class="n">ZeroKernel</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">kernels</span><span class="o">.</span><span class="n">add_rule</span><span class="p">((</span><span class="kc">None</span><span class="p">,</span> <span class="n">p</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">pids</span><span class="p">,</span> <span class="k">lambda</span> <span class="n">pi</span><span class="p">:</span> <span class="n">ZeroKernel</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_add_p</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">p</span></div>
+
+    <span class="nd">@_dispatch</span><span class="p">(</span><span class="nb">object</span><span class="p">,</span> <span class="n">PromisedGP</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">sum</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">,</span> <span class="n">p</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Sum a GP from the graph with another object.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            obj1 (other type or :class:`.graph.GP`): First term in the sum.</span>
+<span class="sd">            obj2 (other type or :class:`.graph.GP`): Second term in the sum.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            :class:`.graph.GP`: The GP corresponding to the sum.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">other</span><span class="p">)</span>
+
+    <span class="nd">@_dispatch</span><span class="p">(</span><span class="n">PromisedGP</span><span class="p">,</span> <span class="nb">object</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">sum</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">p</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_update</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">means</span><span class="p">[</span><span class="n">p</span><span class="p">]</span> <span class="o">+</span> <span class="n">other</span><span class="p">,</span>
+                            <span class="k">lambda</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernels</span><span class="p">[</span><span class="n">p</span><span class="p">],</span>
+                            <span class="k">lambda</span> <span class="n">pi</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernels</span><span class="p">[</span><span class="n">p</span><span class="p">,</span> <span class="n">pi</span><span class="p">])</span>
+
+<div class="viewcode-block" id="Graph.sum"><a class="viewcode-back" href="../../source/stheno.graph.html#stheno.graph.Graph.sum">[docs]</a>    <span class="nd">@_dispatch</span><span class="p">(</span><span class="n">PromisedGP</span><span class="p">,</span> <span class="n">PromisedGP</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">sum</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">p1</span><span class="p">,</span> <span class="n">p2</span><span class="p">):</span>
+        <span class="c1"># Check that the GPs are on the same graph.</span>
+        <span class="k">if</span> <span class="n">p1</span><span class="o">.</span><span class="n">graph</span> <span class="o">!=</span> <span class="n">p2</span><span class="o">.</span><span class="n">graph</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s1">&#39;Can only add GPs from the same graph.&#39;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_update</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">means</span><span class="p">[</span><span class="n">p1</span><span class="p">]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">means</span><span class="p">[</span><span class="n">p2</span><span class="p">],</span>
+                            <span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernels</span><span class="p">[</span><span class="n">p1</span><span class="p">]</span> <span class="o">+</span>
+                                     <span class="bp">self</span><span class="o">.</span><span class="n">kernels</span><span class="p">[</span><span class="n">p2</span><span class="p">]</span> <span class="o">+</span>
+                                     <span class="bp">self</span><span class="o">.</span><span class="n">kernels</span><span class="p">[</span><span class="n">p1</span><span class="p">,</span> <span class="n">p2</span><span class="p">]</span> <span class="o">+</span>
+                                     <span class="bp">self</span><span class="o">.</span><span class="n">kernels</span><span class="p">[</span><span class="n">p2</span><span class="p">,</span> <span class="n">p1</span><span class="p">]),</span>
+                            <span class="k">lambda</span> <span class="n">pi</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernels</span><span class="p">[</span><span class="n">p1</span><span class="p">,</span> <span class="n">pi</span><span class="p">]</span> <span class="o">+</span>
+                                       <span class="bp">self</span><span class="o">.</span><span class="n">kernels</span><span class="p">[</span><span class="n">p2</span><span class="p">,</span> <span class="n">pi</span><span class="p">])</span></div>
+
+    <span class="nd">@_dispatch</span><span class="p">(</span><span class="n">PromisedGP</span><span class="p">,</span> <span class="n">B</span><span class="o">.</span><span class="n">Numeric</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">mul</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">p</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Multiply a GP from the graph with another object.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            p (:class:`.graph.GP`): GP in the product.</span>
+<span class="sd">            other (object): Other object in the product.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            :class:`.graph.GP`: The GP corresponding to the product.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_update</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">means</span><span class="p">[</span><span class="n">p</span><span class="p">]</span> <span class="o">*</span> <span class="n">other</span><span class="p">,</span>
+                            <span class="k">lambda</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernels</span><span class="p">[</span><span class="n">p</span><span class="p">]</span> <span class="o">*</span> <span class="n">other</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span>
+                            <span class="k">lambda</span> <span class="n">pi</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernels</span><span class="p">[</span><span class="n">p</span><span class="p">,</span> <span class="n">pi</span><span class="p">]</span> <span class="o">*</span> <span class="n">other</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Graph.mul"><a class="viewcode-back" href="../../source/stheno.graph.html#stheno.graph.Graph.mul">[docs]</a>    <span class="nd">@_dispatch</span><span class="p">(</span><span class="n">PromisedGP</span><span class="p">,</span> <span class="n">FunctionType</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">mul</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">p</span><span class="p">,</span> <span class="n">f</span><span class="p">):</span>
+        <span class="k">def</span> <span class="nf">ones</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">B</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">B</span><span class="o">.</span><span class="n">dtype</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="n">B</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="n">x</span><span class="p">)[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">1</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_update</span><span class="p">(</span><span class="n">f</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">means</span><span class="p">[</span><span class="n">p</span><span class="p">],</span>
+                            <span class="k">lambda</span><span class="p">:</span> <span class="n">f</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernels</span><span class="p">[</span><span class="n">p</span><span class="p">],</span>
+                            <span class="p">(</span><span class="k">lambda</span> <span class="n">pi</span><span class="p">:</span> <span class="n">TensorProductKernel</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">ones</span><span class="p">)</span> <span class="o">*</span>
+                                        <span class="bp">self</span><span class="o">.</span><span class="n">kernels</span><span class="p">[</span><span class="n">p</span><span class="p">,</span> <span class="n">pi</span><span class="p">]))</span></div>
+
+<div class="viewcode-block" id="Graph.shift"><a class="viewcode-back" href="../../source/stheno.graph.html#stheno.graph.Graph.shift">[docs]</a>    <span class="k">def</span> <span class="nf">shift</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">p</span><span class="p">,</span> <span class="n">shift</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Shift a GP.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            p (:class:`.graph.GP`): GP to shift.</span>
+<span class="sd">            shift (object): Amount to shift by.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            :class:`.graph.GP`: The shifted GP.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_update</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">means</span><span class="p">[</span><span class="n">p</span><span class="p">]</span><span class="o">.</span><span class="n">shift</span><span class="p">(</span><span class="n">shift</span><span class="p">),</span>
+                            <span class="k">lambda</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernels</span><span class="p">[</span><span class="n">p</span><span class="p">]</span><span class="o">.</span><span class="n">shift</span><span class="p">(</span><span class="n">shift</span><span class="p">),</span>
+                            <span class="k">lambda</span> <span class="n">pi</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernels</span><span class="p">[</span><span class="n">p</span><span class="p">,</span> <span class="n">pi</span><span class="p">]</span><span class="o">.</span><span class="n">shift</span><span class="p">(</span><span class="n">shift</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="Graph.stretch"><a class="viewcode-back" href="../../source/stheno.graph.html#stheno.graph.Graph.stretch">[docs]</a>    <span class="k">def</span> <span class="nf">stretch</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">p</span><span class="p">,</span> <span class="n">stretch</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Stretch a GP.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            p (:class:`.graph.GP`): GP to stretch.</span>
+<span class="sd">            stretch (object): Extent of stretch.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            :class:`.graph.GP`: The stretched GP.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_update</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">means</span><span class="p">[</span><span class="n">p</span><span class="p">]</span><span class="o">.</span><span class="n">stretch</span><span class="p">(</span><span class="n">stretch</span><span class="p">),</span>
+                            <span class="k">lambda</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernels</span><span class="p">[</span><span class="n">p</span><span class="p">]</span><span class="o">.</span><span class="n">stretch</span><span class="p">(</span><span class="n">stretch</span><span class="p">),</span>
+                            <span class="k">lambda</span> <span class="n">pi</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernels</span><span class="p">[</span><span class="n">p</span><span class="p">,</span> <span class="n">pi</span><span class="p">]</span><span class="o">.</span><span class="n">stretch</span><span class="p">(</span><span class="n">stretch</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="Graph.select"><a class="viewcode-back" href="../../source/stheno.graph.html#stheno.graph.Graph.select">[docs]</a>    <span class="k">def</span> <span class="nf">select</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">p</span><span class="p">,</span> <span class="o">*</span><span class="n">dims</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Select input dimensions.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            p (:class:`.graph.GP`): GP to select input</span>
+<span class="sd">                dimensions from.</span>
+<span class="sd">            *dims (object): Dimensions to select.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            :class:`.graph.GP`: GP with the specific input dimensions.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_update</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">means</span><span class="p">[</span><span class="n">p</span><span class="p">]</span><span class="o">.</span><span class="n">select</span><span class="p">(</span><span class="n">dims</span><span class="p">),</span>
+                            <span class="k">lambda</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernels</span><span class="p">[</span><span class="n">p</span><span class="p">]</span><span class="o">.</span><span class="n">select</span><span class="p">(</span><span class="n">dims</span><span class="p">),</span>
+                            <span class="k">lambda</span> <span class="n">pi</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernels</span><span class="p">[</span><span class="n">p</span><span class="p">,</span> <span class="n">pi</span><span class="p">]</span><span class="o">.</span><span class="n">select</span><span class="p">(</span><span class="n">dims</span><span class="p">,</span> <span class="kc">None</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="Graph.transform"><a class="viewcode-back" href="../../source/stheno.graph.html#stheno.graph.Graph.transform">[docs]</a>    <span class="k">def</span> <span class="nf">transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">p</span><span class="p">,</span> <span class="n">f</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Transform the inputs of a GP.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            p (:class:`.graph.GP`): GP to input transform.</span>
+<span class="sd">            f (function): Input transform.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            :class:`.graph.GP`: Input-transformed GP.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_update</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">means</span><span class="p">[</span><span class="n">p</span><span class="p">]</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">f</span><span class="p">),</span>
+                            <span class="k">lambda</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernels</span><span class="p">[</span><span class="n">p</span><span class="p">]</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">f</span><span class="p">),</span>
+                            <span class="k">lambda</span> <span class="n">pi</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernels</span><span class="p">[</span><span class="n">p</span><span class="p">,</span> <span class="n">pi</span><span class="p">]</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="kc">None</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="Graph.diff"><a class="viewcode-back" href="../../source/stheno.graph.html#stheno.graph.Graph.diff">[docs]</a>    <span class="k">def</span> <span class="nf">diff</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">p</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Differentiate a GP.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            p (:class:`.graph.GP`): GP to differentiate.</span>
+<span class="sd">            dim (int, optional): Dimension of feature which to take the</span>
+<span class="sd">                derivative with respect to. Defaults to `0`.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            :class:`.graph.GP`: Derivative of GP.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_update</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">means</span><span class="p">[</span><span class="n">p</span><span class="p">]</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">dim</span><span class="p">),</span>
+                            <span class="k">lambda</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernels</span><span class="p">[</span><span class="n">p</span><span class="p">]</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">dim</span><span class="p">),</span>
+                            <span class="k">lambda</span> <span class="n">pi</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernels</span><span class="p">[</span><span class="n">p</span><span class="p">,</span> <span class="n">pi</span><span class="p">]</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">dim</span><span class="p">,</span> <span class="kc">None</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="Graph.condition"><a class="viewcode-back" href="../../source/stheno.graph.html#stheno.graph.Graph.condition">[docs]</a>    <span class="nd">@_dispatch</span><span class="p">({</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">},</span> <span class="n">AbstractObservations</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">condition</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ps</span><span class="p">,</span> <span class="n">obs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Condition the graph on observations.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            ps (list[:class:`.graph.GP`]): Processes to condition.</span>
+<span class="sd">            obs (:class:`.graph.AbstractObservations`): Observations to</span>
+<span class="sd">                condition on.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            list[:class:`.graph.GP`]: Posterior processes.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># A construction like this is necessary to properly close over `p`.</span>
+        <span class="k">def</span> <span class="nf">build_gens</span><span class="p">(</span><span class="n">p</span><span class="p">):</span>
+            <span class="k">def</span> <span class="nf">k_ij_generator</span><span class="p">(</span><span class="n">pi</span><span class="p">):</span>
+                <span class="k">return</span> <span class="n">obs</span><span class="o">.</span><span class="n">posterior_kernel</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">pi</span><span class="p">)</span>
+
+            <span class="k">def</span> <span class="nf">k_ii_generator</span><span class="p">():</span>
+                <span class="k">return</span> <span class="n">obs</span><span class="o">.</span><span class="n">posterior_kernel</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">p</span><span class="p">)</span>
+
+            <span class="k">return</span> <span class="n">k_ii_generator</span><span class="p">,</span> <span class="n">k_ij_generator</span>
+
+        <span class="k">return</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_update</span><span class="p">(</span><span class="n">obs</span><span class="o">.</span><span class="n">posterior_mean</span><span class="p">(</span><span class="n">p</span><span class="p">),</span> <span class="o">*</span><span class="n">build_gens</span><span class="p">(</span><span class="n">p</span><span class="p">))</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">ps</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="Graph.cross"><a class="viewcode-back" href="../../source/stheno.graph.html#stheno.graph.Graph.cross">[docs]</a>    <span class="k">def</span> <span class="nf">cross</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">ps</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Construct the Cartesian product of a collection of processes.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            *ps (:class:`.graph.GP`): Processes to construct the</span>
+<span class="sd">                Cartesian product of.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            :class:`.graph.GP`: The Cartesian product of `ps`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">mok</span> <span class="o">=</span> <span class="n">MOK</span><span class="p">(</span><span class="o">*</span><span class="n">ps</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_update</span><span class="p">(</span><span class="n">MOM</span><span class="p">(</span><span class="o">*</span><span class="n">ps</span><span class="p">),</span>
+                            <span class="k">lambda</span><span class="p">:</span> <span class="n">mok</span><span class="p">,</span>
+                            <span class="k">lambda</span> <span class="n">pi</span><span class="p">:</span> <span class="n">mok</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="k">lambda</span> <span class="n">y</span><span class="p">:</span> <span class="n">At</span><span class="p">(</span><span class="n">pi</span><span class="p">)(</span><span class="n">y</span><span class="p">)))</span></div>
+
+    <span class="nd">@_dispatch</span><span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="p">[</span><span class="n">At</span><span class="p">])</span>
+    <span class="k">def</span> <span class="nf">sample</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="o">*</span><span class="n">xs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Sample multiple processes simultaneously.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            n (int, optional): Number of samples. Defaults to `1`.</span>
+<span class="sd">            *xs (:class:`.graph.At`): Locations to sample at.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            tuple: Tuple of samples.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">sample</span> <span class="o">=</span> <span class="n">GP</span><span class="p">(</span><span class="n">MOK</span><span class="p">(</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">ps</span><span class="p">),</span>
+                    <span class="n">MOM</span><span class="p">(</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">ps</span><span class="p">),</span>
+                    <span class="n">graph</span><span class="o">=</span><span class="n">Graph</span><span class="p">())(</span><span class="n">MultiInput</span><span class="p">(</span><span class="o">*</span><span class="n">xs</span><span class="p">))</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+
+        <span class="c1"># To unpack `x`, just keep `.get()`ing.</span>
+        <span class="k">def</span> <span class="nf">unpack</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+            <span class="k">while</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">Input</span><span class="p">):</span>
+                <span class="n">x</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+            <span class="k">return</span> <span class="n">x</span>
+
+        <span class="c1"># Unpack sample.</span>
+        <span class="n">lengths</span> <span class="o">=</span> <span class="p">[</span><span class="n">B</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="n">uprank</span><span class="p">(</span><span class="n">unpack</span><span class="p">(</span><span class="n">x</span><span class="p">)))[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">xs</span><span class="p">]</span>
+        <span class="n">i</span><span class="p">,</span> <span class="n">samples</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">length</span> <span class="ow">in</span> <span class="n">lengths</span><span class="p">:</span>
+            <span class="n">samples</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sample</span><span class="p">[</span><span class="n">i</span><span class="p">:</span><span class="n">i</span> <span class="o">+</span> <span class="n">length</span><span class="p">,</span> <span class="p">:])</span>
+            <span class="n">i</span> <span class="o">+=</span> <span class="n">length</span>
+        <span class="k">return</span> <span class="n">samples</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">samples</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="k">else</span> <span class="n">samples</span>
+
+<div class="viewcode-block" id="Graph.sample"><a class="viewcode-back" href="../../source/stheno.graph.html#stheno.graph.Graph.sample">[docs]</a>    <span class="nd">@_dispatch</span><span class="p">([</span><span class="n">At</span><span class="p">])</span>
+    <span class="k">def</span> <span class="nf">sample</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">xs</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">*</span><span class="n">xs</span><span class="p">)</span></div>
+
+    <span class="nd">@_dispatch</span><span class="p">([{</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">}])</span>
+    <span class="k">def</span> <span class="nf">logpdf</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">pairs</span><span class="p">):</span>
+        <span class="n">xs</span><span class="p">,</span> <span class="n">ys</span> <span class="o">=</span> <span class="nb">zip</span><span class="p">(</span><span class="o">*</span><span class="n">pairs</span><span class="p">)</span>
+
+        <span class="c1"># Check that all processes are specified.</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">all</span><span class="p">([</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">At</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">xs</span><span class="p">]):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Must explicitly specify the processes which to &#39;</span>
+                             <span class="s1">&#39;compute the log-pdf for.&#39;</span><span class="p">)</span>
+
+        <span class="c1"># Uprank all outputs and concatenate.</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="n">B</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="o">*</span><span class="p">[</span><span class="n">uprank</span><span class="p">(</span><span class="n">y</span><span class="p">)</span> <span class="k">for</span> <span class="n">y</span> <span class="ow">in</span> <span class="n">ys</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="c1"># Return composite log-pdf.</span>
+        <span class="k">return</span> <span class="n">GP</span><span class="p">(</span><span class="n">MOK</span><span class="p">(</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">ps</span><span class="p">),</span>
+                  <span class="n">MOM</span><span class="p">(</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">ps</span><span class="p">),</span>
+                  <span class="n">graph</span><span class="o">=</span><span class="n">Graph</span><span class="p">())(</span><span class="n">MultiInput</span><span class="p">(</span><span class="o">*</span><span class="n">xs</span><span class="p">))</span><span class="o">.</span><span class="n">logpdf</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+
+    <span class="nd">@_dispatch</span><span class="p">(</span><span class="n">At</span><span class="p">,</span> <span class="n">B</span><span class="o">.</span><span class="n">Numeric</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">logpdf</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">x</span><span class="o">.</span><span class="n">logpdf</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+
+    <span class="nd">@_dispatch</span><span class="p">(</span><span class="n">Observations</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">logpdf</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obs</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">obs</span><span class="o">.</span><span class="n">x</span><span class="o">.</span><span class="n">logpdf</span><span class="p">(</span><span class="n">obs</span><span class="o">.</span><span class="n">y</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Graph.logpdf"><a class="viewcode-back" href="../../source/stheno.graph.html#stheno.graph.Graph.logpdf">[docs]</a>    <span class="nd">@_dispatch</span><span class="p">(</span><span class="n">SparseObservations</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">logpdf</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obs</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">obs</span><span class="o">.</span><span class="n">elbo</span></div></div>
+
+
+<span class="n">model</span> <span class="o">=</span> <span class="n">Graph</span><span class="p">()</span>  <span class="c1">#: A default graph provided for convenience</span>
+
+
+<div class="viewcode-block" id="GP"><a class="viewcode-back" href="../../source/stheno.graph.html#stheno.graph.GP">[docs]</a><span class="k">class</span> <span class="nc">GP</span><span class="p">(</span><span class="n">RandomProcess</span><span class="p">,</span> <span class="n">Referentiable</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Gaussian process.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        kernel (:class:`.kernel.Kernel`): Kernel of the</span>
+<span class="sd">            process.</span>
+<span class="sd">        mean (:class:`.mean.Mean`, optional): Mean function of the</span>
+<span class="sd">            process. Defaults to zero.</span>
+<span class="sd">        graph (:class:`.graph.Graph`, optional): Graph to attach to.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">_dispatch</span> <span class="o">=</span> <span class="n">Dispatcher</span><span class="p">(</span><span class="n">in_class</span><span class="o">=</span><span class="n">Self</span><span class="p">)</span>
+
+    <span class="nd">@_dispatch</span><span class="p">([</span><span class="nb">object</span><span class="p">])</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">kernel</span><span class="p">,</span> <span class="n">mean</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">graph</span><span class="o">=</span><span class="n">model</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="c1"># Resolve kernel.</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">kernel</span><span class="p">,</span> <span class="p">(</span><span class="n">B</span><span class="o">.</span><span class="n">Numeric</span><span class="p">,</span> <span class="n">FunctionType</span><span class="p">)):</span>
+            <span class="n">kernel</span> <span class="o">*=</span> <span class="n">OneKernel</span><span class="p">()</span>
+
+        <span class="c1"># Resolve mean.</span>
+        <span class="k">if</span> <span class="n">mean</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">mean</span> <span class="o">=</span> <span class="n">ZeroMean</span><span class="p">()</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">mean</span><span class="p">,</span> <span class="p">(</span><span class="n">B</span><span class="o">.</span><span class="n">Numeric</span><span class="p">,</span> <span class="n">FunctionType</span><span class="p">)):</span>
+            <span class="n">mean</span> <span class="o">*=</span> <span class="n">OneMean</span><span class="p">()</span>
+
+        <span class="c1"># Then add a new `GP` to the graph with the resolved kernel and mean.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">graph</span> <span class="o">=</span> <span class="n">graph</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">add_independent_gp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">kernel</span><span class="p">,</span> <span class="n">mean</span><span class="p">)</span>
+
+        <span class="c1"># If a name is given, set the name.</span>
+        <span class="k">if</span> <span class="n">name</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">name</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+
+    <span class="nd">@_dispatch</span><span class="p">(</span><span class="n">Graph</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">graph</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">graph</span> <span class="o">=</span> <span class="n">graph</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">kernel</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Kernel of the GP.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">kernels</span><span class="p">[</span><span class="bp">self</span><span class="p">]</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">mean</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Mean function of the GP.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">means</span><span class="p">[</span><span class="bp">self</span><span class="p">]</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">name</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Name of the GP.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="bp">self</span><span class="p">]</span>
+
+    <span class="nd">@name</span><span class="o">.</span><span class="n">setter</span>
+    <span class="nd">@_dispatch</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">name</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">name</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Construct a finite-dimensional distribution at specified locations.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            x (input): Points to construct the distribution at.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            :class:`.random.Normal`: Finite-dimensional distribution.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">Normal</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span>
+
+    <span class="nd">@_dispatch</span><span class="p">([</span><span class="nb">object</span><span class="p">])</span>
+    <span class="k">def</span> <span class="nf">condition</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Condition the GP. See :meth:`.graph.Graph.condition`.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">condition</span><span class="p">((</span><span class="bp">self</span><span class="p">,),</span> <span class="n">Observations</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">ref</span><span class="o">=</span><span class="bp">self</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
+
+<div class="viewcode-block" id="GP.condition"><a class="viewcode-back" href="../../source/stheno.graph.html#stheno.graph.GP.condition">[docs]</a>    <span class="nd">@_dispatch</span><span class="p">(</span><span class="n">AbstractObservations</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">condition</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obs</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">condition</span><span class="p">((</span><span class="bp">self</span><span class="p">,),</span> <span class="n">obs</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span></div>
+
+    <span class="nd">@_dispatch</span><span class="p">(</span><span class="nb">object</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">__add__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">)</span>
+
+    <span class="nd">@_dispatch</span><span class="p">(</span><span class="n">Random</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">__add__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s1">&#39;Cannot add a GP and a </span><span class="si">{}</span><span class="s1">.&#39;</span>
+                                  <span class="s1">&#39;&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">other</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="p">))</span>
+
+    <span class="nd">@_dispatch</span><span class="p">(</span><span class="n">Self</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">__add__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">)</span>
+
+    <span class="nd">@_dispatch</span><span class="p">(</span><span class="nb">object</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">__mul__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">mul</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">)</span>
+
+    <span class="nd">@_dispatch</span><span class="p">(</span><span class="n">Random</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">__mul__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s1">&#39;Cannot multiply a GP and a </span><span class="si">{}</span><span class="s1">.&#39;</span>
+                                  <span class="s1">&#39;&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">other</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="p">))</span>
+
+    <span class="nd">@_dispatch</span><span class="p">(</span><span class="n">Self</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">__mul__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">means</span><span class="p">[</span><span class="bp">self</span><span class="p">](</span><span class="n">x</span><span class="p">))</span> <span class="o">*</span> <span class="n">other</span> <span class="o">+</span> \
+               <span class="bp">self</span> <span class="o">*</span> <span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">means</span><span class="p">[</span><span class="n">other</span><span class="p">](</span><span class="n">x</span><span class="p">))</span> <span class="o">+</span> \
+               <span class="n">GP</span><span class="p">(</span><span class="n">kernel</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">kernels</span><span class="p">[</span><span class="bp">self</span><span class="p">]</span> <span class="o">*</span>
+                         <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">kernels</span><span class="p">[</span><span class="n">other</span><span class="p">]</span> <span class="o">+</span>
+                         <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">kernels</span><span class="p">[</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">]</span> <span class="o">*</span>
+                         <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">kernels</span><span class="p">[</span><span class="n">other</span><span class="p">,</span> <span class="bp">self</span><span class="p">],</span>
+                  <span class="n">mean</span><span class="o">=-</span><span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">means</span><span class="p">[</span><span class="bp">self</span><span class="p">]</span> <span class="o">*</span>
+                       <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">means</span><span class="p">[</span><span class="n">other</span><span class="p">],</span>
+                  <span class="n">graph</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="p">)</span>
+
+    <span class="nd">@_dispatch</span><span class="p">([</span><span class="nb">object</span><span class="p">])</span>
+    <span class="k">def</span> <span class="nf">__or__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">args</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Shorthand for conditioning.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">condition</span><span class="p">(</span><span class="n">Observations</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">ref</span><span class="o">=</span><span class="bp">self</span><span class="p">))</span>
+
+    <span class="nd">@_dispatch</span><span class="p">(</span><span class="n">AbstractObservations</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">__or__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obs</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">condition</span><span class="p">(</span><span class="n">obs</span><span class="p">)</span>
+
+<div class="viewcode-block" id="GP.shift"><a class="viewcode-back" href="../../source/stheno.graph.html#stheno.graph.GP.shift">[docs]</a>    <span class="k">def</span> <span class="nf">shift</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">shift</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Shift the GP. See :meth:`.graph.Graph.shift`.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">shift</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">shift</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="GP.stretch"><a class="viewcode-back" href="../../source/stheno.graph.html#stheno.graph.GP.stretch">[docs]</a>    <span class="k">def</span> <span class="nf">stretch</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">stretch</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Stretch the GP. See :meth:`.graph.Graph.stretch`.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">stretch</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">stretch</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">__gt__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">stretch</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Shorthand for :meth:`.graph.GP.stretch`.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">stretch</span><span class="p">(</span><span class="n">stretch</span><span class="p">)</span>
+
+<div class="viewcode-block" id="GP.transform"><a class="viewcode-back" href="../../source/stheno.graph.html#stheno.graph.GP.transform">[docs]</a>    <span class="k">def</span> <span class="nf">transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">f</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Input transform the GP. See :meth:`.graph.Graph.transform`.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="GP.select"><a class="viewcode-back" href="../../source/stheno.graph.html#stheno.graph.GP.select">[docs]</a>    <span class="k">def</span> <span class="nf">select</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">dims</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Select dimensions from the input. See :meth:`.graph.Graph.select`.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">select</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">dims</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">__getitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">dims</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Shorthand for :meth:`.graph.GP.select`.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">select</span><span class="p">(</span><span class="o">*</span><span class="n">dims</span><span class="p">)</span>
+
+<div class="viewcode-block" id="GP.diff"><a class="viewcode-back" href="../../source/stheno.graph.html#stheno.graph.GP.diff">[docs]</a>    <span class="k">def</span> <span class="nf">diff</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Differentiate the GP. See :meth:`.graph.Graph.diff`.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dim</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="GP.diff_approx"><a class="viewcode-back" href="../../source/stheno.graph.html#stheno.graph.GP.diff_approx">[docs]</a>    <span class="k">def</span> <span class="nf">diff_approx</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">deriv</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="mi">6</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Approximate the derivative of the GP by constructing a finite</span>
+<span class="sd">        difference approximation.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            deriv (int): Order of the derivative.</span>
+<span class="sd">            order (int): Order of the estimate.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Approximation of the derivative of the GP.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Use the FDM library to figure out the coefficients.</span>
+        <span class="n">fdm</span> <span class="o">=</span> <span class="n">central_fdm</span><span class="p">(</span><span class="n">order</span><span class="p">,</span> <span class="n">deriv</span><span class="p">,</span> <span class="n">adapt</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">factor</span><span class="o">=</span><span class="mf">1e8</span><span class="p">)</span>
+        <span class="n">fdm</span><span class="o">.</span><span class="n">estimate</span><span class="p">()</span>  <span class="c1"># Estimate step size.</span>
+
+        <span class="c1"># Construct finite difference.</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">g</span><span class="p">,</span> <span class="n">c</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">fdm</span><span class="o">.</span><span class="n">grid</span><span class="p">,</span> <span class="n">fdm</span><span class="o">.</span><span class="n">coefs</span><span class="p">):</span>
+            <span class="n">df</span> <span class="o">+=</span> <span class="n">c</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">shift</span><span class="p">(</span><span class="o">-</span><span class="n">g</span> <span class="o">*</span> <span class="n">fdm</span><span class="o">.</span><span class="n">step</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">df</span> <span class="o">/</span> <span class="n">fdm</span><span class="o">.</span><span class="n">step</span> <span class="o">**</span> <span class="n">deriv</span></div>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">stationary</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Stationarity of the GP.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernel</span><span class="o">.</span><span class="n">stationary</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">var</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Variance of the GP.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernel</span><span class="o">.</span><span class="n">var</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">length_scale</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Length scale of the GP.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernel</span><span class="o">.</span><span class="n">length_scale</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">period</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Period of the GP.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernel</span><span class="o">.</span><span class="n">period</span>
+
+    <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">display</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">display</span><span class="p">()</span>
+
+<div class="viewcode-block" id="GP.display"><a class="viewcode-back" href="../../source/stheno.graph.html#stheno.graph.GP.display">[docs]</a>    <span class="k">def</span> <span class="nf">display</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">formatter</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Display the GP.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            formatter (function, optional): Function to format values.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            str: GP as a string.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="s1">&#39;GP(</span><span class="si">{}</span><span class="s1">, </span><span class="si">{}</span><span class="s1">)&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">kernel</span><span class="o">.</span><span class="n">display</span><span class="p">(</span><span class="n">formatter</span><span class="p">),</span>
+                                   <span class="bp">self</span><span class="o">.</span><span class="n">mean</span><span class="o">.</span><span class="n">display</span><span class="p">(</span><span class="n">formatter</span><span class="p">))</span></div></div>
+
+
+<span class="n">PromisedGP</span><span class="o">.</span><span class="n">deliver</span><span class="p">(</span><span class="n">GP</span><span class="p">)</span>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2017, Wessel Bruinsma
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

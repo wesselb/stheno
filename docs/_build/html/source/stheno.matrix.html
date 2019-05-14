@@ -1,0 +1,422 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>stheno.matrix module &mdash; stheno 0.1.0 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../_static/jquery.js"></script>
+        <script type="text/javascript" src="../_static/underscore.js"></script>
+        <script type="text/javascript" src="../_static/doctools.js"></script>
+        <script type="text/javascript" src="../_static/language_data.js"></script>
+        <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="stheno.mean module" href="stheno.mean.html" />
+    <link rel="prev" title="stheno.lazy module" href="stheno.lazy.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> stheno
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.1
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../readme.html">Stheno</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../api.html">Application Programming Interface</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="stheno.eis.html">stheno.eis module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stheno.field.html">stheno.field module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stheno.function_field.html">stheno.function_field module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stheno.graph.html">stheno.graph module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stheno.input.html">stheno.input module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stheno.kernel.html">stheno.kernel module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stheno.lazy.html">stheno.lazy module</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">stheno.matrix module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stheno.mean.html">stheno.mean module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stheno.mokernel.html">stheno.mokernel module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stheno.momean.html">stheno.momean module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stheno.numpy.html">stheno.numpy module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stheno.random.html">stheno.random module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stheno.tf.html">stheno.tf module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stheno.torch.html">stheno.torch module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stheno.util.html">stheno.util module</a></li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">stheno</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../api.html">Application Programming Interface</a> &raquo;</li>
+        
+      <li>stheno.matrix module</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../_sources/source/stheno.matrix.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="module-stheno.matrix">
+<span id="stheno-matrix-module"></span><h1>stheno.matrix module<a class="headerlink" href="#module-stheno.matrix" title="Permalink to this headline">¶</a></h1>
+<dl class="attribute">
+<dt id="stheno.matrix.matrix">
+<code class="descclassname">stheno.matrix.</code><code class="descname">matrix</code><a class="reference internal" href="../_modules/stheno/matrix.html#matrix"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.matrix.matrix" title="Permalink to this definition">¶</a></dt>
+<dd><p>Matrix as <cite>Dense</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>a</strong> (<em>tensor</em>) – Matrix to type.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Matrix as <cite>Dense</cite>.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#stheno.matrix.Dense" title="stheno.matrix.Dense"><code class="xref py py-class docutils literal notranslate"><span class="pre">matrix.Dense</span></code></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="class">
+<dt id="stheno.matrix.Dense">
+<em class="property">class </em><code class="descclassname">stheno.matrix.</code><code class="descname">Dense</code><span class="sig-paren">(</span><em>mat</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/stheno/matrix.html#Dense"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.matrix.Dense" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.field.Element</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">plum.resolvable.Referentiable</span></code></p>
+<p>Symmetric positive-definite matrix.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>mat</strong> (<em>tensor</em>) – Symmetric positive-definite matrix.</p>
+</dd>
+</dl>
+<dl class="attribute">
+<dt id="stheno.matrix.Dense.T">
+<code class="descname">T</code><a class="headerlink" href="#stheno.matrix.Dense.T" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="stheno.matrix.LowRank">
+<em class="property">class </em><code class="descclassname">stheno.matrix.</code><code class="descname">LowRank</code><span class="sig-paren">(</span><em>left</em>, <em>right=None</em>, <em>middle=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/stheno/matrix.html#LowRank"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.matrix.LowRank" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#stheno.matrix.Dense" title="stheno.matrix.Dense"><code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.matrix.Dense</span></code></a>, <code class="xref py py-class docutils literal notranslate"><span class="pre">plum.resolvable.Referentiable</span></code></p>
+<p>Low-rank symmetric positive-definite matrix.</p>
+<p>The low-rank matrix is constructed via <cite>left diag(scales) transpose(right)</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>left</strong> (<em>tensor</em>) – Left part of the matrix.</p></li>
+<li><p><strong>right</strong> (<em>tensor</em><em>, </em><em>optional</em>) – Right part of the matrix. Defaults to <cite>left</cite>.</p></li>
+<li><p><strong>scales</strong> (<em>tensor</em><em>, </em><em>optional</em>) – Scaling of the outer products. Defaults to
+ones.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="class">
+<dt id="stheno.matrix.Diagonal">
+<em class="property">class </em><code class="descclassname">stheno.matrix.</code><code class="descname">Diagonal</code><span class="sig-paren">(</span><em>diag</em>, <em>rows=None</em>, <em>cols=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/stheno/matrix.html#Diagonal"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.matrix.Diagonal" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#stheno.matrix.Dense" title="stheno.matrix.Dense"><code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.matrix.Dense</span></code></a>, <code class="xref py py-class docutils literal notranslate"><span class="pre">plum.resolvable.Referentiable</span></code></p>
+<p>Diagonal symmetric positive-definite matrix.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>diag</strong> (<em>vector</em>) – Diagonal of the matrix.</p></li>
+<li><p><strong>rows</strong> (<em>scalar</em><em>, </em><em>optional</em>) – Number of rows. Defaults to the length of the
+diagonal.</p></li>
+<li><p><strong>cols</strong> (<em>scalar</em><em>, </em><em>optional</em>) – Number of columns. Defaults to the number of
+rows.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="class">
+<dt id="stheno.matrix.UniformlyDiagonal">
+<em class="property">class </em><code class="descclassname">stheno.matrix.</code><code class="descname">UniformlyDiagonal</code><span class="sig-paren">(</span><em>diag_scale</em>, <em>n</em>, <em>rows=None</em>, <em>cols=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/stheno/matrix.html#UniformlyDiagonal"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.matrix.UniformlyDiagonal" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#stheno.matrix.Diagonal" title="stheno.matrix.Diagonal"><code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.matrix.Diagonal</span></code></a>, <code class="xref py py-class docutils literal notranslate"><span class="pre">plum.resolvable.Referentiable</span></code></p>
+<p>Uniformly diagonal symmetric positive-definite matrix.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>diag_scale</strong> (<em>scalar</em>) – Scale of the diagonal of the matrix.</p></li>
+<li><p><strong>n</strong> (<em>int</em>) – Length of the diagonal.</p></li>
+<li><p><strong>rows</strong> (<em>scalar</em><em>, </em><em>optional</em>) – Number of rows. Defaults to the length of the
+diagonal.</p></li>
+<li><p><strong>cols</strong> (<em>scalar</em><em>, </em><em>optional</em>) – Number of columns. Defaults to the number of
+rows.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="classmethod">
+<dt id="stheno.matrix.UniformlyDiagonal.from_">
+<em class="property">classmethod </em><code class="descname">from_</code><span class="sig-paren">(</span><em>diag_scale</em>, <em>ref</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/stheno/matrix.html#UniformlyDiagonal.from_"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.matrix.UniformlyDiagonal.from_" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="stheno.matrix.One">
+<em class="property">class </em><code class="descclassname">stheno.matrix.</code><code class="descname">One</code><span class="sig-paren">(</span><em>dtype</em>, <em>rows</em>, <em>cols=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/stheno/matrix.html#One"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.matrix.One" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#stheno.matrix.Constant" title="stheno.matrix.Constant"><code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.matrix.Constant</span></code></a>, <code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.field.OneElement</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">plum.resolvable.Referentiable</span></code></p>
+<p>Dense matrix full of ones.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dtype</strong> (<em>dtype</em>) – Data type.</p></li>
+<li><p><strong>rows</strong> (<em>scalar</em>) – Number of rows.</p></li>
+<li><p><strong>cols</strong> (<em>scalar</em><em>, </em><em>optional</em>) – Number of columns. Defaults to the number of
+rows.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="classmethod">
+<dt id="stheno.matrix.One.from_">
+<em class="property">classmethod </em><code class="descname">from_</code><span class="sig-paren">(</span><em>ref</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/stheno/matrix.html#One.from_"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.matrix.One.from_" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="stheno.matrix.Zero">
+<em class="property">class </em><code class="descclassname">stheno.matrix.</code><code class="descname">Zero</code><a class="reference internal" href="../_modules/stheno/matrix.html#Zero"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.matrix.Zero" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#stheno.matrix.Constant" title="stheno.matrix.Constant"><code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.matrix.Constant</span></code></a>, <code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.field.ZeroElement</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">plum.resolvable.Referentiable</span></code></p>
+<p>Dense matrix full of zeros.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dtype</strong> (<em>dtype</em>) – Data type.</p></li>
+<li><p><strong>rows</strong> (<em>scalar</em>) – Number of rows.</p></li>
+<li><p><strong>cols</strong> (<em>scalar</em><em>, </em><em>optional</em>) – Number of columns. Defaults to the number of
+rows.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="classmethod">
+<dt id="stheno.matrix.Zero.from_">
+<em class="property">classmethod </em><code class="descname">from_</code><span class="sig-paren">(</span><em>ref</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/stheno/matrix.html#Zero.from_"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.matrix.Zero.from_" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="attribute">
+<dt id="stheno.matrix.dense">
+<code class="descclassname">stheno.matrix.</code><code class="descname">dense</code><a class="reference internal" href="../_modules/stheno/matrix.html#dense"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.matrix.dense" title="Permalink to this definition">¶</a></dt>
+<dd><p><cite>Dense</cite> as matrix.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>a</strong> (<a class="reference internal" href="#stheno.matrix.Dense" title="stheno.matrix.Dense"><code class="xref py py-class docutils literal notranslate"><span class="pre">matrix.Dense</span></code></a>) – <cite>Dense</cite> to unwrap.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><cite>Dense</cite> as matrix.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>tensor</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="class">
+<dt id="stheno.matrix.Woodbury">
+<em class="property">class </em><code class="descclassname">stheno.matrix.</code><code class="descname">Woodbury</code><span class="sig-paren">(</span><em>diag</em>, <em>lr</em>, <em>lr_pd=True</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/stheno/matrix.html#Woodbury"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.matrix.Woodbury" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#stheno.matrix.Dense" title="stheno.matrix.Dense"><code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.matrix.Dense</span></code></a>, <code class="xref py py-class docutils literal notranslate"><span class="pre">plum.resolvable.Referentiable</span></code></p>
+<p>Sum of a low-rank and diagonal symmetric positive-definite matrix.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>diag</strong> (<a class="reference internal" href="#stheno.matrix.Diagonal" title="stheno.matrix.Diagonal"><code class="xref py py-class docutils literal notranslate"><span class="pre">matrix.Diagonal</span></code></a>) – Diagonal part.</p></li>
+<li><p><strong>lr</strong> (<a class="reference internal" href="#stheno.matrix.LowRank" title="stheno.matrix.LowRank"><code class="xref py py-class docutils literal notranslate"><span class="pre">matrix.LowRank</span></code></a>) – Low-rank part.</p></li>
+<li><p><strong>lr_pd</strong> (<em>bool</em><em>, </em><em>optional</em>) – Specify that the low-rank part is PD. Defaults
+to <cite>True</cite>.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="class">
+<dt id="stheno.matrix.Constant">
+<em class="property">class </em><code class="descclassname">stheno.matrix.</code><code class="descname">Constant</code><span class="sig-paren">(</span><em>constant</em>, <em>rows</em>, <em>cols=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/stheno/matrix.html#Constant"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.matrix.Constant" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#stheno.matrix.LowRank" title="stheno.matrix.LowRank"><code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.matrix.LowRank</span></code></a>, <code class="xref py py-class docutils literal notranslate"><span class="pre">plum.resolvable.Referentiable</span></code></p>
+<p>Constant symmetric positive-definite matrix.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>constant</strong> (<em>scalar</em>) – Constant of the matrix.</p></li>
+<li><p><strong>rows</strong> (<em>scalar</em>) – Number of rows.</p></li>
+<li><p><strong>cols</strong> (<em>scalar</em><em>, </em><em>optional</em>) – Number of columns. Defaults to the number of
+rows.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="classmethod">
+<dt id="stheno.matrix.Constant.from_">
+<em class="property">classmethod </em><code class="descname">from_</code><span class="sig-paren">(</span><em>constant</em>, <em>ref</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/stheno/matrix.html#Constant.from_"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.matrix.Constant.from_" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="stheno.mean.html" class="btn btn-neutral float-right" title="stheno.mean module" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="stheno.lazy.html" class="btn btn-neutral float-left" title="stheno.lazy module" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2017, Wessel Bruinsma
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>
