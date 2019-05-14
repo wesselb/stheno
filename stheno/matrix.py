@@ -836,7 +836,7 @@ def sample(a, num=1):
     Returns:
         tensor: Samples as rank 2 column vectors.
     """
-    # Convert integer data types to floats.
+    # # Convert integer data types to floats.
     dtype = float if B.issubdtype(B.dtype(a), np.integer) else B.dtype(a)
 
     # Perform sampling operation.

@@ -9,6 +9,7 @@ from .util import uprank
 from .input import Input, At
 from .matrix import matrix, Dispatcher, UniformlyDiagonal, Diagonal, dense, \
     Dense
+from .mean import ZeroMean
 
 __all__ = ['Normal', 'Normal1D']
 
@@ -69,11 +70,15 @@ class Normal(RandomVector, At, Referentiable):
         # Ensure that the variance is stored as a structured matrix.
         self._var = matrix(var)
 
-        # Resolve mean.
+        # Resolve mean and check whether it is zero.
         if mean is None:
-            self._mean = B.zeros(self.dtype, self.dim, 1)
+            # Set to an actual zero that indicates that it is all zeros.
+            self._mean = 0
+            self._zero_mean = True
         else:
-            self._mean = dense(mean)  # Not useful to retain structure here.
+            # Not useful to retain structure here.
+            self._mean = dense(mean)
+            self._zero_mean = False
 
         # Set `p` and `x` to `None`.
         self.p = None
@@ -90,6 +95,9 @@ class Normal(RandomVector, At, Referentiable):
         # cache.
         self.p = p
         self.x = x
+
+        # Check whether the mean is zero.
+        self._zero_mean = isinstance(self.p.mean, ZeroMean)
 
     def get(self):
         """Get the point at which the the process was evaluated to construct
@@ -124,7 +132,10 @@ class Normal(RandomVector, At, Referentiable):
     @property
     def mean(self):
         """Mean."""
-        if self._mean is None:
+        if self._mean is 0:
+            # Mean is all zeros.
+            self._mean = B.zeros(self.dtype, self.dim, 1)
+        elif self._mean is None:
             # Mean must be acquired from the saved process. It is not useful
             # to retain structure.
             self._mean = dense(self.p.mean(self.x))
@@ -238,7 +249,10 @@ class Normal(RandomVector, At, Referentiable):
             var += UniformlyDiagonal.from_(noise, self.var)
 
         # Perform sampling operation.
-        return B.sample(var, num) + self.mean
+        sample = B.sample(var, num)
+        if not self._zero_mean:
+            sample = sample + self.mean
+        return sample
 
     @_dispatch(object)
     def __add__(self, other):

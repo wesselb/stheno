@@ -7,6 +7,7 @@ from lab import B
 from scipy.stats import multivariate_normal
 from stheno.matrix import UniformlyDiagonal, Diagonal, dense
 from stheno.random import Normal, Normal1D, RandomVector
+from stheno.graph import GP
 
 # noinspection PyUnresolvedReferences
 from . import eq, neq, lt, le, ge, gt, raises, ok, allclose, assert_allclose
@@ -110,6 +111,15 @@ def test_normal_sampling():
     # Test `__str__` and `__repr__`.
     yield eq, str(dist), RandomVector.__str__(dist)
     yield eq, repr(dist), RandomVector.__repr__(dist)
+
+    # Test zero mean determination.
+    yield ok, Normal(np.eye(3))._zero_mean
+    yield ok, not Normal(np.eye(3), np.random.randn(3, 1))._zero_mean
+
+    x = np.random.randn(3)
+    yield ok, GP(1)(x)._zero_mean
+    yield ok, not GP(1, 1)(x)._zero_mean
+    yield ok, GP(1, 0)(x)._zero_mean
 
 
 def test_normal_1d():
