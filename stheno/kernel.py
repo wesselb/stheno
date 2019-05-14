@@ -624,7 +624,7 @@ class EQ(Kernel, Referentiable):
         return self._compute(B.ew_dists2(x, y))
 
     def _compute(self, dists2):
-        return B.exp(B.multiply(B.cast(-.5, B.dtype(dists2)), dists2))
+        return B.exp(-0.5 * dists2)
 
     @property
     def _stationary(self):
