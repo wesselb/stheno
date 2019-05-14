@@ -38,7 +38,7 @@ class MultiOutputMean(Mean, Referentiable):
 
     @_dispatch(MultiInput)
     def __call__(self, x):
-        return B.concat([self(xi) for xi in x.get()], axis=0)
+        return B.concat(*[self(xi) for xi in x.get()], axis=0)
 
     def __str__(self):
         ks = [str(self.means[p]) for p in self.ps]

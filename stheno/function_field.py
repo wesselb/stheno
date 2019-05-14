@@ -60,7 +60,7 @@ def to_tensor(x):
 
 @_dispatch({tuple, list})
 def to_tensor(x):
-    return B.stack(x, axis=0)
+    return B.stack(*x, axis=0)
 
 
 class Function(Element, Referentiable):

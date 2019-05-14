@@ -95,8 +95,8 @@ class MultiOutputKernel(Kernel, Referentiable):
         if len(x.get()) != len(y.get()):
             raise ValueError('MultiOutputKernel.elwise must be called with '
                              'similarly sized MultiInputs.')
-        return B.concat([self.elwise(xi, yi)
-                         for xi, yi in zip(x.get(), y.get())], axis=0)
+        return B.concat(*[self.elwise(xi, yi)
+                          for xi, yi in zip(x.get(), y.get())], axis=0)
 
     def __str__(self):
         ks = [str(self.kernels[p]) for p in self.ps]

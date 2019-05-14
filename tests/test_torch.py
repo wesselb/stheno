@@ -7,7 +7,7 @@ from stheno.field import Element
 from stheno.torch import EQ
 
 import torch
-import lab as B
+import lab.torch as B
 
 # noinspection PyUnresolvedReferences
 from . import eq, neq, ok, raises, benchmark, le, assert_instance

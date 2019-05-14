@@ -5,7 +5,7 @@ from __future__ import absolute_import, division, print_function
 from numbers import Number
 
 import numpy as np
-from lab import B
+from lab.tensorflow import B
 from numpy.testing import assert_allclose
 from plum import Dispatcher
 import tensorflow as tf

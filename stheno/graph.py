@@ -76,7 +76,7 @@ class AbstractObservations(Referentiable):
         # Condition on the newly created vector-valued GP.
         xs, ys = zip(*pairs)
         self.x = p(MultiInput(*xs))
-        self.y = B.concat([uprank(y) for y in ys], axis=0)
+        self.y = B.concat(*[uprank(y) for y in ys], axis=0)
 
     @_dispatch({tuple, list})
     def __ror__(self, ps):
@@ -436,7 +436,7 @@ class Graph(Referentiable):
     @_dispatch(PromisedGP, FunctionType)
     def mul(self, p, f):
         def ones(x):
-            return B.ones([B.shape(x)[0], 1], B.dtype(x))
+            return B.ones(B.dtype(x), B.shape(x)[0], 1)
 
         return self._update(f * self.means[p],
                             lambda: f * self.kernels[p],
@@ -598,7 +598,7 @@ class Graph(Referentiable):
                              'compute the log-pdf for.')
 
         # Uprank all outputs and concatenate.
-        y = B.concat([uprank(y) for y in ys], axis=0)
+        y = B.concat(*[uprank(y) for y in ys], axis=0)
 
         # Return composite log-pdf.
         return GP(MOK(*self.ps),

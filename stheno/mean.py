@@ -133,7 +133,7 @@ class OneMean(Mean, OneFunction, Referentiable):
     @_dispatch(B.Numeric)
     @uprank
     def __call__(self, x):
-        return B.ones([B.shape_int(x)[0], 1], B.dtype(x))
+        return B.ones(B.dtype(x), B.shape_int(x)[0], 1)
 
 
 class ZeroMean(Mean, ZeroFunction, Referentiable):
@@ -144,7 +144,7 @@ class ZeroMean(Mean, ZeroFunction, Referentiable):
     @_dispatch(B.Numeric)
     @uprank
     def __call__(self, x):
-        return B.zeros([B.shape_int(x)[0], 1], B.dtype(x))
+        return B.zeros(B.dtype(x), B.shape_int(x)[0], 1)
 
 
 class TensorProductMean(Mean, TensorProductFunction, Referentiable):

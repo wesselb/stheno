@@ -4,7 +4,7 @@ from __future__ import absolute_import, division, print_function
 
 import numpy as np
 import tensorflow as tf
-from lab import B
+from lab.tensorflow import B
 from stheno.input import Observed, Unique
 from stheno.kernel import EQ, RQ, Matern12, Matern32, Matern52, Delta, Kernel, \
     Linear, OneKernel, ZeroKernel, PosteriorKernel, ShiftedKernel, \
@@ -737,22 +737,22 @@ def test_derivative():
     x2 = tf.constant(np.random.randn(5, 1))
 
     # Test derivative with respect to first input.
-    ref = s.run(B.ones((10, 5), tf.float64) * B.transpose(x2))
+    ref = s.run(B.ones(tf.float64, 10, 5) * B.transpose(x2))
     yield assert_allclose, s.run(dense(k.diff(0, None)(x1, x2))), ref
-    ref = s.run(B.ones((10, 10), tf.float64) * B.transpose(x1))
+    ref = s.run(B.ones(tf.float64, 10, 10) * B.transpose(x1))
     yield assert_allclose, s.run(dense(k.diff(0, None)(x1))), ref
 
     # Test derivative with respect to second input.
-    ref = s.run(B.ones((10, 5), tf.float64) * x1)
+    ref = s.run(B.ones(tf.float64, 10, 5) * x1)
     yield assert_allclose, s.run(dense(k.diff(None, 0)(x1, x2))), ref
-    ref = s.run(B.ones((10, 10), tf.float64) * x1)
+    ref = s.run(B.ones(tf.float64, 10, 10) * x1)
     yield assert_allclose, s.run(dense(k.diff(None, 0)(x1))), ref
 
     # Test derivative with respect to both inputs.
-    ref = s.run(B.ones((10, 5), tf.float64))
+    ref = s.run(B.ones(tf.float64, 10, 5))
     yield assert_allclose, s.run(dense(k.diff(0, 0)(x1, x2))), ref
     yield assert_allclose, s.run(dense(k.diff(0)(x1, x2))), ref
-    ref = s.run(B.ones((10, 10), tf.float64))
+    ref = s.run(B.ones(tf.float64, 10, 10))
     yield assert_allclose, s.run(dense(k.diff(0, 0)(x1))), ref
     yield assert_allclose, s.run(dense(k.diff(0)(x1))), ref
 

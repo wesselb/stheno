@@ -49,6 +49,6 @@ def uprank(f):
 
     @wraps(f)
     def wrapped_f(*args):
-        return f(*(uprank(x) for x in args))
+        return f(*[uprank(x) for x in args])
 
     return wrapped_f

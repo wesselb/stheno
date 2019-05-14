@@ -211,7 +211,7 @@ class OneKernel(Kernel, OneFunction, Referentiable):
     @_dispatch(B.Numeric, B.Numeric)
     @uprank
     def elwise(self, x, y):
-        return B.ones([B.shape_int(x)[0], 1], B.dtype(x))
+        return B.ones(B.dtype(x), B.shape_int(x)[0], 1)
 
     @property
     def _stationary(self):
@@ -247,7 +247,7 @@ class ZeroKernel(Kernel, ZeroFunction, Referentiable):
     @_dispatch(B.Numeric, B.Numeric)
     @uprank
     def elwise(self, x, y):
-        return B.zeros([B.shape_int(x)[0], 1], B.dtype(x))
+        return B.zeros(B.dtype(x), B.shape_int(x)[0], 1)
 
     @property
     def _stationary(self):
@@ -579,7 +579,7 @@ class PeriodicKernel(Kernel, WrappedFunction, Referentiable):
     def _compute(self, x, y):
         def feat_map(z):
             z = B.divide(B.multiply(B.multiply(z, 2), B.pi), self.period)
-            return B.concat((B.sin(z), B.cos(z)), axis=1)
+            return B.concat(B.sin(z), B.cos(z), axis=1)
 
         return feat_map(x), feat_map(y)
 
@@ -1117,12 +1117,10 @@ class DerivativeKernel(Kernel, DerivativeFunction, Referentiable):
 
         # Derivative with respect to both `x` and `y`.
         if i is not None and j is not None:
-            z = B.concat([x[:, i], y[:, j]], axis=0)
+            z = B.concat(x[:, i], y[:, j], axis=0)
             n = B.shape(x)[0]
-            K = dense(k(B.concat([x[:, :i], z[:n, None], x[:, i + 1:]],
-                                 axis=1),
-                        B.concat([y[:, :j], z[n:, None], y[:, j + 1:]],
-                                 axis=1)))
+            K = dense(k(B.concat(x[:, :i], z[:n, None], x[:, i + 1:], axis=1),
+                        B.concat(y[:, :j], z[n:, None], y[:, j + 1:], axis=1)))
             return Dense(tf.hessians(K, [z])[0][:n, n:])
 
         # Derivative with respect to `x`.
@@ -1131,12 +1129,12 @@ class DerivativeKernel(Kernel, DerivativeFunction, Referentiable):
             xis = [B.identity(xi) for _ in range(B.shape_int(y)[0])]
 
             def f(z):
-                return dense(k(B.concat([x[:, :i], z[0], x[:, i + 1:]],
-                                        axis=1), z[1]))
+                return dense(k(B.concat(x[:, :i], z[0], x[:, i + 1:], axis=1),
+                               z[1]))
 
-            res = tf.map_fn(f, (B.stack(xis, axis=0), y[:, None, :]),
+            res = tf.map_fn(f, (B.stack(*xis, axis=0), y[:, None, :]),
                             dtype=B.dtype(x))
-            return Dense(B.concat(tf.gradients(B.sum(res, axis=0), xis),
+            return Dense(B.concat(*tf.gradients(B.sum(res, axis=0), xis),
                                   axis=1))
 
         # Derivative with respect to `y`.
@@ -1146,12 +1144,12 @@ class DerivativeKernel(Kernel, DerivativeFunction, Referentiable):
 
             def f(z):
                 return dense(
-                    k(z[0], B.concat([y[:, :j], z[1], y[:, j + 1:]], axis=1))
+                    k(z[0], B.concat(y[:, :j], z[1], y[:, j + 1:], axis=1))
                 )
 
-            res = tf.map_fn(f, (x[:, None, :], B.stack(yjs, axis=0)),
+            res = tf.map_fn(f, (x[:, None, :], B.stack(*yjs, axis=0)),
                             dtype=B.dtype(x))
-            dKt = B.concat(tf.gradients(B.sum(res, axis=0), yjs), axis=1)
+            dKt = B.concat(*tf.gradients(B.sum(res, axis=0), yjs), axis=1)
             return Dense(B.transpose(dKt))
 
         else:
