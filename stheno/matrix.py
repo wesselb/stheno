@@ -110,7 +110,7 @@ class UniformlyDiagonal(Diagonal, Referentiable):
     _dispatch = Dispatcher(in_class=Self)
 
     def __init__(self, diag_scale, n, rows=None, cols=None):
-        diag = diag_scale * B.ones([n], B.dtype(diag_scale))
+        diag = diag_scale * B.ones(B.dtype(diag_scale), n)
         Diagonal.__init__(self, diag=diag, rows=rows, cols=cols)
 
     @classmethod
@@ -138,7 +138,7 @@ class LowRank(Dense, Referentiable):
         self.left = left
         self.right = left if right is None else right
         if middle is None:
-            self.middle = B.eye(B.shape_int(self.left)[1], B.dtype(self.left))
+            self.middle = B.eye(B.dtype(self.left), B.shape(self.left)[1])
         else:
             self.middle = middle
 
@@ -171,11 +171,11 @@ class Constant(LowRank, Referentiable):
         self.cols = rows if cols is None else cols
 
         # Construct and initialise the low-rank representation.
-        left = B.ones([self.rows, 1], B.dtype(self.constant))
+        left = B.ones(B.dtype(self.constant), self.rows, 1)
         if self.rows is self.cols:
             right = left
         else:
-            right = B.ones([self.cols, 1], B.dtype(self.constant))
+            right = B.ones(B.dtype(self.constant), self.cols, 1)
         middle = B.expand_dims(B.expand_dims(self.constant, axis=0), axis=0)
         LowRank.__init__(self, left=left, right=right, middle=middle)
 
@@ -263,7 +263,7 @@ class Woodbury(Dense, Referentiable):
 # Conveniently make identity matrices.
 
 @B.eye.extend(Dense)
-def eye(a): return B.eye(B.shape(a), B.dtype(a))
+def eye(a): return B.eye(B.dtype(a), *B.shape(a))
 
 
 # Conversion between matrices and dense matrices:
@@ -384,14 +384,14 @@ def block_matrix(*rows):
                     diagonal = False
 
         if diagonal:
-            return Diagonal(B.concat([B.diag(K) for K in diagonal_blocks],
+            return Diagonal(B.concat(*[B.diag(K) for K in diagonal_blocks],
                                      axis=0),
                             rows=grid_rows,
                             cols=grid_cols)
 
     # We could not preserve any structure. Simply concatenate them all
     # densely.
-    return Dense(B.concat2d([[dense(K) for K in row] for row in rows]))
+    return Dense(B.concat2d(*[[dense(K) for K in row] for row in rows]))
 
 
 B.block_matrix = block_matrix  # Record in LAB.
@@ -434,11 +434,13 @@ def sum(a, axis=None):
     if axis is None:
         return B.sum(B.diag(a))
     elif axis is 0:
-        return B.concat([B.diag(a), B.zeros([B.shape(a)[1] - B.diag_len(a)],
-                                            B.dtype(a))], axis=0)
+        return B.concat(B.diag(a),
+                        B.zeros(B.dtype(a), B.shape(a)[1] - B.diag_len(a)),
+                        axis=0)
     elif axis is 1:
-        return B.concat([B.diag(a), B.zeros([B.shape(a)[0] - B.diag_len(a)],
-                                            B.dtype(a))], axis=0)
+        return B.concat(B.diag(a),
+                        B.zeros(B.dtype(a), B.shape(a)[0] - B.diag_len(a)),
+                        axis=0)
     else:
         # Fall back to generic implementation.
         return B.sum.invoke(Dense)(a, axis=axis)
@@ -500,8 +502,7 @@ def diag(a):
     # Append zeros or remove elements as necessary.
     diag_len = B.diag_len(a)
     extra_zeros = B.maximum(diag_len - B.shape(a.diag)[0], 0)
-    return B.concat([a.diag[:diag_len],
-                     B.zeros([extra_zeros], B.dtype(a))], axis=0)
+    return B.concat(a.diag[:diag_len], B.zeros(B.dtype(a), extra_zeros), axis=0)
 
 
 @B.diag.extend(LowRank)
@@ -513,7 +514,7 @@ def diag(a):
 
 
 @B.diag.extend(Constant)
-def diag(a): return a.constant * B.ones([B.diag_len(a)], B.dtype(a))
+def diag(a): return a.constant * B.ones(B.dtype(a), B.diag_len(a))
 
 
 @B.diag.extend(Woodbury)
@@ -539,14 +540,14 @@ def diag(diag, rows, cols=None):
     # Pad extra columns if necessary.
     extra_cols = cols - diag_len
     if not (isinstance(extra_cols, Number) and extra_cols == 0):
-        zeros = B.zeros([diag_len, extra_cols], dtype)
-        res = B.concat([B.diag(diag), zeros], axis=1)
+        zeros = B.zeros(dtype, diag_len, extra_cols)
+        res = B.concat(B.diag(diag), zeros, axis=1)
 
     # Pad extra rows if necessary.
     extra_rows = rows - diag_len
     if not (isinstance(extra_rows, Number) and extra_rows == 0):
-        zeros = B.zeros([extra_rows, diag_len + extra_cols], dtype)
-        res = B.concat([res, zeros], axis=0)
+        zeros = B.zeros(dtype, extra_rows, diag_len + extra_cols)
+        res = B.concat(res, zeros, axis=0)
 
     return res
 
@@ -603,8 +604,8 @@ def matmul(a, b, tr_a=False, tr_b=False):
 
     # Compute extra zeros to be appended.
     extra_rows = a_rows - rows
-    extra_zeros = B.zeros([extra_rows, B.shape_int(b)[1]], B.dtype(b))
-    return B.concat([core, extra_zeros], axis=0)
+    extra_zeros = B.zeros(B.dtype(b), extra_rows, B.shape_int(b)[1])
+    return B.concat(core, extra_zeros, axis=0)
 
 
 @B.matmul.extend({B.Numeric, Dense}, Diagonal)
@@ -625,8 +626,8 @@ def matmul(a, b, tr_a=False, tr_b=False):
 
     # Compute extra zeros to be appended.
     extra_cols = b_cols - cols
-    extra_zeros = B.zeros([B.shape_int(a)[0], extra_cols], B.dtype(b))
-    return B.concat([core, extra_zeros], axis=1)
+    extra_zeros = B.zeros(B.dtype(b), B.shape_int(a)[0], extra_cols)
+    return B.concat(core, extra_zeros, axis=1)
 
 
 @B.matmul.extend(Diagonal, Diagonal)
@@ -840,7 +841,7 @@ def sample(a, num=1):
 
     # Perform sampling operation.
     chol = B.cholesky(matrix(a))
-    return B.matmul(chol, B.randn([B.shape(chol)[1], num], dtype))
+    return B.matmul(chol, B.randn(dtype, B.shape(chol)[1], num))
 
 
 B.sample = sample  # Record in LAB.
@@ -1117,17 +1118,17 @@ def mul(a, b):
     bm = [B.unstack(x, axis=0) for x in B.unstack(b.middle, axis=0)]
 
     # Construct all parts of the product.
-    left = B.stack([ali * blk
-                    for ali in al
-                    for blk in bl], axis=1)
-    right = B.stack([arj * brl
-                     for arj in ar
-                     for brl in br], axis=1)
-    middle = B.stack([B.stack([amij * bmkl
-                               for amij in ami
-                               for bmkl in bmk], axis=0)
-                      for ami in am
-                      for bmk in bm], axis=0)
+    left = B.stack(*[ali * blk
+                     for ali in al
+                     for blk in bl], axis=1)
+    right = B.stack(*[arj * brl
+                      for arj in ar
+                      for brl in br], axis=1)
+    middle = B.stack(*[B.stack(*[amij * bmkl
+                                 for amij in ami
+                                 for bmkl in bmk], axis=0)
+                       for ami in am
+                       for bmk in bm], axis=0)
 
     # And assemble the result.
     return LowRank(left=left, right=right, middle=middle)
@@ -1157,12 +1158,10 @@ def add(a, b): return Diagonal(B.diag(a) + B.diag(b), *B.shape(a))
 @add.extend(LowRank, LowRank)
 def add(a, b):
     shape_a, shape_b, dtype = B.shape(a.middle), B.shape(b.middle), B.dtype(a)
-    middle = B.concat2d(
-        [[a.middle, B.zeros([shape_a[0], shape_b[1]], dtype)],
-         [B.zeros([shape_b[0], shape_a[1]], dtype), b.middle]]
-    )
-    return LowRank(left=B.concat([a.left, b.left], axis=1),
-                   right=B.concat([a.right, b.right], axis=1),
+    middle = B.concat2d([a.middle, B.zeros(dtype, shape_a[0], shape_b[1])],
+                        [B.zeros(dtype, shape_b[0], shape_a[1]), b.middle])
+    return LowRank(left=B.concat(a.left, b.left, axis=1),
+                   right=B.concat(a.right, b.right, axis=1),
                    middle=middle)
 
 

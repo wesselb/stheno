@@ -151,7 +151,7 @@ def test_block_matrix():
     # Check correctness.
     rows = [[np.random.randn(4, 3), np.random.randn(4, 5)],
             [np.random.randn(6, 3), np.random.randn(6, 5)]]
-    yield assert_allclose, B.block_matrix(*rows), B.concat2d(rows)
+    yield assert_allclose, B.block_matrix(*rows), B.concat2d(*rows)
 
     # Check that grid is checked correctly.
     yield eq, type(B.block_matrix([Zero(dt, 3, 7), Zero(dt, 3, 4)],
@@ -411,7 +411,7 @@ def test_lr_diff():
     b = np.random.randn(2, 2)
     lr2 = LowRank(left=a, right=np.random.randn(3, 2), middle=b.dot(b.T))
 
-    yield assert_allclose, B.lr_diff(lr1, lr1), B.zeros((3, 3))
+    yield assert_allclose, B.lr_diff(lr1, lr1), B.zeros(3, 3)
     yield assert_allclose, B.lr_diff(lr1 + lr2, lr1), lr2
     yield assert_allclose, B.lr_diff(lr1 + lr2, lr2), lr1
     yield assert_allclose, B.lr_diff(lr1 + lr1 + lr2, lr1), lr1 + lr2
@@ -420,7 +420,7 @@ def test_lr_diff():
     yield assert_allclose, B.lr_diff(lr1 + lr1 + lr2, lr1 + lr2), lr1
     yield assert_allclose, \
           B.lr_diff(lr1 + lr1 + lr2, lr1 + lr1 + lr2), \
-          B.zeros((3, 3))
+          B.zeros(3, 3)
 
     # Second, test positive definiteness.
     lr1 = LowRank(left=lr1.left, middle=lr1.middle)
