@@ -2,7 +2,10 @@ language: python
 python:
   - 2.7
   - 3.6
+before_install:
+  - sudo apt-get install gfortran
 install:
+  - pip install --upgrade pip cython
   - pip install --no-cache-dir -U -r requirements.txt | cat
 script:
   - nosetests tests --with-coverage --cover-package=stheno
