@@ -59,7 +59,8 @@ Moar?! Then read on!
 
 The package is tested for Python 2.7 and Python 3.6, which are the versions 
 recommended to use.
-To install the package, use the following sequence of commands:
+To install the package, please ensure that `gcc` and `gfortran` are 
+available, and then run the following commands:
 
 ```bash
 git clone https://github.com/wesselb/stheno
