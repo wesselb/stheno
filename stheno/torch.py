@@ -4,6 +4,8 @@ from __future__ import absolute_import  # pragma: no cover
 
 import logging
 
+# noinspection PyUnresolvedReferences
+import lab.torch
 from plum import Dispatcher
 from torch import Tensor
 
