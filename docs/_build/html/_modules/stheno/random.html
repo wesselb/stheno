@@ -160,6 +160,7 @@
 <span class="kn">from</span> <span class="nn">.input</span> <span class="k">import</span> <span class="n">Input</span><span class="p">,</span> <span class="n">At</span>
 <span class="kn">from</span> <span class="nn">.matrix</span> <span class="k">import</span> <span class="n">matrix</span><span class="p">,</span> <span class="n">Dispatcher</span><span class="p">,</span> <span class="n">UniformlyDiagonal</span><span class="p">,</span> <span class="n">Diagonal</span><span class="p">,</span> <span class="n">dense</span><span class="p">,</span> \
     <span class="n">Dense</span>
+<span class="kn">from</span> <span class="nn">.mean</span> <span class="k">import</span> <span class="n">ZeroMean</span>
 
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;Normal&#39;</span><span class="p">,</span> <span class="s1">&#39;Normal1D&#39;</span><span class="p">]</span>
 
@@ -220,11 +221,15 @@
         <span class="c1"># Ensure that the variance is stored as a structured matrix.</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_var</span> <span class="o">=</span> <span class="n">matrix</span><span class="p">(</span><span class="n">var</span><span class="p">)</span>
 
-        <span class="c1"># Resolve mean.</span>
+        <span class="c1"># Resolve mean and check whether it is zero.</span>
         <span class="k">if</span> <span class="n">mean</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_mean</span> <span class="o">=</span> <span class="n">B</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="c1"># Set to an actual zero that indicates that it is all zeros.</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_mean</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_zero_mean</span> <span class="o">=</span> <span class="kc">True</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_mean</span> <span class="o">=</span> <span class="n">dense</span><span class="p">(</span><span class="n">mean</span><span class="p">)</span>  <span class="c1"># Not useful to retain structure here.</span>
+            <span class="c1"># Not useful to retain structure here.</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_mean</span> <span class="o">=</span> <span class="n">dense</span><span class="p">(</span><span class="n">mean</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_zero_mean</span> <span class="o">=</span> <span class="kc">False</span>
 
         <span class="c1"># Set `p` and `x` to `None`.</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">p</span> <span class="o">=</span> <span class="kc">None</span>
@@ -241,6 +246,9 @@
         <span class="c1"># cache.</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">p</span> <span class="o">=</span> <span class="n">p</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">x</span> <span class="o">=</span> <span class="n">x</span>
+
+        <span class="c1"># Check whether the mean is zero.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_zero_mean</span> <span class="o">=</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="o">.</span><span class="n">mean</span><span class="p">,</span> <span class="n">ZeroMean</span><span class="p">)</span>
 
 <div class="viewcode-block" id="Normal.get"><a class="viewcode-back" href="../../source/stheno.random.html#stheno.random.Normal.get">[docs]</a>    <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Get the point at which the the process was evaluated to construct</span>
@@ -275,7 +283,10 @@
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">mean</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Mean.&quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mean</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mean</span> <span class="ow">is</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="c1"># Mean is all zeros.</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_mean</span> <span class="o">=</span> <span class="n">B</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mean</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="c1"># Mean must be acquired from the saved process. It is not useful</span>
             <span class="c1"># to retain structure.</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_mean</span> <span class="o">=</span> <span class="n">dense</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">))</span>
@@ -322,8 +333,8 @@
 <span class="sd">                then the list is flattened to a scalar.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">logpdfs</span> <span class="o">=</span> <span class="o">-</span><span class="p">(</span><span class="n">B</span><span class="o">.</span><span class="n">logdet</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">var</span><span class="p">)</span> <span class="o">+</span>
-                    <span class="n">B</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span> <span class="o">*</span>
-                    <span class="n">B</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="n">B</span><span class="o">.</span><span class="n">log_2_pi</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span> <span class="o">+</span>
+                    <span class="n">B</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="p">)</span> <span class="o">*</span>
+                    <span class="n">B</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">B</span><span class="o">.</span><span class="n">log_2_pi</span><span class="p">)</span> <span class="o">+</span>
                     <span class="n">B</span><span class="o">.</span><span class="n">qf_diag</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">var</span><span class="p">,</span> <span class="n">uprank</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean</span><span class="p">))</span> <span class="o">/</span> <span class="mi">2</span>
         <span class="k">return</span> <span class="n">logpdfs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="n">B</span><span class="o">.</span><span class="n">shape_int</span><span class="p">(</span><span class="n">logpdfs</span><span class="p">)</span> <span class="o">==</span> <span class="p">(</span><span class="mi">1</span><span class="p">,)</span> <span class="k">else</span> <span class="n">logpdfs</span></div>
 
@@ -334,8 +345,8 @@
 <span class="sd">            scalar: The entropy.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="p">(</span><span class="n">B</span><span class="o">.</span><span class="n">logdet</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">var</span><span class="p">)</span> <span class="o">+</span>
-                <span class="n">B</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span> <span class="o">*</span>
-                <span class="n">B</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="n">B</span><span class="o">.</span><span class="n">log_2_pi</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">))</span> <span class="o">/</span> <span class="mi">2</span></div>
+                <span class="n">B</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="p">)</span> <span class="o">*</span>
+                <span class="n">B</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">B</span><span class="o">.</span><span class="n">log_2_pi</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span> <span class="o">/</span> <span class="mi">2</span></div>
 
 <div class="viewcode-block" id="Normal.kl"><a class="viewcode-back" href="../../source/stheno.random.html#stheno.random.Normal.kl">[docs]</a>    <span class="nd">@_dispatch</span><span class="p">(</span><span class="n">Self</span><span class="p">)</span>
     <span class="k">def</span> <span class="nf">kl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
@@ -350,7 +361,7 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="p">(</span><span class="n">B</span><span class="o">.</span><span class="n">ratio</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">var</span><span class="p">,</span> <span class="n">other</span><span class="o">.</span><span class="n">var</span><span class="p">)</span> <span class="o">+</span>
                 <span class="n">B</span><span class="o">.</span><span class="n">qf_diag</span><span class="p">(</span><span class="n">other</span><span class="o">.</span><span class="n">var</span><span class="p">,</span> <span class="n">other</span><span class="o">.</span><span class="n">mean</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span>
-                <span class="n">B</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span> <span class="o">+</span>
+                <span class="n">B</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="p">)</span> <span class="o">+</span>
                 <span class="n">B</span><span class="o">.</span><span class="n">logdet</span><span class="p">(</span><span class="n">other</span><span class="o">.</span><span class="n">var</span><span class="p">)</span> <span class="o">-</span> <span class="n">B</span><span class="o">.</span><span class="n">logdet</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">var</span><span class="p">))</span> <span class="o">/</span> <span class="mi">2</span></div>
 
 <div class="viewcode-block" id="Normal.w2"><a class="viewcode-back" href="../../source/stheno.random.html#stheno.random.Normal.w2">[docs]</a>    <span class="nd">@_dispatch</span><span class="p">(</span><span class="n">Self</span><span class="p">)</span>
@@ -389,7 +400,10 @@
             <span class="n">var</span> <span class="o">+=</span> <span class="n">UniformlyDiagonal</span><span class="o">.</span><span class="n">from_</span><span class="p">(</span><span class="n">noise</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">var</span><span class="p">)</span>
 
         <span class="c1"># Perform sampling operation.</span>
-        <span class="k">return</span> <span class="n">B</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">var</span><span class="p">,</span> <span class="n">num</span><span class="p">)</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean</span></div>
+        <span class="n">sample</span> <span class="o">=</span> <span class="n">B</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">var</span><span class="p">,</span> <span class="n">num</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_zero_mean</span><span class="p">:</span>
+            <span class="n">sample</span> <span class="o">=</span> <span class="n">sample</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean</span>
+        <span class="k">return</span> <span class="n">sample</span></div>
 
     <span class="nd">@_dispatch</span><span class="p">(</span><span class="nb">object</span><span class="p">)</span>
     <span class="k">def</span> <span class="nf">__add__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
