@@ -1,6 +1,13 @@
 TODO:
     ☐ Fix examples: they use old versions of wbml, varz, and LAB! @critical
-    ☐ Throw warning at fallback for elwise!
+    ☐ Throw warning at fallback for elwise! @critical
+    ☐ Do not automatically TensorFlow at startup! @critical
+    ☐ Optimise select
+    ☐ Remove exceptions for torch 0-dim behaviour
+    ☐ Use ABC with six.
+    ☐ DerivativeKernel for torch and autograd?
+        ☐ Simplify for TensorFlow! Jacobian function?
+
 
 Features:
     ☐ FITC approximation
@@ -15,8 +22,8 @@ Structured Matrices:
     ☐ Kronecker product, and sum thereof
     ☐ Toeplitz
 
-Refactor:
-    ☐ Make RQ, Exp, Matern32, and Matern52 cache friendly.
+Profiling:
+    ☐ Single sample 100-d normal maximum 20% slower.
 
 ＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿
 Archive:

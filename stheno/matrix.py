@@ -13,8 +13,16 @@ from plum import Referentiable, Self, Dispatcher, add_conversion_method, \
 
 from .field import Element, OneElement, ZeroElement, mul, add, get_field
 
-__all__ = ['matrix', 'Dense', 'LowRank', 'Diagonal', 'UniformlyDiagonal', 'One',
-           'Zero', 'dense', 'Woodbury', 'Constant']
+__all__ = ['matrix',
+           'Dense',
+           'LowRank',
+           'Diagonal',
+           'UniformlyDiagonal',
+           'One',
+           'Zero',
+           'dense',
+           'Woodbury',
+           'Constant']
 
 log = logging.getLogger(__name__)
 
@@ -331,22 +339,22 @@ def block_matrix(*rows):
     # Check that all shapes line up.
     for r in range(1, len(rows)):
         for c in range(1, len(rows[0])):
-            block_shape = B.shape_int(rows[r][c])
+            block_shape = B.shape(rows[r][c])
 
             # The previous block in the row must have an equal
             # number of rows.
-            if block_shape[0] != B.shape_int(rows[r][c - 1])[0]:
+            if block_shape[0] != B.shape(rows[r][c - 1])[0]:
                 grid = False
 
             # The previous block in the column must have an equal
             # number of columns.
-            if block_shape[1] != B.shape_int(rows[r - 1][c])[1]:
+            if block_shape[1] != B.shape(rows[r - 1][c])[1]:
                 grid = False
 
     if grid:
         # We have a grid! First, determine the resulting shape.
-        grid_rows = _builtin_sum([B.shape_int(row[0])[0] for row in rows])
-        grid_cols = _builtin_sum([B.shape_int(K)[1] for K in rows[0]])
+        grid_rows = _builtin_sum([B.shape(row[0])[0] for row in rows])
+        grid_cols = _builtin_sum([B.shape(K)[1] for K in rows[0]])
 
         # Check whether the result is just zeros.
         if all([all([isinstance(K, Zero) for K in row]) for row in rows]):
@@ -366,7 +374,7 @@ def block_matrix(*rows):
 
         for r in range(len(rows)):
             for c in range(len(rows[0])):
-                block_shape = B.shape_int(rows[r][c])
+                block_shape = B.shape(rows[r][c])
                 if r == c:
                     # Keep track of all the diagonal blocks.
                     diagonal_blocks.append(rows[r][c])
@@ -592,7 +600,7 @@ def matmul(a, b, tr_a=False, tr_b=False):
     b = B.transpose(b) if tr_b else b
 
     # Get shape of `a`.
-    a_rows, a_cols = B.shape_int(a)
+    a_rows, a_cols = B.shape(a)
 
     # If `a` is square, don't do complicated things.
     if a_rows == a_cols and a_rows is not None:
@@ -604,7 +612,7 @@ def matmul(a, b, tr_a=False, tr_b=False):
 
     # Compute extra zeros to be appended.
     extra_rows = a_rows - rows
-    extra_zeros = B.zeros(B.dtype(b), extra_rows, B.shape_int(b)[1])
+    extra_zeros = B.zeros(B.dtype(b), extra_rows, B.shape(b)[1])
     return B.concat(core, extra_zeros, axis=0)
 
 
@@ -614,7 +622,7 @@ def matmul(a, b, tr_a=False, tr_b=False):
     b = B.transpose(b) if tr_b else b
 
     # Get shape of `b`.
-    b_rows, b_cols = B.shape_int(b)
+    b_rows, b_cols = B.shape(b)
 
     # If `b` is square, don't do complicated things.
     if b_rows == b_cols and b_rows is not None:
@@ -626,7 +634,7 @@ def matmul(a, b, tr_a=False, tr_b=False):
 
     # Compute extra zeros to be appended.
     extra_cols = b_cols - cols
-    extra_zeros = B.zeros(B.dtype(b), B.shape_int(a)[0], extra_cols)
+    extra_zeros = B.zeros(B.dtype(b), B.shape(a)[0], extra_cols)
     return B.concat(core, extra_zeros, axis=1)
 
 
@@ -1052,12 +1060,9 @@ def divide(a, b): return B.multiply(a, 1 / b)
 
 # Get shapes of matrices.
 
+
 @B.shape.extend(Dense)
 def shape(a): return B.shape(dense(a))
-
-
-@B.shape_int.extend(Dense)
-def shape_int(a): return B.shape_int(dense(a))
 
 
 #   Don't use a union here to prevent ambiguity errors with the implementation
@@ -1072,17 +1077,6 @@ def shape(a): return B.shape(a.left)[0], B.shape(a.right)[0]
 
 @B.shape.extend(Woodbury)
 def shape(a): return B.shape(a.lr)
-
-
-B.shape_int.extend_multi((Diagonal,), (Constant,))(B.shape)
-
-
-@B.shape_int.extend(LowRank)
-def shape_int(a): return B.shape_int(a.left)[0], B.shape_int(a.right)[0]
-
-
-@B.shape_int.extend(Woodbury)
-def shape_int(a): return B.shape_int(a.lr)
 
 
 # Setup promotion and conversion of matrices as a fallback mechanism.

@@ -4,9 +4,9 @@ from __future__ import absolute_import, division, print_function
 
 import logging
 import operator
-import tensorflow as tf
 
 import numpy as np
+import tensorflow as tf
 from lab import B
 from plum import Dispatcher, Self, Referentiable
 
@@ -15,11 +15,11 @@ from stheno.function_field import StretchedFunction, ShiftedFunction, \
     TensorProductFunction, stretch, transform, Function, ZeroFunction, \
     OneFunction, ScaledFunction, ProductFunction, SumFunction, \
     WrappedFunction, JoinFunction, shift, select, to_tensor, tuple_equal
-from .util import uprank
 from .field import add, mul, broadcast, get_field, Formatter, need_parens
 from .input import Input, Unique
 from .matrix import Dense, LowRank, UniformlyDiagonal, One, Zero, \
     dense, matrix
+from .util import uprank
 
 __all__ = ['Kernel',
            'OneKernel',
@@ -211,7 +211,7 @@ class OneKernel(Kernel, OneFunction, Referentiable):
     @_dispatch(B.Numeric, B.Numeric)
     @uprank
     def elwise(self, x, y):
-        return B.ones(B.dtype(x), B.shape_int(x)[0], 1)
+        return B.ones(B.dtype(x), B.shape(x)[0], 1)
 
     @property
     def _stationary(self):
@@ -247,7 +247,7 @@ class ZeroKernel(Kernel, ZeroFunction, Referentiable):
     @_dispatch(B.Numeric, B.Numeric)
     @uprank
     def elwise(self, x, y):
-        return B.zeros(B.dtype(x), B.shape_int(x)[0], 1)
+        return B.zeros(B.dtype(x), B.shape(x)[0], 1)
 
     @property
     def _stationary(self):
@@ -1126,7 +1126,7 @@ class DerivativeKernel(Kernel, DerivativeFunction, Referentiable):
         # Derivative with respect to `x`.
         elif i is not None and j is None:
             xi = x[:, i:i + 1]
-            xis = [B.identity(xi) for _ in range(B.shape_int(y)[0])]
+            xis = [B.identity(xi) for _ in range(B.shape(y)[0])]
 
             def f(z):
                 return dense(k(B.concat(x[:, :i], z[0], x[:, i + 1:], axis=1),
@@ -1140,7 +1140,7 @@ class DerivativeKernel(Kernel, DerivativeFunction, Referentiable):
         # Derivative with respect to `y`.
         elif i is None and j is not None:
             yj = y[:, j:j + 1]
-            yjs = [B.identity(yj) for _ in range(B.shape_int(x)[0])]
+            yjs = [B.identity(yj) for _ in range(B.shape(x)[0])]
 
             def f(z):
                 return dense(

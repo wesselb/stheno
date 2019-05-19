@@ -185,7 +185,7 @@ class Normal(RandomVector, At, Referentiable):
                     B.cast(self.dtype, self.dim) *
                     B.cast(self.dtype, B.log_2_pi) +
                     B.qf_diag(self.var, uprank(x) - self.mean)) / 2
-        return logpdfs[0] if B.shape_int(logpdfs) == (1,) else logpdfs
+        return logpdfs[0] if B.shape(logpdfs) == (1,) else logpdfs
 
     def entropy(self):
         """Compute the entropy.
