@@ -1,5 +1,4 @@
 TODO:
-    ☐ Fix examples: they use old versions of wbml, varz, and LAB! @critical
     ☐ Throw warning at fallback for elwise! @critical
     ☐ Do not automatically TensorFlow at startup! @critical
     ☐ Optimise select
@@ -7,6 +6,8 @@ TODO:
     ☐ Use ABC with six.
     ☐ DerivativeKernel for torch and autograd?
         ☐ Simplify for TensorFlow! Jacobian function?
+
+    ☐ Fixup examples: they use old versions of wbml, varz, and LAB! @critical
 
 
 Features:
