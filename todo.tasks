@@ -9,6 +9,8 @@ TODO:
 
     ☐ Fixup examples: they use old versions of wbml, varz, and LAB! @critical
 
+    ☐ Rename tf->tensorflow, but still allow tf @critical
+
 
 Features:
     ☐ FITC approximation
