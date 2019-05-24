@@ -4,10 +4,11 @@ python:
   - 3.6
 before_install:
   - sudo apt-get install gfortran
+  - pip install --upgrade pip
+  - pip install cython pytest pytest-cov coveralls
 install:
-  - pip install --upgrade pip cython
   - pip install --no-cache-dir -U -r requirements.txt | cat
 script:
-  - nosetests tests --with-coverage --cover-package=stheno
+  - pytest -v --cov=stheno --cov-report term-missing
 after_success:
   - coveralls

@@ -1,5 +1,3 @@
-nose
-coveralls
 numpy
 scipy<=1.2.1
 autograd
