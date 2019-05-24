@@ -520,9 +520,11 @@ def test_qf():
 
     for x in [a, d, wb]:
         allclose(B.qf(x, b), np.linalg.solve(dense(x), b).T.dot(b))
+        allclose(B.qf(x, b, b), B.qf(x, b))
         allclose(B.qf(x, b, c), np.linalg.solve(dense(x), b).T.dot(c))
         allclose(B.qf_diag(x, b),
                  np.diag(np.linalg.solve(dense(x), b).T.dot(b)))
+        allclose(B.qf_diag(x, b, b), B.qf_diag(x, b, b))
         allclose(B.qf_diag(x, b, c),
                  np.diag(np.linalg.solve(dense(x), b).T.dot(c)))
 
@@ -580,8 +582,11 @@ def test_arithmetic_and_shapes():
 
     # Check division.
     allclose(a.__div__(5.0), dense(a) / 5.0)
+    allclose(a.__rdiv__(5.0), 5.0 / dense(a))
     allclose(a.__truediv__(5.0), dense(a) / 5.0)
+    allclose(a.__rtruediv__(5.0), 5.0 / dense(a))
     allclose(B.divide(a, 5.0), dense(a) / 5.0)
+    allclose(B.divide(a, a), B.ones(dense(a)))
 
     # Check shapes.
     for m in candidates:
