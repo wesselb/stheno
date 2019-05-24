@@ -3,39 +3,55 @@
 from __future__ import absolute_import, division, print_function
 
 import numpy as np
+import pytest
 import tensorflow as tf
 from lab.tensorflow import B
+
 from stheno.input import Observed, Unique
-from stheno.kernel import EQ, RQ, Matern12, Matern32, Matern52, Delta, Kernel, \
-    Linear, OneKernel, ZeroKernel, PosteriorKernel, ShiftedKernel, \
-    TensorProductKernel, CorrectiveKernel, DecayingKernel, LogKernel
+from stheno.kernel import (
+    EQ,
+    RQ,
+    Matern12,
+    Matern32,
+    Matern52,
+    Delta,
+    Kernel,
+    Linear,
+    OneKernel,
+    ZeroKernel,
+    PosteriorKernel,
+    ShiftedKernel,
+    TensorProductKernel,
+    CorrectiveKernel,
+    DecayingKernel,
+    LogKernel
+)
 from stheno.matrix import matrix, dense, Zero, One, UniformlyDiagonal
-
-# noinspection PyUnresolvedReferences
-from . import eq, raises, ok, allclose, assert_allclose, assert_instance, neq
+from .util import allclose
 
 
-def kernel_generator(k):
+def standard_kernel_tests(k):
     # # Check that the kernel computes.
     x1 = np.random.randn(10, 2)
     x2 = np.random.randn(5, 2)
 
-    yield assert_allclose, k(x1, x2), k(x2, x1).T
+    allclose(k(x1, x2), k(x2, x1).T)
 
     # Check `elwise`.
     x1 = np.random.randn(10, 2)
     x2 = np.random.randn(10, 2)
 
-    yield assert_allclose, k.elwise(x1, x2)[:, 0], B.diag(k(x1, x2))
-    yield assert_allclose, k.elwise(x1, x2), Kernel.elwise(k, x1, x2)
+    allclose(k.elwise(x1, x2)[:, 0], B.diag(k(x1, x2)))
+    allclose(k.elwise(x1, x2), Kernel.elwise(k, x1, x2))
     # The element-wise computation is more accurate, which is why we allow a
     # discrepancy a bit larger than the square root of the machine epsilon.
-    yield assert_allclose, k.elwise(x1)[:, 0], B.diag(k(x1)), '', 1e-6, 1e-6
-    yield assert_allclose, k.elwise(x1), Kernel.elwise(k, x1)
+    allclose(k.elwise(x1)[:, 0], B.diag(k(x1)), desc='', atol=1e-6, rtol=1e-6)
+    allclose(k.elwise(x1), Kernel.elwise(k, x1))
 
 
 def test_corner_cases():
-    yield raises, RuntimeError, lambda: Kernel()(1.)
+    with pytest.raises(RuntimeError):
+        Kernel()(1.)
 
 
 def test_construction():
@@ -43,21 +59,21 @@ def test_construction():
 
     x = np.random.randn(10, 1)
 
-    yield k, x
-    yield k, x, x
+    k(x)
+    k(x, x)
 
-    yield k, Observed(x)
-    yield k, Observed(x), Observed(x)
-    yield k, x, Observed(x)
-    yield k, Observed(x), x
+    k(Observed(x))
+    k(Observed(x), Observed(x))
+    k(x, Observed(x))
+    k(Observed(x), x)
 
-    yield k.elwise, x
-    yield k.elwise, x, x
+    k.elwise(x)
+    k.elwise(x, x)
 
-    yield k.elwise, Observed(x)
-    yield k.elwise, Observed(x), Observed(x)
-    yield k.elwise, x, Observed(x)
-    yield k.elwise, Observed(x), x
+    k.elwise(Observed(x))
+    k.elwise(Observed(x), Observed(x))
+    k.elwise(x, Observed(x))
+    k.elwise(Observed(x), x)
 
 
 def test_basic_arithmetic():
@@ -71,23 +87,19 @@ def test_basic_arithmetic():
     xs1 = np.random.randn(10, 2), np.random.randn(20, 2)
     xs2 = np.random.randn(), np.random.randn()
 
-    yield ok, allclose(k6(xs1[0]), k6(xs1[0], xs1[0])), 'dispatch'
-    yield ok, allclose((k1 * k2)(*xs1), k1(*xs1) * k2(*xs1)), 'prod'
-    yield ok, allclose((k1 * k2)(*xs2), k1(*xs2) * k2(*xs2)), 'prod 2'
-    yield ok, allclose((k3 + k4)(*xs1), k3(*xs1) + k4(*xs1)), 'sum'
-    yield ok, allclose((k3 + k4)(*xs2), k3(*xs2) + k4(*xs2)), 'sum 2'
-    yield ok, allclose((5. * k5)(*xs1), 5. * k5(*xs1)), 'prod 3'
-    yield ok, allclose((5. * k5)(*xs2), 5. * k5(*xs2)), 'prod 4'
-    yield ok, allclose((5. + k7)(*xs1), 5. + k7(*xs1)), 'sum 3'
-    yield ok, allclose((5. + k7)(*xs2), 5. + k7(*xs2)), 'sum 4'
-    yield ok, allclose(k1.stretch(2.)(*xs1),
-                       k1(xs1[0] / 2., xs1[1] / 2.)), 'stretch'
-    yield ok, allclose(k1.stretch(2.)(*xs2),
-                       k1(xs2[0] / 2., xs2[1] / 2.)), 'stretch 2'
-    yield ok, allclose(k1.periodic(1.)(*xs1),
-                       k1.periodic(1.)(xs1[0], xs1[1] + 5.)), 'periodic'
-    yield ok, allclose(k1.periodic(1.)(*xs2),
-                       k1.periodic(1.)(xs2[0], xs2[1] + 5.)), 'periodic 2'
+    allclose(k6(xs1[0]), k6(xs1[0], xs1[0]))
+    allclose((k1 * k2)(*xs1), k1(*xs1) * k2(*xs1))
+    allclose((k1 * k2)(*xs2), k1(*xs2) * k2(*xs2))
+    allclose((k3 + k4)(*xs1), k3(*xs1) + k4(*xs1))
+    allclose((k3 + k4)(*xs2), k3(*xs2) + k4(*xs2))
+    allclose((5. * k5)(*xs1), 5. * k5(*xs1))
+    allclose((5. * k5)(*xs2), 5. * k5(*xs2))
+    allclose((5. + k7)(*xs1), 5. + k7(*xs1))
+    allclose((5. + k7)(*xs2), 5. + k7(*xs2))
+    allclose(k1.stretch(2.)(*xs1), k1(xs1[0] / 2., xs1[1] / 2.))
+    allclose(k1.stretch(2.)(*xs2), k1(xs2[0] / 2., xs2[1] / 2.))
+    allclose(k1.periodic(1.)(*xs1), k1.periodic(1.)(xs1[0], xs1[1] + 5.))
+    allclose(k1.periodic(1.)(*xs2), k1.periodic(1.)(xs2[0], xs2[1] + 5.))
 
 
 def test_reversal():
@@ -97,40 +109,41 @@ def test_reversal():
 
     # Test with a stationary and non-stationary kernel.
     for k in [EQ(), Linear()]:
-        yield assert_allclose, k(x1), reversed(k)(x1)
-        yield assert_allclose, k(x3), reversed(k)(x3)
-        yield assert_allclose, k(x1, x2), reversed(k)(x1, x2)
-        yield assert_allclose, k(x1, x2), reversed(k)(x2, x1).T
+        allclose(k(x1), reversed(k)(x1))
+        allclose(k(x3), reversed(k)(x3))
+        allclose(k(x1, x2), reversed(k)(x1, x2))
+        allclose(k(x1, x2), reversed(k)(x2, x1).T)
 
         # Test double reversal does the right thing.
-        yield assert_allclose, k(x1), reversed(reversed(k))(x1)
-        yield assert_allclose, k(x3), reversed(reversed(k))(x3)
-        yield assert_allclose, k(x1, x2), reversed(reversed(k))(x1, x2)
-        yield assert_allclose, k(x1, x2), reversed(reversed(k))(x2, x1).T
+        allclose(k(x1), reversed(reversed(k))(x1))
+        allclose(k(x3), reversed(reversed(k))(x3))
+        allclose(k(x1, x2), reversed(reversed(k))(x1, x2))
+        allclose(k(x1, x2), reversed(reversed(k))(x2, x1).T)
 
     # Verify that the kernel has the right properties.
     k = reversed(EQ())
-    yield eq, k.stationary, True
-    yield eq, k.var, 1
-    yield eq, k.length_scale, 1
-    yield eq, k.period, np.inf
+    assert k.stationary
+    assert k.var == 1
+    assert k.length_scale == 1
+    assert k.period == np.inf
 
     k = reversed(Linear())
-    yield eq, k.stationary, False
-    yield raises, RuntimeError, lambda: k.var
-    yield raises, RuntimeError, lambda: k.length_scale
-    yield eq, k.period, np.inf
-    yield eq, str(k), 'Reversed(Linear())'
+    assert not k.stationary
+    with pytest.raises(RuntimeError):
+        k.var
+    with pytest.raises(RuntimeError):
+        k.length_scale
+    assert k.period == np.inf
+    assert str(k) == 'Reversed(Linear())'
 
     # Check equality.
-    yield eq, reversed(Linear()), reversed(Linear())
-    yield neq, reversed(Linear()), Linear()
-    yield neq, reversed(Linear()), reversed(EQ())
-    yield neq, reversed(Linear()), reversed(DecayingKernel(1, 1))
+    assert reversed(Linear()) == reversed(Linear())
+    assert reversed(Linear()) != Linear()
+    assert reversed(Linear()) != reversed(EQ())
+    assert reversed(Linear()) != reversed(DecayingKernel(1, 1))
 
     # Standard tests:
-    for x in kernel_generator(k):
-        yield x
+    standard_kernel_tests(k)
 
 
 def test_delta():
@@ -139,132 +152,126 @@ def test_delta():
     x2 = np.random.randn(5, 2)
 
     # Verify that the kernel has the right properties.
-    yield eq, k.stationary, True
-    yield eq, k.var, 1
-    yield eq, k.length_scale, 0
-    yield eq, k.period, np.inf
-    yield eq, str(k), 'Delta()'
+    assert k.stationary
+    assert k.var == 1
+    assert k.length_scale == 0
+    assert k.period == np.inf
+    assert str(k) == 'Delta()'
 
     # Check equality.
-    yield eq, Delta(), Delta()
-    yield neq, Delta(), Delta(epsilon=k.epsilon * 10)
-    yield neq, Delta(), EQ()
+    assert Delta() == Delta()
+    assert Delta() != Delta(epsilon=k.epsilon * 10)
+    assert Delta() != EQ()
 
-    # Check caching.
-    yield ok, allclose(k(x1), np.eye(10)), 'same'
-    yield ok, allclose(k(x1, x2), np.zeros((10, 5))), 'others'
+    # Check uniqueness checks.
+    allclose(k(x1), np.eye(10))
+    allclose(k(x1, x2), np.zeros((10, 5)))
 
     # Standard tests:
-    for x in kernel_generator(k):
-        yield x
+    standard_kernel_tests(k)
 
     # Test `Unique` inputs.
-    yield assert_instance, k(Unique(x1), Unique(x1.copy())), Zero
-    yield assert_instance, k(Unique(x1), Unique(x1)), UniformlyDiagonal
-    yield assert_instance, k(Unique(x1), x1), Zero
-    yield assert_instance, k(x1, Unique(x1)), Zero
+    assert isinstance(k(Unique(x1), Unique(x1.copy())), Zero)
+    assert isinstance(k(Unique(x1), Unique(x1)), UniformlyDiagonal)
+    assert isinstance(k(Unique(x1), x1), Zero)
+    assert isinstance(k(x1, Unique(x1)), Zero)
 
-    yield assert_instance, k.elwise(Unique(x1), Unique(x1.copy())), Zero
-    yield assert_instance, k.elwise(Unique(x1), Unique(x1)), One
-    yield assert_instance, k.elwise(Unique(x1), x1), Zero
-    yield assert_instance, k.elwise(x1, Unique(x1)), Zero
+    assert isinstance(k.elwise(Unique(x1), Unique(x1.copy())), Zero)
+    assert isinstance(k.elwise(Unique(x1), Unique(x1)), One)
+    assert isinstance(k.elwise(Unique(x1), x1), Zero)
+    assert isinstance(k.elwise(x1, Unique(x1)), Zero)
 
 
 def test_eq():
     k = EQ()
 
     # Verify that the kernel has the right properties.
-    yield eq, k.stationary, True
-    yield eq, k.var, 1
-    yield eq, k.length_scale, 1
-    yield eq, k.period, np.inf
-    yield eq, str(k), 'EQ()'
+    assert k.stationary
+    assert k.var == 1
+    assert k.length_scale == 1
+    assert k.period == np.inf
+    assert str(k) == 'EQ()'
 
     # Test equality.
-    yield eq, EQ(), EQ()
-    yield neq, EQ(), Linear()
+    assert EQ() == EQ()
+    assert EQ() != Linear()
 
     # Standard tests:
-    for x in kernel_generator(k):
-        yield x
+    standard_kernel_tests(k)
 
 
 def test_rq():
     k = RQ(1e-1)
 
     # Verify that the kernel has the right properties.
-    yield eq, k.alpha, 1e-1
-    yield eq, k.stationary, True
-    yield eq, k.var, 1
-    yield eq, k.length_scale, 1
-    yield eq, k.period, np.inf
-    yield eq, str(k), 'RQ(0.1)'
+    assert k.alpha == 1e-1
+    assert k.stationary
+    assert k.var == 1
+    assert k.length_scale == 1
+    assert k.period == np.inf
+    assert str(k) == 'RQ(0.1)'
 
     # Test equality.
-    yield eq, RQ(1e-1), RQ(1e-1)
-    yield neq, RQ(1e-1), RQ(2e-1)
-    yield neq, RQ(1e-1), Linear()
+    assert RQ(1e-1) == RQ(1e-1)
+    assert RQ(1e-1) != RQ(2e-1)
+    assert RQ(1e-1) != Linear()
 
     # Standard tests:
-    for x in kernel_generator(k):
-        yield x
+    standard_kernel_tests(k)
 
 
 def test_exp():
     k = Matern12()
 
     # Verify that the kernel has the right properties.
-    yield eq, k.stationary, True
-    yield eq, k.var, 1
-    yield eq, k.length_scale, 1
-    yield eq, k.period, np.inf
-    yield eq, str(k), 'Exp()'
+    assert k.stationary
+    assert k.var == 1
+    assert k.length_scale == 1
+    assert k.period == np.inf
+    assert str(k) == 'Exp()'
 
     # Test equality.
-    yield eq, Matern12(), Matern12()
-    yield neq, Matern12(), Linear()
+    assert Matern12() == Matern12()
+    assert Matern12() != Linear()
 
     # Standard tests:
-    for x in kernel_generator(k):
-        yield x
+    standard_kernel_tests(k)
 
 
 def test_mat32():
     k = Matern32()
 
     # Verify that the kernel has the right properties.
-    yield eq, k.stationary, True
-    yield eq, k.var, 1
-    yield eq, k.length_scale, 1
-    yield eq, k.period, np.inf
-    yield eq, str(k), 'Matern32()'
+    assert k.stationary
+    assert k.var == 1
+    assert k.length_scale == 1
+    assert k.period == np.inf
+    assert str(k) == 'Matern32()'
 
     # Test equality.
-    yield eq, Matern32(), Matern32()
-    yield neq, Matern32(), Linear()
+    assert Matern32() == Matern32()
+    assert Matern32() != Linear()
 
     # Standard tests:
-    for x in kernel_generator(k):
-        yield x
+    standard_kernel_tests(k)
 
 
 def test_mat52():
     k = Matern52()
 
     # Verify that the kernel has the right properties.
-    yield eq, k.stationary, True
-    yield eq, k.var, 1
-    yield eq, k.length_scale, 1
-    yield eq, k.period, np.inf
-    yield eq, str(k), 'Matern52()'
+    assert k.stationary
+    assert k.var == 1
+    assert k.length_scale == 1
+    assert k.period == np.inf
+    assert str(k) == 'Matern52()'
 
     # Test equality.
-    yield eq, Matern52(), Matern52()
-    yield neq, Matern52(), Linear()
+    assert Matern52() == Matern52()
+    assert Matern52() != Linear()
 
     # Standard tests:
-    for x in kernel_generator(k):
-        yield x
+    standard_kernel_tests(k)
 
 
 def test_one():
@@ -274,22 +281,21 @@ def test_one():
     x2 = np.random.randn(5, 2)
 
     # Test that the kernel computes correctly.
-    yield assert_allclose, k(x1, x2), np.ones((10, 5))
+    allclose(k(x1, x2), np.ones((10, 5)))
 
     # Verify that the kernel has the right properties.
-    yield eq, k.stationary, True
-    yield eq, k.var, 1
-    yield eq, k.length_scale, 0
-    yield eq, k.period, 0
-    yield eq, str(k), '1'
+    assert k.stationary
+    assert k.var == 1
+    assert k.length_scale == 0
+    assert k.period == 0
+    assert str(k) == '1'
 
     # Test equality.
-    yield eq, OneKernel(), OneKernel()
-    yield neq, OneKernel(), Linear()
+    assert OneKernel() == OneKernel()
+    assert OneKernel() != Linear()
 
     # Standard tests:
-    for x in kernel_generator(k):
-        yield x
+    standard_kernel_tests(k)
 
 
 def test_zero():
@@ -298,80 +304,80 @@ def test_zero():
     x2 = np.random.randn(5, 2)
 
     # Test that the kernel computes correctly.
-    yield assert_allclose, k(x1, x2), np.zeros((10, 5))
+    allclose(k(x1, x2), np.zeros((10, 5)))
 
     # Verify that the kernel has the right properties.
-    yield eq, k.stationary, True
-    yield eq, k.var, 0
-    yield eq, k.length_scale, 0
-    yield eq, k.period, 0
-    yield eq, str(k), '0'
+    assert k.stationary
+    assert k.var == 0
+    assert k.length_scale == 0
+    assert k.period == 0
+    assert str(k) == '0'
 
     # Test equality.
-    yield eq, ZeroKernel(), ZeroKernel()
-    yield neq, ZeroKernel(), Linear()
+    assert ZeroKernel() == ZeroKernel()
+    assert ZeroKernel() != Linear()
 
     # Standard tests:
-    for x in kernel_generator(k):
-        yield x
+    standard_kernel_tests(k)
 
 
 def test_linear():
     k = Linear()
 
     # Verify that the kernel has the right properties.
-    yield eq, k.stationary, False
-    yield raises, RuntimeError, lambda: k.var
-    yield raises, RuntimeError, lambda: k.length_scale
-    yield eq, k.period, np.inf
-    yield eq, str(k), 'Linear()'
+    assert not k.stationary
+    with pytest.raises(RuntimeError):
+        k.var
+    with pytest.raises(RuntimeError):
+        k.length_scale
+    assert k.period == np.inf
+    assert str(k) == 'Linear()'
 
     # Test equality.
-    yield eq, Linear(), Linear()
-    yield neq, Linear(), EQ()
+    assert Linear() == Linear()
+    assert Linear() != EQ()
 
     # Standard tests:
-    for x in kernel_generator(k):
-        yield x
+    standard_kernel_tests(k)
 
 
 def test_decaying_kernel():
     k = DecayingKernel(3.0, 4.0)
 
-    yield eq, k.stationary, False
-    yield raises, RuntimeError, lambda: k.length_scale
-    yield raises, RuntimeError, lambda: k.var
-    yield eq, k.period, np.inf
-    yield eq, str(k), 'DecayingKernel(3.0, 4.0)'
+    assert not k.stationary
+    with pytest.raises(RuntimeError):
+        k.length_scale
+    with pytest.raises(RuntimeError):
+        k.var
+    assert k.period == np.inf
+    assert str(k) == 'DecayingKernel(3.0, 4.0)'
 
     # Standard tests:
-    for x in kernel_generator(k):
-        yield x
+    standard_kernel_tests(k)
 
     # Test equality.
-    yield eq, DecayingKernel(3.0, 4.0), DecayingKernel(3.0, 4.0)
-    yield neq, DecayingKernel(3.0, 4.0), DecayingKernel(3.0, 5.0)
-    yield neq, DecayingKernel(3.0, 4.0), DecayingKernel(4.0, 4.0)
-    yield neq, DecayingKernel(3.0, 4.0), EQ()
+    assert DecayingKernel(3.0, 4.0) == DecayingKernel(3.0, 4.0)
+    assert DecayingKernel(3.0, 4.0) != DecayingKernel(3.0, 5.0)
+    assert DecayingKernel(3.0, 4.0) != DecayingKernel(4.0, 4.0)
+    assert DecayingKernel(3.0, 4.0) != EQ()
 
 
 def test_log_kernel():
     k = LogKernel()
 
     # Verify that the kernel has the right properties.
-    yield eq, k.stationary, True
-    yield eq, k.var, 1
-    yield eq, k.length_scale, np.inf
-    yield eq, k.period, np.inf
-    yield eq, str(k), 'LogKernel()'
+    assert k.stationary
+    assert k.var == 1
+    assert k.length_scale == np.inf
+    assert k.period == np.inf
+    assert str(k) == 'LogKernel()'
 
     # Test equality.
-    yield eq, LogKernel(), LogKernel()
-    yield neq, LogKernel(), EQ()
+    assert LogKernel() == LogKernel()
+    assert LogKernel() != EQ()
 
     # Standard tests:
-    for x in kernel_generator(k):
-        yield x
+    standard_kernel_tests(k)
 
 
 def test_posterior_kernel():
@@ -381,15 +387,17 @@ def test_posterior_kernel():
     )
 
     # Verify that the kernel has the right properties.
-    yield eq, k.stationary, False
-    yield raises, RuntimeError, lambda: k.var
-    yield raises, RuntimeError, lambda: k.length_scale
-    yield raises, RuntimeError, lambda: k.period
-    yield eq, str(k), 'PosteriorKernel()'
+    assert not k.stationary
+    with pytest.raises(RuntimeError):
+        k.var
+    with pytest.raises(RuntimeError):
+        k.length_scale
+    with pytest.raises(RuntimeError):
+        k.period
+    assert str(k) == 'PosteriorKernel()'
 
     # Standard tests:
-    for x in kernel_generator(k):
-        yield x
+    standard_kernel_tests(k)
 
 
 def test_corrective_kernel():
@@ -399,15 +407,17 @@ def test_corrective_kernel():
     k = CorrectiveKernel(EQ(), EQ(), z, a, matrix(b))
 
     # Verify that the kernel has the right properties.
-    yield eq, k.stationary, False
-    yield raises, RuntimeError, lambda: k.var
-    yield raises, RuntimeError, lambda: k.length_scale
-    yield raises, RuntimeError, lambda: k.period
-    yield eq, str(k), 'CorrectiveKernel()'
+    assert not k.stationary
+    with pytest.raises(RuntimeError):
+        k.var
+    with pytest.raises(RuntimeError):
+        k.length_scale
+    with pytest.raises(RuntimeError):
+        k.period
+    assert str(k) == 'CorrectiveKernel()'
 
     # Standard tests:
-    for x in kernel_generator(k):
-        yield x
+    standard_kernel_tests(k)
 
 
 def test_sum():
@@ -415,220 +425,222 @@ def test_sum():
     k2 = 3 * RQ(1e-2).stretch(5)
     k = k1 + k2
 
-    yield eq, k.stationary, True
-    yield assert_allclose, k.length_scale, (1 * 2 + 3 * 5) / 4
-    yield eq, k.period, np.inf
-    yield eq, k.var, 4
+    assert k.stationary
+    allclose(k.length_scale, (1 * 2 + 3 * 5) / 4)
+    assert k.period == np.inf
+    assert k.var == 4
 
-    yield assert_allclose, (EQ() + EQ()).length_scale, 1
-    yield assert_allclose, (EQ().stretch(2) + EQ().stretch(2)).length_scale, 2
+    allclose((EQ() + EQ()).length_scale, 1)
+    allclose((EQ().stretch(2) + EQ().stretch(2)).length_scale, 2)
 
-    yield eq, EQ() + Linear(), EQ() + Linear()
-    yield eq, EQ() + Linear(), Linear() + EQ()
-    yield neq, EQ() + Linear(), EQ() + RQ(1e-1)
-    yield neq, EQ() + Linear(), RQ(1e-1) + Linear()
+    assert EQ() + Linear() == EQ() + Linear()
+    assert EQ() + Linear() == Linear() + EQ()
+    assert EQ() + Linear() != EQ() + RQ(1e-1)
+    assert EQ() + Linear() != RQ(1e-1) + Linear()
 
     # Standard tests:
-    for x in kernel_generator(k):
-        yield x
+    standard_kernel_tests(k)
 
 
 def test_stretched():
     k = EQ().stretch(2)
 
-    yield eq, k.stationary, True
-    yield eq, k.length_scale, 2
-    yield eq, k.period, np.inf
-    yield eq, k.var, 1
+    assert k.stationary
+    assert k.length_scale == 2
+    assert k.period == np.inf
+    assert k.var == 1
 
     # Test equality.
-    yield eq, EQ().stretch(2), EQ().stretch(2)
-    yield neq, EQ().stretch(2), EQ().stretch(3)
-    yield neq, EQ().stretch(2), Matern12().stretch(2)
+    assert EQ().stretch(2) == EQ().stretch(2)
+    assert EQ().stretch(2) != EQ().stretch(3)
+    assert EQ().stretch(2) != Matern12().stretch(2)
 
     # Standard tests:
-    for x in kernel_generator(k):
-        yield x
+    standard_kernel_tests(k)
 
     k = EQ().stretch(1, 2)
 
-    yield eq, k.stationary, False
-    yield raises, RuntimeError, lambda: k.length_scale
-    yield raises, RuntimeError, lambda: k.period
-    yield eq, k.var, 1
+    assert not k.stationary
+    with pytest.raises(RuntimeError):
+        k.length_scale
+    with pytest.raises(RuntimeError):
+        k.period
+    assert k.var == 1
 
     # Check passing in a list.
     k = EQ().stretch(np.array([1, 2]))
-    yield k, np.random.randn(10, 2)
+    k(np.random.randn(10, 2))
 
 
 def test_periodic():
     k = EQ().stretch(2).periodic(3)
 
-    yield eq, k.stationary, True
-    yield eq, k.length_scale, 2
-    yield eq, k.period, 3
-    yield eq, k.var, 1
+    assert k.stationary
+    assert k.length_scale == 2
+    assert k.period == 3
+    assert k.var == 1
 
     # Test equality.
-    yield eq, EQ().periodic(2), EQ().periodic(2)
-    yield neq, EQ().periodic(2), EQ().periodic(3)
-    yield neq, Matern12().periodic(2), EQ().periodic(2)
+    assert EQ().periodic(2) == EQ().periodic(2)
+    assert EQ().periodic(2) != EQ().periodic(3)
+    assert Matern12().periodic(2) != EQ().periodic(2)
 
     # Standard tests:
-    for x in kernel_generator(k):
-        yield x
+    standard_kernel_tests(k)
 
     k = 5 * k.stretch(5)
 
-    yield eq, k.stationary, True
-    yield eq, k.length_scale, 10
-    yield eq, k.period, 15
-    yield eq, k.var, 5
+    assert k.stationary
+    assert k.length_scale == 10
+    assert k.period == 15
+    assert k.var == 5
 
     # Check passing in a list.
     k = EQ().periodic(np.array([1, 2]))
-    yield k, np.random.randn(10, 2)
+    k(np.random.randn(10, 2))
 
 
 def test_scaled():
     k = 2 * EQ()
 
-    yield eq, k.stationary, True
-    yield eq, k.length_scale, 1
-    yield eq, k.period, np.inf
-    yield eq, k.var, 2
+    assert k.stationary
+    assert k.length_scale == 1
+    assert k.period == np.inf
+    assert k.var == 2
 
     # Test equality.
-    yield eq, 2 * EQ(), 2 * EQ()
-    yield neq, 2 * EQ(), 3 * EQ()
-    yield neq, 2 * EQ(), 2 * Matern12()
+    assert 2 * EQ() == 2 * EQ()
+    assert 2 * EQ() != 3 * EQ()
+    assert 2 * EQ() != 2 * Matern12()
 
     # Standard tests:
-    for x in kernel_generator(k):
-        yield x
+    standard_kernel_tests(k)
 
 
 def test_shifted():
     k = ShiftedKernel(2 * EQ(), 5)
 
-    yield eq, k.stationary, True
-    yield eq, k.length_scale, 1
-    yield eq, k.period, np.inf
-    yield eq, k.var, 2
+    assert k.stationary
+    assert k.length_scale == 1
+    assert k.period == np.inf
+    assert k.var == 2
 
     # Test equality.
-    yield eq, Linear().shift(2), Linear().shift(2)
-    yield neq, Linear().shift(2), Linear().shift(3)
-    yield neq, Linear().shift(2), DecayingKernel(1, 1).shift(2)
+    assert Linear().shift(2) == Linear().shift(2)
+    assert Linear().shift(2) != Linear().shift(3)
+    assert Linear().shift(2) != DecayingKernel(1, 1).shift(2)
 
     # Standard tests:
-    for x in kernel_generator(k):
-        yield x
+    standard_kernel_tests(k)
 
     k = (2 * EQ()).shift(5, 6)
 
-    yield eq, k.stationary, False
-    yield raises, RuntimeError, lambda: k.length_scale
-    yield eq, k.period, np.inf
-    yield eq, k.var, 2
+    assert not k.stationary
+    with pytest.raises(RuntimeError):
+        k.length_scale
+    assert k.period == np.inf
+    assert k.var == 2
 
     # Check computation.
     x1 = np.random.randn(10, 2)
     x2 = np.random.randn(5, 2)
     k = Linear()
-    yield assert_allclose, k.shift(5)(x1, x2), k(x1 - 5, x2 - 5)
+    allclose(k.shift(5)(x1, x2), k(x1 - 5, x2 - 5))
 
     # Check passing in a list.
     k = Linear().shift(np.array([1, 2]))
-    yield k, np.random.randn(10, 2)
+    k(np.random.randn(10, 2))
 
 
 def test_product():
     k = (2 * EQ().stretch(10)) * (3 * RQ(1e-2).stretch(20))
 
-    yield eq, k.stationary, True
-    yield eq, k.length_scale, 10
-    yield eq, k.period, np.inf
-    yield eq, k.var, 6
+    assert k.stationary
+    assert k.length_scale == 10
+    assert k.period == np.inf
+    assert k.var == 6
 
     # Test equality.
-    yield eq, EQ() * Linear(), EQ() * Linear()
-    yield eq, EQ() * Linear(), Linear() * EQ()
-    yield neq, EQ() * Linear(), EQ() * RQ(1e-1)
-    yield neq, EQ() * Linear(), RQ(1e-1) * Linear()
+    assert EQ() * Linear() == EQ() * Linear()
+    assert EQ() * Linear() == Linear() * EQ()
+    assert EQ() * Linear() != EQ() * RQ(1e-1)
+    assert EQ() * Linear() != RQ(1e-1) * Linear()
 
     # Standard tests:
-    for x in kernel_generator(k):
-        yield x
+    standard_kernel_tests(k)
 
 
 def test_selection():
     k = (2 * EQ().stretch(5)).select(0)
 
-    yield eq, k.stationary, True
-    yield eq, k.length_scale, 5
-    yield eq, k.period, np.inf
-    yield eq, k.var, 2
+    assert k.stationary
+    assert k.length_scale == 5
+    assert k.period == np.inf
+    assert k.var == 2
 
     # Test equality.
-    yield eq, EQ().select(0), EQ().select(0)
-    yield neq, EQ().select(0), EQ().select(1)
-    yield neq, EQ().select(0), Matern12().select(0)
+    assert EQ().select(0) == EQ().select(0)
+    assert EQ().select(0) != EQ().select(1)
+    assert EQ().select(0) != Matern12().select(0)
 
     # Standard tests:
-    for x in kernel_generator(k):
-        yield x
+    standard_kernel_tests(k)
 
     k = (2 * EQ().stretch(5)).select([2, 3])
 
-    yield eq, k.stationary, True
-    yield eq, k.length_scale, 5
-    yield eq, k.period, np.inf
-    yield eq, k.var, 2
+    assert k.stationary
+    assert k.length_scale == 5
+    assert k.period == np.inf
+    assert k.var == 2
 
     k = (2 * EQ().stretch(np.array([1, 2, 3]))).select([0, 2])
 
-    yield eq, k.stationary, True
-    yield assert_allclose, k.length_scale, [1, 3]
-    yield assert_allclose, k.period, [np.inf, np.inf]
-    yield eq, k.var, 2
+    assert k.stationary
+    allclose(k.length_scale, [1, 3])
+    allclose(k.period, [np.inf, np.inf])
+    assert k.var == 2
 
     k = (2 * EQ().periodic(np.array([1, 2, 3]))).select([1, 2])
 
-    yield eq, k.stationary, True
-    yield assert_allclose, k.length_scale, [1, 1]
-    yield assert_allclose, k.period, [2, 3]
-    yield eq, k.var, 2
+    assert k.stationary
+    allclose(k.length_scale, [1, 1])
+    allclose(k.period, [2, 3])
+    assert k.var == 2
 
     k = (2 * EQ().stretch(np.array([1, 2, 3]))).select([0, 2], [1, 2])
 
-    yield eq, k.stationary, False
-    yield raises, RuntimeError, lambda: k.length_scale
-    yield raises, RuntimeError, lambda: k.period
-    yield eq, k.var, 2
+    assert not k.stationary
+    with pytest.raises(RuntimeError):
+        k.length_scale
+    with pytest.raises(RuntimeError):
+        k.period
+    assert k.var == 2
 
     k = (2 * EQ().periodic(np.array([1, 2, 3]))).select([0, 2], [1, 2])
 
-    yield eq, k.stationary, False
-    yield eq, k.length_scale, 1
-    yield raises, RuntimeError, lambda: k.period
-    yield eq, k.var, 2
+    assert not k.stationary
+    assert k.length_scale == 1
+    with pytest.raises(RuntimeError):
+        k.period
+    assert k.var == 2
 
     # Test that computation is valid.
     k1 = EQ().select([1, 2])
     k2 = EQ()
     x = np.random.randn(10, 3)
-    yield assert_allclose, k1(x), k2(x[:, [1, 2]])
+    allclose(k1(x), k2(x[:, [1, 2]]))
 
 
 def test_input_transform():
     k = Linear().transform(lambda x: x - 5)
 
-    yield eq, k.stationary, False
-    yield raises, RuntimeError, lambda: k.length_scale
-    yield raises, RuntimeError, lambda: k.var
-    yield raises, RuntimeError, lambda: k.period
+    assert not k.stationary
+    with pytest.raises(RuntimeError):
+        k.length_scale
+    with pytest.raises(RuntimeError):
+        k.var
+    with pytest.raises(RuntimeError):
+        k.period
 
     def f1(x):
         return x
@@ -637,13 +649,12 @@ def test_input_transform():
         return x ** 2
 
     # Test equality.
-    yield eq, EQ().transform(f1), EQ().transform(f1)
-    yield neq, EQ().transform(f1), EQ().transform(f2)
-    yield neq, EQ().transform(f1), Matern12().transform(f1)
+    assert EQ().transform(f1) == EQ().transform(f1)
+    assert EQ().transform(f1) != EQ().transform(f2)
+    assert EQ().transform(f1) != Matern12().transform(f1)
 
     # Standard tests:
-    for x in kernel_generator(k):
-        yield x
+    standard_kernel_tests(k)
 
     # Test computation of the kernel.
     k = Linear()
@@ -652,56 +663,62 @@ def test_input_transform():
     k2 = k.transform(lambda x: x ** 2)
     k3 = k.transform(lambda x: x ** 2, lambda x: x - 5)
 
-    yield assert_allclose, k(x1 ** 2, x2 ** 2), k2(x1, x2)
-    yield assert_allclose, k(x1 ** 2, x2 - 5), k3(x1, x2)
+    allclose(k(x1 ** 2, x2 ** 2), k2(x1, x2))
+    allclose(k(x1 ** 2, x2 - 5), k3(x1, x2))
 
 
 def test_tensor_product():
     k = TensorProductKernel(lambda x: B.sum(x ** 2, axis=1))
 
-    yield eq, k.stationary, False
-    yield raises, RuntimeError, lambda: k.length_scale
-    yield raises, RuntimeError, lambda: k.var
-    yield raises, RuntimeError, lambda: k.period
+    assert not k.stationary
+    with pytest.raises(RuntimeError):
+        k.length_scale
+    with pytest.raises(RuntimeError):
+        k.var
+    with pytest.raises(RuntimeError):
+        k.period
 
     # Check equality.
-    yield eq, k, k
-    yield neq, k, TensorProductKernel(lambda x: x)
-    yield neq, k, EQ()
+    assert k == k
+    assert k != TensorProductKernel(lambda x: x)
+    assert k != EQ()
 
     # Standard tests:
-    for x in kernel_generator(k):
-        yield x
+    standard_kernel_tests(k)
 
     # Check computation of kernel.
     k = TensorProductKernel(lambda x: x)
     x1 = np.linspace(0, 1, 100)[:, None]
     x2 = np.linspace(0, 1, 50)[:, None]
 
-    yield assert_allclose, k(x1), x1 * x1.T
-    yield assert_allclose, k(x1, x2), x1 * x2.T
+    allclose(k(x1), x1 * x1.T)
+    allclose(k(x1, x2), x1 * x2.T)
 
     k = TensorProductKernel(lambda x: x ** 2)
 
-    yield assert_allclose, k(x1), x1 ** 2 * (x1 ** 2).T
-    yield assert_allclose, k(x1, x2), (x1 ** 2) * (x2 ** 2).T
+    allclose(k(x1), x1 ** 2 * (x1 ** 2).T)
+    allclose(k(x1, x2), (x1 ** 2) * (x2 ** 2).T)
 
 
 def test_derivative():
     # First, check properties.
     k = EQ().diff(0)
 
-    yield eq, k.stationary, False
-    yield raises, RuntimeError, lambda: k.length_scale
-    yield raises, RuntimeError, lambda: k.var
-    yield raises, RuntimeError, lambda: k.period
+    assert not k.stationary
+    with pytest.raises(RuntimeError):
+        k.length_scale
+    with pytest.raises(RuntimeError):
+        k.var
+    with pytest.raises(RuntimeError):
+        k.period
 
     # Test equality.
-    yield eq, EQ().diff(0), EQ().diff(0)
-    yield neq, EQ().diff(0), EQ().diff(1)
-    yield neq, Matern12().diff(0), EQ().diff(0)
+    assert EQ().diff(0) == EQ().diff(0)
+    assert EQ().diff(0) != EQ().diff(1)
+    assert Matern12().diff(0) != EQ().diff(0)
 
-    yield raises, RuntimeError, lambda: EQ().diff(None, None)(1)
+    with pytest.raises(RuntimeError):
+        EQ().diff(None, None)(1)
 
     # Third, check computation.
     s = tf.Session()
@@ -713,23 +730,23 @@ def test_derivative():
 
     # Test derivative with respect to first input.
     ref = s.run(-dense(k(x1, x2)) * (x1 - B.transpose(x2)))
-    yield assert_allclose, s.run(dense(k.diff(0, None)(x1, x2))), ref
+    allclose(s.run(dense(k.diff(0, None)(x1, x2))), ref)
     ref = s.run(-dense(k(x1)) * (x1 - B.transpose(x1)))
-    yield assert_allclose, s.run(dense(k.diff(0, None)(x1))), ref
+    allclose(s.run(dense(k.diff(0, None)(x1))), ref)
 
     # Test derivative with respect to second input.
     ref = s.run(-dense(k(x1, x2)) * (B.transpose(x2) - x1))
-    yield assert_allclose, s.run(dense(k.diff(None, 0)(x1, x2))), ref
+    allclose(s.run(dense(k.diff(None, 0)(x1, x2))), ref)
     ref = s.run(-dense(k(x1)) * (B.transpose(x1) - x1))
-    yield assert_allclose, s.run(dense(k.diff(None, 0)(x1))), ref
+    allclose(s.run(dense(k.diff(None, 0)(x1))), ref)
 
     # Test derivative with respect to both inputs.
     ref = s.run(dense(k(x1, x2)) * (1 - (x1 - B.transpose(x2)) ** 2))
-    yield assert_allclose, s.run(dense(k.diff(0, 0)(x1, x2))), ref
-    yield assert_allclose, s.run(dense(k.diff(0)(x1, x2))), ref
+    allclose(s.run(dense(k.diff(0, 0)(x1, x2))), ref)
+    allclose(s.run(dense(k.diff(0)(x1, x2))), ref)
     ref = s.run(dense(k(x1)) * (1 - (x1 - B.transpose(x1)) ** 2))
-    yield assert_allclose, s.run(dense(k.diff(0, 0)(x1))), ref
-    yield assert_allclose, s.run(dense(k.diff(0)(x1))), ref
+    allclose(s.run(dense(k.diff(0, 0)(x1))), ref)
+    allclose(s.run(dense(k.diff(0)(x1))), ref)
 
     # Test derivative of kernel Linear.
     k = Linear()
@@ -738,22 +755,22 @@ def test_derivative():
 
     # Test derivative with respect to first input.
     ref = s.run(B.ones(tf.float64, 10, 5) * B.transpose(x2))
-    yield assert_allclose, s.run(dense(k.diff(0, None)(x1, x2))), ref
+    allclose(s.run(dense(k.diff(0, None)(x1, x2))), ref)
     ref = s.run(B.ones(tf.float64, 10, 10) * B.transpose(x1))
-    yield assert_allclose, s.run(dense(k.diff(0, None)(x1))), ref
+    allclose(s.run(dense(k.diff(0, None)(x1))), ref)
 
     # Test derivative with respect to second input.
     ref = s.run(B.ones(tf.float64, 10, 5) * x1)
-    yield assert_allclose, s.run(dense(k.diff(None, 0)(x1, x2))), ref
+    allclose(s.run(dense(k.diff(None, 0)(x1, x2))), ref)
     ref = s.run(B.ones(tf.float64, 10, 10) * x1)
-    yield assert_allclose, s.run(dense(k.diff(None, 0)(x1))), ref
+    allclose(s.run(dense(k.diff(None, 0)(x1))), ref)
 
     # Test derivative with respect to both inputs.
     ref = s.run(B.ones(tf.float64, 10, 5))
-    yield assert_allclose, s.run(dense(k.diff(0, 0)(x1, x2))), ref
-    yield assert_allclose, s.run(dense(k.diff(0)(x1, x2))), ref
+    allclose(s.run(dense(k.diff(0, 0)(x1, x2))), ref)
+    allclose(s.run(dense(k.diff(0)(x1, x2))), ref)
     ref = s.run(B.ones(tf.float64, 10, 10))
-    yield assert_allclose, s.run(dense(k.diff(0, 0)(x1))), ref
-    yield assert_allclose, s.run(dense(k.diff(0)(x1))), ref
+    allclose(s.run(dense(k.diff(0, 0)(x1))), ref)
+    allclose(s.run(dense(k.diff(0)(x1))), ref)
 
     s.close()

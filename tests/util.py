@@ -6,20 +6,12 @@ from time import time
 
 import numpy as np
 from lab import B
-from nose.tools import assert_raises, assert_equal, assert_less, \
-    assert_less_equal, assert_not_equal, assert_greater, \
-    assert_greater_equal, ok_
 from plum import dispatch
+from numpy.testing import assert_array_almost_equal
+
 from stheno.matrix import Dense, dense as _dense
 
-le = assert_less_equal
-lt = assert_less
-eq = assert_equal
-neq = assert_not_equal
-ge = assert_greater_equal
-gt = assert_greater
-raises = assert_raises
-ok = ok_
+__all__ = ['benchmark', 'dense', 'allclose', 'approx']
 
 
 def benchmark(f, args, n=1000, get_output=False):
@@ -59,21 +51,16 @@ def dense(a):
     return np.array(a)
 
 
-def allclose(a, b, desc=None, atol=1e-8, rtol=1e-8):
-    return np.allclose(dense(a), dense(b), atol=atol, rtol=rtol)
-
-
 @dispatch({B.Numeric, Dense, list}, {B.Numeric, Dense, list}, [object])
-def assert_allclose(a, b, desc=None, atol=1e-8, rtol=1e-8):
+def allclose(a, b, desc=None, atol=1e-8, rtol=1e-8):
     np.testing.assert_allclose(dense(a), dense(b), atol=atol, rtol=rtol)
 
 
 @dispatch(tuple, tuple, [object])
-def assert_allclose(a, b, desc=None, atol=1e-8, rtol=1e-8):
+def allclose(a, b, desc=None, atol=1e-8, rtol=1e-8):
     assert len(a) == len(b)
     for x, y in zip(a, b):
-        assert_allclose(x, y, desc, atol=atol, rtol=rtol)
+        allclose(x, y, desc, atol=atol, rtol=rtol)
 
 
-def assert_instance(a, b, desc=None):
-    assert isinstance(a, b)
+approx = assert_array_almost_equal

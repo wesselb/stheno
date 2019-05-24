@@ -2,14 +2,14 @@
 
 from __future__ import absolute_import, division, print_function
 
+import pytest
+
 from stheno.lazy import Rule, LazyMatrix, LazyVector
-# noinspection PyUnresolvedReferences
-from . import eq, neq, lt, le, ge, gt, raises, ok
 
 
 def test_corner_cases():
-    yield eq, repr(Rule(1, {1}, 1)), \
-          'Rule(pattern=1, indices={!r}, builder=1)'.format({1})
+    assert repr(Rule(1, {1}, 1)) == \
+           'Rule(pattern=1, indices={!r}, builder=1)'.format({1})
 
 
 def test_indexing():
@@ -17,13 +17,13 @@ def test_indexing():
     m = LazyMatrix()
 
     v[1] = 1
-    yield eq, v[1], 1
+    assert v[1] == 1
 
     # Test diagonal.
     m[1] = 1
     m[2, 2] = 2
-    yield eq, m[1, 1], 1
-    yield eq, m[2], 2
+    assert m[1, 1] == 1
+    assert m[2] == 2
 
     # Test resolving of indices.
     class A(object):
@@ -34,17 +34,17 @@ def test_indexing():
     m[id(a1)] = 1
     m[a2] = 2
 
-    yield eq, m[a1, a1], 1
-    yield eq, m[a1, a2], (1, 2)
-    yield eq, m[a2, a2], 2
+    assert m[a1, a1] == 1
+    assert m[a1, a2] == (1, 2)
+    assert m[a2, a2] == 2
 
 
 def test_rule():
     rule = Rule((1, None, 2, None, 3), {1, 2, 3, 4, 5}, lambda: None)
 
-    yield ok, rule.applies((1, 1, 2, 5, 3))
-    yield ok, not rule.applies((1, 1, 2, 6, 3))
-    yield ok, not rule.applies((2, 1, 2, 5, 3))
+    assert rule.applies((1, 1, 2, 5, 3))
+    assert not rule.applies((1, 1, 2, 6, 3))
+    assert not rule.applies((2, 1, 2, 5, 3))
 
 
 def test_building():
@@ -62,14 +62,20 @@ def test_building():
 
     for i in range(3):
         for j in range(3):
-            yield eq, m[i, j].x, i * j
+            assert m[i, j].x == i * j
 
-    yield raises, RuntimeError, lambda: m[-1, 0]
-    yield raises, RuntimeError, lambda: m[0, -1]
-    yield raises, RuntimeError, lambda: m[-1, -1]
-    yield raises, RuntimeError, lambda: m[4, 3]
-    yield raises, RuntimeError, lambda: m[3, 4]
-    yield raises, RuntimeError, lambda: m[4, 4]
+    with pytest.raises(RuntimeError):
+        m[-1, 0]
+    with pytest.raises(RuntimeError):
+        m[0, -1]
+    with pytest.raises(RuntimeError):
+        m[-1, -1]
+    with pytest.raises(RuntimeError):
+        m[4, 3]
+    with pytest.raises(RuntimeError):
+        m[3, 4]
+    with pytest.raises(RuntimeError):
+        m[4, 4]
 
     # Test building along first dimension.
     m.add_rule((3, None), range(4), lambda y: ReversibleNumber(3 + y))
@@ -77,19 +83,25 @@ def test_building():
 
     for i in range(3):
         for j in range(3):
-            yield eq, m[i, j].x, i * j
+            assert m[i, j].x == i * j
 
     for i in range(3):
-        yield eq, m[i, 3].x, i + 3
-        yield eq, m[3, i].x, 3 + i
-    yield eq, m[3, 3].x, 3 + 3
+        assert m[i, 3].x == i + 3
+        assert m[3, i].x == 3 + i
+    assert m[3, 3].x == 3 + 3
 
-    yield raises, RuntimeError, lambda: m[-1, 0]
-    yield raises, RuntimeError, lambda: m[0, -1]
-    yield raises, RuntimeError, lambda: m[-1, -1]
-    yield raises, RuntimeError, lambda: m[5, 4]
-    yield raises, RuntimeError, lambda: m[4, 5]
-    yield raises, RuntimeError, lambda: m[5, 5]
+    with pytest.raises(RuntimeError):
+        m[-1, 0]
+    with pytest.raises(RuntimeError):
+        m[0, -1]
+    with pytest.raises(RuntimeError):
+        m[-1, -1]
+    with pytest.raises(RuntimeError):
+        m[5, 4]
+    with pytest.raises(RuntimeError):
+        m[4, 5]
+    with pytest.raises(RuntimeError):
+        m[5, 5]
 
     # Test building along second dimension.
     m.add_rule((None, 4), range(5), lambda x: ReversibleNumber(x ** 2 + 4 ** 2))
@@ -97,24 +109,30 @@ def test_building():
 
     for i in range(3):
         for j in range(3):
-            yield eq, m[i, j].x, i * j
+            assert m[i, j].x == i * j
 
     for i in range(3):
-        yield eq, m[i, 3].x, i + 3
-        yield eq, m[3, i].x, 3 + i
-    yield eq, m[3, 3].x, 3 + 3
+        assert m[i, 3].x == i + 3
+        assert m[3, i].x == 3 + i
+    assert m[3, 3].x == 3 + 3
 
     for i in range(4):
-        yield eq, m[i, 4].x, i ** 2 + 4 ** 2
-        yield eq, m[4, i].x, 4 ** 2 + i ** 2
-    yield eq, m[4, 4].x, 4 ** 2 + 4 ** 2
+        assert m[i, 4].x == i ** 2 + 4 ** 2
+        assert m[4, i].x == 4 ** 2 + i ** 2
+    assert m[4, 4].x == 4 ** 2 + 4 ** 2
 
-    yield raises, RuntimeError, lambda: m[-1, 0]
-    yield raises, RuntimeError, lambda: m[0, -1]
-    yield raises, RuntimeError, lambda: m[-1, -1]
-    yield raises, RuntimeError, lambda: m[6, 5]
-    yield raises, RuntimeError, lambda: m[5, 6]
-    yield raises, RuntimeError, lambda: m[6, 6]
+    with pytest.raises(RuntimeError):
+        m[-1, 0]
+    with pytest.raises(RuntimeError):
+        m[0, -1]
+    with pytest.raises(RuntimeError):
+        m[-1, -1]
+    with pytest.raises(RuntimeError):
+        m[6, 5]
+    with pytest.raises(RuntimeError):
+        m[5, 6]
+    with pytest.raises(RuntimeError):
+        m[6, 6]
 
     # Now try all rules at once and mix up access order.
     m2 = LazyMatrix()
@@ -127,22 +145,28 @@ def test_building():
                 lambda x: ReversibleNumber(x ** 2 + 4 ** 2))
 
     for i in range(4):
-        yield eq, m2[i, 4].x, i ** 2 + 4 ** 2
-        yield eq, m2[4, i].x, 4 ** 2 + i ** 2
-    yield eq, m2[4, 4].x, 4 ** 2 + 4 ** 2
+        assert m2[i, 4].x == i ** 2 + 4 ** 2
+        assert m2[4, i].x == 4 ** 2 + i ** 2
+    assert m2[4, 4].x == 4 ** 2 + 4 ** 2
 
     for i in range(3):
-        yield eq, m2[i, 3].x, i + 3
-        yield eq, m2[3, i].x, 3 + i
-    yield eq, m2[3, 3].x, 3 + 3
+        assert m2[i, 3].x == i + 3
+        assert m2[3, i].x == 3 + i
+    assert m2[3, 3].x == 3 + 3
 
     for i in range(3):
         for j in range(3):
-            yield eq, m2[i, j].x, i * j
+            assert m2[i, j].x == i * j
 
-    yield raises, RuntimeError, lambda: m2[-1, 0]
-    yield raises, RuntimeError, lambda: m2[0, -1]
-    yield raises, RuntimeError, lambda: m2[-1, -1]
-    yield raises, RuntimeError, lambda: m2[6, 5]
-    yield raises, RuntimeError, lambda: m2[5, 6]
-    yield raises, RuntimeError, lambda: m2[6, 6]
+    with pytest.raises(RuntimeError):
+        m2[-1, 0]
+    with pytest.raises(RuntimeError):
+        m2[0, -1]
+    with pytest.raises(RuntimeError):
+        m2[-1, -1]
+    with pytest.raises(RuntimeError):
+        m2[6, 5]
+    with pytest.raises(RuntimeError):
+        m2[5, 6]
+    with pytest.raises(RuntimeError):
+        m2[6, 6]
