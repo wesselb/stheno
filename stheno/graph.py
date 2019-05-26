@@ -20,8 +20,12 @@ from .mokernel import MultiOutputKernel as MOK
 from .momean import MultiOutputMean as MOM
 from .random import Random, PromisedGP, RandomProcess, Normal
 
-__all__ = ['GP', 'model', 'Graph', 'Observations', 'Obs', 'SparseObservations',
-           'SparseObs']
+__all__ = ['GP',
+           'model',
+           'Graph',
+           'AbstractObservations',
+           'Observations', 'Obs',
+           'SparseObservations', 'SparseObs']
 
 log = logging.getLogger(__name__)
 
