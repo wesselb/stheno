@@ -30,23 +30,34 @@ from stheno.matrix import matrix, dense, Zero, One, UniformlyDiagonal
 from .util import allclose
 
 
-def standard_kernel_tests(k):
-    # # Check that the kernel computes.
-    x1 = np.random.randn(10, 2)
-    x2 = np.random.randn(5, 2)
+def standard_kernel_tests(k, shapes=None):
+    if shapes is None:
+        shapes = [((10, 2), (5, 2)),
+                  ((10, 1), (5, 1)),
+                  ((10,), (5,)),
+                  ((10,), ()),
+                  ((), (5,)),
+                  ((), ())]
 
-    allclose(k(x1, x2), k(x2, x1).T)
+    # Check various shapes of arguments.
+    for shape1, shape2 in shapes:
+        x1 = B.randn(*shape1)
+        x2 = B.randn(*shape2)
 
-    # Check `elwise`.
-    x1 = np.random.randn(10, 2)
-    x2 = np.random.randn(10, 2)
+        # Check that the kernel computes.
+        allclose(k(x1, x2), k(x2, x1).T)
 
-    allclose(k.elwise(x1, x2)[:, 0], B.diag(k(x1, x2)))
-    allclose(k.elwise(x1, x2), Kernel.elwise(k, x1, x2))
-    # The element-wise computation is more accurate, which is why we allow a
-    # discrepancy a bit larger than the square root of the machine epsilon.
-    allclose(k.elwise(x1)[:, 0], B.diag(k(x1)), desc='', atol=1e-6, rtol=1e-6)
-    allclose(k.elwise(x1), Kernel.elwise(k, x1))
+        # Check `elwise`.
+        x2 = B.randn(*shape1)
+
+        allclose(k.elwise(x1, x2)[:, 0], B.diag(k(x1, x2)))
+        allclose(k.elwise(x1, x2), Kernel.elwise(k, x1, x2))
+        # The element-wise computation is more accurate, which is why we allow
+        # a discrepancy a bit larger than the square root of the machine
+        # epsilon.
+        allclose(k.elwise(x1)[:, 0], B.diag(k(x1)),
+                 desc='', atol=1e-6, rtol=1e-6)
+        allclose(k.elwise(x1), Kernel.elwise(k, x1))
 
 
 def test_corner_cases():
@@ -148,8 +159,6 @@ def test_reversal():
 
 def test_delta():
     k = Delta()
-    x1 = np.random.randn(10, 2)
-    x2 = np.random.randn(5, 2)
 
     # Verify that the kernel has the right properties.
     assert k.stationary
@@ -163,9 +172,20 @@ def test_delta():
     assert Delta() != Delta(epsilon=k.epsilon * 10)
     assert Delta() != EQ()
 
+
+@pytest.mark.parametrize('x1_x2', [(np.array(0), np.array(1)),
+                                   (B.randn(10), B.randn(5)),
+                                   (B.randn(10, 1), B.randn(5, 1)),
+                                   (B.randn(10, 2), B.randn(5, 2))])
+def test_delta_evaluations(x1_x2):
+    k = Delta()
+    x1, x2 = x1_x2
+    n1 = B.shape(B.uprank(x1))[0]
+    n2 = B.shape(B.uprank(x2))[0]
+
     # Check uniqueness checks.
-    allclose(k(x1), np.eye(10))
-    allclose(k(x1, x2), np.zeros((10, 5)))
+    allclose(k(x1), B.eye(n1))
+    allclose(k(x1, x2), B.zeros(n1, n2))
 
     # Standard tests:
     standard_kernel_tests(k)
@@ -397,7 +417,7 @@ def test_posterior_kernel():
     assert str(k) == 'PosteriorKernel()'
 
     # Standard tests:
-    standard_kernel_tests(k)
+    standard_kernel_tests(k, shapes=[((10, 2), (5, 2))])
 
 
 def test_corrective_kernel():
@@ -417,7 +437,7 @@ def test_corrective_kernel():
     assert str(k) == 'CorrectiveKernel()'
 
     # Standard tests:
-    standard_kernel_tests(k)
+    standard_kernel_tests(k, shapes=[((10, 2), (5, 2))])
 
 
 def test_sum():
