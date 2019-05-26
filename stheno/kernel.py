@@ -10,15 +10,40 @@ import tensorflow as tf
 from lab import B
 from plum import Dispatcher, Self, Referentiable
 
-from stheno.function_field import StretchedFunction, ShiftedFunction, \
-    SelectedFunction, InputTransformedFunction, DerivativeFunction, \
-    TensorProductFunction, stretch, transform, Function, ZeroFunction, \
-    OneFunction, ScaledFunction, ProductFunction, SumFunction, \
-    WrappedFunction, JoinFunction, shift, select, to_tensor, tuple_equal
+from stheno.function_field import (
+    StretchedFunction,
+    ShiftedFunction,
+    SelectedFunction,
+    InputTransformedFunction,
+    DerivativeFunction,
+    TensorProductFunction,
+    stretch,
+    transform,
+    Function,
+    ZeroFunction,
+    OneFunction,
+    ScaledFunction,
+    ProductFunction,
+    SumFunction,
+    WrappedFunction,
+    JoinFunction,
+    shift,
+    select,
+    to_tensor,
+    tuple_equal
+)
 from .field import add, mul, broadcast, get_field, Formatter, need_parens
 from .input import Input, Unique
-from .matrix import Dense, LowRank, UniformlyDiagonal, One, Zero, \
-    dense, matrix
+from .matrix import (
+    Dense,
+    LowRank,
+    UniformlyDiagonal,
+    Diagonal,
+    One,
+    Zero,
+    dense,
+    matrix
+)
 from .util import uprank
 
 __all__ = ['Kernel',
@@ -32,6 +57,7 @@ __all__ = ['Kernel',
            'Matern32',
            'Matern52',
            'Delta',
+           'FixedDelta',
            'Linear',
            'DerivativeKernel',
            'DecayingKernel',
@@ -907,6 +933,56 @@ class Delta(Kernel, Referentiable):
     @_dispatch(Self)
     def __eq__(self, other):
         return self.epsilon == other.epsilon
+
+
+class FixedDelta(Kernel, Referentiable):
+    """Kronecker delta kernel that produces a diagonal matrix with given
+    noises if and only if the inputs are identical and of the right shape.
+
+    Args:
+        noises (vector): Noises.
+    """
+
+    _dispatch = Dispatcher(in_class=Self)
+
+    def __init__(self, noises):
+        self.noises = noises
+
+    @_dispatch(B.Numeric, B.Numeric)
+    def __call__(self, x, y):
+        if x is y and B.shape(uprank(x))[0] == B.shape(self.noises)[0]:
+            return Diagonal(self.noises)
+        else:
+            x, y = uprank(x), uprank(y)
+            return Zero(B.dtype(x), B.shape(x)[0], B.shape(y)[0])
+
+    @_dispatch(B.Numeric, B.Numeric)
+    def elwise(self, x, y):
+        if x is y and B.shape(B.uprank(x))[0] == B.shape(self.noises)[0]:
+            return B.uprank(self.noises)
+        else:
+            x = B.uprank(x)
+            return Zero(B.dtype(x), B.shape(x)[0], 1)
+
+    @property
+    def _stationary(self):
+        return True
+
+    @property
+    def var(self):
+        return 1
+
+    @property
+    def length_scale(self):
+        return 0
+
+    @property
+    def period(self):
+        return np.inf
+
+    @_dispatch(Self)
+    def __eq__(self, other):
+        return B.all(self.noises == other.noises)
 
 
 class Linear(Kernel, Referentiable):

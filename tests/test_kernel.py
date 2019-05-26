@@ -15,6 +15,7 @@ from stheno.kernel import (
     Matern32,
     Matern52,
     Delta,
+    FixedDelta,
     Kernel,
     Linear,
     OneKernel,
@@ -200,6 +201,41 @@ def test_delta_evaluations(x1_x2):
     assert isinstance(k.elwise(Unique(x1), Unique(x1)), One)
     assert isinstance(k.elwise(Unique(x1), x1), Zero)
     assert isinstance(k.elwise(x1, Unique(x1)), Zero)
+
+
+def test_fixed_delta():
+    noises = B.rand(3)
+    k = FixedDelta(noises)
+
+    # Verify that the kernel has the right properties.
+    assert k.stationary
+    assert k.var == 1
+    assert k.length_scale == 0
+    assert k.period == np.inf
+    assert str(k) == 'FixedDelta()'
+
+    # Check equality.
+    assert FixedDelta(noises) == FixedDelta(noises)
+    assert FixedDelta(noises) != FixedDelta(2 * noises)
+    assert FixedDelta(noises) != EQ()
+
+    # Standard tests:
+    standard_kernel_tests(k)
+
+    # Check correctness.
+    x1 = B.randn(5)
+    x2 = B.randn(5)
+    allclose(k(x1), B.zeros(5, 5))
+    allclose(k.elwise(x1), B.zeros(5, 1))
+    allclose(k(x1, x2), B.zeros(5, 5))
+    allclose(k.elwise(x1, x2), B.zeros(5, 1))
+
+    x1 = B.randn(3)
+    x2 = B.randn(3)
+    allclose(k(x1), B.diag(noises))
+    allclose(k.elwise(x1), B.uprank(noises))
+    allclose(k(x1, x2), B.zeros(3, 3))
+    allclose(k.elwise(x1, x2), B.zeros(3, 1))
 
 
 def test_eq():
