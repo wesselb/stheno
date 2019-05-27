@@ -53,13 +53,13 @@ class Dense(Element, Referentiable):
         return B.divide(self, other)
 
     def __truediv__(self, other):
-        return Dense.__div__(self, other)
+        return B.divide(self, other)
 
     def __rdiv__(self, other):
-        return Dense.__div__(other, self)
+        return B.divide(other, self)
 
     def __rtruediv__(self, other):
-        return Dense.__div__(other, self)
+        return B.divide(other, self)
 
     def __getitem__(self, item):
         return dense(self)[item]
