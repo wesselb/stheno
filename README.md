@@ -21,7 +21,7 @@ also [Stheno.jl](https://github.com/willtebbutt/Stheno.jl).
         * [Displaying GPs](#displaying-gps)
         * [Properties of GPs](#properties-of-gps)
         * [Naming GPs](#naming-gps)
-    - [Inference and Sampling](#inference-and-sampling)
+    - [Finite-Dimensional Distributions, Inference, and Sampling](#finite-dimensional-distributions-inference-and-sampling)
     - [Inducing Points](#inducing-points)
     - [NumPy, TensorFlow, or PyTorch?](#numpy-tensorflow-or-pytorch)
     - [Undiscussed Features](#undiscussed-features)
