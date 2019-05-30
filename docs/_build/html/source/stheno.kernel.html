@@ -523,6 +523,42 @@ Defaults to <cite>1e-10</cite>.</p>
 </dd></dl>
 
 <dl class="class">
+<dt id="stheno.kernel.FixedDelta">
+<em class="property">class </em><code class="descclassname">stheno.kernel.</code><code class="descname">FixedDelta</code><span class="sig-paren">(</span><em>noises</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/stheno/kernel.html#FixedDelta"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.kernel.FixedDelta" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#stheno.kernel.Kernel" title="stheno.kernel.Kernel"><code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.kernel.Kernel</span></code></a>, <code class="xref py py-class docutils literal notranslate"><span class="pre">plum.resolvable.Referentiable</span></code></p>
+<p>Kronecker delta kernel that produces a diagonal matrix with given
+noises if and only if the inputs are identical and of the right shape.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>noises</strong> (<em>vector</em>) – Noises.</p>
+</dd>
+</dl>
+<dl class="attribute">
+<dt id="stheno.kernel.FixedDelta.elwise">
+<code class="descname">elwise</code><em class="property"> = &lt;function &lt;function FixedDelta.elwise&gt; with 1 method(s)&gt;</em><a class="reference internal" href="../_modules/stheno/kernel.html#FixedDelta.elwise"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.kernel.FixedDelta.elwise" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="stheno.kernel.FixedDelta.length_scale">
+<code class="descname">length_scale</code><a class="headerlink" href="#stheno.kernel.FixedDelta.length_scale" title="Permalink to this definition">¶</a></dt>
+<dd><p>Approximation of the length scale of the kernel.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="stheno.kernel.FixedDelta.period">
+<code class="descname">period</code><a class="headerlink" href="#stheno.kernel.FixedDelta.period" title="Permalink to this definition">¶</a></dt>
+<dd><p>Period of the kernel.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="stheno.kernel.FixedDelta.var">
+<code class="descname">var</code><a class="headerlink" href="#stheno.kernel.FixedDelta.var" title="Permalink to this definition">¶</a></dt>
+<dd><p>Variance of the kernel.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
 <dt id="stheno.kernel.Linear">
 <em class="property">class </em><code class="descclassname">stheno.kernel.</code><code class="descname">Linear</code><a class="reference internal" href="../_modules/stheno/kernel.html#Linear"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.kernel.Linear" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#stheno.kernel.Kernel" title="stheno.kernel.Kernel"><code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.kernel.Kernel</span></code></a>, <code class="xref py py-class docutils literal notranslate"><span class="pre">plum.resolvable.Referentiable</span></code></p>

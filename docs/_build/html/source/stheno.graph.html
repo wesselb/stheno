@@ -489,9 +489,57 @@ dimensions from.</p></li>
 </dd></dl>
 
 <dl class="class">
+<dt id="stheno.graph.AbstractObservations">
+<em class="property">class </em><code class="descclassname">stheno.graph.</code><code class="descname">AbstractObservations</code><a class="reference internal" href="../_modules/stheno/graph.html#AbstractObservations"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.graph.AbstractObservations" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">plum.resolvable.Referentiable</span></code></p>
+<p>Abstract base class for observations.</p>
+<dl class="method">
+<dt id="stheno.graph.AbstractObservations.posterior_kernel">
+<code class="descname">posterior_kernel</code><span class="sig-paren">(</span><em>p_i</em>, <em>p_j</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/stheno/graph.html#AbstractObservations.posterior_kernel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.graph.AbstractObservations.posterior_kernel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the posterior kernel between two processes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>p_i</strong> (<a class="reference internal" href="#stheno.graph.GP" title="stheno.graph.GP"><code class="xref py py-class docutils literal notranslate"><span class="pre">graph.GP</span></code></a>) – First process.</p></li>
+<li><p><strong>p_j</strong> (<a class="reference internal" href="#stheno.graph.GP" title="stheno.graph.GP"><code class="xref py py-class docutils literal notranslate"><span class="pre">graph.GP</span></code></a>) – Second process.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>Posterior kernel between the first and</dt><dd><p>second process.</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="stheno.kernel.html#stheno.kernel.Kernel" title="stheno.kernel.Kernel"><code class="xref py py-class docutils literal notranslate"><span class="pre">kernel.Kernel</span></code></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="stheno.graph.AbstractObservations.posterior_mean">
+<code class="descname">posterior_mean</code><span class="sig-paren">(</span><em>p</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/stheno/graph.html#AbstractObservations.posterior_mean"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.graph.AbstractObservations.posterior_mean" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the posterior kernel of a process.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>p</strong> (<a class="reference internal" href="#stheno.graph.GP" title="stheno.graph.GP"><code class="xref py py-class docutils literal notranslate"><span class="pre">graph.GP</span></code></a>) – Process.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Posterior mean of <cite>p</cite>.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">mean.Mean</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
 <dt id="stheno.graph.Observations">
 <em class="property">class </em><code class="descclassname">stheno.graph.</code><code class="descname">Observations</code><span class="sig-paren">(</span><em>*args</em>, <em>**kw_args</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/stheno/graph.html#Observations"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.graph.Observations" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.graph.AbstractObservations</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">plum.resolvable.Referentiable</span></code></p>
+<dd><p>Bases: <a class="reference internal" href="#stheno.graph.AbstractObservations" title="stheno.graph.AbstractObservations"><code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.graph.AbstractObservations</span></code></a>, <code class="xref py py-class docutils literal notranslate"><span class="pre">plum.resolvable.Referentiable</span></code></p>
 <p>Observations.</p>
 <p>Can alternatively construct an instance of <cite>Observations</cite> with tuples or
 lists of valid constructors.</p>
@@ -564,7 +612,7 @@ lists of valid constructors.</p>
 <dl class="class">
 <dt id="stheno.graph.SparseObservations">
 <em class="property">class </em><code class="descclassname">stheno.graph.</code><code class="descname">SparseObservations</code><a class="reference internal" href="../_modules/stheno/graph.html#SparseObservations"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.graph.SparseObservations" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.graph.AbstractObservations</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">plum.resolvable.Referentiable</span></code></p>
+<dd><p>Bases: <a class="reference internal" href="#stheno.graph.AbstractObservations" title="stheno.graph.AbstractObservations"><code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.graph.AbstractObservations</span></code></a>, <code class="xref py py-class docutils literal notranslate"><span class="pre">plum.resolvable.Referentiable</span></code></p>
 <p>Observations through inducing points. Takes further arguments
 according to the constructor of <a class="reference internal" href="#stheno.graph.Observations" title="stheno.graph.Observations"><code class="xref py py-class docutils literal notranslate"><span class="pre">graph.Observations</span></code></a>.</p>
 <dl class="attribute">

@@ -155,22 +155,47 @@
 
 <span class="kn">import</span> <span class="nn">logging</span>
 <span class="kn">import</span> <span class="nn">operator</span>
-<span class="kn">import</span> <span class="nn">tensorflow</span> <span class="k">as</span> <span class="nn">tf</span>
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">tensorflow</span> <span class="k">as</span> <span class="nn">tf</span>
 <span class="kn">from</span> <span class="nn">lab</span> <span class="k">import</span> <span class="n">B</span>
 <span class="kn">from</span> <span class="nn">plum</span> <span class="k">import</span> <span class="n">Dispatcher</span><span class="p">,</span> <span class="n">Self</span><span class="p">,</span> <span class="n">Referentiable</span>
 
-<span class="kn">from</span> <span class="nn">stheno.function_field</span> <span class="k">import</span> <span class="n">StretchedFunction</span><span class="p">,</span> <span class="n">ShiftedFunction</span><span class="p">,</span> \
-    <span class="n">SelectedFunction</span><span class="p">,</span> <span class="n">InputTransformedFunction</span><span class="p">,</span> <span class="n">DerivativeFunction</span><span class="p">,</span> \
-    <span class="n">TensorProductFunction</span><span class="p">,</span> <span class="n">stretch</span><span class="p">,</span> <span class="n">transform</span><span class="p">,</span> <span class="n">Function</span><span class="p">,</span> <span class="n">ZeroFunction</span><span class="p">,</span> \
-    <span class="n">OneFunction</span><span class="p">,</span> <span class="n">ScaledFunction</span><span class="p">,</span> <span class="n">ProductFunction</span><span class="p">,</span> <span class="n">SumFunction</span><span class="p">,</span> \
-    <span class="n">WrappedFunction</span><span class="p">,</span> <span class="n">JoinFunction</span><span class="p">,</span> <span class="n">shift</span><span class="p">,</span> <span class="n">select</span><span class="p">,</span> <span class="n">to_tensor</span><span class="p">,</span> <span class="n">tuple_equal</span>
-<span class="kn">from</span> <span class="nn">.util</span> <span class="k">import</span> <span class="n">uprank</span>
+<span class="kn">from</span> <span class="nn">stheno.function_field</span> <span class="k">import</span> <span class="p">(</span>
+    <span class="n">StretchedFunction</span><span class="p">,</span>
+    <span class="n">ShiftedFunction</span><span class="p">,</span>
+    <span class="n">SelectedFunction</span><span class="p">,</span>
+    <span class="n">InputTransformedFunction</span><span class="p">,</span>
+    <span class="n">DerivativeFunction</span><span class="p">,</span>
+    <span class="n">TensorProductFunction</span><span class="p">,</span>
+    <span class="n">stretch</span><span class="p">,</span>
+    <span class="n">transform</span><span class="p">,</span>
+    <span class="n">Function</span><span class="p">,</span>
+    <span class="n">ZeroFunction</span><span class="p">,</span>
+    <span class="n">OneFunction</span><span class="p">,</span>
+    <span class="n">ScaledFunction</span><span class="p">,</span>
+    <span class="n">ProductFunction</span><span class="p">,</span>
+    <span class="n">SumFunction</span><span class="p">,</span>
+    <span class="n">WrappedFunction</span><span class="p">,</span>
+    <span class="n">JoinFunction</span><span class="p">,</span>
+    <span class="n">shift</span><span class="p">,</span>
+    <span class="n">select</span><span class="p">,</span>
+    <span class="n">to_tensor</span><span class="p">,</span>
+    <span class="n">tuple_equal</span>
+<span class="p">)</span>
 <span class="kn">from</span> <span class="nn">.field</span> <span class="k">import</span> <span class="n">add</span><span class="p">,</span> <span class="n">mul</span><span class="p">,</span> <span class="n">broadcast</span><span class="p">,</span> <span class="n">get_field</span><span class="p">,</span> <span class="n">Formatter</span><span class="p">,</span> <span class="n">need_parens</span>
 <span class="kn">from</span> <span class="nn">.input</span> <span class="k">import</span> <span class="n">Input</span><span class="p">,</span> <span class="n">Unique</span>
-<span class="kn">from</span> <span class="nn">.matrix</span> <span class="k">import</span> <span class="n">Dense</span><span class="p">,</span> <span class="n">LowRank</span><span class="p">,</span> <span class="n">UniformlyDiagonal</span><span class="p">,</span> <span class="n">One</span><span class="p">,</span> <span class="n">Zero</span><span class="p">,</span> \
-    <span class="n">dense</span><span class="p">,</span> <span class="n">matrix</span>
+<span class="kn">from</span> <span class="nn">.matrix</span> <span class="k">import</span> <span class="p">(</span>
+    <span class="n">Dense</span><span class="p">,</span>
+    <span class="n">LowRank</span><span class="p">,</span>
+    <span class="n">UniformlyDiagonal</span><span class="p">,</span>
+    <span class="n">Diagonal</span><span class="p">,</span>
+    <span class="n">One</span><span class="p">,</span>
+    <span class="n">Zero</span><span class="p">,</span>
+    <span class="n">dense</span><span class="p">,</span>
+    <span class="n">matrix</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">.util</span> <span class="k">import</span> <span class="n">uprank</span>
 
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;Kernel&#39;</span><span class="p">,</span>
            <span class="s1">&#39;OneKernel&#39;</span><span class="p">,</span>
@@ -183,6 +208,7 @@
            <span class="s1">&#39;Matern32&#39;</span><span class="p">,</span>
            <span class="s1">&#39;Matern52&#39;</span><span class="p">,</span>
            <span class="s1">&#39;Delta&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;FixedDelta&#39;</span><span class="p">,</span>
            <span class="s1">&#39;Linear&#39;</span><span class="p">,</span>
            <span class="s1">&#39;DerivativeKernel&#39;</span><span class="p">,</span>
            <span class="s1">&#39;DecayingKernel&#39;</span><span class="p">,</span>
@@ -362,7 +388,7 @@
 <div class="viewcode-block" id="OneKernel.elwise"><a class="viewcode-back" href="../../source/stheno.kernel.html#stheno.kernel.OneKernel.elwise">[docs]</a>    <span class="nd">@_dispatch</span><span class="p">(</span><span class="n">B</span><span class="o">.</span><span class="n">Numeric</span><span class="p">,</span> <span class="n">B</span><span class="o">.</span><span class="n">Numeric</span><span class="p">)</span>
     <span class="nd">@uprank</span>
     <span class="k">def</span> <span class="nf">elwise</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
-        <span class="k">return</span> <span class="n">B</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">B</span><span class="o">.</span><span class="n">dtype</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="n">B</span><span class="o">.</span><span class="n">shape_int</span><span class="p">(</span><span class="n">x</span><span class="p">)[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">1</span><span class="p">)</span></div>
+        <span class="k">return</span> <span class="n">B</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">B</span><span class="o">.</span><span class="n">dtype</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="n">B</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="n">x</span><span class="p">)[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">1</span><span class="p">)</span></div>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">_stationary</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -398,7 +424,7 @@
 <div class="viewcode-block" id="ZeroKernel.elwise"><a class="viewcode-back" href="../../source/stheno.kernel.html#stheno.kernel.ZeroKernel.elwise">[docs]</a>    <span class="nd">@_dispatch</span><span class="p">(</span><span class="n">B</span><span class="o">.</span><span class="n">Numeric</span><span class="p">,</span> <span class="n">B</span><span class="o">.</span><span class="n">Numeric</span><span class="p">)</span>
     <span class="nd">@uprank</span>
     <span class="k">def</span> <span class="nf">elwise</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
-        <span class="k">return</span> <span class="n">B</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">B</span><span class="o">.</span><span class="n">dtype</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="n">B</span><span class="o">.</span><span class="n">shape_int</span><span class="p">(</span><span class="n">x</span><span class="p">)[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">1</span><span class="p">)</span></div>
+        <span class="k">return</span> <span class="n">B</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">B</span><span class="o">.</span><span class="n">dtype</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="n">B</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="n">x</span><span class="p">)[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">1</span><span class="p">)</span></div>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">_stationary</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -1060,6 +1086,56 @@
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">epsilon</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">epsilon</span></div>
 
 
+<div class="viewcode-block" id="FixedDelta"><a class="viewcode-back" href="../../source/stheno.kernel.html#stheno.kernel.FixedDelta">[docs]</a><span class="k">class</span> <span class="nc">FixedDelta</span><span class="p">(</span><span class="n">Kernel</span><span class="p">,</span> <span class="n">Referentiable</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Kronecker delta kernel that produces a diagonal matrix with given</span>
+<span class="sd">    noises if and only if the inputs are identical and of the right shape.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        noises (vector): Noises.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">_dispatch</span> <span class="o">=</span> <span class="n">Dispatcher</span><span class="p">(</span><span class="n">in_class</span><span class="o">=</span><span class="n">Self</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">noises</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">noises</span> <span class="o">=</span> <span class="n">noises</span>
+
+    <span class="nd">@_dispatch</span><span class="p">(</span><span class="n">B</span><span class="o">.</span><span class="n">Numeric</span><span class="p">,</span> <span class="n">B</span><span class="o">.</span><span class="n">Numeric</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">x</span> <span class="ow">is</span> <span class="n">y</span> <span class="ow">and</span> <span class="n">B</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="n">uprank</span><span class="p">(</span><span class="n">x</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">B</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">noises</span><span class="p">)[</span><span class="mi">0</span><span class="p">]:</span>
+            <span class="k">return</span> <span class="n">Diagonal</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">noises</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">uprank</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="n">uprank</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">Zero</span><span class="p">(</span><span class="n">B</span><span class="o">.</span><span class="n">dtype</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="n">B</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="n">x</span><span class="p">)[</span><span class="mi">0</span><span class="p">],</span> <span class="n">B</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="n">y</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span>
+
+<div class="viewcode-block" id="FixedDelta.elwise"><a class="viewcode-back" href="../../source/stheno.kernel.html#stheno.kernel.FixedDelta.elwise">[docs]</a>    <span class="nd">@_dispatch</span><span class="p">(</span><span class="n">B</span><span class="o">.</span><span class="n">Numeric</span><span class="p">,</span> <span class="n">B</span><span class="o">.</span><span class="n">Numeric</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">elwise</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">x</span> <span class="ow">is</span> <span class="n">y</span> <span class="ow">and</span> <span class="n">B</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="n">B</span><span class="o">.</span><span class="n">uprank</span><span class="p">(</span><span class="n">x</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">B</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">noises</span><span class="p">)[</span><span class="mi">0</span><span class="p">]:</span>
+            <span class="k">return</span> <span class="n">B</span><span class="o">.</span><span class="n">uprank</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">noises</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">B</span><span class="o">.</span><span class="n">uprank</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">Zero</span><span class="p">(</span><span class="n">B</span><span class="o">.</span><span class="n">dtype</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="n">B</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="n">x</span><span class="p">)[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">1</span><span class="p">)</span></div>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">_stationary</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">True</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">var</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="mi">1</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">length_scale</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="mi">0</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">period</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">inf</span>
+
+    <span class="nd">@_dispatch</span><span class="p">(</span><span class="n">Self</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">B</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">noises</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">noises</span><span class="p">)</span></div>
+
+
 <div class="viewcode-block" id="Linear"><a class="viewcode-back" href="../../source/stheno.kernel.html#stheno.kernel.Linear">[docs]</a><span class="k">class</span> <span class="nc">Linear</span><span class="p">(</span><span class="n">Kernel</span><span class="p">,</span> <span class="n">Referentiable</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Linear kernel.&quot;&quot;&quot;</span>
 
@@ -1277,7 +1353,7 @@
         <span class="c1"># Derivative with respect to `x`.</span>
         <span class="k">elif</span> <span class="n">i</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">j</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">xi</span> <span class="o">=</span> <span class="n">x</span><span class="p">[:,</span> <span class="n">i</span><span class="p">:</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span>
-            <span class="n">xis</span> <span class="o">=</span> <span class="p">[</span><span class="n">B</span><span class="o">.</span><span class="n">identity</span><span class="p">(</span><span class="n">xi</span><span class="p">)</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">B</span><span class="o">.</span><span class="n">shape_int</span><span class="p">(</span><span class="n">y</span><span class="p">)[</span><span class="mi">0</span><span class="p">])]</span>
+            <span class="n">xis</span> <span class="o">=</span> <span class="p">[</span><span class="n">B</span><span class="o">.</span><span class="n">identity</span><span class="p">(</span><span class="n">xi</span><span class="p">)</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">B</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="n">y</span><span class="p">)[</span><span class="mi">0</span><span class="p">])]</span>
 
             <span class="k">def</span> <span class="nf">f</span><span class="p">(</span><span class="n">z</span><span class="p">):</span>
                 <span class="k">return</span> <span class="n">dense</span><span class="p">(</span><span class="n">k</span><span class="p">(</span><span class="n">B</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">x</span><span class="p">[:,</span> <span class="p">:</span><span class="n">i</span><span class="p">],</span> <span class="n">z</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">x</span><span class="p">[:,</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">:],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>
@@ -1291,7 +1367,7 @@
         <span class="c1"># Derivative with respect to `y`.</span>
         <span class="k">elif</span> <span class="n">i</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">j</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">yj</span> <span class="o">=</span> <span class="n">y</span><span class="p">[:,</span> <span class="n">j</span><span class="p">:</span><span class="n">j</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span>
-            <span class="n">yjs</span> <span class="o">=</span> <span class="p">[</span><span class="n">B</span><span class="o">.</span><span class="n">identity</span><span class="p">(</span><span class="n">yj</span><span class="p">)</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">B</span><span class="o">.</span><span class="n">shape_int</span><span class="p">(</span><span class="n">x</span><span class="p">)[</span><span class="mi">0</span><span class="p">])]</span>
+            <span class="n">yjs</span> <span class="o">=</span> <span class="p">[</span><span class="n">B</span><span class="o">.</span><span class="n">identity</span><span class="p">(</span><span class="n">yj</span><span class="p">)</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">B</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="n">x</span><span class="p">)[</span><span class="mi">0</span><span class="p">])]</span>
 
             <span class="k">def</span> <span class="nf">f</span><span class="p">(</span><span class="n">z</span><span class="p">):</span>
                 <span class="k">return</span> <span class="n">dense</span><span class="p">(</span>

@@ -171,8 +171,12 @@
 <span class="kn">from</span> <span class="nn">.momean</span> <span class="k">import</span> <span class="n">MultiOutputMean</span> <span class="k">as</span> <span class="n">MOM</span>
 <span class="kn">from</span> <span class="nn">.random</span> <span class="k">import</span> <span class="n">Random</span><span class="p">,</span> <span class="n">PromisedGP</span><span class="p">,</span> <span class="n">RandomProcess</span><span class="p">,</span> <span class="n">Normal</span>
 
-<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;GP&#39;</span><span class="p">,</span> <span class="s1">&#39;model&#39;</span><span class="p">,</span> <span class="s1">&#39;Graph&#39;</span><span class="p">,</span> <span class="s1">&#39;Observations&#39;</span><span class="p">,</span> <span class="s1">&#39;Obs&#39;</span><span class="p">,</span> <span class="s1">&#39;SparseObservations&#39;</span><span class="p">,</span>
-           <span class="s1">&#39;SparseObs&#39;</span><span class="p">]</span>
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;GP&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;model&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;Graph&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;AbstractObservations&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;Observations&#39;</span><span class="p">,</span> <span class="s1">&#39;Obs&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;SparseObservations&#39;</span><span class="p">,</span> <span class="s1">&#39;SparseObs&#39;</span><span class="p">]</span>
 
 <span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
 
@@ -198,7 +202,7 @@
                          <span class="s1">&#39;condition on.&#39;</span><span class="p">)</span>
 
 
-<span class="k">class</span> <span class="nc">AbstractObservations</span><span class="p">(</span><span class="n">Referentiable</span><span class="p">):</span>
+<div class="viewcode-block" id="AbstractObservations"><a class="viewcode-back" href="../../source/stheno.graph.html#stheno.graph.AbstractObservations">[docs]</a><span class="k">class</span> <span class="nc">AbstractObservations</span><span class="p">(</span><span class="n">Referentiable</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Abstract base class for observations.&quot;&quot;&quot;</span>
 
     <span class="n">_dispatch</span> <span class="o">=</span> <span class="n">Dispatcher</span><span class="p">(</span><span class="n">in_class</span><span class="o">=</span><span class="n">Self</span><span class="p">)</span>
@@ -233,7 +237,7 @@
     <span class="k">def</span> <span class="nf">__ror__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ps</span><span class="p">):</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">condition</span><span class="p">(</span><span class="n">ps</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">posterior_kernel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">p_i</span><span class="p">,</span> <span class="n">p_j</span><span class="p">):</span>  <span class="c1"># pragma: no cover</span>
+<div class="viewcode-block" id="AbstractObservations.posterior_kernel"><a class="viewcode-back" href="../../source/stheno.graph.html#stheno.graph.AbstractObservations.posterior_kernel">[docs]</a>    <span class="k">def</span> <span class="nf">posterior_kernel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">p_i</span><span class="p">,</span> <span class="n">p_j</span><span class="p">):</span>  <span class="c1"># pragma: no cover</span>
         <span class="sd">&quot;&quot;&quot;Get the posterior kernel between two processes.</span>
 
 <span class="sd">        Args:</span>
@@ -245,9 +249,9 @@
 <span class="sd">                second process.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s1">&#39;Posterior kernel construction not &#39;</span>
-                                  <span class="s1">&#39;implemented.&#39;</span><span class="p">)</span>
+                                  <span class="s1">&#39;implemented.&#39;</span><span class="p">)</span></div>
 
-    <span class="k">def</span> <span class="nf">posterior_mean</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">p</span><span class="p">):</span>  <span class="c1"># pragma: no cover</span>
+<div class="viewcode-block" id="AbstractObservations.posterior_mean"><a class="viewcode-back" href="../../source/stheno.graph.html#stheno.graph.AbstractObservations.posterior_mean">[docs]</a>    <span class="k">def</span> <span class="nf">posterior_mean</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">p</span><span class="p">):</span>  <span class="c1"># pragma: no cover</span>
         <span class="sd">&quot;&quot;&quot;Get the posterior kernel of a process.</span>
 
 <span class="sd">        Args:</span>
@@ -257,7 +261,7 @@
 <span class="sd">            :class:`.mean.Mean`: Posterior mean of `p`.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s1">&#39;Posterior mean construction not &#39;</span>
-                                  <span class="s1">&#39;implemented.&#39;</span><span class="p">)</span>
+                                  <span class="s1">&#39;implemented.&#39;</span><span class="p">)</span></div></div>
 
 
 <div class="viewcode-block" id="Observations"><a class="viewcode-back" href="../../source/stheno.graph.html#stheno.graph.Observations">[docs]</a><span class="k">class</span> <span class="nc">Observations</span><span class="p">(</span><span class="n">AbstractObservations</span><span class="p">,</span> <span class="n">Referentiable</span><span class="p">):</span>
