@@ -6,10 +6,15 @@ TODO:
     ☐ Use ABC with six.
     ☐ DerivativeKernel for torch and autograd?
         ☐ Simplify for TensorFlow! Jacobian function?
+    ☐ Update manual, e.g. kernels!
+    ☐ Remove uprank: use B.uprank
 
     ☐ Fixup examples: they use old versions of wbml, varz, and LAB! @critical
 
     ☐ Rename tf->tensorflow, but still allow tf @critical
+
+    ☐ Refactor tests to use PyTest: remove raises, fixtures, and parametrisation. @critical
+        ☐ Fixtures for kernel inputs!
 
 
 Features:
