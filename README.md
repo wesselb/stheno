@@ -61,10 +61,9 @@ Before installing the package, please ensure that `gcc` and `gfortran` are
 available.
 On OS X, these are both installed with `brew install gcc`;
 users of Anaconda may want to instead consider `conda install gcc`.
-The installation then proceeds as follows:
+Then simply
 
 ```
-pip install numpy cython  # These must be installed first.
 pip install stheno
 ```
 
