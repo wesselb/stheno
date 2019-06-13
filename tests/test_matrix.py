@@ -87,7 +87,7 @@ def test_dense_methods():
     allclose(dense(a[5]), dense(a)[5])
 
 
-def test_eye_form():
+def test_eye():
     a = Dense(np.random.randn(5, 10))
     allclose(dense(B.eye(a)), np.eye(5, 10))
     allclose(dense(B.eye(a.T)), np.eye(10, 5))
