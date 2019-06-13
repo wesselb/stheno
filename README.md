@@ -57,15 +57,15 @@ Moar?! Then read on!
 
 ## Installation
 
-The package is tested for Python 2.7 and Python 3.6, which are the versions 
-recommended to use.
-To install the package, please ensure that `gcc` and `gfortran` are 
-available, and then run the following commands:
+Before installing the package, please ensure that `gcc` and `gfortran` are 
+available.
+On OS X, these are both installed with `brew install gcc`;
+users of Anaconda may want to instead consider `conda install gcc`.
+The installation then proceeds as follows:
 
-```bash
-git clone https://github.com/wesselb/stheno
-cd stheno
-make install
+```
+pip install numpy cython  # These must be installed first.
+pip install stheno
 ```
 
 ## Manual

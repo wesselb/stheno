@@ -9,9 +9,8 @@ matrix:
       sudo: true
 before_install:
   - sudo apt-get install gfortran
-  - pip install --upgrade pip
-  - pip install --upgrade cython pytest pytest-cov coveralls
 install:
+  - pip install --upgrade pip setuptools wheel numpy cython
   - pip install --no-cache-dir -U -r requirements.txt | cat
 script:
   - pytest -v --cov=stheno --cov-report term-missing

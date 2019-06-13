@@ -6,6 +6,8 @@ venv
 
 # Packaging
 *.egg-info
+pip-wheel-metadata
+dist
 
 # Documentation and coverage
 docs/_build
