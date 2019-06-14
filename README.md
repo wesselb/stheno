@@ -69,8 +69,8 @@ pip install stheno
 
 ## Manual
 
-Note: [here](https://stheno.readthedocs.io/en/latest) is a nicely rendered 
-and more readable version of the docs.
+Note: [here](https://wesselb.github.io/stheno) is a nicely rendered and more
+readable version of the docs.
 
 ### Kernel and Mean Design
 
