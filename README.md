@@ -317,8 +317,8 @@ available:
     EQ() transform (None, f)
     ```
 
-* Numerically, but efficiently, take derivatives of _kernels and means_. This 
-currently only works in TensorFlow and derivatives cannot be nested.
+* Numerically, but efficiently, take derivatives of _kernels and means_.
+    This currently only works in TensorFlow.
 
     Definition:
 

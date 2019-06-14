@@ -7,14 +7,25 @@ import logging
 import tensorflow as tf
 from lab import B
 from plum import Dispatcher, Self, Referentiable
-from stheno.function_field import StretchedFunction, ShiftedFunction, \
-    SelectedFunction, InputTransformedFunction, DerivativeFunction, \
-    TensorProductFunction, ZeroFunction, OneFunction, \
-    ScaledFunction, ProductFunction, SumFunction, Function
 
-from .util import uprank
 from .field import get_field
+from .function_field import (
+    StretchedFunction,
+    ShiftedFunction,
+    SelectedFunction,
+    InputTransformedFunction,
+    DerivativeFunction,
+    TensorProductFunction,
+    ZeroFunction,
+    OneFunction,
+    ScaledFunction,
+    ProductFunction,
+    SumFunction,
+    Function
+)
 from .input import Input
+from .matrix import dense
+from .util import uprank
 
 __all__ = ['TensorProductMean', 'DerivativeMean']
 
@@ -164,7 +175,12 @@ class DerivativeMean(Mean, DerivativeFunction, Referentiable):
     @uprank
     def __call__(self, x):
         i = self.derivs[0]
-        return tf.gradients(self[0](x), x)[0][:, i:i + 1]
+        with tf.GradientTape() as t:
+            xi = x[:, i:i + 1]
+            t.watch(xi)
+            x = B.concat(x[:, :i], xi, x[:, i + 1:], axis=1)
+            out = dense(self[0](x))
+            return t.gradient(out, xi, unconnected_gradients='zero')
 
 
 class PosteriorMean(Mean, Referentiable):

@@ -8,6 +8,7 @@ import numpy as np
 import pytest
 import tensorflow as tf
 from plum import Dispatcher
+import lab.tensorflow as B
 
 from stheno.input import Observed
 from stheno.kernel import EQ
@@ -99,16 +100,12 @@ def test_function_mean():
 
 
 def test_derivative():
-    s = tf.Session()
-
     m = TensorProductMean(lambda x: x ** 2)
     m2 = TensorProductMean(lambda x: x ** 3)
-    x = tf.constant(np.random.randn(10, 1))
+    x = B.randn(tf.float64, 10, 1)
 
-    allclose(s.run(m.diff(0)(x)), s.run(2 * x))
-    allclose(s.run(m2.diff(0)(x)), s.run(3 * x ** 2))
-
-    s.close()
+    allclose(m.diff(0)(x), 2 * x)
+    allclose(m2.diff(0)(x), 3 * x ** 2)
 
 
 def test_selected_mean():

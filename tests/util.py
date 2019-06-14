@@ -11,7 +11,7 @@ from numpy.testing import assert_array_almost_equal
 
 from stheno.matrix import Dense, dense as _dense
 
-__all__ = ['benchmark', 'dense', 'allclose', 'approx']
+__all__ = ['benchmark', 'to_np', 'allclose', 'approx']
 
 
 def benchmark(f, args, n=1000, get_output=False):
@@ -32,28 +32,34 @@ def benchmark(f, args, n=1000, get_output=False):
 
 
 @dispatch(B.Numeric)
-def dense(a):
+def to_np(a):
     return a
 
 
 @dispatch(tuple)
-def dense(a):
-    return tuple(dense(x) for x in a)
+def to_np(a):
+    return tuple(to_np(x) for x in a)
 
 
 @dispatch(Dense)
-def dense(a):
+def to_np(a):
     return _dense(a)
 
 
 @dispatch(list)
-def dense(a):
+def to_np(a):
     return np.array(a)
+
+
+@dispatch({B.TFNumeric, B.TorchNumeric})
+def to_np(a):
+    return a.numpy()
 
 
 @dispatch({B.Numeric, Dense, list}, {B.Numeric, Dense, list}, [object])
 def allclose(a, b, desc=None, atol=1e-8, rtol=1e-8):
-    np.testing.assert_allclose(dense(a), dense(b), atol=atol, rtol=rtol)
+    np.testing.assert_allclose(to_np(a), to_np(b),
+                               atol=atol, rtol=rtol, err_msg=desc)
 
 
 @dispatch(tuple, tuple, [object])

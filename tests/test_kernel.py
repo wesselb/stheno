@@ -25,13 +25,14 @@ from stheno.kernel import (
     TensorProductKernel,
     CorrectiveKernel,
     DecayingKernel,
-    LogKernel
+    LogKernel,
+    perturb,
 )
 from stheno.matrix import matrix, dense, Zero, One, UniformlyDiagonal
 from .util import allclose
 
 
-def standard_kernel_tests(k, shapes=None):
+def standard_kernel_tests(k, shapes=None, dtype=np.float64):
     if shapes is None:
         shapes = [((10, 2), (5, 2)),
                   ((10, 1), (5, 1)),
@@ -42,14 +43,14 @@ def standard_kernel_tests(k, shapes=None):
 
     # Check various shapes of arguments.
     for shape1, shape2 in shapes:
-        x1 = B.randn(*shape1)
-        x2 = B.randn(*shape2)
+        x1 = B.randn(dtype, *shape1)
+        x2 = B.randn(dtype, *shape2)
 
-        # Check that the kernel computes.
-        allclose(k(x1, x2), k(x2, x1).T)
+        # Check that the kernel computes consistently.
+        allclose(k(x1, x2), reversed(k)(x2, x1).T)
 
         # Check `elwise`.
-        x2 = B.randn(*shape1)
+        x2 = B.randn(dtype, *shape1)
 
         allclose(k.elwise(x1, x2)[:, 0], B.diag(k(x1, x2)))
         allclose(k.elwise(x1, x2), Kernel.elwise(k, x1, x2))
@@ -734,7 +735,7 @@ def test_tensor_product():
     with pytest.raises(RuntimeError):
         k.period
 
-    # Check equality.
+    # Test equality.
     assert k == k
     assert k != TensorProductKernel(lambda x: x)
     assert k != EQ()
@@ -773,60 +774,84 @@ def test_derivative():
     assert EQ().diff(0) != EQ().diff(1)
     assert Matern12().diff(0) != EQ().diff(0)
 
+    # Standard tests:
+    for k in [EQ().diff(0), EQ().diff(None, 0), EQ().diff(0, None)]:
+        standard_kernel_tests(k, dtype=tf.float64)
+
+    # Check that a derivative must be specified.
     with pytest.raises(RuntimeError):
-        EQ().diff(None, None)(1)
+        EQ().diff(None, None)(np.array([1.0]))
+    with pytest.raises(RuntimeError):
+        EQ().diff(None, None).elwise(np.array([1.0]))
 
-    # Third, check computation.
-    s = tf.Session()
 
-    # Test derivative of kernel EQ.
+def test_derivative_eq():
+    # Test derivative of kernel `EQ()`.
     k = EQ()
-    x1 = tf.constant(np.random.randn(10, 1))
-    x2 = tf.constant(np.random.randn(5, 1))
+    x1 = B.randn(tf.float64, 10, 1)
+    x2 = B.randn(tf.float64, 5, 1)
 
     # Test derivative with respect to first input.
-    ref = s.run(-dense(k(x1, x2)) * (x1 - B.transpose(x2)))
-    allclose(s.run(dense(k.diff(0, None)(x1, x2))), ref)
-    ref = s.run(-dense(k(x1)) * (x1 - B.transpose(x1)))
-    allclose(s.run(dense(k.diff(0, None)(x1))), ref)
+    allclose(k.diff(0, None)(x1, x2), -k(x1, x2) * (x1 - B.transpose(x2)))
+    allclose(k.diff(0, None)(x1), -k(x1) * (x1 - B.transpose(x1)))
 
     # Test derivative with respect to second input.
-    ref = s.run(-dense(k(x1, x2)) * (B.transpose(x2) - x1))
-    allclose(s.run(dense(k.diff(None, 0)(x1, x2))), ref)
-    ref = s.run(-dense(k(x1)) * (B.transpose(x1) - x1))
-    allclose(s.run(dense(k.diff(None, 0)(x1))), ref)
+    allclose(k.diff(None, 0)(x1, x2), -k(x1, x2) * (B.transpose(x2) - x1))
+    allclose(k.diff(None, 0)(x1), -k(x1) * (B.transpose(x1) - x1))
 
     # Test derivative with respect to both inputs.
-    ref = s.run(dense(k(x1, x2)) * (1 - (x1 - B.transpose(x2)) ** 2))
-    allclose(s.run(dense(k.diff(0, 0)(x1, x2))), ref)
-    allclose(s.run(dense(k.diff(0)(x1, x2))), ref)
-    ref = s.run(dense(k(x1)) * (1 - (x1 - B.transpose(x1)) ** 2))
-    allclose(s.run(dense(k.diff(0, 0)(x1))), ref)
-    allclose(s.run(dense(k.diff(0)(x1))), ref)
+    ref = k(x1, x2) * (1 - (x1 - B.transpose(x2)) ** 2)
+    allclose(k.diff(0, 0)(x1, x2), ref)
+    allclose(k.diff(0)(x1, x2), ref)
+    ref = k(x1) * (1 - (x1 - B.transpose(x1)) ** 2)
+    allclose(k.diff(0, 0)(x1), ref)
+    allclose(k.diff(0)(x1), ref)
 
-    # Test derivative of kernel Linear.
+
+def test_derivative_linear():
+    # Test derivative of kernel `Linear()`.
     k = Linear()
-    x1 = tf.constant(np.random.randn(10, 1))
-    x2 = tf.constant(np.random.randn(5, 1))
+    x1 = B.randn(tf.float64, 10, 1)
+    x2 = B.randn(tf.float64, 5, 1)
 
     # Test derivative with respect to first input.
-    ref = s.run(B.ones(tf.float64, 10, 5) * B.transpose(x2))
-    allclose(s.run(dense(k.diff(0, None)(x1, x2))), ref)
-    ref = s.run(B.ones(tf.float64, 10, 10) * B.transpose(x1))
-    allclose(s.run(dense(k.diff(0, None)(x1))), ref)
+    allclose(k.diff(0, None)(x1, x2),
+             B.ones(tf.float64, 10, 5) * B.transpose(x2))
+    allclose(k.diff(0, None)(x1),
+             B.ones(tf.float64, 10, 10) * B.transpose(x1))
 
     # Test derivative with respect to second input.
-    ref = s.run(B.ones(tf.float64, 10, 5) * x1)
-    allclose(s.run(dense(k.diff(None, 0)(x1, x2))), ref)
-    ref = s.run(B.ones(tf.float64, 10, 10) * x1)
-    allclose(s.run(dense(k.diff(None, 0)(x1))), ref)
+    allclose(k.diff(None, 0)(x1, x2), B.ones(tf.float64, 10, 5) * x1)
+    allclose(k.diff(None, 0)(x1), B.ones(tf.float64, 10, 10) * x1)
 
     # Test derivative with respect to both inputs.
-    ref = s.run(B.ones(tf.float64, 10, 5))
-    allclose(s.run(dense(k.diff(0, 0)(x1, x2))), ref)
-    allclose(s.run(dense(k.diff(0)(x1, x2))), ref)
-    ref = s.run(B.ones(tf.float64, 10, 10))
-    allclose(s.run(dense(k.diff(0, 0)(x1))), ref)
-    allclose(s.run(dense(k.diff(0)(x1))), ref)
+    ref = B.ones(tf.float64, 10, 5)
+    allclose(k.diff(0, 0)(x1, x2), ref)
+    allclose(k.diff(0)(x1, x2), ref)
+    ref = B.ones(tf.float64, 10, 10)
+    allclose(k.diff(0, 0)(x1), ref)
+    allclose(k.diff(0)(x1), ref)
 
-    s.close()
+
+@pytest.mark.parametrize('x,result',
+                         [(np.float64([1]), np.float64([1e-20 + 1 + 1e-14])),
+                          (np.float32([1]), np.float32([1e-20 + 1 + 1e-7]))])
+def test_perturb(x, result):
+    assert perturb(x) == result  # Test NumPy.
+    assert perturb(tf.constant(x)).numpy() == result  # Test TF.
+
+
+def test_perturb_type_check():
+    with pytest.raises(ValueError):
+        perturb(0)
+
+
+@pytest.mark.parametrize('dtype', [tf.float32, tf.float64])
+def test_nested_derivatives(dtype):
+    x = B.randn(dtype, 10, 2)
+
+    res = EQ().diff(0, 0).diff(0, 0)(x)
+    assert ~B.isnan(res[0, 0])
+
+    res = EQ().diff(1, 1).diff(1, 1)(x)
+    assert ~B.isnan(res[0, 0])

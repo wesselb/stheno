@@ -8,7 +8,7 @@ import operator
 import numpy as np
 import tensorflow as tf
 from lab import B
-from plum import Dispatcher, Self, Referentiable
+from plum import Dispatcher, Self, Referentiable, convert
 
 from stheno.function_field import (
     StretchedFunction,
@@ -1181,6 +1181,153 @@ class CorrectiveKernel(Kernel, Referentiable):
                          B.trisolve(self.L, self.k_zj(self.z, y)))[:, None]
 
 
+def dkx(k_elwise, i):
+    """Construct the derivative of a kernel with respect to its first
+    argument.
+
+    Args:
+        k_elwise (function): Function that performs element-wise computation
+            of the kernel.
+        i (int): Dimension with respect to which to compute the derivative.
+
+    Returns:
+        function: Derivative of the kernel with respect to its first argument.
+    """
+
+    def _dkx(x, y):
+        with tf.GradientTape() as t:
+            # Get the numbers of inputs.
+            nx = B.shape(x)[0]
+            ny = B.shape(y)[0]
+
+            # Copy the input `ny` times to efficiently compute many derivatives.
+            xis = tf.identity_n([x[:, i:i + 1]] * ny)
+            t.watch(xis)
+
+            # Tile inputs for batched computation.
+            x = B.tile(x, ny, 1)
+            y = B.reshape(B.tile(y, 1, nx), ny * nx, -1)
+
+            # Insert tracked dimension, which is different for every tile.
+            xi = B.concat(*xis, axis=0)
+            x = B.concat(x[:, :i], xi, x[:, i + 1:], axis=1)
+
+            # Perform the derivative computation.
+            out = dense(k_elwise(x, y))
+            grads = t.gradient(out, xis, unconnected_gradients='zero')
+            return B.concat(*grads, axis=1)
+
+    return _dkx
+
+
+def dkx_elwise(k_elwise, i):
+    """Construct the element-wise derivative of a kernel with respect to
+    its first argument.
+
+    Args:
+        k_elwise (function): Function that performs element-wise computation
+            of the kernel.
+        i (int): Dimension with respect to which to compute the derivative.
+
+    Returns:
+        function: Element-wise derivative of the kernel with respect to its
+            first argument.
+    """
+
+    def _dkx_elwise(x, y):
+        with tf.GradientTape() as t:
+            xi = x[:, i:i + 1]
+            t.watch(xi)
+            x = B.concat(x[:, :i], xi, x[:, i + 1:], axis=1)
+            out = dense(k_elwise(x, y))
+            return t.gradient(out, xi, unconnected_gradients='zero')
+
+    return _dkx_elwise
+
+
+def dky(k_elwise, i):
+    """Construct the derivative of a kernel with respect to its second
+    argument.
+
+    Args:
+        k_elwise (function): Function that performs element-wise computation
+            of the kernel.
+        i (int): Dimension with respect to which to compute the derivative.
+
+    Returns:
+        function: Derivative of the kernel with respect to its second argument.
+    """
+
+    def _dky(x, y):
+        with tf.GradientTape() as t:
+            # Get the numbers of inputs.
+            nx = B.shape(x)[0]
+            ny = B.shape(y)[0]
+
+            # Copy the input `nx` times to efficiently compute many derivatives.
+            yis = tf.identity_n([y[:, i:i + 1]] * nx)
+            t.watch(yis)
+
+            # Tile inputs for batched computation.
+            x = B.reshape(B.tile(x, 1, ny), nx * ny, -1)
+            y = B.tile(y, nx, 1)
+
+            # Insert tracked dimension, which is different for every tile.
+            yi = B.concat(*yis, axis=0)
+            y = B.concat(y[:, :i], yi, y[:, i + 1:], axis=1)
+
+            # Perform the derivative computation.
+            out = dense(k_elwise(x, y))
+            grads = t.gradient(out, yis, unconnected_gradients='zero')
+            return B.transpose(B.concat(*grads, axis=1))
+
+    return _dky
+
+
+def dky_elwise(k_elwise, i):
+    """Construct the element-wise derivative of a kernel with respect to
+    its second argument.
+
+    Args:
+        k_elwise (function): Function that performs element-wise computation
+            of the kernel.
+        i (int): Dimension with respect to which to compute the derivative.
+
+    Returns:
+        function: Element-wise derivative of the kernel with respect to its
+            second argument.
+    """
+
+    def _dky_elwise(x, y):
+        with tf.GradientTape() as t:
+            yi = y[:, i:i + 1]
+            t.watch(yi)
+            y = B.concat(y[:, :i], yi, y[:, i + 1:], axis=1)
+            out = dense(k_elwise(x, y))
+            return t.gradient(out, yi, unconnected_gradients='zero')
+
+    return _dky_elwise
+
+
+def perturb(x):
+    """Slightly perturb a tensor.
+
+    Args:
+        x (tensor): Tensor to perturb.
+
+    Returns:
+        tensor: `x`, but perturbed.
+    """
+    dtype = convert(B.dtype(x), B.NPDType)
+    if dtype == np.float64:
+        return 1e-20 + x * (1 + 1e-14)
+    elif dtype == np.float32:
+        return 1e-20 + x * (1 + 1e-7)
+    else:
+        raise ValueError('Cannot perturb a tensor of data type {}.'
+                         ''.format(B.dtype(x)))
+
+
 class DerivativeKernel(Kernel, DerivativeFunction, Referentiable):
     """Derivative of kernel."""
     _dispatch = Dispatcher(in_class=Self)
@@ -1191,42 +1338,44 @@ class DerivativeKernel(Kernel, DerivativeFunction, Referentiable):
         i, j = expand(self.derivs)
         k = self[0]
 
-        # Derivative with respect to both `x` and `y`.
+        # Prevent that `x` equals `y` to stabilise nested gradients.
+        y = perturb(y)
+
         if i is not None and j is not None:
-            z = B.concat(x[:, i], y[:, j], axis=0)
-            n = B.shape(x)[0]
-            K = dense(k(B.concat(x[:, :i], z[:n, None], x[:, i + 1:], axis=1),
-                        B.concat(y[:, :j], z[n:, None], y[:, j + 1:], axis=1)))
-            return Dense(tf.hessians(K, [z])[0][:n, n:])
+            # Derivative with respect to both `x` and `y`.
+            return Dense(dky(dkx_elwise(k.elwise, i), j)(x, y))
 
-        # Derivative with respect to `x`.
         elif i is not None and j is None:
-            xi = x[:, i:i + 1]
-            xis = [B.identity(xi) for _ in range(B.shape(y)[0])]
+            # Derivative with respect to `x`.
+            return Dense(dkx(k.elwise, i)(x, y))
 
-            def f(z):
-                return dense(k(B.concat(x[:, :i], z[0], x[:, i + 1:], axis=1),
-                               z[1]))
-
-            res = tf.map_fn(f, (B.stack(*xis, axis=0), y[:, None, :]),
-                            dtype=B.dtype(x))
-            return Dense(B.concat(*tf.gradients(B.sum(res, axis=0), xis),
-                                  axis=1))
-
-        # Derivative with respect to `y`.
         elif i is None and j is not None:
-            yj = y[:, j:j + 1]
-            yjs = [B.identity(yj) for _ in range(B.shape(x)[0])]
+            # Derivative with respect to `y`.
+            return Dense(dky(k.elwise, j)(x, y))
 
-            def f(z):
-                return dense(
-                    k(z[0], B.concat(y[:, :j], z[1], y[:, j + 1:], axis=1))
-                )
+        else:
+            raise RuntimeError('No derivative specified.')
 
-            res = tf.map_fn(f, (x[:, None, :], B.stack(*yjs, axis=0)),
-                            dtype=B.dtype(x))
-            dKt = B.concat(*tf.gradients(B.sum(res, axis=0), yjs), axis=1)
-            return Dense(B.transpose(dKt))
+    @_dispatch(B.Numeric, B.Numeric)
+    @uprank
+    def elwise(self, x, y):
+        i, j = expand(self.derivs)
+        k = self[0]
+
+        # Prevent that `x` equals `y` to stabilise nested gradients.
+        y = perturb(y)
+
+        if i is not None and j is not None:
+            # Derivative with respect to both `x` and `y`.
+            return dky_elwise(dkx_elwise(k.elwise, i), j)(x, y)
+
+        elif i is not None and j is None:
+            # Derivative with respect to `x`.
+            return dkx_elwise(k.elwise, i)(x, y)
+
+        elif i is None and j is not None:
+            # Derivative with respect to `y`.
+            return dky_elwise(k.elwise, j)(x, y)
 
         else:
             raise RuntimeError('No derivative specified.')
@@ -1234,7 +1383,7 @@ class DerivativeKernel(Kernel, DerivativeFunction, Referentiable):
     @property
     def _stationary(self):
         # NOTE: In the one-dimensional case, if derivatives with respect to both
-        # arguments are taken, then the result is in fact stationary.
+        #     arguments are taken, then the result is in fact stationary.
         return False
 
     @_dispatch(Self)

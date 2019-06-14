@@ -392,24 +392,20 @@ def test_derivative():
     assert str(p.diff(1)) == 'GP(d(1) EQ(), d(1) <lambda>)'
 
     # Test case:
-    s = tf.Session()
-
     model = Graph()
-    x = tf.constant(np.linspace(0, 1, 100))[:, None]
+    x = B.linspace(tf.float64, 0, 1, 100)[:, None]
     y = 2 * x
 
     p = GP(EQ(), graph=model)
     dp = p.diff()
 
     # Test conditioning on function.
-    assert abs_err(s.run(dp.condition(p(x), y)(x).mean - 2)) <= 1e-3
+    assert abs_err(dp.condition(p(x), y)(x).mean, 2) <= 1e-3
 
     # Test conditioning on derivative.
     post = p.condition((B.cast(tf.float64, 0),
                         B.cast(tf.float64, 0)), (dp(x), y))
-    assert abs_err(s.run(post(x).mean - x ** 2)) <= 1e-3
-
-    s.close()
+    assert abs_err(post(x).mean, x ** 2) <= 1e-3
 
 
 def test_multi_sample():

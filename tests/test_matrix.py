@@ -2,31 +2,29 @@
 
 from __future__ import absolute_import, division, print_function
 
-import numpy as np
-from lab import B
 from itertools import product
 
+import numpy as np
+import pytest
+from lab import B
 from stheno.matrix import (
     Dense,
     Diagonal,
     LowRank,
-    dense,
     Woodbury,
-    Constant,
     matrix,
     Zero,
     One,
     Constant
 )
 
-import pytest
-from .util import allclose, dense
+from .util import allclose, to_np
 
 
 def test_equality():
     # Test `Dense.`
     a = Dense(np.random.randn(4, 2))
-    allclose(a == a, dense(a) == dense(a))
+    allclose(a == a, to_np(a) == to_np(a))
 
     # Test `Diagonal`.
     d = Diagonal(np.random.randn(4))
@@ -82,15 +80,15 @@ def test_shorthands():
 
 def test_dense_methods():
     a = Dense(np.random.randn(10, 5))
-    allclose(dense(a.T), dense(a).T)
-    allclose(dense(-a), -dense(a))
-    allclose(dense(a[5]), dense(a)[5])
+    allclose(a.T, to_np(a).T)
+    allclose(-a, -to_np(a))
+    allclose(a[5], to_np(a)[5])
 
 
 def test_eye():
     a = Dense(np.random.randn(5, 10))
-    allclose(dense(B.eye(a)), np.eye(5, 10))
-    allclose(dense(B.eye(a.T)), np.eye(10, 5))
+    allclose(B.eye(a), np.eye(5, 10))
+    allclose(B.eye(a.T), np.eye(10, 5))
 
 
 def test_matrix():
@@ -103,40 +101,39 @@ def test_matrix():
 
 def test_dense():
     a = np.random.randn(5, 3)
-    allclose(dense(Dense(a)), a)
-    allclose(dense(a), a)
+    allclose(Dense(a), a)
 
     # Extensively test Diagonal.
-    allclose(dense(Diagonal(np.array([1, 2]))), np.array([[1, 0],
-                                                          [0, 2]]))
-    allclose(dense(Diagonal(np.array([1, 2]), 3)), np.array([[1, 0, 0],
-                                                             [0, 2, 0],
-                                                             [0, 0, 0]]))
-    allclose(dense(Diagonal(np.array([1, 2]), 1)), np.array([[1]]))
-    allclose(dense(Diagonal(np.array([1, 2]), 3, 3)), np.array([[1, 0, 0],
-                                                                [0, 2, 0],
-                                                                [0, 0, 0]]))
-    allclose(dense(Diagonal(np.array([1, 2]), 2, 3)), np.array([[1, 0, 0],
-                                                                [0, 2, 0]]))
-    allclose(dense(Diagonal(np.array([1, 2]), 3, 2)), np.array([[1, 0],
-                                                                [0, 2],
-                                                                [0, 0]]))
-    allclose(dense(Diagonal(np.array([1, 2]), 1, 3)), np.array([[1, 0, 0]]))
-    allclose(dense(Diagonal(np.array([1, 2]), 3, 1)), np.array([[1],
-                                                                [0],
-                                                                [0]]))
+    allclose(Diagonal(np.array([1, 2])), np.array([[1, 0],
+                                                   [0, 2]]))
+    allclose(Diagonal(np.array([1, 2]), 3), np.array([[1, 0, 0],
+                                                      [0, 2, 0],
+                                                      [0, 0, 0]]))
+    allclose(Diagonal(np.array([1, 2]), 1), np.array([[1]]))
+    allclose(Diagonal(np.array([1, 2]), 3, 3), np.array([[1, 0, 0],
+                                                         [0, 2, 0],
+                                                         [0, 0, 0]]))
+    allclose(Diagonal(np.array([1, 2]), 2, 3), np.array([[1, 0, 0],
+                                                         [0, 2, 0]]))
+    allclose(Diagonal(np.array([1, 2]), 3, 2), np.array([[1, 0],
+                                                         [0, 2],
+                                                         [0, 0]]))
+    allclose(Diagonal(np.array([1, 2]), 1, 3), np.array([[1, 0, 0]]))
+    allclose(Diagonal(np.array([1, 2]), 3, 1), np.array([[1],
+                                                         [0],
+                                                         [0]]))
 
     # Test low-rank matrices.
     left = np.random.randn(5, 3)
     right = np.random.randn(10, 3)
     middle = np.random.randn(3, 3)
     lr = LowRank(left=left, right=right, middle=middle)
-    allclose(dense(lr), left.dot(middle).dot(right.T))
+    allclose(lr, left.dot(middle).dot(right.T))
 
     # Test Woodbury matrices.
     diag = Diagonal(np.array([1, 2, 3, 4]), 5, 10)
     wb = Woodbury(diag=diag, lr=lr)
-    allclose(dense(wb), dense(diag) + dense(lr))
+    allclose(wb, to_np(diag) + to_np(lr))
 
 
 def test_block_matrix():
@@ -217,17 +214,16 @@ def test_dtype():
 
 def test_sum():
     a = Dense(np.random.randn(10, 20))
-    allclose(B.sum(a, axis=0), np.sum(dense(a), axis=0))
+    allclose(B.sum(a, axis=0), np.sum(to_np(a), axis=0))
 
     for x in [Diagonal(np.array([1, 2, 3]), rows=3, cols=5),
               LowRank(left=np.random.randn(5, 3),
                       right=np.random.randn(10, 3),
                       middle=np.random.randn(3, 3))]:
-        allclose(B.sum(x), np.sum(dense(x)))
-        allclose(B.sum(x, axis=0), np.sum(dense(x), axis=0))
-        allclose(B.sum(x, axis=1), np.sum(dense(x), axis=1))
-        allclose(B.sum(x, axis=(0, 1)), np.sum(dense(x),
-                                               axis=(0, 1)))
+        allclose(B.sum(x), np.sum(to_np(x)))
+        allclose(B.sum(x, axis=0), np.sum(to_np(x), axis=0))
+        allclose(B.sum(x, axis=1), np.sum(to_np(x), axis=1))
+        allclose(B.sum(x, axis=(0, 1)), np.sum(to_np(x), axis=(0, 1)))
 
 
 def test_trace():
@@ -279,12 +275,12 @@ def test_cholesky():
 
     # Test `Diagonal`.
     d = Diagonal(np.diag(a))
-    allclose(np.linalg.cholesky(dense(d)), B.cholesky(d))
+    allclose(np.linalg.cholesky(to_np(d)), B.cholesky(d))
 
     # Test `LowRank`.
     a = np.random.randn(2, 2)
     lr = LowRank(left=np.random.randn(5, 2), middle=a.dot(a.T))
-    chol = dense(B.cholesky(lr))
+    chol = to_np(B.cholesky(lr))
     #   The Cholesky here is not technically the Cholesky decomposition. Hence
     #   we test this slightly differently.
     allclose(chol.dot(chol.T), lr)
@@ -304,8 +300,8 @@ def test_matmul():
                  middle=np.random.randn(2, 2))
 
     def compare(a, b):
-        return np.allclose(dense(B.matmul(a, b)),
-                           B.matmul(dense(a), dense(b)))
+        return np.allclose(to_np(B.matmul(a, b)),
+                           B.matmul(to_np(a), to_np(b)))
 
     # Test `Dense`.
     assert compare(dense_wide, dense_tall.T), 'dense w x dense t'
@@ -353,8 +349,9 @@ def test_matmul():
 
     # Test `B.matmul` with three matrices simultaneously.
     allclose(B.matmul(dense_tall, dense_square, dense_wide, tr_c=True),
-             dense(dense_tall).dot(dense(dense_square)).dot(
-                 dense(dense_wide).T))
+             (to_np(dense_tall)
+              .dot(to_np(dense_square))
+              .dot(to_np(dense_wide).T)))
 
     # Test `Woodbury`.
     wb = lr + dense_tall
@@ -370,13 +367,13 @@ def test_inverse_and_logdet():
     a = Dense(a.dot(a.T))
     allclose(B.matmul(a, B.inverse(a)), np.eye(3))
     allclose(B.matmul(B.inverse(a), a), np.eye(3))
-    allclose(B.logdet(a), np.log(np.linalg.det(dense(a))))
+    allclose(B.logdet(a), np.log(np.linalg.det(to_np(a))))
 
     # Test `Diagonal`.
     d = Diagonal(np.array([1, 2, 3]))
     allclose(B.matmul(d, B.inverse(d)), np.eye(3))
     allclose(B.matmul(B.inverse(d), d), np.eye(3))
-    allclose(B.logdet(d), np.log(np.linalg.det(dense(d))))
+    allclose(B.logdet(d), np.log(np.linalg.det(to_np(d))))
     assert B.shape(B.inverse(Diagonal(np.array([1, 2]),
                                       rows=2, cols=4))) == (4, 2)
 
@@ -387,7 +384,7 @@ def test_inverse_and_logdet():
     for _ in range(4):
         allclose(B.matmul(wb, B.inverse(wb)), np.eye(3))
         allclose(B.matmul(B.inverse(wb), wb), np.eye(3))
-        allclose(B.logdet(wb), np.log(np.linalg.det(dense(wb))))
+        allclose(B.logdet(wb), np.log(np.linalg.det(to_np(wb))))
         wb = B.inverse(wb)
 
     # Test `LowRank`.
@@ -451,7 +448,7 @@ def test_sample():
     for cov in [a, wb]:
         samps = B.sample(cov, num_samps)
         cov_emp = B.matmul(samps, samps, tr_b=True) / num_samps
-        assert np.mean(np.abs(dense(cov_emp) - dense(cov))) <= 5e-2
+        assert np.mean(np.abs(to_np(cov_emp) - to_np(cov))) <= 5e-2
 
 
 def test_schur():
@@ -471,7 +468,7 @@ def test_schur():
     c = np.random.randn(2, 2)
     c = Diagonal(np.array([1, 2, 3])) + LowRank(left=np.random.randn(3, 2),
                                                 middle=c.dot(c.T))
-    allclose(B.schur(a, b, c, d), a - np.linalg.solve(dense(c).T, b).T.dot(d),
+    allclose(B.schur(a, b, c, d), a - np.linalg.solve(to_np(c).T, b).T.dot(d),
              desc='n n w n')
 
     #   Test all combinations of `Woodbury`, `LowRank`, and `Diagonal`.
@@ -500,9 +497,9 @@ def test_schur():
             for ci in [c, c.diag]:
                 for di in [d, d.lr, d.diag]:
                     allclose(B.schur(ai, bi, ci, di),
-                             dense(ai) -
-                             np.linalg.solve(dense(ci).T,
-                                             dense(bi)).T.dot(dense(di)),
+                             to_np(ai) -
+                             np.linalg.solve(to_np(ci).T,
+                                             to_np(bi)).T.dot(to_np(di)),
                              desc='{} {} {} {}'.format(ai, bi, ci, di))
 
 
@@ -519,14 +516,14 @@ def test_qf():
                      middle=e.dot(e.T))
 
     for x in [a, d, wb]:
-        allclose(B.qf(x, b), np.linalg.solve(dense(x), b).T.dot(b))
+        allclose(B.qf(x, b), np.linalg.solve(to_np(x), b).T.dot(b))
         allclose(B.qf(x, b, b), B.qf(x, b))
-        allclose(B.qf(x, b, c), np.linalg.solve(dense(x), b).T.dot(c))
+        allclose(B.qf(x, b, c), np.linalg.solve(to_np(x), b).T.dot(c))
         allclose(B.qf_diag(x, b),
-                 np.diag(np.linalg.solve(dense(x), b).T.dot(b)))
+                 np.diag(np.linalg.solve(to_np(x), b).T.dot(b)))
         allclose(B.qf_diag(x, b, b), B.qf_diag(x, b, b))
         allclose(B.qf_diag(x, b, c),
-                 np.diag(np.linalg.solve(dense(x), b).T.dot(c)))
+                 np.diag(np.linalg.solve(to_np(x), b).T.dot(c)))
 
     # Test `LowRank`.
     lr = LowRank(np.random.randn(5, 3))
@@ -547,14 +544,14 @@ def test_ratio():
     c = np.random.randn(3, 3)
     lr = LowRank(left=np.random.randn(4, 3), middle=c.dot(c.T))
 
-    allclose(B.ratio(a, b), np.trace(np.linalg.solve(dense(b), dense(a))))
-    allclose(B.ratio(lr, b), np.trace(np.linalg.solve(dense(b), dense(lr))))
-    allclose(B.ratio(d, e), np.trace(np.linalg.solve(dense(e), dense(d))))
+    allclose(B.ratio(a, b), np.trace(np.linalg.solve(to_np(b), to_np(a))))
+    allclose(B.ratio(lr, b), np.trace(np.linalg.solve(to_np(b), to_np(lr))))
+    allclose(B.ratio(d, e), np.trace(np.linalg.solve(to_np(e), to_np(d))))
 
 
 def test_transposition():
     def compare(a):
-        allclose(B.transpose(a), dense(a).T)
+        allclose(B.transpose(a), to_np(a).T)
 
     d = Diagonal(np.array([1, 2, 3]), rows=5, cols=10)
     lr = LowRank(left=np.random.randn(5, 3), right=np.random.randn(10, 3))
@@ -581,12 +578,12 @@ def test_arithmetic_and_shapes():
     candidates = [a, d, lr, wb, constant, one, zero, 2, 1, 0, 2.0, 1.0, 0.0]
 
     # Check division.
-    allclose(a.__div__(5.0), dense(a) / 5.0)
-    allclose(a.__rdiv__(5.0), 5.0 / dense(a))
-    allclose(a.__truediv__(5.0), dense(a) / 5.0)
-    allclose(a.__rtruediv__(5.0), 5.0 / dense(a))
-    allclose(B.divide(a, 5.0), dense(a) / 5.0)
-    allclose(B.divide(a, a), B.ones(dense(a)))
+    allclose(a.__div__(5.0), to_np(a) / 5.0)
+    allclose(a.__rdiv__(5.0), 5.0 / to_np(a))
+    allclose(a.__truediv__(5.0), to_np(a) / 5.0)
+    allclose(a.__rtruediv__(5.0), 5.0 / to_np(a))
+    allclose(B.divide(a, 5.0), to_np(a) / 5.0)
+    allclose(B.divide(a, a), B.ones(to_np(a)))
 
     # Check shapes.
     for m in candidates:
@@ -594,6 +591,6 @@ def test_arithmetic_and_shapes():
 
     # Check interactions.
     for m1, m2 in product(candidates, candidates):
-        allclose(m1 * m2, dense(m1) * dense(m2))
-        allclose(m1 + m2, dense(m1) + dense(m2))
-        allclose(m1 - m2, dense(m1) - dense(m2))
+        allclose(m1 * m2, to_np(m1) * to_np(m2))
+        allclose(m1 + m2, to_np(m1) + to_np(m2))
+        allclose(m1 - m2, to_np(m1) - to_np(m2))
