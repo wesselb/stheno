@@ -7,7 +7,10 @@ import logging
 from autograd.numpy.numpy_boxes import ArrayBox
 from plum import Dispatcher
 
+# noinspection PyUnresolvedReferences
+from . import *  # pragma: no cover
 from .field import Element
+from .random import Random
 
 __all__ = []
 
@@ -25,7 +28,7 @@ def __mul__(self, other):
     return __mul__array_box(self, other)
 
 
-@_dispatch(ArrayBox, Element)
+@_dispatch(ArrayBox, {Element, Random})
 def __mul__(self, other):
     return other.__rmul__(self)
 
@@ -35,7 +38,7 @@ def __add__(self, other):
     return __add__array_box(self, other)
 
 
-@_dispatch(ArrayBox, Element)
+@_dispatch(ArrayBox, {Element, Random})
 def __add__(self, other):
     return other.__radd__(self)
 
