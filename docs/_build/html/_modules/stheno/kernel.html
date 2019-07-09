@@ -159,7 +159,7 @@
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">import</span> <span class="nn">tensorflow</span> <span class="k">as</span> <span class="nn">tf</span>
 <span class="kn">from</span> <span class="nn">lab</span> <span class="k">import</span> <span class="n">B</span>
-<span class="kn">from</span> <span class="nn">plum</span> <span class="k">import</span> <span class="n">Dispatcher</span><span class="p">,</span> <span class="n">Self</span><span class="p">,</span> <span class="n">Referentiable</span>
+<span class="kn">from</span> <span class="nn">plum</span> <span class="k">import</span> <span class="n">Dispatcher</span><span class="p">,</span> <span class="n">Self</span><span class="p">,</span> <span class="n">Referentiable</span><span class="p">,</span> <span class="n">convert</span>
 
 <span class="kn">from</span> <span class="nn">stheno.function_field</span> <span class="k">import</span> <span class="p">(</span>
     <span class="n">StretchedFunction</span><span class="p">,</span>
@@ -1332,6 +1332,153 @@
                          <span class="n">B</span><span class="o">.</span><span class="n">trisolve</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">L</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">k_zj</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">z</span><span class="p">,</span> <span class="n">y</span><span class="p">)))[:,</span> <span class="kc">None</span><span class="p">]</span>
 
 
+<span class="k">def</span> <span class="nf">dkx</span><span class="p">(</span><span class="n">k_elwise</span><span class="p">,</span> <span class="n">i</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Construct the derivative of a kernel with respect to its first</span>
+<span class="sd">    argument.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        k_elwise (function): Function that performs element-wise computation</span>
+<span class="sd">            of the kernel.</span>
+<span class="sd">        i (int): Dimension with respect to which to compute the derivative.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        function: Derivative of the kernel with respect to its first argument.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">_dkx</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+        <span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">GradientTape</span><span class="p">()</span> <span class="k">as</span> <span class="n">t</span><span class="p">:</span>
+            <span class="c1"># Get the numbers of inputs.</span>
+            <span class="n">nx</span> <span class="o">=</span> <span class="n">B</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="n">x</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">ny</span> <span class="o">=</span> <span class="n">B</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="n">y</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+
+            <span class="c1"># Copy the input `ny` times to efficiently compute many derivatives.</span>
+            <span class="n">xis</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">identity_n</span><span class="p">([</span><span class="n">x</span><span class="p">[:,</span> <span class="n">i</span><span class="p">:</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]]</span> <span class="o">*</span> <span class="n">ny</span><span class="p">)</span>
+            <span class="n">t</span><span class="o">.</span><span class="n">watch</span><span class="p">(</span><span class="n">xis</span><span class="p">)</span>
+
+            <span class="c1"># Tile inputs for batched computation.</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">B</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">ny</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">y</span> <span class="o">=</span> <span class="n">B</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">B</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">nx</span><span class="p">),</span> <span class="n">ny</span> <span class="o">*</span> <span class="n">nx</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+
+            <span class="c1"># Insert tracked dimension, which is different for every tile.</span>
+            <span class="n">xi</span> <span class="o">=</span> <span class="n">B</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="o">*</span><span class="n">xis</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">B</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">x</span><span class="p">[:,</span> <span class="p">:</span><span class="n">i</span><span class="p">],</span> <span class="n">xi</span><span class="p">,</span> <span class="n">x</span><span class="p">[:,</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">:],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+            <span class="c1"># Perform the derivative computation.</span>
+            <span class="n">out</span> <span class="o">=</span> <span class="n">dense</span><span class="p">(</span><span class="n">k_elwise</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">))</span>
+            <span class="n">grads</span> <span class="o">=</span> <span class="n">t</span><span class="o">.</span><span class="n">gradient</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">xis</span><span class="p">,</span> <span class="n">unconnected_gradients</span><span class="o">=</span><span class="s1">&#39;zero&#39;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">B</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="o">*</span><span class="n">grads</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">_dkx</span>
+
+
+<span class="k">def</span> <span class="nf">dkx_elwise</span><span class="p">(</span><span class="n">k_elwise</span><span class="p">,</span> <span class="n">i</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Construct the element-wise derivative of a kernel with respect to</span>
+<span class="sd">    its first argument.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        k_elwise (function): Function that performs element-wise computation</span>
+<span class="sd">            of the kernel.</span>
+<span class="sd">        i (int): Dimension with respect to which to compute the derivative.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        function: Element-wise derivative of the kernel with respect to its</span>
+<span class="sd">            first argument.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">_dkx_elwise</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+        <span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">GradientTape</span><span class="p">()</span> <span class="k">as</span> <span class="n">t</span><span class="p">:</span>
+            <span class="n">xi</span> <span class="o">=</span> <span class="n">x</span><span class="p">[:,</span> <span class="n">i</span><span class="p">:</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span>
+            <span class="n">t</span><span class="o">.</span><span class="n">watch</span><span class="p">(</span><span class="n">xi</span><span class="p">)</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">B</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">x</span><span class="p">[:,</span> <span class="p">:</span><span class="n">i</span><span class="p">],</span> <span class="n">xi</span><span class="p">,</span> <span class="n">x</span><span class="p">[:,</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">:],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">out</span> <span class="o">=</span> <span class="n">dense</span><span class="p">(</span><span class="n">k_elwise</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">))</span>
+            <span class="k">return</span> <span class="n">t</span><span class="o">.</span><span class="n">gradient</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">xi</span><span class="p">,</span> <span class="n">unconnected_gradients</span><span class="o">=</span><span class="s1">&#39;zero&#39;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">_dkx_elwise</span>
+
+
+<span class="k">def</span> <span class="nf">dky</span><span class="p">(</span><span class="n">k_elwise</span><span class="p">,</span> <span class="n">i</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Construct the derivative of a kernel with respect to its second</span>
+<span class="sd">    argument.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        k_elwise (function): Function that performs element-wise computation</span>
+<span class="sd">            of the kernel.</span>
+<span class="sd">        i (int): Dimension with respect to which to compute the derivative.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        function: Derivative of the kernel with respect to its second argument.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">_dky</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+        <span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">GradientTape</span><span class="p">()</span> <span class="k">as</span> <span class="n">t</span><span class="p">:</span>
+            <span class="c1"># Get the numbers of inputs.</span>
+            <span class="n">nx</span> <span class="o">=</span> <span class="n">B</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="n">x</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">ny</span> <span class="o">=</span> <span class="n">B</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="n">y</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+
+            <span class="c1"># Copy the input `nx` times to efficiently compute many derivatives.</span>
+            <span class="n">yis</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">identity_n</span><span class="p">([</span><span class="n">y</span><span class="p">[:,</span> <span class="n">i</span><span class="p">:</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]]</span> <span class="o">*</span> <span class="n">nx</span><span class="p">)</span>
+            <span class="n">t</span><span class="o">.</span><span class="n">watch</span><span class="p">(</span><span class="n">yis</span><span class="p">)</span>
+
+            <span class="c1"># Tile inputs for batched computation.</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">B</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">B</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">ny</span><span class="p">),</span> <span class="n">nx</span> <span class="o">*</span> <span class="n">ny</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">y</span> <span class="o">=</span> <span class="n">B</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">nx</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+
+            <span class="c1"># Insert tracked dimension, which is different for every tile.</span>
+            <span class="n">yi</span> <span class="o">=</span> <span class="n">B</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="o">*</span><span class="n">yis</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+            <span class="n">y</span> <span class="o">=</span> <span class="n">B</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">y</span><span class="p">[:,</span> <span class="p">:</span><span class="n">i</span><span class="p">],</span> <span class="n">yi</span><span class="p">,</span> <span class="n">y</span><span class="p">[:,</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">:],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+            <span class="c1"># Perform the derivative computation.</span>
+            <span class="n">out</span> <span class="o">=</span> <span class="n">dense</span><span class="p">(</span><span class="n">k_elwise</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">))</span>
+            <span class="n">grads</span> <span class="o">=</span> <span class="n">t</span><span class="o">.</span><span class="n">gradient</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">yis</span><span class="p">,</span> <span class="n">unconnected_gradients</span><span class="o">=</span><span class="s1">&#39;zero&#39;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">B</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">B</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="o">*</span><span class="n">grads</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span>
+
+    <span class="k">return</span> <span class="n">_dky</span>
+
+
+<span class="k">def</span> <span class="nf">dky_elwise</span><span class="p">(</span><span class="n">k_elwise</span><span class="p">,</span> <span class="n">i</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Construct the element-wise derivative of a kernel with respect to</span>
+<span class="sd">    its second argument.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        k_elwise (function): Function that performs element-wise computation</span>
+<span class="sd">            of the kernel.</span>
+<span class="sd">        i (int): Dimension with respect to which to compute the derivative.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        function: Element-wise derivative of the kernel with respect to its</span>
+<span class="sd">            second argument.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">_dky_elwise</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+        <span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">GradientTape</span><span class="p">()</span> <span class="k">as</span> <span class="n">t</span><span class="p">:</span>
+            <span class="n">yi</span> <span class="o">=</span> <span class="n">y</span><span class="p">[:,</span> <span class="n">i</span><span class="p">:</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span>
+            <span class="n">t</span><span class="o">.</span><span class="n">watch</span><span class="p">(</span><span class="n">yi</span><span class="p">)</span>
+            <span class="n">y</span> <span class="o">=</span> <span class="n">B</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">y</span><span class="p">[:,</span> <span class="p">:</span><span class="n">i</span><span class="p">],</span> <span class="n">yi</span><span class="p">,</span> <span class="n">y</span><span class="p">[:,</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">:],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">out</span> <span class="o">=</span> <span class="n">dense</span><span class="p">(</span><span class="n">k_elwise</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">))</span>
+            <span class="k">return</span> <span class="n">t</span><span class="o">.</span><span class="n">gradient</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">yi</span><span class="p">,</span> <span class="n">unconnected_gradients</span><span class="o">=</span><span class="s1">&#39;zero&#39;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">_dky_elwise</span>
+
+
+<span class="k">def</span> <span class="nf">perturb</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Slightly perturb a tensor.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        x (tensor): Tensor to perturb.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        tensor: `x`, but perturbed.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">dtype</span> <span class="o">=</span> <span class="n">convert</span><span class="p">(</span><span class="n">B</span><span class="o">.</span><span class="n">dtype</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="n">B</span><span class="o">.</span><span class="n">NPDType</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">dtype</span> <span class="o">==</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mf">1e-20</span> <span class="o">+</span> <span class="n">x</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="mf">1e-14</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">dtype</span> <span class="o">==</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mf">1e-20</span> <span class="o">+</span> <span class="n">x</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="mf">1e-7</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Cannot perturb a tensor of data type </span><span class="si">{}</span><span class="s1">.&#39;</span>
+                         <span class="s1">&#39;&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">B</span><span class="o">.</span><span class="n">dtype</span><span class="p">(</span><span class="n">x</span><span class="p">)))</span>
+
+
 <div class="viewcode-block" id="DerivativeKernel"><a class="viewcode-back" href="../../source/stheno.kernel.html#stheno.kernel.DerivativeKernel">[docs]</a><span class="k">class</span> <span class="nc">DerivativeKernel</span><span class="p">(</span><span class="n">Kernel</span><span class="p">,</span> <span class="n">DerivativeFunction</span><span class="p">,</span> <span class="n">Referentiable</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Derivative of kernel.&quot;&quot;&quot;</span>
     <span class="n">_dispatch</span> <span class="o">=</span> <span class="n">Dispatcher</span><span class="p">(</span><span class="n">in_class</span><span class="o">=</span><span class="n">Self</span><span class="p">)</span>
@@ -1342,50 +1489,52 @@
         <span class="n">i</span><span class="p">,</span> <span class="n">j</span> <span class="o">=</span> <span class="n">expand</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">derivs</span><span class="p">)</span>
         <span class="n">k</span> <span class="o">=</span> <span class="bp">self</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
 
-        <span class="c1"># Derivative with respect to both `x` and `y`.</span>
+        <span class="c1"># Prevent that `x` equals `y` to stabilise nested gradients.</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="n">perturb</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+
         <span class="k">if</span> <span class="n">i</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">j</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">z</span> <span class="o">=</span> <span class="n">B</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">x</span><span class="p">[:,</span> <span class="n">i</span><span class="p">],</span> <span class="n">y</span><span class="p">[:,</span> <span class="n">j</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-            <span class="n">n</span> <span class="o">=</span> <span class="n">B</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="n">x</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
-            <span class="n">K</span> <span class="o">=</span> <span class="n">dense</span><span class="p">(</span><span class="n">k</span><span class="p">(</span><span class="n">B</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">x</span><span class="p">[:,</span> <span class="p">:</span><span class="n">i</span><span class="p">],</span> <span class="n">z</span><span class="p">[:</span><span class="n">n</span><span class="p">,</span> <span class="kc">None</span><span class="p">],</span> <span class="n">x</span><span class="p">[:,</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">:],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>
-                        <span class="n">B</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">y</span><span class="p">[:,</span> <span class="p">:</span><span class="n">j</span><span class="p">],</span> <span class="n">z</span><span class="p">[</span><span class="n">n</span><span class="p">:,</span> <span class="kc">None</span><span class="p">],</span> <span class="n">y</span><span class="p">[:,</span> <span class="n">j</span> <span class="o">+</span> <span class="mi">1</span><span class="p">:],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)))</span>
-            <span class="k">return</span> <span class="n">Dense</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">hessians</span><span class="p">(</span><span class="n">K</span><span class="p">,</span> <span class="p">[</span><span class="n">z</span><span class="p">])[</span><span class="mi">0</span><span class="p">][:</span><span class="n">n</span><span class="p">,</span> <span class="n">n</span><span class="p">:])</span>
+            <span class="c1"># Derivative with respect to both `x` and `y`.</span>
+            <span class="k">return</span> <span class="n">Dense</span><span class="p">(</span><span class="n">dky</span><span class="p">(</span><span class="n">dkx_elwise</span><span class="p">(</span><span class="n">k</span><span class="o">.</span><span class="n">elwise</span><span class="p">,</span> <span class="n">i</span><span class="p">),</span> <span class="n">j</span><span class="p">)(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">))</span>
 
-        <span class="c1"># Derivative with respect to `x`.</span>
         <span class="k">elif</span> <span class="n">i</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">j</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">xi</span> <span class="o">=</span> <span class="n">x</span><span class="p">[:,</span> <span class="n">i</span><span class="p">:</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span>
-            <span class="n">xis</span> <span class="o">=</span> <span class="p">[</span><span class="n">B</span><span class="o">.</span><span class="n">identity</span><span class="p">(</span><span class="n">xi</span><span class="p">)</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">B</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="n">y</span><span class="p">)[</span><span class="mi">0</span><span class="p">])]</span>
+            <span class="c1"># Derivative with respect to `x`.</span>
+            <span class="k">return</span> <span class="n">Dense</span><span class="p">(</span><span class="n">dkx</span><span class="p">(</span><span class="n">k</span><span class="o">.</span><span class="n">elwise</span><span class="p">,</span> <span class="n">i</span><span class="p">)(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">))</span>
 
-            <span class="k">def</span> <span class="nf">f</span><span class="p">(</span><span class="n">z</span><span class="p">):</span>
-                <span class="k">return</span> <span class="n">dense</span><span class="p">(</span><span class="n">k</span><span class="p">(</span><span class="n">B</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">x</span><span class="p">[:,</span> <span class="p">:</span><span class="n">i</span><span class="p">],</span> <span class="n">z</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">x</span><span class="p">[:,</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">:],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>
-                               <span class="n">z</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
-
-            <span class="n">res</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">map_fn</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="p">(</span><span class="n">B</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="o">*</span><span class="n">xis</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">),</span> <span class="n">y</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">,</span> <span class="p">:]),</span>
-                            <span class="n">dtype</span><span class="o">=</span><span class="n">B</span><span class="o">.</span><span class="n">dtype</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
-            <span class="k">return</span> <span class="n">Dense</span><span class="p">(</span><span class="n">B</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="o">*</span><span class="n">tf</span><span class="o">.</span><span class="n">gradients</span><span class="p">(</span><span class="n">B</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">res</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">),</span> <span class="n">xis</span><span class="p">),</span>
-                                  <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span>
-
-        <span class="c1"># Derivative with respect to `y`.</span>
         <span class="k">elif</span> <span class="n">i</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">j</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">yj</span> <span class="o">=</span> <span class="n">y</span><span class="p">[:,</span> <span class="n">j</span><span class="p">:</span><span class="n">j</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span>
-            <span class="n">yjs</span> <span class="o">=</span> <span class="p">[</span><span class="n">B</span><span class="o">.</span><span class="n">identity</span><span class="p">(</span><span class="n">yj</span><span class="p">)</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">B</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="n">x</span><span class="p">)[</span><span class="mi">0</span><span class="p">])]</span>
-
-            <span class="k">def</span> <span class="nf">f</span><span class="p">(</span><span class="n">z</span><span class="p">):</span>
-                <span class="k">return</span> <span class="n">dense</span><span class="p">(</span>
-                    <span class="n">k</span><span class="p">(</span><span class="n">z</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">B</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">y</span><span class="p">[:,</span> <span class="p">:</span><span class="n">j</span><span class="p">],</span> <span class="n">z</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">y</span><span class="p">[:,</span> <span class="n">j</span> <span class="o">+</span> <span class="mi">1</span><span class="p">:],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span>
-                <span class="p">)</span>
-
-            <span class="n">res</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">map_fn</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="p">(</span><span class="n">x</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">,</span> <span class="p">:],</span> <span class="n">B</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="o">*</span><span class="n">yjs</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)),</span>
-                            <span class="n">dtype</span><span class="o">=</span><span class="n">B</span><span class="o">.</span><span class="n">dtype</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
-            <span class="n">dKt</span> <span class="o">=</span> <span class="n">B</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="o">*</span><span class="n">tf</span><span class="o">.</span><span class="n">gradients</span><span class="p">(</span><span class="n">B</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">res</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">),</span> <span class="n">yjs</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-            <span class="k">return</span> <span class="n">Dense</span><span class="p">(</span><span class="n">B</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">dKt</span><span class="p">))</span>
+            <span class="c1"># Derivative with respect to `y`.</span>
+            <span class="k">return</span> <span class="n">Dense</span><span class="p">(</span><span class="n">dky</span><span class="p">(</span><span class="n">k</span><span class="o">.</span><span class="n">elwise</span><span class="p">,</span> <span class="n">j</span><span class="p">)(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">))</span>
 
         <span class="k">else</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s1">&#39;No derivative specified.&#39;</span><span class="p">)</span>
 
+<div class="viewcode-block" id="DerivativeKernel.elwise"><a class="viewcode-back" href="../../source/stheno.kernel.html#stheno.kernel.DerivativeKernel.elwise">[docs]</a>    <span class="nd">@_dispatch</span><span class="p">(</span><span class="n">B</span><span class="o">.</span><span class="n">Numeric</span><span class="p">,</span> <span class="n">B</span><span class="o">.</span><span class="n">Numeric</span><span class="p">)</span>
+    <span class="nd">@uprank</span>
+    <span class="k">def</span> <span class="nf">elwise</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+        <span class="n">i</span><span class="p">,</span> <span class="n">j</span> <span class="o">=</span> <span class="n">expand</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">derivs</span><span class="p">)</span>
+        <span class="n">k</span> <span class="o">=</span> <span class="bp">self</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="c1"># Prevent that `x` equals `y` to stabilise nested gradients.</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="n">perturb</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">i</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">j</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># Derivative with respect to both `x` and `y`.</span>
+            <span class="k">return</span> <span class="n">dky_elwise</span><span class="p">(</span><span class="n">dkx_elwise</span><span class="p">(</span><span class="n">k</span><span class="o">.</span><span class="n">elwise</span><span class="p">,</span> <span class="n">i</span><span class="p">),</span> <span class="n">j</span><span class="p">)(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+
+        <span class="k">elif</span> <span class="n">i</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">j</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># Derivative with respect to `x`.</span>
+            <span class="k">return</span> <span class="n">dkx_elwise</span><span class="p">(</span><span class="n">k</span><span class="o">.</span><span class="n">elwise</span><span class="p">,</span> <span class="n">i</span><span class="p">)(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+
+        <span class="k">elif</span> <span class="n">i</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">j</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># Derivative with respect to `y`.</span>
+            <span class="k">return</span> <span class="n">dky_elwise</span><span class="p">(</span><span class="n">k</span><span class="o">.</span><span class="n">elwise</span><span class="p">,</span> <span class="n">j</span><span class="p">)(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s1">&#39;No derivative specified.&#39;</span><span class="p">)</span></div>
+
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">_stationary</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="c1"># NOTE: In the one-dimensional case, if derivatives with respect to both</span>
-        <span class="c1"># arguments are taken, then the result is in fact stationary.</span>
+        <span class="c1">#     arguments are taken, then the result is in fact stationary.</span>
         <span class="k">return</span> <span class="kc">False</span>
 
     <span class="nd">@_dispatch</span><span class="p">(</span><span class="n">Self</span><span class="p">)</span>

@@ -792,13 +792,13 @@
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">kernel</span><span class="p">,</span> <span class="n">mean</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">graph</span><span class="o">=</span><span class="n">model</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="c1"># Resolve kernel.</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">kernel</span><span class="p">,</span> <span class="p">(</span><span class="n">B</span><span class="o">.</span><span class="n">Numeric</span><span class="p">,</span> <span class="n">FunctionType</span><span class="p">)):</span>
-            <span class="n">kernel</span> <span class="o">*=</span> <span class="n">OneKernel</span><span class="p">()</span>
+            <span class="n">kernel</span> <span class="o">=</span> <span class="n">kernel</span> <span class="o">*</span> <span class="n">OneKernel</span><span class="p">()</span>
 
         <span class="c1"># Resolve mean.</span>
         <span class="k">if</span> <span class="n">mean</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">mean</span> <span class="o">=</span> <span class="n">ZeroMean</span><span class="p">()</span>
         <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">mean</span><span class="p">,</span> <span class="p">(</span><span class="n">B</span><span class="o">.</span><span class="n">Numeric</span><span class="p">,</span> <span class="n">FunctionType</span><span class="p">)):</span>
-            <span class="n">mean</span> <span class="o">*=</span> <span class="n">OneMean</span><span class="p">()</span>
+            <span class="n">mean</span> <span class="o">=</span> <span class="n">mean</span> <span class="o">*</span> <span class="n">OneMean</span><span class="p">()</span>
 
         <span class="c1"># Then add a new `GP` to the graph with the resolved kernel and mean.</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">graph</span> <span class="o">=</span> <span class="n">graph</span>

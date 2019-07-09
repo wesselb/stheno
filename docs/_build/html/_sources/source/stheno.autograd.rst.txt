@@ -1,0 +1,7 @@
+stheno.autograd module
+======================
+
+.. automodule:: stheno.autograd
+    :members:
+    :undoc-members:
+    :show-inheritance:

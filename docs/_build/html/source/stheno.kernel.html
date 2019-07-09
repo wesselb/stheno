@@ -88,6 +88,7 @@
               <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../readme.html">Stheno</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../api.html">Application Programming Interface</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="stheno.autograd.html">stheno.autograd module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stheno.eis.html">stheno.eis module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stheno.field.html">stheno.field module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stheno.function_field.html">stheno.function_field module</a></li>
@@ -99,9 +100,8 @@
 <li class="toctree-l2"><a class="reference internal" href="stheno.mean.html">stheno.mean module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stheno.mokernel.html">stheno.mokernel module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stheno.momean.html">stheno.momean module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stheno.numpy.html">stheno.numpy module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stheno.random.html">stheno.random module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stheno.tf.html">stheno.tf module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stheno.tensorflow.html">stheno.tensorflow module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stheno.torch.html">stheno.torch module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stheno.util.html">stheno.util module</a></li>
 </ul>
@@ -581,6 +581,11 @@ noises if and only if the inputs are identical and of the right shape.</p>
 <em class="property">class </em><code class="descclassname">stheno.kernel.</code><code class="descname">DerivativeKernel</code><span class="sig-paren">(</span><em>e</em>, <em>*derivs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/stheno/kernel.html#DerivativeKernel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.kernel.DerivativeKernel" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#stheno.kernel.Kernel" title="stheno.kernel.Kernel"><code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.kernel.Kernel</span></code></a>, <code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.function_field.DerivativeFunction</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">plum.resolvable.Referentiable</span></code></p>
 <p>Derivative of kernel.</p>
+<dl class="attribute">
+<dt id="stheno.kernel.DerivativeKernel.elwise">
+<code class="descname">elwise</code><em class="property"> = &lt;function &lt;function DerivativeKernel.elwise&gt; with 1 method(s)&gt;</em><a class="reference internal" href="../_modules/stheno/kernel.html#DerivativeKernel.elwise"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.kernel.DerivativeKernel.elwise" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
 </dd></dl>
 
 <dl class="class">

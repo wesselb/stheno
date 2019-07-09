@@ -70,22 +70,20 @@ Moar?! Then read on!
 Installation
 ------------
 
-The package is tested for Python 2.7 and Python 3.6, which are the
-versions recommended to use. To install the package, please ensure that
-``gcc`` and ``gfortran`` are available, and then run the following
-commands:
+Before installing the package, please ensure that ``gcc`` and
+``gfortran`` are available. On OS X, these are both installed with
+``brew install gcc``; users of Anaconda may want to instead consider
+``conda install gcc``. Then simply
 
-.. code:: bash
+::
 
-    git clone https://github.com/wesselb/stheno
-    cd stheno
-    make install
+    pip install stheno
 
 Manual
 ------
 
-Note: `here <https://stheno.readthedocs.io/en/latest>`__ is a nicely
-rendered and more readable version of the docs.
+Note: `here <https://wesselb.github.io/stheno>`__ is a nicely rendered
+and more readable version of the docs.
 
 Kernel and Mean Design
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -346,8 +344,7 @@ Compositional Design
        EQ() transform (None, f)
 
 -  Numerically, but efficiently, take derivatives of *kernels and
-   means*. This currently only works in TensorFlow and derivatives
-   cannot be nested.
+   means*. This currently only works in TensorFlow.
 
    Definition:
 
@@ -837,7 +834,7 @@ Your choice!
 
 .. code:: python
 
-    from stheno.tf import GP, EQ
+    from stheno.tensorflow import GP, EQ
 
 .. code:: python
 
@@ -1048,7 +1045,7 @@ Learn a Function, Incorporating Prior Knowledge About Its Form
     from tensorflow.contrib.opt import ScipyOptimizerInterface as SOI
     from wbml import vars64 as vs
 
-    from stheno.tf import GP, EQ, Delta
+    from stheno.tensorflow import GP, EQ, Delta
 
     s = tf.Session()
 
@@ -1343,7 +1340,7 @@ GPAR
     from tensorflow.contrib.opt import ScipyOptimizerInterface as SOI
     from wbml import Vars
 
-    from stheno.tf import GP, Delta, EQ, Graph, B
+    from stheno.tensorflow import GP, Delta, EQ, Graph, B
 
     s = tf.Session()
 
@@ -1441,7 +1438,7 @@ A GP–RNN Model
     import tensorflow as tf
     from wbml import Vars, rnn as rnn_constructor
 
-    from stheno.tf import GP, Delta, EQ, RQ, Obs
+    from stheno.tensorflow import GP, Delta, EQ, RQ, Obs
 
     # Construct variable storages.
     vs_gp = Vars(np.float32)

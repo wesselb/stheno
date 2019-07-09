@@ -264,20 +264,18 @@ Functions</a></p></li>
 </div>
 <div class="section" id="installation">
 <h2>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h2>
-<p>The package is tested for Python 2.7 and Python 3.6, which are the
-versions recommended to use. To install the package, please ensure that
-<code class="docutils literal notranslate"><span class="pre">gcc</span></code> and <code class="docutils literal notranslate"><span class="pre">gfortran</span></code> are available, and then run the following
-commands:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git clone https://github.com/wesselb/stheno
-<span class="nb">cd</span> stheno
-make install
+<p>Before installing the package, please ensure that <code class="docutils literal notranslate"><span class="pre">gcc</span></code> and
+<code class="docutils literal notranslate"><span class="pre">gfortran</span></code> are available. On OS X, these are both installed with
+<code class="docutils literal notranslate"><span class="pre">brew</span> <span class="pre">install</span> <span class="pre">gcc</span></code>; users of Anaconda may want to instead consider
+<code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">install</span> <span class="pre">gcc</span></code>. Then simply</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pip</span> <span class="n">install</span> <span class="n">stheno</span>
 </pre></div>
 </div>
 </div>
 <div class="section" id="manual">
 <h2>Manual<a class="headerlink" href="#manual" title="Permalink to this headline">¶</a></h2>
-<p>Note: <a class="reference external" href="https://stheno.readthedocs.io/en/latest">here</a> is a nicely
-rendered and more readable version of the docs.</p>
+<p>Note: <a class="reference external" href="https://wesselb.github.io/stheno">here</a> is a nicely rendered
+and more readable version of the docs.</p>
 <div class="section" id="kernel-and-mean-design">
 <h3>Kernel and Mean Design<a class="headerlink" href="#kernel-and-mean-design" title="Permalink to this headline">¶</a></h3>
 <p>Inputs to kernels, means, and GPs, henceforth referred to simply as
@@ -502,8 +500,7 @@ stretching:</p>
 </div>
 </li>
 <li><p>Numerically, but efficiently, take derivatives of <em>kernels and
-means</em>. This currently only works in TensorFlow and derivatives
-cannot be nested.</p>
+means</em>. This currently only works in TensorFlow.</p>
 <p>Definition:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">k</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="mi">0</span><span class="p">)(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span> <span class="o">==</span> <span class="n">d</span><span class="o">/</span><span class="n">d</span><span class="p">(</span><span class="n">x</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">])</span> <span class="n">d</span><span class="o">/</span><span class="n">d</span><span class="p">(</span><span class="n">y</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">])</span> <span class="n">k</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
 
@@ -913,7 +910,7 @@ inducing points.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">stheno</span> <span class="kn">import</span> <span class="n">GP</span><span class="p">,</span> <span class="n">EQ</span>
 </pre></div>
 </div>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">stheno.tf</span> <span class="kn">import</span> <span class="n">GP</span><span class="p">,</span> <span class="n">EQ</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">stheno.tensorflow</span> <span class="kn">import</span> <span class="n">GP</span><span class="p">,</span> <span class="n">EQ</span>
 </pre></div>
 </div>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">stheno.torch</span> <span class="kn">import</span> <span class="n">GP</span><span class="p">,</span> <span class="n">EQ</span>
@@ -1111,7 +1108,7 @@ experimental feature.</p>
 <span class="kn">from</span> <span class="nn">tensorflow.contrib.opt</span> <span class="kn">import</span> <span class="n">ScipyOptimizerInterface</span> <span class="k">as</span> <span class="n">SOI</span>
 <span class="kn">from</span> <span class="nn">wbml</span> <span class="kn">import</span> <span class="n">vars64</span> <span class="k">as</span> <span class="n">vs</span>
 
-<span class="kn">from</span> <span class="nn">stheno.tf</span> <span class="kn">import</span> <span class="n">GP</span><span class="p">,</span> <span class="n">EQ</span><span class="p">,</span> <span class="n">Delta</span>
+<span class="kn">from</span> <span class="nn">stheno.tensorflow</span> <span class="kn">import</span> <span class="n">GP</span><span class="p">,</span> <span class="n">EQ</span><span class="p">,</span> <span class="n">Delta</span>
 
 <span class="n">s</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">Session</span><span class="p">()</span>
 
@@ -1398,7 +1395,7 @@ experimental feature.</p>
 <span class="kn">from</span> <span class="nn">tensorflow.contrib.opt</span> <span class="kn">import</span> <span class="n">ScipyOptimizerInterface</span> <span class="k">as</span> <span class="n">SOI</span>
 <span class="kn">from</span> <span class="nn">wbml</span> <span class="kn">import</span> <span class="n">Vars</span>
 
-<span class="kn">from</span> <span class="nn">stheno.tf</span> <span class="kn">import</span> <span class="n">GP</span><span class="p">,</span> <span class="n">Delta</span><span class="p">,</span> <span class="n">EQ</span><span class="p">,</span> <span class="n">Graph</span><span class="p">,</span> <span class="n">B</span>
+<span class="kn">from</span> <span class="nn">stheno.tensorflow</span> <span class="kn">import</span> <span class="n">GP</span><span class="p">,</span> <span class="n">Delta</span><span class="p">,</span> <span class="n">EQ</span><span class="p">,</span> <span class="n">Graph</span><span class="p">,</span> <span class="n">B</span>
 
 <span class="n">s</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">Session</span><span class="p">()</span>
 
@@ -1494,7 +1491,7 @@ experimental feature.</p>
 <span class="kn">import</span> <span class="nn">tensorflow</span> <span class="kn">as</span> <span class="nn">tf</span>
 <span class="kn">from</span> <span class="nn">wbml</span> <span class="kn">import</span> <span class="n">Vars</span><span class="p">,</span> <span class="n">rnn</span> <span class="k">as</span> <span class="n">rnn_constructor</span>
 
-<span class="kn">from</span> <span class="nn">stheno.tf</span> <span class="kn">import</span> <span class="n">GP</span><span class="p">,</span> <span class="n">Delta</span><span class="p">,</span> <span class="n">EQ</span><span class="p">,</span> <span class="n">RQ</span><span class="p">,</span> <span class="n">Obs</span>
+<span class="kn">from</span> <span class="nn">stheno.tensorflow</span> <span class="kn">import</span> <span class="n">GP</span><span class="p">,</span> <span class="n">Delta</span><span class="p">,</span> <span class="n">EQ</span><span class="p">,</span> <span class="n">RQ</span><span class="p">,</span> <span class="n">Obs</span>
 
 <span class="c1"># Construct variable storages.</span>
 <span class="n">vs_gp</span> <span class="o">=</span> <span class="n">Vars</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
