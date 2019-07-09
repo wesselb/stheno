@@ -11,7 +11,6 @@ before_install:
   - sudo apt-get install gfortran
 install:
   - pip install --upgrade pip
-  - pip install --upgrade git+https://github.com/wesselb/lab
   - pip install --no-cache-dir -U -r requirements.txt | cat
 script:
   - pytest -v --cov=stheno --cov-report term-missing
