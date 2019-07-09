@@ -641,13 +641,13 @@ class GP(RandomProcess, Referentiable):
     def __init__(self, kernel, mean=None, graph=model, name=None):
         # Resolve kernel.
         if isinstance(kernel, (B.Numeric, FunctionType)):
-            kernel *= OneKernel()
+            kernel = kernel * OneKernel()
 
         # Resolve mean.
         if mean is None:
             mean = ZeroMean()
         elif isinstance(mean, (B.Numeric, FunctionType)):
-            mean *= OneMean()
+            mean = mean * OneMean()
 
         # Then add a new `GP` to the graph with the resolved kernel and mean.
         self.graph = graph
