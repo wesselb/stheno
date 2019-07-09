@@ -12,6 +12,7 @@ from tensorflow import Tensor
 # noinspection PyUnresolvedReferences
 from . import *  # pragma: no cover
 from .field import Element
+from .random import Random
 
 log = logging.getLogger(__name__)
 
@@ -27,7 +28,7 @@ def __mul__(self, other):
     return __mul__tensor(self, other)
 
 
-@_dispatch(Tensor, Element)
+@_dispatch(Tensor, {Element, Random})
 def __mul__(self, other):
     return other.__rmul__(self)
 
@@ -37,7 +38,7 @@ def __add__(self, other):
     return __add__tensor(self, other)
 
 
-@_dispatch(Tensor, Element)
+@_dispatch(Tensor, {Element, Random})
 def __add__(self, other):
     return other.__radd__(self)
 
