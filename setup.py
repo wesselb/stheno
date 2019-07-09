@@ -7,7 +7,7 @@ from setuptools import find_packages, setup
 requirements = ['numpy>=1.16',
                 'scipy<1.3',
                 'autograd',
-                'tensorflow',
+                'tensorflow>=2.0.0b',
                 'torch',
 
                 'fdm',
