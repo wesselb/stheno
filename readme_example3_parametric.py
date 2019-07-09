@@ -4,7 +4,7 @@ import tensorflow as tf
 from tensorflow.contrib.opt import ScipyOptimizerInterface as SOI
 from wbml import vars64 as vs
 
-from stheno.tf import GP, EQ, Delta
+from stheno.tensorflow import GP, EQ, Delta
 
 s = tf.Session()
 

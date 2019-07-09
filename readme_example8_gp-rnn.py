@@ -3,7 +3,7 @@ import numpy as np
 import tensorflow as tf
 from wbml import Vars, rnn as rnn_constructor
 
-from stheno.tf import GP, Delta, EQ, RQ, Obs
+from stheno.tensorflow import GP, Delta, EQ, RQ, Obs
 
 # Construct variable storages.
 vs_gp = Vars(np.float32)

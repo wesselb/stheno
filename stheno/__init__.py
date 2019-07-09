@@ -16,4 +16,4 @@ from .random import *
 from .eis import *
 from .lazy import *
 from .graph import *
-from .numpy import *
+from .autograd import *

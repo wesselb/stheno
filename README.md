@@ -797,7 +797,7 @@ from stheno import GP, EQ
 ```
 
 ```python
-from stheno.tf import GP, EQ
+from stheno.tensorflow import GP, EQ
 ```
 
 ```python
@@ -993,7 +993,7 @@ import tensorflow as tf
 from tensorflow.contrib.opt import ScipyOptimizerInterface as SOI
 from wbml import vars64 as vs
 
-from stheno.tf import GP, EQ, Delta
+from stheno.tensorflow import GP, EQ, Delta
 
 s = tf.Session()
 
@@ -1272,7 +1272,7 @@ import tensorflow as tf
 from tensorflow.contrib.opt import ScipyOptimizerInterface as SOI
 from wbml import Vars
 
-from stheno.tf import GP, Delta, EQ, Graph, B
+from stheno.tensorflow import GP, Delta, EQ, Graph, B
 
 s = tf.Session()
 
@@ -1366,7 +1366,7 @@ import numpy as np
 import tensorflow as tf
 from wbml import Vars, rnn as rnn_constructor
 
-from stheno.tf import GP, Delta, EQ, RQ, Obs
+from stheno.tensorflow import GP, Delta, EQ, RQ, Obs
 
 # Construct variable storages.
 vs_gp = Vars(np.float32)
