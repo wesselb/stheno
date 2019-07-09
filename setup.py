@@ -12,7 +12,7 @@ requirements = ['numpy>=1.16',
 
                 'fdm',
                 'plum-dispatch',
-                'backends']
+                'backends>=0.2']
 
 setup(packages=find_packages(exclude=['docs']),
       install_requires=requirements,
