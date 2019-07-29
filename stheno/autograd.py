@@ -4,6 +4,8 @@ from __future__ import absolute_import, division, print_function
 
 import logging
 
+# noinspection PyUnresolvedReferences
+import lab.autograd as B
 from autograd.numpy.numpy_boxes import ArrayBox
 from plum import Dispatcher
 
