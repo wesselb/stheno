@@ -5,3 +5,6 @@ sphinx-rtd-theme
 pytest
 pytest-cov
 coveralls
+autograd
+tensorflow>=2.0.0b
+torch

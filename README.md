@@ -7,7 +7,7 @@
 Stheno is an implementation of Gaussian process modelling in Python. See 
 also [Stheno.jl](https://github.com/willtebbutt/Stheno.jl).
 
-_Note:_ Stheno requires TensorFlow 2.
+_Note:_ Stheno requires Python 3.5+ and TensorFlow 2 if TensorFlow is used.
 
 * [Nonlinear Regression in 20 Seconds](#nonlinear-regression-in-20-seconds)
 * [Installation](#installation)
@@ -25,7 +25,7 @@ _Note:_ Stheno requires TensorFlow 2.
         * [Naming GPs](#naming-gps)
     - [Finite-Dimensional Distributions, Inference, and Sampling](#finite-dimensional-distributions-inference-and-sampling)
     - [Inducing Points](#inducing-points)
-    - [NumPy, TensorFlow, or PyTorch?](#numpy-tensorflow-or-pytorch)
+    - [AutoGrad, TensorFlow, or PyTorch?](#autograd-tensorflow-or-pytorch)
     - [Undiscussed Features](#undiscussed-features)
 * [Examples](#examples)
     - [Simple Regression](#simple-regression)
@@ -790,12 +790,12 @@ obs = SparseObs((u1(z1), u2(z2), ...), (e1, f1(x1), y1), (e2, f2(x2), y2), ...)
 `SparseObs` will also compute the value of the ELBO in `obs.elbo`, which can be
 optimised to select hyperparameters and locations of the inducing points.
 
-### NumPy, TensorFlow, or PyTorch?
+### AutoGrad, TensorFlow, or PyTorch?
 
 Your choice!
 
 ```python
-from stheno import GP, EQ
+from stheno.autograd import GP, EQ
 ```
 
 ```python
