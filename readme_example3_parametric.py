@@ -16,7 +16,7 @@ def model(vs):
 
     # Random fluctuation:
     u = GP(vs.pos(.5, name='u/var') *
-           EQ().stretch(vs.pos(1., name='u/scale')), graph=g)
+           EQ().stretch(vs.pos(0.5, name='u/scale')), graph=g)
 
     # Noise:
     e = GP(vs.pos(0.5, name='e/var') * Delta(), graph=g)
@@ -31,19 +31,19 @@ def model(vs):
 
 # Sample a true, underlying function and observations.
 vs = Vars(tf.float64)
-f_true = x ** 1.8
+f_true = x ** 1.8 + B.sin(2 * B.pi * x)
 f, y = model(vs)
 y_obs = (y | (f(x), f_true))(x_obs).sample()
 
 
 def objective(vs):
     f, y = model(vs)
-    evidence = y(tf.constant(x_obs)).logpdf(y_obs)
+    evidence = y(x_obs).logpdf(y_obs)
     return -evidence
 
 
 # Learn hyperparameters.
-minimise_l_bfgs_b(objective, vs)
+minimise_l_bfgs_b(tf.function(objective, autograph=False), vs)
 f, y = model(vs)
 
 # Print the learned parameters.
