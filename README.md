@@ -1016,8 +1016,7 @@ x_obs = B.linspace(tf.float64, 0, 3, 20)
 def model(vs):
     g = Graph()
 
-    # Latent function:
-    alpha = vs.pos(1.2, name='alpha')
+    # Random fluctuation:
     u = GP(vs.pos(.5, name='u/var') *
            EQ().stretch(vs.pos(1., name='u/scale')), graph=g)
 
@@ -1025,6 +1024,7 @@ def model(vs):
     e = GP(vs.pos(0.5, name='e/var') * Delta(), graph=g)
 
     # Construct model:
+    alpha = vs.pos(1.2, name='alpha')
     f = u + (lambda x: x ** alpha)
     y = f + e
 
