@@ -6,10 +6,8 @@ import logging
 import operator
 
 import numpy as np
-import tensorflow as tf
 from lab import B
 from plum import Dispatcher, Self, Referentiable, convert
-
 from stheno.function_field import (
     StretchedFunction,
     ShiftedFunction,
@@ -32,6 +30,7 @@ from stheno.function_field import (
     to_tensor,
     tuple_equal
 )
+
 from .field import add, mul, broadcast, get_field, Formatter, need_parens
 from .input import Input, Unique
 from .matrix import (
@@ -1195,6 +1194,8 @@ def dkx(k_elwise, i):
     """
 
     def _dkx(x, y):
+        import tensorflow as tf
+
         with tf.GradientTape() as t:
             # Get the numbers of inputs.
             nx = B.shape(x)[0]
@@ -1235,6 +1236,8 @@ def dkx_elwise(k_elwise, i):
     """
 
     def _dkx_elwise(x, y):
+        import tensorflow as tf
+
         with tf.GradientTape() as t:
             xi = x[:, i:i + 1]
             t.watch(xi)
@@ -1259,6 +1262,8 @@ def dky(k_elwise, i):
     """
 
     def _dky(x, y):
+        import tensorflow as tf
+
         with tf.GradientTape() as t:
             # Get the numbers of inputs.
             nx = B.shape(x)[0]
@@ -1299,6 +1304,8 @@ def dky_elwise(k_elwise, i):
     """
 
     def _dky_elwise(x, y):
+        import tensorflow as tf
+
         with tf.GradientTape() as t:
             yi = y[:, i:i + 1]
             t.watch(yi)

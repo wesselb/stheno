@@ -4,7 +4,6 @@ from __future__ import absolute_import, division, print_function
 
 import logging
 
-import tensorflow as tf
 from lab import B
 from plum import Dispatcher, Self, Referentiable
 
@@ -174,6 +173,8 @@ class DerivativeMean(Mean, DerivativeFunction, Referentiable):
     @_dispatch(B.Numeric)
     @uprank
     def __call__(self, x):
+        import tensorflow as tf
+
         i = self.derivs[0]
         with tf.GradientTape() as t:
             xi = x[:, i:i + 1]
