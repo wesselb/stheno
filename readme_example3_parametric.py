@@ -1,46 +1,65 @@
 import matplotlib.pyplot as plt
-import numpy as np
 import tensorflow as tf
-from tensorflow.contrib.opt import ScipyOptimizerInterface as SOI
-from wbml import vars64 as vs
+import wbml.out
+import wbml.plot
+from varz.tensorflow import Vars, minimise_l_bfgs_b
 
-from stheno.tensorflow import GP, EQ, Delta
-
-s = tf.Session()
+from stheno.tensorflow import B, Graph, GP, EQ, Delta
 
 # Define points to predict at.
-x = np.linspace(0, 5, 100)
-x_obs = np.linspace(0, 3, 20)
+x = B.linspace(tf.float64, 0, 5, 100)
+x_obs = B.linspace(tf.float64, 0, 3, 20)
 
-# Construct the model.
-u = GP(vs.pos(.5) * EQ().stretch(vs.pos(1.)))
-e = GP(vs.pos(.5) * Delta())
-alpha = vs.pos(1.2)
-vs.init(s)
 
-f = u + (lambda x: x ** alpha)
-y = f + e
+def model(vs):
+    g = Graph()
+
+    # Latent function:
+    alpha = vs.pos(1.2, name='alpha')
+    u = GP(vs.pos(.5, name='u/var') *
+           EQ().stretch(vs.pos(1., name='u/scale')), graph=g)
+
+    # Noise:
+    e = GP(vs.pos(0.5, name='e/var') * Delta(), graph=g)
+
+    # Construct model:
+    f = u + (lambda x: x ** alpha)
+    y = f + e
+
+    return f, y
+
 
 # Sample a true, underlying function and observations.
+vs = Vars(tf.float64)
 f_true = x ** 1.8
-y_obs = s.run((y | (f(x), f_true))(x_obs).sample())
+f, y = model(vs)
+y_obs = (y | (f(x), f_true))(x_obs).sample()
 
-# Learn.
-lml = y(x_obs).logpdf(y_obs)
-SOI(-lml).minimize(s)
+
+def objective(vs):
+    f, y = model(vs)
+    evidence = y(tf.constant(x_obs)).logpdf(y_obs)
+    return -evidence
+
+
+# Learn hyperparameters.
+minimise_l_bfgs_b(objective, vs)
+f, y = model(vs)
 
 # Print the learned parameters.
-print('alpha', s.run(alpha))
-print('prior', y.display(s.run))
+wbml.out.kv('Alpha', vs['alpha'])
+wbml.out.kv('Prior', y.display(wbml.out.format))
 
 # Condition on the observations to make predictions.
-mean, lower, upper = s.run((f | (y(x_obs), y_obs))(x).marginals())
+mean, lower, upper = (f | (y(x_obs), y_obs))(x).marginals()
 
 # Plot result.
-plt.plot(x, f_true.squeeze(), label='True', c='tab:blue')
-plt.scatter(x_obs, y_obs.squeeze(), label='Observations', c='tab:red')
+plt.plot(x, B.squeeze(f_true), label='True', c='tab:blue')
+plt.scatter(x_obs, B.squeeze(y_obs), label='Observations', c='tab:red')
 plt.plot(x, mean, label='Prediction', c='tab:green')
 plt.plot(x, lower, ls='--', c='tab:green')
 plt.plot(x, upper, ls='--', c='tab:green')
-plt.legend()
+wbml.plot.tweak()
+
+plt.savefig('readme_example3_parametric.png')
 plt.show()

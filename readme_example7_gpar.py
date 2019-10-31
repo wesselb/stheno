@@ -1,65 +1,70 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
-from tensorflow.contrib.opt import ScipyOptimizerInterface as SOI
-from wbml import Vars
+import wbml.plot
+from varz.tensorflow import Vars, minimise_l_bfgs_b
 
-from stheno.tensorflow import GP, Delta, EQ, Graph, B
-
-s = tf.Session()
+from stheno.tensorflow import B, Graph, GP, Delta, EQ
 
 # Define points to predict at.
-x = np.linspace(0, 10, 200)
-x_obs1 = np.linspace(0, 10, 30)
+x = B.linspace(tf.float64, 0, 10, 200)
+x_obs1 = B.linspace(tf.float64, 0, 10, 30)
 inds2 = np.random.permutation(len(x_obs1))[:10]
-x_obs2 = x_obs1[inds2]
-
-# Construct variable storages.
-vs1 = Vars(np.float64)
-vs2 = Vars(np.float64)
-
-# Construct a model for each output.
-m1 = Graph()
-m2 = Graph()
-f1 = vs1.pos(1.) * GP(EQ(), graph=m1).stretch(vs1.pos(1.))
-f2 = vs2.pos(1.) * GP(EQ(), graph=m2).stretch(vs2.pos([1., .5]))
-sig1 = vs1.pos(0.1)
-sig2 = vs2.pos(0.1)
-
-# Initialise variables.
-vs1.init(s)
-vs2.init(s)
-
-# Noise models:
-e1 = sig1 * GP(Delta(), graph=m1)
-e2 = sig2 * GP(Delta(), graph=m2)
-
-# Observation models:
-y1 = f1 + e1
-y2 = f2 + e2
+x_obs2 = B.take(x_obs1, inds2)
 
 # Construction functions to predict and observations.
-f1_true = np.sin(x)
-f2_true = np.sin(x) ** 2
+f1_true = B.sin(x)
+f2_true = B.sin(x) ** 2
 
-y1_obs = np.sin(x_obs1) + 0.1 * np.random.randn(*x_obs1.shape)
-y2_obs = np.sin(x_obs2) ** 2 + 0.1 * np.random.randn(*x_obs2.shape)
+y1_obs = B.sin(x_obs1) + 0.1 * B.randn(*x_obs1.shape)
+y2_obs = B.sin(x_obs2) ** 2 + 0.1 * B.randn(*x_obs2.shape)
 
-# Learn.
-lml1 = y1(x_obs1).logpdf(y1_obs)
-SOI(-lml1, var_list=vs1.vars).minimize(s)
 
-lml2 = y2(np.stack((x_obs2, y1_obs[inds2]), axis=1)).logpdf(y2_obs)
-SOI(-lml2, var_list=vs2.vars).minimize(s)
+def model(vs):
+    g = Graph()
+
+    # Construct model for first layer:
+    f1 = GP(vs.pos(1., name='f1/var') *
+            EQ().stretch(vs.pos(1., name='f1/scale')), graph=g)
+    e1 = GP(vs.pos(0.1, name='e1/var') * Delta(), graph=g)
+    y1 = f1 + e1
+
+    # Construct model for second layer:
+    f2 = GP(vs.pos(1., name='f2/var') *
+            EQ().stretch(vs.pos(np.array([1., .5]), name='f2/scale')), graph=g)
+    e2 = GP(vs.pos(0.1, name='e2/var') * Delta(), graph=g)
+    y2 = f2 + e2
+
+    return f1, y1, f2, y2
+
+
+def objective(vs):
+    f1, y1, f2, y2 = model(vs)
+
+    x1 = x_obs1
+    x2 = B.stack(x_obs2, B.take(y1_obs, inds2), axis=1)
+    evidence = y1(x1).logpdf(y1_obs) + y2(x2).logpdf(y2_obs)
+
+    return -evidence
+
+
+# Learn hyperparameters.
+vs = Vars(tf.float64)
+minimise_l_bfgs_b(objective, vs)
+f1, y1, f2, y2 = model(vs)
+
+# Condition to make predictions.
+x1 = x_obs1
+x2 = B.stack(x_obs2, B.take(y1_obs, inds2), axis=1)
+f1 = f1 | (y1(x1), y1_obs)
+f2 = f2 | (y2(x2), y2_obs)
 
 # Predict first output.
-f1 = f1 | (y1(x_obs1), y1_obs)
-mean1, lower1, upper1 = s.run(f1(x).marginals())
+mean1, lower1, upper1 = f1(x).marginals()
 
 # Predict second output with Monte Carlo.
-f2 = f2 | (y2(np.stack((x_obs2, y1_obs[inds2]), axis=1)), y2_obs)
-sample = f2(B.concat([x[:, None], f1(x).sample()], axis=1)).sample()
-samples = [s.run(sample).squeeze() for _ in range(100)]
+samples = [f2(B.stack(x, f1(x).sample()[:, 0], axis=1)).sample()[:, 0]
+           for _ in range(100)]
 mean2 = np.mean(samples, axis=0)
 lower2 = np.percentile(samples, 2.5, axis=0)
 upper2 = np.percentile(samples, 100 - 2.5, axis=0)
@@ -74,7 +79,7 @@ plt.scatter(x_obs1, y1_obs, label='Observations', c='tab:red')
 plt.plot(x, mean1, label='Prediction', c='tab:green')
 plt.plot(x, lower1, ls='--', c='tab:green')
 plt.plot(x, upper1, ls='--', c='tab:green')
-plt.legend()
+wbml.plot.tweak()
 
 plt.subplot(2, 1, 2)
 plt.title('Output 2')
@@ -83,6 +88,7 @@ plt.scatter(x_obs2, y2_obs, label='Observations', c='tab:red')
 plt.plot(x, mean2, label='Prediction', c='tab:green')
 plt.plot(x, lower2, ls='--', c='tab:green')
 plt.plot(x, upper2, ls='--', c='tab:green')
-plt.legend()
+wbml.plot.tweak()
 
+plt.savefig('readme_example7_gpar.png')
 plt.show()

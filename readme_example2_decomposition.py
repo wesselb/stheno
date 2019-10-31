@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import wbml.plot
 
 from stheno import GP, model, EQ, RQ, Linear, Delta, Exp, Obs, B
 
@@ -57,7 +58,7 @@ def plot_prediction(x, f, pred, x_obs=None, y_obs=None):
     plt.plot(x, mean, label='Prediction', c='tab:green')
     plt.plot(x, lower, ls='--', c='tab:green')
     plt.plot(x, upper, ls='--', c='tab:green')
-    plt.legend()
+    wbml.plot.tweak()
 
 
 plt.figure(figsize=(10, 6))
@@ -82,4 +83,5 @@ plt.subplot(3, 2, 6)
 plt.title('Linear Component')
 plot_prediction(x, f_true_linear, pred_linear)
 
+plt.savefig('readme_example2_decomposition.png')
 plt.show()

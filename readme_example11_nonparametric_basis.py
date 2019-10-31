@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import wbml.plot
 
 from stheno import GP, EQ, Delta, model, Obs
 
@@ -32,5 +33,7 @@ mean, lower, upper = f(x).marginals()
 plt.plot(x, mean, label='Prediction', c='tab:green')
 plt.plot(x, lower, ls='--', c='tab:green')
 plt.plot(x, upper, ls='--', c='tab:green')
-plt.legend()
+wbml.plot.tweak()
+
+plt.savefig('readme_example11_nonparametric_basis.png')
 plt.show()

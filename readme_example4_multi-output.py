@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from plum import Dispatcher, Referentiable, Self
+import wbml.plot
 
 from stheno import GP, EQ, Delta, model, Kernel, Obs
 
@@ -84,7 +85,7 @@ def plot_prediction(x, f, pred, x_obs=None, y_obs=None):
     plt.plot(x, mean, label='Prediction', c='tab:green')
     plt.plot(x, lower, ls='--', c='tab:green')
     plt.plot(x, upper, ls='--', c='tab:green')
-    plt.legend()
+    wbml.plot.tweak()
 
 
 plt.figure(figsize=(10, 6))
@@ -94,4 +95,5 @@ for i in range(p):
     plt.title('Output {}'.format(i + 1))
     plot_prediction(x, fs_true[i], preds[i], x_obs, ys_obs[i])
 
+plt.savefig('readme_example4_multi-output.png')
 plt.show()

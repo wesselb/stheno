@@ -1,5 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import wbml.out
+import wbml.plot
 
 from stheno import GP, EQ, Delta, SparseObs
 
@@ -22,7 +24,7 @@ obs = SparseObs(f(x_ind),  # Inducing points.
                 .5 * e,  # Noise process.
                 # Observations _without_ the noise process added on.
                 f(x_obs), y_obs)
-print('elbo', obs.elbo)
+wbml.out.kv('elbo', obs.elbo)
 mean, lower, upper = (f | obs)(x).marginals()
 
 # Plot result.
@@ -32,5 +34,7 @@ plt.scatter(x_ind, 0 * x_ind, label='Inducing Points', c='black')
 plt.plot(x, mean, label='Prediction', c='tab:green')
 plt.plot(x, lower, ls='--', c='tab:green')
 plt.plot(x, upper, ls='--', c='tab:green')
-plt.legend()
+wbml.plot.tweak()
+
+plt.savefig('readme_example10_sparse.png')
 plt.show()

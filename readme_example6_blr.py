@@ -1,7 +1,9 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import wbml.out
+import wbml.plot
 
-from stheno import GP, Delta, model, Obs, dense
+from stheno import GP, Delta, model, Obs
 
 # Define points to predict at.
 x = np.linspace(0, 10, 200)
@@ -24,10 +26,10 @@ true_slope, true_intercept, f_true, y_obs = \
 slope, intercept, f = (slope, intercept, f) | Obs(y(x_obs), y_obs)
 mean, lower, upper = f(x).marginals()
 
-print('true slope', true_slope)
-print('predicted slope', slope(0).mean)
-print('true intercept', true_intercept)
-print('predicted intercept', intercept(0).mean)
+wbml.out.kv('True slope', true_slope[0, 0])
+wbml.out.kv('Predicted slope', slope(0).mean[0, 0])
+wbml.out.kv('True intercept', true_intercept[0, 0])
+wbml.out.kv('Predicted intercept', intercept(0).mean[0, 0])
 
 # Plot result.
 plt.plot(x, f_true, label='True', c='tab:blue')
@@ -35,5 +37,7 @@ plt.scatter(x_obs, y_obs, label='Observations', c='tab:red')
 plt.plot(x, mean, label='Prediction', c='tab:green')
 plt.plot(x, lower, ls='--', c='tab:green')
 plt.plot(x, upper, ls='--', c='tab:green')
-plt.legend()
+wbml.plot.tweak()
+
+plt.savefig('readme_example6_blr.png')
 plt.show()

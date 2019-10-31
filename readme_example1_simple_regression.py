@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import wbml.plot
 
 from stheno import GP, EQ, Delta, model
 
@@ -24,5 +25,7 @@ plt.scatter(x_obs, y_obs, label='Observations', c='tab:red')
 plt.plot(x, mean, label='Prediction', c='tab:green')
 plt.plot(x, lower, ls='--', c='tab:green')
 plt.plot(x, upper, ls='--', c='tab:green')
-plt.legend()
+
+wbml.plot.tweak()
+plt.savefig('readme_example1_simple_regression.png')
 plt.show()

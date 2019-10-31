@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import wbml.plot
 
 from stheno import GP, EQ, model, Obs
 
@@ -26,5 +27,7 @@ plt.plot(x, s1 * s2, label='True product', c='tab:orange')
 plt.plot(x, mean, label='Approximate posterior', c='tab:green')
 plt.plot(x, lower, ls='--', c='tab:green')
 plt.plot(x, upper, ls='--', c='tab:green')
-plt.legend()
+wbml.plot.tweak()
+
+plt.savefig('readme_example9_product.png')
 plt.show()
