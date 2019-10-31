@@ -45,9 +45,9 @@ def model(vs):
     f_rnn.initialise(input_size=1, vs=weights)
 
     # Construct GPs that modulate the RNN.
-    a = GP(1e-2 * EQ().stretch(0.1), graph=g)
-    b = GP(1e-2 * EQ().stretch(0.1), graph=g)
-    e = GP(1e-2 * Delta(), graph=g)
+    a = GP(1e-2 * EQ().stretch(vs.pos(0.1, name='a/scale')), graph=g)
+    b = GP(1e-2 * EQ().stretch(vs.pos(0.1, name='b/scale')), graph=g)
+    e = GP(vs.pos(1e-2, name='e/var') * Delta(), graph=g)
 
     # GP-RNN model:
     f_gp_rnn = (1 + a) * (lambda x: f_rnn(x)) + b
