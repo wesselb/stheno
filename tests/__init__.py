@@ -15,7 +15,9 @@ import lab.torch
 # noinspection PyUnresolvedReferences
 import lab.tensorflow
 
-# Load Torch and TensorFlow extensions.
+# Load AutoGrad, Torch, TensorFlow extensions.
+# noinspection PyUnresolvedReferences
+import stheno.autograd
 # noinspection PyUnresolvedReferences
 import stheno.torch
 # noinspection PyUnresolvedReferences
