@@ -1,15 +1,10 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import, division, print_function
-
 from numbers import Number
 
+import lab.tensorflow as B
 import numpy as np
 import pytest
 import tensorflow as tf
 from plum import Dispatcher
-import lab.tensorflow as B
-
 from stheno.input import Observed
 from stheno.kernel import EQ
 from stheno.matrix import matrix
@@ -20,6 +15,7 @@ from stheno.mean import (
     OneMean,
     PosteriorMean
 )
+
 from .util import allclose
 
 

@@ -1,13 +1,8 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import, division, print_function
-
 import numpy as np
 import pytest
 import tensorflow as tf
 from lab import B
 from plum import type_parameter
-
 from stheno.graph import Graph, GP, Obs, SparseObs
 from stheno.input import At, Unique
 from stheno.kernel import (
@@ -22,6 +17,7 @@ from stheno.kernel import (
 )
 from stheno.mean import TensorProductMean, ZeroMean, ScaledMean, OneMean
 from stheno.random import Normal
+
 from .util import allclose
 
 

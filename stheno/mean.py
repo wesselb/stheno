@@ -1,11 +1,7 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import, division, print_function
-
 import logging
 
 from lab import B
-from plum import Dispatcher, Self, Referentiable
+from plum import Dispatcher, Self
 
 from .field import get_field
 from .function_field import (
@@ -31,7 +27,7 @@ __all__ = ['TensorProductMean', 'DerivativeMean']
 log = logging.getLogger(__name__)
 
 
-class Mean(Function, Referentiable):
+class Mean(Function):
     """Mean function.
 
     Means can be added and multiplied.
@@ -62,7 +58,7 @@ class Mean(Function, Referentiable):
 def get_field(a): return Mean
 
 
-class SumMean(Mean, SumFunction, Referentiable):
+class SumMean(Mean, SumFunction):
     """Sum of two means."""
 
     _dispatch = Dispatcher(in_class=Self)
@@ -72,7 +68,7 @@ class SumMean(Mean, SumFunction, Referentiable):
         return B.add(self[0](x), self[1](x))
 
 
-class ProductMean(Mean, ProductFunction, Referentiable):
+class ProductMean(Mean, ProductFunction):
     """Product of two means."""
 
     _dispatch = Dispatcher(in_class=Self)
@@ -82,7 +78,7 @@ class ProductMean(Mean, ProductFunction, Referentiable):
         return B.multiply(self[0](x), self[1](x))
 
 
-class ScaledMean(Mean, ScaledFunction, Referentiable):
+class ScaledMean(Mean, ScaledFunction):
     """Scaled mean."""
 
     _dispatch = Dispatcher(in_class=Self)
@@ -92,7 +88,7 @@ class ScaledMean(Mean, ScaledFunction, Referentiable):
         return B.multiply(self.scale, self[0](x))
 
 
-class StretchedMean(Mean, StretchedFunction, Referentiable):
+class StretchedMean(Mean, StretchedFunction):
     """Stretched mean."""
 
     _dispatch = Dispatcher(in_class=Self)
@@ -103,7 +99,7 @@ class StretchedMean(Mean, StretchedFunction, Referentiable):
         return self[0](B.divide(x, self.stretches[0]))
 
 
-class ShiftedMean(Mean, ShiftedFunction, Referentiable):
+class ShiftedMean(Mean, ShiftedFunction):
     """Shifted mean."""
 
     _dispatch = Dispatcher(in_class=Self)
@@ -114,7 +110,7 @@ class ShiftedMean(Mean, ShiftedFunction, Referentiable):
         return self[0](B.subtract(x, self.shifts[0]))
 
 
-class SelectedMean(Mean, SelectedFunction, Referentiable):
+class SelectedMean(Mean, SelectedFunction):
     """Mean with particular input dimensions selected."""
 
     _dispatch = Dispatcher(in_class=Self)
@@ -125,7 +121,7 @@ class SelectedMean(Mean, SelectedFunction, Referentiable):
         return self[0](B.take(x, self.dims[0], axis=1))
 
 
-class InputTransformedMean(Mean, InputTransformedFunction, Referentiable):
+class InputTransformedMean(Mean, InputTransformedFunction):
     """Input-transformed mean."""
 
     _dispatch = Dispatcher(in_class=Self)
@@ -135,7 +131,7 @@ class InputTransformedMean(Mean, InputTransformedFunction, Referentiable):
         return self[0](uprank(self.fs[0](x)))
 
 
-class OneMean(Mean, OneFunction, Referentiable):
+class OneMean(Mean, OneFunction):
     """Constant mean of `1`."""
 
     _dispatch = Dispatcher(in_class=Self)
@@ -146,7 +142,7 @@ class OneMean(Mean, OneFunction, Referentiable):
         return B.ones(B.dtype(x), B.shape(x)[0], 1)
 
 
-class ZeroMean(Mean, ZeroFunction, Referentiable):
+class ZeroMean(Mean, ZeroFunction):
     """Constant mean of `0`."""
 
     _dispatch = Dispatcher(in_class=Self)
@@ -157,7 +153,7 @@ class ZeroMean(Mean, ZeroFunction, Referentiable):
         return B.zeros(B.dtype(x), B.shape(x)[0], 1)
 
 
-class TensorProductMean(Mean, TensorProductFunction, Referentiable):
+class TensorProductMean(Mean, TensorProductFunction):
     _dispatch = Dispatcher(in_class=Self)
 
     @_dispatch(B.Numeric)
@@ -166,7 +162,7 @@ class TensorProductMean(Mean, TensorProductFunction, Referentiable):
         return uprank(self.fs[0](x))
 
 
-class DerivativeMean(Mean, DerivativeFunction, Referentiable):
+class DerivativeMean(Mean, DerivativeFunction):
     """Derivative of mean."""
     _dispatch = Dispatcher(in_class=Self)
 
@@ -184,7 +180,7 @@ class DerivativeMean(Mean, DerivativeFunction, Referentiable):
             return t.gradient(out, xi, unconnected_gradients='zero')
 
 
-class PosteriorMean(Mean, Referentiable):
+class PosteriorMean(Mean):
     """Posterior mean.
 
     Args:

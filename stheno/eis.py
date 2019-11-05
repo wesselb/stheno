@@ -1,10 +1,6 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import, division, print_function
-
 import logging
 
-from plum import Dispatcher, Self, Referentiable
+from plum import Dispatcher, Self
 
 from .input import Observed, Latent, Component
 from .kernel import Kernel, ZeroKernel
@@ -14,7 +10,7 @@ __all__ = ['NoisyKernel', 'ComponentKernel', 'AdditiveComponentKernel']
 log = logging.getLogger(__name__)
 
 
-class ComponentKernel(Kernel, Referentiable):
+class ComponentKernel(Kernel):
     """Kernel consisting of multiple components.
 
     Uses :class:`.input.Component`.
@@ -38,7 +34,7 @@ class ComponentKernel(Kernel, Referentiable):
         return 'ComponentKernel({})'.format(', '.join([str(k) for k in ks]))
 
 
-class AdditiveComponentKernel(ComponentKernel, Referentiable):
+class AdditiveComponentKernel(ComponentKernel):
     """Kernel consisting of additive, independent components.
 
     Uses :class:`.input.Component`, :class:`.input.Observed`, and
@@ -54,7 +50,7 @@ class AdditiveComponentKernel(ComponentKernel, Referentiable):
     def __init__(self, ks, latent=None):
         input_types = set(ks.keys())
 
-        class KernelMatrix(object):
+        class KernelMatrix:
             def _resolve(self, t):
                 if t == Latent:
                     return {} if latent is None else set(latent)
@@ -73,7 +69,7 @@ class AdditiveComponentKernel(ComponentKernel, Referentiable):
         ComponentKernel.__init__(self, KernelMatrix())
 
 
-class NoisyKernel(Kernel, Referentiable):
+class NoisyKernel(Kernel):
     """Noisy observations of a latent process.
 
     Uses :class:`.input.Latent` and :class:`.input.Observed`.

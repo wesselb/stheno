@@ -1,7 +1,3 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import, division, print_function
-
 import logging
 
 from plum import Dispatcher, Referentiable, Self
@@ -27,7 +23,7 @@ def replace_at(tup, i, val):
     return tuple(listed)
 
 
-class Rule(object):
+class Rule:
     """A rule for an :class:`.lazy.LazyTensor`.
 
     Note:
@@ -79,7 +75,7 @@ class Rule(object):
                ''.format(self.pattern, self.indices, self.builder)
 
 
-class LazyTensor(Referentiable):
+class LazyTensor(metaclass=Referentiable):
     """A lazy tensor that indexes by the identity of its indices.
 
     Args:

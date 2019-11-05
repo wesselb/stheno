@@ -1,15 +1,15 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import print_function, division, absolute_import
-
 import logging
 from numbers import Number
 from string import ascii_lowercase
 
 import numpy as np
 from lab import B
-from plum import Referentiable, Self, Dispatcher, add_conversion_method, \
+from plum import (
+    Self,
+    Dispatcher,
+    add_conversion_method,
     add_promotion_rule
+)
 
 from .field import Element, OneElement, ZeroElement, mul, add, get_field
 
@@ -29,7 +29,7 @@ log = logging.getLogger(__name__)
 _dispatch = Dispatcher()
 
 
-class Dense(Element, Referentiable):
+class Dense(Element):
     """Symmetric positive-definite matrix.
 
     Args:
@@ -81,7 +81,7 @@ class Dense(Element, Referentiable):
 def get_field(a): return Dense
 
 
-class Diagonal(Dense, Referentiable):
+class Diagonal(Dense):
     """Diagonal symmetric positive-definite matrix.
 
     Args:
@@ -104,7 +104,7 @@ class Diagonal(Dense, Referentiable):
         return B.diag(self) == B.diag(other)
 
 
-class UniformlyDiagonal(Diagonal, Referentiable):
+class UniformlyDiagonal(Diagonal):
     """Uniformly diagonal symmetric positive-definite matrix.
 
     Args:
@@ -128,7 +128,7 @@ class UniformlyDiagonal(Diagonal, Referentiable):
                    *B.shape(ref))
 
 
-class LowRank(Dense, Referentiable):
+class LowRank(Dense):
     """Low-rank symmetric positive-definite matrix.
 
     The low-rank matrix is constructed via `left diag(scales) transpose(right)`.
@@ -162,7 +162,7 @@ class LowRank(Dense, Referentiable):
                 self.right == other.right)
 
 
-class Constant(LowRank, Referentiable):
+class Constant(LowRank):
     """Constant symmetric positive-definite matrix.
 
     Args:
@@ -196,7 +196,7 @@ class Constant(LowRank, Referentiable):
                and self.constant == other.constant
 
 
-class One(Constant, OneElement, Referentiable):
+class One(Constant, OneElement):
     """Dense matrix full of ones.
 
     Args:
@@ -219,7 +219,7 @@ class One(Constant, OneElement, Referentiable):
         return B.shape(self) == B.shape(other)
 
 
-class Zero(Constant, ZeroElement, Referentiable):
+class Zero(Constant, ZeroElement):
     """Dense matrix full of zeros.
 
     Args:
@@ -243,7 +243,7 @@ class Zero(Constant, ZeroElement, Referentiable):
         return B.shape(self) == B.shape(other)
 
 
-class Woodbury(Dense, Referentiable):
+class Woodbury(Dense):
     """Sum of a low-rank and diagonal symmetric positive-definite matrix.
 
     Args:

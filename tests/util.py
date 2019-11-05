@@ -1,14 +1,9 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import, division, print_function
-
 from time import time
 
 import numpy as np
 from lab import B
-from plum import dispatch
 from numpy.testing import assert_array_almost_equal
-
+from plum import dispatch
 from stheno.matrix import Dense, dense as _dense
 
 __all__ = ['benchmark', 'to_np', 'allclose', 'approx']

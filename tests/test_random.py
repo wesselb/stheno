@@ -1,15 +1,11 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import, division, print_function
-
 import numpy as np
 import pytest
 from lab import B
 from scipy.stats import multivariate_normal
-
 from stheno.graph import GP
 from stheno.matrix import UniformlyDiagonal, Diagonal, dense
 from stheno.random import Normal, Normal1D, RandomVector
+
 from .util import allclose
 
 

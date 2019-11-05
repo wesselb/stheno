@@ -6,7 +6,7 @@ import wbml.plot
 from stheno import GP, EQ, Delta, model, Kernel, Obs
 
 
-class VGP(Referentiable):
+class VGP(metaclass=Referentiable):
     """A vector-valued GP.
 
     Args:

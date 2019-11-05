@@ -1,11 +1,5 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import, division, print_function
-
 from lab import B
-from plum import Dispatcher, Referentiable, Self, NotFoundLookupError
-
-from .util import uprank
+from plum import Dispatcher, Referentiable, Self
 
 __all__ = []
 
@@ -70,7 +64,7 @@ def broadcast(op, xs, ys):
     return tuple(op(x, y) for x, y in zip(xs, ys))
 
 
-class Element(Referentiable):
+class Element(metaclass=Referentiable):
     """A field over functions.
 
     Functions are also referred to as elements of the field. Elements can be
@@ -174,7 +168,7 @@ class Element(Referentiable):
         return self.display(lambda x: x)
 
 
-class OneElement(Element, Referentiable):
+class OneElement(Element):
     """The constant `1`."""
     _dispatch = Dispatcher(in_class=Self)
 
@@ -187,7 +181,7 @@ class OneElement(Element, Referentiable):
         return True
 
 
-class ZeroElement(Element, Referentiable):
+class ZeroElement(Element):
     """The constant `0`."""
     _dispatch = Dispatcher(in_class=Self)
 
@@ -200,7 +194,7 @@ class ZeroElement(Element, Referentiable):
         return True
 
 
-class WrappedElement(Element, Referentiable):
+class WrappedElement(Element):
     """A wrapped element.
 
     Args:
@@ -222,7 +216,7 @@ class WrappedElement(Element, Referentiable):
         raise NotImplementedError()
 
 
-class JoinElement(Element, Referentiable):
+class JoinElement(Element):
     """Two wrapped elements.
 
     Args:
@@ -248,7 +242,7 @@ class JoinElement(Element, Referentiable):
         raise NotImplementedError()
 
 
-class ScaledElement(WrappedElement, Referentiable):
+class ScaledElement(WrappedElement):
     """Scaled element.
 
     Args:
@@ -280,7 +274,7 @@ class ScaledElement(WrappedElement, Referentiable):
         return B.all(self.scale == other.scale) and self[0] == other[0]
 
 
-class ProductElement(JoinElement, Referentiable):
+class ProductElement(JoinElement):
     """Product of elements."""
     _dispatch = Dispatcher(in_class=Self)
 
@@ -306,7 +300,7 @@ class ProductElement(JoinElement, Referentiable):
                (self[0] == other[1] and self[1] == other[0])
 
 
-class SumElement(JoinElement, Referentiable):
+class SumElement(JoinElement):
     """Sum of elements."""
     _dispatch = Dispatcher(in_class=Self)
 

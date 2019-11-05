@@ -5,7 +5,7 @@ from __future__ import absolute_import, division, print_function
 import logging
 
 from lab import B
-from plum import Dispatcher, Self, Referentiable, type_parameter
+from plum import Dispatcher, Self, type_parameter
 
 from .input import At, MultiInput
 from .mean import Mean
@@ -15,7 +15,7 @@ __all__ = ['MultiOutputMean']
 log = logging.getLogger(__name__)
 
 
-class MultiOutputMean(Mean, Referentiable):
+class MultiOutputMean(Mean):
     """A generic multi-output mean.
 
     Args:

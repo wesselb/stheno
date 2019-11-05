@@ -1,15 +1,8 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import, division, print_function
-
 from functools import wraps
-import logging
-from numbers import Number
-from time import time
 from types import FunctionType
 
 from lab import B
-from plum import Dispatcher, Self, Referentiable
+from plum import Dispatcher
 
 __all__ = []
 

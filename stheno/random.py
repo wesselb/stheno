@@ -5,16 +5,22 @@ from __future__ import absolute_import, division, print_function
 from lab import B
 from plum import Self, Referentiable, PromisedType, type_parameter
 
-from .util import uprank
 from .input import Input, At
-from .matrix import matrix, Dispatcher, UniformlyDiagonal, Diagonal, dense, \
+from .matrix import (
+    matrix,
+    Dispatcher,
+    UniformlyDiagonal,
+    Diagonal,
+    dense,
     Dense
+)
 from .mean import ZeroMean
+from .util import uprank
 
 __all__ = ['Normal', 'Normal1D']
 
 
-class Random(object):
+class Random(metaclass=Referentiable):
     """A random object."""
 
     def __radd__(self, other):
@@ -50,7 +56,7 @@ class RandomVector(Random):
 PromisedGP = PromisedType()
 
 
-class Normal(RandomVector, At, Referentiable):
+class Normal(RandomVector, At):
     """Normal random variable.
 
     A normal random variable also acts as in instance of `At`, which can be
@@ -306,7 +312,7 @@ def type_parameter(a):
     return a.p
 
 
-class Normal1D(Normal, Referentiable):
+class Normal1D(Normal):
     """A one-dimensional version of :class:`.random.Normal` with convenient
     broadcasting behaviour.
 

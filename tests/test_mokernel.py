@@ -1,15 +1,11 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import, division, print_function
-
 import numpy as np
 import pytest
-
 from stheno.graph import Graph, GP
 from stheno.input import MultiInput
 from stheno.kernel import EQ
 from stheno.matrix import dense
 from stheno.mokernel import MultiOutputKernel
+
 from .util import allclose
 
 

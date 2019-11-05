@@ -1,16 +1,12 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import, division, print_function
-
 import numpy as np
 import pytest
 from lab import B
-
 from stheno.graph import GP, Graph
 from stheno.input import Component
 from stheno.kernel import OneKernel, EQ
 from stheno.mean import OneMean
 from stheno.util import uprank
+
 from .util import allclose, approx
 
 

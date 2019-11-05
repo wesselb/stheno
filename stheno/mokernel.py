@@ -5,18 +5,17 @@ from __future__ import absolute_import, division, print_function
 import logging
 
 from lab import B
-from plum import Dispatcher, Self, Referentiable, type_parameter
+from plum import Dispatcher, Self, type_parameter
 
 from .input import At, MultiInput, Input
 from .kernel import Kernel
-from .matrix import dense, Dense, Zero, Diagonal, One
 
 __all__ = ['MultiOutputKernel']
 
 log = logging.getLogger(__name__)
 
 
-class MultiOutputKernel(Kernel, Referentiable):
+class MultiOutputKernel(Kernel):
     """A generic multi-output kernel.
 
     Args:

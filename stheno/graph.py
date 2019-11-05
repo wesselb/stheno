@@ -1,7 +1,3 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import, division, print_function
-
 import logging
 from types import FunctionType
 
@@ -9,16 +5,21 @@ from fdm import central_fdm
 from lab import B
 from plum import Dispatcher, Self, Referentiable, type_parameter, Union
 
-from .util import uprank
 from .input import Input, At, MultiInput
-from .kernel import ZeroKernel, PosteriorKernel, TensorProductKernel, \
-    CorrectiveKernel, OneKernel
+from .kernel import (
+    ZeroKernel,
+    PosteriorKernel,
+    TensorProductKernel,
+    CorrectiveKernel,
+    OneKernel
+)
 from .lazy import LazyVector, LazyMatrix
-from .matrix import matrix, Diagonal, dense
+from .matrix import matrix, Diagonal
 from .mean import PosteriorMean, ZeroMean, OneMean
 from .mokernel import MultiOutputKernel as MOK
 from .momean import MultiOutputMean as MOM
 from .random import Random, PromisedGP, RandomProcess, Normal
+from .util import uprank
 
 __all__ = ['GP',
            'model',
@@ -51,7 +52,7 @@ def ensure_at(x, ref=None):
                          'condition on.')
 
 
-class AbstractObservations(Referentiable):
+class AbstractObservations(metaclass=Referentiable):
     """Abstract base class for observations."""
 
     _dispatch = Dispatcher(in_class=Self)
@@ -113,7 +114,7 @@ class AbstractObservations(Referentiable):
                                   'implemented.')
 
 
-class Observations(AbstractObservations, Referentiable):
+class Observations(AbstractObservations):
     """Observations.
 
     Can alternatively construct an instance of `Observations` with tuples or
@@ -154,7 +155,7 @@ class Observations(AbstractObservations, Referentiable):
                              x, self.K_x, self.y)
 
 
-class SparseObservations(AbstractObservations, Referentiable):
+class SparseObservations(AbstractObservations):
     """Observations through inducing points. Takes further arguments
     according to the constructor of :class:`.graph.Observations`.
 
@@ -311,7 +312,7 @@ Obs = Observations  #: Shorthand for `Observations`.
 SparseObs = SparseObservations  #: Shorthand for `SparseObservations`.
 
 
-class Graph(Referentiable):
+class Graph(metaclass=Referentiable):
     """A GP model."""
     _dispatch = Dispatcher(in_class=Self)
 
@@ -625,7 +626,7 @@ class Graph(Referentiable):
 model = Graph()  #: A default graph provided for convenience
 
 
-class GP(RandomProcess, Referentiable):
+class GP(RandomProcess):
     """Gaussian process.
 
     Args:

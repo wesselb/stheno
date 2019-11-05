@@ -1,12 +1,7 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import, division, print_function
-
 import numpy as np
 import pytest
 import tensorflow as tf
 from lab.tensorflow import B
-
 from stheno.input import Observed, Unique
 from stheno.kernel import (
     EQ,
@@ -28,7 +23,8 @@ from stheno.kernel import (
     LogKernel,
     perturb,
 )
-from stheno.matrix import matrix, dense, Zero, One, UniformlyDiagonal
+from stheno.matrix import matrix, Zero, One, UniformlyDiagonal
+
 from .util import allclose
 
 

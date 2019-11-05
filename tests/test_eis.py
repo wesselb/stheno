@@ -1,13 +1,9 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import, division, print_function
-
 import numpy as np
 import pytest
-
 from stheno.eis import ComponentKernel, AdditiveComponentKernel, NoisyKernel
 from stheno.input import Component, Latent, Observed
 from stheno.kernel import EQ, RQ, ZeroKernel
+
 from .util import allclose
 
 

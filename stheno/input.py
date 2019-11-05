@@ -1,13 +1,9 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import, division, print_function
-
 from plum import parametric, kind
 
 __all__ = ['Input', 'Observed', 'Latent', 'Component', 'At', 'Unique']
 
 
-class Input(object):
+class Input:
     """Input type.
 
     Args:

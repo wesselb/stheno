@@ -1,13 +1,8 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import, division, print_function
-
 import operator
 
 import numpy as np
 import pytest
 from plum import NotFoundLookupError
-
 from stheno.field import (
     mul,
     add,
@@ -54,6 +49,7 @@ from stheno.kernel import (
 )
 from stheno.matrix import Dense
 from stheno.mean import TensorProductMean, ZeroMean, OneMean, Mean
+
 from .util import allclose
 
 

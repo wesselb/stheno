@@ -1,16 +1,23 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import, division, print_function
-
 import operator
 from types import FunctionType as PythonFunction
-import numpy as np
 
+import numpy as np
 from lab import B
-from plum import Dispatcher, Referentiable, Self
-from stheno.field import squeeze, mul, add, SumElement, ProductElement, \
-    ScaledElement, OneElement, ZeroElement, WrappedElement, JoinElement, \
-    Formatter, priority
+from plum import Dispatcher, Self
+from stheno.field import (
+    squeeze,
+    mul,
+    add,
+    SumElement,
+    ProductElement,
+    ScaledElement,
+    OneElement,
+    ZeroElement,
+    WrappedElement,
+    JoinElement,
+    Formatter,
+    priority
+)
 
 from .field import Element, new, get_field, broadcast
 
@@ -63,7 +70,7 @@ def to_tensor(x):
     return B.stack(*x, axis=0)
 
 
-class Function(Element, Referentiable):
+class Function(Element):
     """A function.
 
     Crucially, this is not a field, so that it can be inherited.
@@ -169,7 +176,7 @@ class ProductFunction(Function, ProductElement):
     """A product of two functions."""
 
 
-class StretchedFunction(WrappedFunction, Referentiable):
+class StretchedFunction(WrappedFunction):
     """Stretched function.
 
     Args:
@@ -193,7 +200,7 @@ class StretchedFunction(WrappedFunction, Referentiable):
                tuple_equal(self.stretches, other.stretches)
 
 
-class ShiftedFunction(WrappedFunction, Referentiable):
+class ShiftedFunction(WrappedFunction):
     """Shifted function.
 
     Args:
@@ -232,7 +239,7 @@ def _to_list(x):
         raise ValueError('Could not convert "{}" to a list.')
 
 
-class SelectedFunction(WrappedFunction, Referentiable):
+class SelectedFunction(WrappedFunction):
     """Select particular dimensions of the input features.
 
     Args:
@@ -255,7 +262,7 @@ class SelectedFunction(WrappedFunction, Referentiable):
                tuple_equal(self.dims, other.dims)
 
 
-class InputTransformedFunction(WrappedFunction, Referentiable):
+class InputTransformedFunction(WrappedFunction):
     """Transform inputs of a function.
 
     Args:
@@ -287,7 +294,7 @@ class InputTransformedFunction(WrappedFunction, Referentiable):
                tuple_equal(self.fs, other.fs)
 
 
-class DerivativeFunction(WrappedFunction, Referentiable):
+class DerivativeFunction(WrappedFunction):
     """Compute the derivative of a function.
 
     Args:
@@ -316,7 +323,7 @@ class DerivativeFunction(WrappedFunction, Referentiable):
                tuple_equal(self.derivs, other.derivs)
 
 
-class TensorProductFunction(Function, Referentiable):
+class TensorProductFunction(Function):
     """An element built from a product of functions for each input.
 
     Args:
