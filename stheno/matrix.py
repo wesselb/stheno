@@ -76,9 +76,10 @@ class Dense(Element):
         return dense(self) == dense(other)
 
 
-# Register field.
+# Register.
 @get_field.extend(Dense)
-def get_field(a): return Dense
+def get_field(a):
+    return Dense
 
 
 class Diagonal(Dense):
@@ -272,6 +273,13 @@ class Woodbury(Dense):
 
 @B.eye.extend(Dense)
 def eye(a): return B.eye(B.dtype(a), *B.shape(a))
+
+
+# Implement concatenation.
+
+@B.concat.extend([Dense])
+def concat(*elements, **kw_args):
+    return B.concat(*(dense(element) for element in elements), **kw_args)
 
 
 # Conversion between matrices and dense matrices:
@@ -974,11 +982,7 @@ def qf_diag(a, b, c):
 def qf_diag(a, b): return B.qf_diag(a, b, b)
 
 
-@B.qf_diag.extend(Woodbury, object, object)
-def qf_diag(a, b, c): return B.diag(B.qf(a, b, c))
-
-
-@B.qf_diag.extend(Diagonal, object, object)
+@B.qf_diag.extend({Diagonal, Woodbury}, object, object)
 def qf_diag(a, b, c): return B.sum(B.matmul(B.inverse(a), b) * c, axis=0)
 
 
