@@ -4,7 +4,7 @@ import tensorflow as tf
 import torch
 from autograd import grad
 from lab import torch as B
-from stheno.field import Element
+from ring import Element
 from stheno.torch import EQ
 
 

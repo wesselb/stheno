@@ -1,23 +1,9 @@
 import logging
 
+import ring.function as rf
 from lab import B
 from plum import Dispatcher, Self
 
-from .field import get_field
-from .function_field import (
-    StretchedFunction,
-    ShiftedFunction,
-    SelectedFunction,
-    InputTransformedFunction,
-    DerivativeFunction,
-    TensorProductFunction,
-    ZeroFunction,
-    OneFunction,
-    ScaledFunction,
-    ProductFunction,
-    SumFunction,
-    Function
-)
 from .input import Input
 from .matrix import dense
 from .util import uprank
@@ -27,7 +13,7 @@ __all__ = ['TensorProductMean', 'DerivativeMean']
 log = logging.getLogger(__name__)
 
 
-class Mean(Function):
+class Mean(rf.Function):
     """Mean function.
 
     Means can be added and multiplied.
@@ -53,12 +39,13 @@ class Mean(Function):
         return self(x.get())
 
 
-# Register the field.
-@get_field.extend(Mean)
-def get_field(a): return Mean
+# Register the ring.
+@rf.get_ring.extend(Mean)
+def get_ring(a):
+    return Mean
 
 
-class SumMean(Mean, SumFunction):
+class SumMean(Mean, rf.SumFunction):
     """Sum of two means."""
 
     _dispatch = Dispatcher(in_class=Self)
@@ -68,7 +55,7 @@ class SumMean(Mean, SumFunction):
         return B.add(self[0](x), self[1](x))
 
 
-class ProductMean(Mean, ProductFunction):
+class ProductMean(Mean, rf.ProductFunction):
     """Product of two means."""
 
     _dispatch = Dispatcher(in_class=Self)
@@ -78,7 +65,7 @@ class ProductMean(Mean, ProductFunction):
         return B.multiply(self[0](x), self[1](x))
 
 
-class ScaledMean(Mean, ScaledFunction):
+class ScaledMean(Mean, rf.ScaledFunction):
     """Scaled mean."""
 
     _dispatch = Dispatcher(in_class=Self)
@@ -88,7 +75,7 @@ class ScaledMean(Mean, ScaledFunction):
         return B.multiply(self.scale, self[0](x))
 
 
-class StretchedMean(Mean, StretchedFunction):
+class StretchedMean(Mean, rf.StretchedFunction):
     """Stretched mean."""
 
     _dispatch = Dispatcher(in_class=Self)
@@ -99,7 +86,7 @@ class StretchedMean(Mean, StretchedFunction):
         return self[0](B.divide(x, self.stretches[0]))
 
 
-class ShiftedMean(Mean, ShiftedFunction):
+class ShiftedMean(Mean, rf.ShiftedFunction):
     """Shifted mean."""
 
     _dispatch = Dispatcher(in_class=Self)
@@ -110,7 +97,7 @@ class ShiftedMean(Mean, ShiftedFunction):
         return self[0](B.subtract(x, self.shifts[0]))
 
 
-class SelectedMean(Mean, SelectedFunction):
+class SelectedMean(Mean, rf.SelectedFunction):
     """Mean with particular input dimensions selected."""
 
     _dispatch = Dispatcher(in_class=Self)
@@ -121,7 +108,7 @@ class SelectedMean(Mean, SelectedFunction):
         return self[0](B.take(x, self.dims[0], axis=1))
 
 
-class InputTransformedMean(Mean, InputTransformedFunction):
+class InputTransformedMean(Mean, rf.InputTransformedFunction):
     """Input-transformed mean."""
 
     _dispatch = Dispatcher(in_class=Self)
@@ -131,7 +118,7 @@ class InputTransformedMean(Mean, InputTransformedFunction):
         return self[0](uprank(self.fs[0](x)))
 
 
-class OneMean(Mean, OneFunction):
+class OneMean(Mean, rf.OneFunction):
     """Constant mean of `1`."""
 
     _dispatch = Dispatcher(in_class=Self)
@@ -142,7 +129,7 @@ class OneMean(Mean, OneFunction):
         return B.ones(B.dtype(x), B.shape(x)[0], 1)
 
 
-class ZeroMean(Mean, ZeroFunction):
+class ZeroMean(Mean, rf.ZeroFunction):
     """Constant mean of `0`."""
 
     _dispatch = Dispatcher(in_class=Self)
@@ -153,7 +140,7 @@ class ZeroMean(Mean, ZeroFunction):
         return B.zeros(B.dtype(x), B.shape(x)[0], 1)
 
 
-class TensorProductMean(Mean, TensorProductFunction):
+class TensorProductMean(Mean, rf.TensorProductFunction):
     _dispatch = Dispatcher(in_class=Self)
 
     @_dispatch(B.Numeric)
@@ -162,7 +149,7 @@ class TensorProductMean(Mean, TensorProductFunction):
         return uprank(self.fs[0](x))
 
 
-class DerivativeMean(Mean, DerivativeFunction):
+class DerivativeMean(Mean, rf.DerivativeFunction):
     """Derivative of mean."""
     _dispatch = Dispatcher(in_class=Self)
 

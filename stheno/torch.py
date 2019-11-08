@@ -3,11 +3,11 @@ import logging
 # noinspection PyUnresolvedReferences
 import lab.torch
 from plum import Dispatcher
+from ring import Element
 from torch import Tensor
 
 # noinspection PyUnresolvedReferences
 from . import *  # pragma: no cover
-from .field import Element
 from .random import Random
 
 log = logging.getLogger(__name__)

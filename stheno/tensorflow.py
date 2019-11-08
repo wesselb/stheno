@@ -3,11 +3,11 @@ import logging
 # noinspection PyUnresolvedReferences
 import lab.tensorflow
 from plum import Dispatcher
+from ring import Element
 from tensorflow import Tensor, Variable
 
 # noinspection PyUnresolvedReferences
 from . import *  # pragma: no cover
-from .field import Element
 from .random import Random
 
 log = logging.getLogger(__name__)

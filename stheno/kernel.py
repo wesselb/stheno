@@ -1,33 +1,11 @@
 import logging
-import operator
 
 import numpy as np
+import ring.function as rf
 from lab import B
 from plum import Dispatcher, Self, convert
-from stheno.function_field import (
-    StretchedFunction,
-    ShiftedFunction,
-    SelectedFunction,
-    InputTransformedFunction,
-    DerivativeFunction,
-    TensorProductFunction,
-    stretch,
-    transform,
-    Function,
-    ZeroFunction,
-    OneFunction,
-    ScaledFunction,
-    ProductFunction,
-    SumFunction,
-    WrappedFunction,
-    JoinFunction,
-    shift,
-    select,
-    to_tensor,
-    tuple_equal
-)
+from ring.util import tuple_equal, to_tensor
 
-from .field import add, mul, broadcast, get_field, Formatter, need_parens
 from .input import Input, Unique
 from .matrix import (
     Dense,
@@ -76,7 +54,7 @@ def expand(xs):
     return xs * 2 if len(xs) == 1 else xs
 
 
-class Kernel(Function):
+class Kernel(rf.Function):
     """Kernel function.
 
     Kernels can be added and multiplied.
@@ -162,22 +140,6 @@ class Kernel(Function):
         """
         return periodicise(self, period)
 
-    def __reversed__(self):
-        """Reverse the arguments of the kernel."""
-        return reverse(self)
-
-    @_dispatch(int)
-    def __pow__(self, power, modulo=None):
-        if power < 0:
-            raise ValueError('Cannot raise to a negative power.')
-        elif power == 0:
-            return 1
-        else:
-            k = self
-            for _ in range(power - 1):
-                k *= self
-        return k
-
     @property
     def stationary(self):
         """Stationarity of the kernel."""
@@ -210,12 +172,13 @@ class Kernel(Function):
                            ''.format(self.__class__.__name__))
 
 
-# Register the field.
-@get_field.extend(Kernel)
-def get_field(a): return Kernel
+# Register the ring.
+@rf.get_ring.extend(Kernel)
+def get_ring(a):
+    return Kernel
 
 
-class OneKernel(Kernel, OneFunction):
+class OneKernel(Kernel, rf.OneFunction):
     """Constant kernel of `1`."""
 
     _dispatch = Dispatcher(in_class=Self)
@@ -251,7 +214,7 @@ class OneKernel(Kernel, OneFunction):
         return 0
 
 
-class ZeroKernel(Kernel, ZeroFunction):
+class ZeroKernel(Kernel, rf.ZeroFunction):
     """Constant kernel of `0`."""
 
     _dispatch = Dispatcher(in_class=Self)
@@ -287,7 +250,7 @@ class ZeroKernel(Kernel, ZeroFunction):
         return 0
 
 
-class ScaledKernel(Kernel, ScaledFunction):
+class ScaledKernel(Kernel, rf.ScaledFunction):
     """Scaled kernel."""
 
     _dispatch = Dispatcher(in_class=Self)
@@ -320,7 +283,7 @@ class ScaledKernel(Kernel, ScaledFunction):
         return self[0].period
 
 
-class SumKernel(Kernel, SumFunction):
+class SumKernel(Kernel, rf.SumFunction):
     """Sum of kernels."""
 
     _dispatch = Dispatcher(in_class=Self)
@@ -351,7 +314,7 @@ class SumKernel(Kernel, SumFunction):
         return np.inf
 
 
-class ProductKernel(Kernel, ProductFunction):
+class ProductKernel(Kernel, rf.ProductFunction):
     """Product of two kernels."""
 
     _dispatch = Dispatcher(in_class=Self)
@@ -381,7 +344,7 @@ class ProductKernel(Kernel, ProductFunction):
         return np.inf
 
 
-class StretchedKernel(Kernel, StretchedFunction):
+class StretchedKernel(Kernel, rf.StretchedFunction):
     """Stretched kernel."""
 
     _dispatch = Dispatcher(in_class=Self)
@@ -434,7 +397,7 @@ class StretchedKernel(Kernel, StretchedFunction):
                tuple_equal(expand(self.stretches), expand(other.stretches))
 
 
-class ShiftedKernel(Kernel, ShiftedFunction):
+class ShiftedKernel(Kernel, rf.ShiftedFunction):
     """Shifted kernel."""
 
     _dispatch = Dispatcher(in_class=Self)
@@ -483,7 +446,7 @@ class ShiftedKernel(Kernel, ShiftedFunction):
                tuple_equal(expand(self.shifts), expand(other.shifts))
 
 
-class SelectedKernel(Kernel, SelectedFunction):
+class SelectedKernel(Kernel, rf.SelectedFunction):
     """Kernel with particular input dimensions selected."""
 
     _dispatch = Dispatcher(in_class=Self)
@@ -546,7 +509,7 @@ class SelectedKernel(Kernel, SelectedFunction):
                tuple_equal(expand(self.dims), expand(other.dims))
 
 
-class InputTransformedKernel(Kernel, InputTransformedFunction):
+class InputTransformedKernel(Kernel, rf.InputTransformedFunction):
     """Input-transformed kernel."""
 
     _dispatch = Dispatcher(in_class=Self)
@@ -573,7 +536,7 @@ class InputTransformedKernel(Kernel, InputTransformedFunction):
                tuple_equal(expand(self.fs), expand(other.fs))
 
 
-class PeriodicKernel(Kernel, WrappedFunction):
+class PeriodicKernel(Kernel, rf.WrappedFunction):
     """Periodic kernel.
 
     Args:
@@ -584,7 +547,7 @@ class PeriodicKernel(Kernel, WrappedFunction):
     _dispatch = Dispatcher(in_class=Self)
 
     def __init__(self, k, period):
-        WrappedFunction.__init__(self, k)
+        rf.WrappedFunction.__init__(self, k)
         self._period = to_tensor(period)
 
     @_dispatch(B.Numeric, B.Numeric)
@@ -620,8 +583,7 @@ class PeriodicKernel(Kernel, WrappedFunction):
     def period(self):
         return self._period
 
-    @_dispatch(object, Formatter)
-    def display(self, e, formatter):
+    def render_wrap(self, e, formatter):
         return '{} per {}'.format(e, formatter(self._period))
 
     @_dispatch(Self)
@@ -694,8 +656,7 @@ class RQ(Kernel):
     def _compute(self, dists2):
         return (1 + .5 * dists2 / self.alpha) ** (-self.alpha)
 
-    @_dispatch(Formatter)
-    def display(self, formatter):
+    def render(self, formatter):
         return 'RQ({})'.format(formatter(self.alpha))
 
     @property
@@ -1044,8 +1005,7 @@ class DecayingKernel(Kernel):
                                      B.cast(B.dtype(self.beta), 1e-30)))
         return B.power(beta_norm, self.alpha)
 
-    @_dispatch(Formatter)
-    def display(self, formatter):
+    def render(self, formatter):
         return 'DecayingKernel({}, {})'.format(formatter(self.alpha),
                                                formatter(self.beta))
 
@@ -1076,8 +1036,7 @@ class LogKernel(Kernel):
         dists = B.maximum(B.ew_dists(x, y), 1e-10)
         return B.divide(B.log(dists + 1), dists)
 
-    @_dispatch(Formatter)
-    def display(self, formatter):
+    def render(self, formatter):
         return 'LogKernel()'
 
     @property
@@ -1331,7 +1290,7 @@ def perturb(x):
                          ''.format(B.dtype(x)))
 
 
-class DerivativeKernel(Kernel, DerivativeFunction):
+class DerivativeKernel(Kernel, rf.DerivativeFunction):
     """Derivative of kernel."""
     _dispatch = Dispatcher(in_class=Self)
 
@@ -1395,7 +1354,7 @@ class DerivativeKernel(Kernel, DerivativeFunction):
                tuple_equal(expand(self.derivs), expand(other.derivs))
 
 
-class TensorProductKernel(Kernel, TensorProductFunction):
+class TensorProductKernel(Kernel, rf.TensorProductFunction):
     """Tensor product kernel."""
     _dispatch = Dispatcher(in_class=Self)
 
@@ -1419,7 +1378,7 @@ class TensorProductKernel(Kernel, TensorProductFunction):
         return tuple_equal(expand(self.fs), expand(other.fs))
 
 
-class ReversedKernel(Kernel, WrappedFunction):
+class ReversedKernel(Kernel, rf.ReversedFunction):
     """Reversed kernel.
 
     Evaluates with its arguments reversed.
@@ -1450,23 +1409,6 @@ class ReversedKernel(Kernel, WrappedFunction):
     def period(self):
         return self[0].period
 
-    @_dispatch(object, Formatter)
-    def display(self, e, formatter):
-        return 'Reversed({})'.format(e)
-
-    @_dispatch(Self)
-    def __eq__(self, other):
-        return self[0] == other[0]
-
-
-@need_parens.extend_multi((Function, ReversedKernel),
-                          ({WrappedFunction, JoinFunction}, ReversedKernel))
-def need_parens(el, parent): return False
-
-
-@need_parens.extend(ReversedKernel, ProductFunction)
-def need_parens(el, parent): return False
-
 
 # Periodicise kernels.
 
@@ -1478,64 +1420,11 @@ def periodicise(a, b): return PeriodicKernel(a, b)
 def periodicise(a, b): return a
 
 
-# Reverse kernels.
+# Make shifting synergise with stationary kernels.
 
-@_dispatch(Kernel)
-def reverse(a): return a if a.stationary else ReversedKernel(a)
-
-
-@_dispatch(ReversedKernel)
-def reverse(a): return a[0]
-
-
-@_dispatch.multi((ZeroKernel,), (OneKernel,))
-def reverse(a): return a
-
-
-@_dispatch(ShiftedKernel)
-def reverse(a): return shift(reversed(a[0]), *reversed(a.shifts))
-
-
-@_dispatch(StretchedKernel)
-def reverse(a): return stretch(reversed(a[0]), *reversed(a.stretches))
-
-
-@_dispatch(InputTransformedKernel)
-def reverse(a): return transform(reversed(a[0]), *reversed(a.fs))
-
-
-@_dispatch(SelectedKernel)
-def reverse(a): return select(reversed(a[0]), *reversed(a.dims))
-
-
-# Propagate reversal.
-
-@_dispatch(SumKernel)
-def reverse(a): return add(reverse(a[0]), reverse(a[1]))
-
-
-@_dispatch(ProductKernel)
-def reverse(a): return mul(reverse(a[0]), reverse(a[1]))
-
-
-@_dispatch(ScaledKernel)
-def reverse(a): return mul(a.scale, reversed(a[0]))
-
-
-# Make shifting synergise with reversal.
-
-@shift.extend(Kernel, [object])
+@rf.shift.extend(Kernel, [object])
 def shift(a, *shifts):
     if a.stationary and len(shifts) == 1:
         return a
     else:
         return ShiftedKernel(a, *shifts)
-
-
-@shift.extend(ZeroKernel, [object])
-def shift(a, *shifts): return a
-
-
-@shift.extend(ShiftedKernel, [object])
-def shift(a, *shifts):
-    return shift(a[0], *broadcast(operator.add, a.shifts, shifts))

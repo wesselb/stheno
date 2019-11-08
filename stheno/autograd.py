@@ -4,10 +4,10 @@ import logging
 import lab.autograd as B
 from autograd.numpy.numpy_boxes import ArrayBox
 from plum import Dispatcher
+from ring import Element
 
 # noinspection PyUnresolvedReferences
 from . import *  # pragma: no cover
-from .field import Element
 from .random import Random
 
 __all__ = []
