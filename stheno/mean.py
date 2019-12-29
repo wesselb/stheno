@@ -1,11 +1,11 @@
 import logging
 
-import ring.function as rf
+import algebra as algebra
 from lab import B
-from plum import Dispatcher, Self
+from matrix import AbstractMatrix
+from plum import Dispatcher, Self, convert
 
 from .input import Input
-from .matrix import dense
 from .util import uprank
 
 __all__ = ['TensorProductMean', 'DerivativeMean']
@@ -13,7 +13,7 @@ __all__ = ['TensorProductMean', 'DerivativeMean']
 log = logging.getLogger(__name__)
 
 
-class Mean(rf.Function):
+class Mean(algebra.Function):
     """Mean function.
 
     Means can be added and multiplied.
@@ -39,13 +39,13 @@ class Mean(rf.Function):
         return self(x.get())
 
 
-# Register the ring.
-@rf.get_ring.extend(Mean)
-def get_ring(a):
+# Register the algebra.
+@algebra.get_algebra.extend(Mean)
+def get_algebra(a):
     return Mean
 
 
-class SumMean(Mean, rf.SumFunction):
+class SumMean(Mean, algebra.SumFunction):
     """Sum of two means."""
 
     _dispatch = Dispatcher(in_class=Self)
@@ -55,7 +55,7 @@ class SumMean(Mean, rf.SumFunction):
         return B.add(self[0](x), self[1](x))
 
 
-class ProductMean(Mean, rf.ProductFunction):
+class ProductMean(Mean, algebra.ProductFunction):
     """Product of two means."""
 
     _dispatch = Dispatcher(in_class=Self)
@@ -65,7 +65,7 @@ class ProductMean(Mean, rf.ProductFunction):
         return B.multiply(self[0](x), self[1](x))
 
 
-class ScaledMean(Mean, rf.ScaledFunction):
+class ScaledMean(Mean, algebra.ScaledFunction):
     """Scaled mean."""
 
     _dispatch = Dispatcher(in_class=Self)
@@ -75,7 +75,7 @@ class ScaledMean(Mean, rf.ScaledFunction):
         return B.multiply(self.scale, self[0](x))
 
 
-class StretchedMean(Mean, rf.StretchedFunction):
+class StretchedMean(Mean, algebra.StretchedFunction):
     """Stretched mean."""
 
     _dispatch = Dispatcher(in_class=Self)
@@ -86,7 +86,7 @@ class StretchedMean(Mean, rf.StretchedFunction):
         return self[0](B.divide(x, self.stretches[0]))
 
 
-class ShiftedMean(Mean, rf.ShiftedFunction):
+class ShiftedMean(Mean, algebra.ShiftedFunction):
     """Shifted mean."""
 
     _dispatch = Dispatcher(in_class=Self)
@@ -97,7 +97,7 @@ class ShiftedMean(Mean, rf.ShiftedFunction):
         return self[0](B.subtract(x, self.shifts[0]))
 
 
-class SelectedMean(Mean, rf.SelectedFunction):
+class SelectedMean(Mean, algebra.SelectedFunction):
     """Mean with particular input dimensions selected."""
 
     _dispatch = Dispatcher(in_class=Self)
@@ -108,7 +108,7 @@ class SelectedMean(Mean, rf.SelectedFunction):
         return self[0](B.take(x, self.dims[0], axis=1))
 
 
-class InputTransformedMean(Mean, rf.InputTransformedFunction):
+class InputTransformedMean(Mean, algebra.InputTransformedFunction):
     """Input-transformed mean."""
 
     _dispatch = Dispatcher(in_class=Self)
@@ -118,7 +118,7 @@ class InputTransformedMean(Mean, rf.InputTransformedFunction):
         return self[0](uprank(self.fs[0](x)))
 
 
-class OneMean(Mean, rf.OneFunction):
+class OneMean(Mean, algebra.OneFunction):
     """Constant mean of `1`."""
 
     _dispatch = Dispatcher(in_class=Self)
@@ -129,7 +129,7 @@ class OneMean(Mean, rf.OneFunction):
         return B.ones(B.dtype(x), B.shape(x)[0], 1)
 
 
-class ZeroMean(Mean, rf.ZeroFunction):
+class ZeroMean(Mean, algebra.ZeroFunction):
     """Constant mean of `0`."""
 
     _dispatch = Dispatcher(in_class=Self)
@@ -140,7 +140,7 @@ class ZeroMean(Mean, rf.ZeroFunction):
         return B.zeros(B.dtype(x), B.shape(x)[0], 1)
 
 
-class TensorProductMean(Mean, rf.TensorProductFunction):
+class TensorProductMean(Mean, algebra.TensorProductFunction):
     _dispatch = Dispatcher(in_class=Self)
 
     @_dispatch(B.Numeric)
@@ -149,7 +149,7 @@ class TensorProductMean(Mean, rf.TensorProductFunction):
         return uprank(self.fs[0](x))
 
 
-class DerivativeMean(Mean, rf.DerivativeFunction):
+class DerivativeMean(Mean, algebra.DerivativeFunction):
     """Derivative of mean."""
     _dispatch = Dispatcher(in_class=Self)
 
@@ -163,7 +163,7 @@ class DerivativeMean(Mean, rf.DerivativeFunction):
             xi = x[:, i:i + 1]
             t.watch(xi)
             x = B.concat(x[:, :i], xi, x[:, i + 1:], axis=1)
-            out = dense(self[0](x))
+            out = B.dense(self[0](x))
             return t.gradient(out, xi, unconnected_gradients='zero')
 
 
@@ -178,7 +178,7 @@ class PosteriorMean(Mean):
         k_zi (:class:`.kernel.Kernel`): Kernel between processes
             corresponding to the data and the input respectively.
         z (input): Locations of data.
-        K_z (:class:`.matrix.Dense`): Kernel matrix of data.
+        K_z (matrix): Kernel matrix of data.
         y (tensor): Observations to condition on.
     """
 
@@ -189,11 +189,11 @@ class PosteriorMean(Mean):
         self.m_z = m_z
         self.k_zi = k_zi
         self.z = z
-        self.K_z = K_z
+        self.K_z = convert(K_z, AbstractMatrix)
         self.y = uprank(y)
 
     @_dispatch(object)
     def __call__(self, x):
         diff = B.subtract(self.y, self.m_z(self.z))
         return B.add(self.m_i(x),
-                     B.qf(self.K_z, self.k_zi(self.z, x), diff))
+                     B.iqf(self.K_z, self.k_zi(self.z, x), diff))

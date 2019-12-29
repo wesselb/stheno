@@ -18,11 +18,9 @@ used.
         * [Available Means](#available-means)
         * [Compositional Design](#compositional-design)
         * [Displaying Kernels and Means](#displaying-kernels-and-mean)
-        * [Properties of Kernels](#properties-of-kernels)
     - [Model Design](#model-design)
         * [Compositional Design](#compositional-design)
         * [Displaying GPs](#displaying-gps)
-        * [Properties of GPs](#properties-of-gps)
         * [Naming GPs](#naming-gps)
     - [Finite-Dimensional Distributions, Inference, and Sampling](#finite-dimensional-distributions-inference-and-sampling)
     - [Inducing Points](#inducing-points)
@@ -429,51 +427,6 @@ Tensor("Const_1:0", shape=(), dtype=int32) * EQ()
 2 * EQ()
 ```
 
-#### Properties of Kernels
-
-The stationarity of a kernel `k` can always be determined by querying
-`k.stationary`. In many cases, the variance `k.var`, length scale
-`k.length_scale`, and period `k.period` can also be determined.
-
-Example of querying the stationarity:
-
-```python
->>> EQ().stationary
-True
-
->>> (EQ() + Linear()).stationary
-False
-```
-
-Example of querying the variance:
-
-```python
->>> EQ().var
-1
-
->>> (2 * EQ()).var
-2
-```
-
-Example of querying the length scale:
-
-```python
->>> EQ().length_scale
-1
-
->>> (EQ() + EQ().stretch(2)).length_scale
-1.5
-```
-
-Example of querying the period:
-
-```python
->>> EQ().periodic(1).period
-1
-
->>> EQ().periodic(1).stretch(2).period
-2
-```
 
 ### Model Design
 
@@ -642,20 +595,6 @@ Example:
 GP(2.12 * EQ(), 0)
 ```
 
-#### Properties of GPs
-
-Properties of kernels can be queried on GPs directly.
-
-Example:
-
-```python
->>> GP(EQ()).stationary
-True
-
->>> GP(RQ(1e-1)).length_scale
-1
-```
-
 ### Naming GPs
 
 It is possible to give a name to GPs.
@@ -681,8 +620,7 @@ GP(EQ(), 0)
 
 ### Finite-Dimensional Distributions, Inference, and Sampling
 
-
-Simply call a GP to construct its finite-dimensional distribution:
+Simply call a GP to construct the corresponding finite-dimensional distribution:
 
 ```python
 >>> type(f(x))
@@ -830,23 +768,8 @@ from stheno.torch import GP, EQ
            [-1.15642448]])
     ```
 
-* `stheno.eis` offers kernels on an extended input space that allows one to 
-design kernels in an alternative, flexible way.
-
-    Example:
-
-    ```python
-    >>> p = GP(NoisyKernel(EQ(), Delta()))
-
-    >>> prediction = p.condition(Observed(x), y)(Latent(x)).marginals()
-    ```
-    
 * `stheno.normal` offers an efficient implementation `Normal` of the normal 
-distribution, and a convenience constructor `Normal1D` for 1-dimensional normal
-distributions.
-
-* `stheno.matrix` offers structured representations of matrices and efficient
-operations thereon.
+distribution.
 
 * Approximate multiplication between GPs is implemented. This is an 
 experimental feature.

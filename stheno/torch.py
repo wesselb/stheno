@@ -2,9 +2,10 @@ import logging
 
 # noinspection PyUnresolvedReferences
 import lab.torch
+from algebra import Element
 from plum import Dispatcher
-from ring import Element
 from torch import Tensor
+from matrix import AbstractMatrix
 
 # noinspection PyUnresolvedReferences
 from . import *  # pragma: no cover
@@ -26,7 +27,7 @@ def __mul__(self, other):
     return __mul__tensor(self, other)
 
 
-@_dispatch(Tensor, {Element, Random})
+@_dispatch(Tensor, {Element, Random, AbstractMatrix})
 def __mul__(self, other):
     return other.__rmul__(self)
 
@@ -36,7 +37,7 @@ def __imul__(self, other):
     return __imul__tensor(self, other)
 
 
-@_dispatch(Tensor, {Element, Random})
+@_dispatch(Tensor, {Element, Random, AbstractMatrix})
 def __imul__(self, other):
     return other.__rmul__(self)
 
@@ -46,7 +47,7 @@ def __add__(self, other):
     return __add__tensor(self, other)
 
 
-@_dispatch(Tensor, {Element, Random})
+@_dispatch(Tensor, {Element, Random, AbstractMatrix})
 def __add__(self, other):
     return other.__radd__(self)
 
@@ -56,7 +57,7 @@ def __iadd__(self, other):
     return __iadd__tensor(self, other)
 
 
-@_dispatch(Tensor, Element)
+@_dispatch(Tensor, {Element, Random, AbstractMatrix})
 def __iadd__(self, other):
     return other.__radd__(self)
 

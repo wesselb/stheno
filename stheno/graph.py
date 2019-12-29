@@ -3,7 +3,8 @@ from types import FunctionType
 
 from fdm import central_fdm
 from lab import B
-from plum import Dispatcher, Self, Referentiable, type_parameter, Union
+from matrix import Diagonal, AbstractMatrix
+from plum import Dispatcher, Self, Referentiable, type_parameter, Union, convert
 
 from .input import Input, At, MultiInput
 from .kernel import (
@@ -14,7 +15,6 @@ from .kernel import (
     OneKernel
 )
 from .lazy import LazyVector, LazyMatrix
-from .matrix import matrix, Diagonal
 from .mean import PosteriorMean, ZeroMean, OneMean
 from .mokernel import MultiOutputKernel as MOK
 from .momean import MultiOutputMean as MOM
@@ -57,7 +57,7 @@ class AbstractObservations(metaclass=Referentiable):
 
     _dispatch = Dispatcher(in_class=Self)
 
-    @_dispatch({B.Numeric, Input}, B.Numeric, [PromisedGP])
+    @_dispatch({B.Numeric, Input}, {B.Numeric, AbstractMatrix}, [PromisedGP])
     def __init__(self, x, y, ref=None):
         self._ref = ref
         self.x = ensure_at(x, self._ref)
@@ -137,7 +137,7 @@ class Observations(AbstractObservations):
         """Kernel matrix of the data."""
         if self._K_x is None:  # Cache computation.
             p_x, x = type_parameter(self.x), self.x.get()
-            self._K_x = matrix(self.graph.kernels[p_x](x))
+            self._K_x = convert(self.graph.kernels[p_x](x), AbstractMatrix)
         return self._K_x
 
     def posterior_kernel(self, p_i, p_j):
@@ -251,7 +251,7 @@ class SparseObservations(AbstractObservations):
 
         # Construct the necessary kernel matrices.
         K_zx = self.graph.kernels[p_z, p_x](z, x)
-        self._K_z = matrix(self.graph.kernels[p_z](z))
+        self._K_z = convert(self.graph.kernels[p_z](z), AbstractMatrix)
 
         # Evaluating `e.kernel(x)` will yield incorrect results if `x` is a
         # `MultiInput`, because `x` then still designates the particular
@@ -272,23 +272,23 @@ class SparseObservations(AbstractObservations):
 
         # And construct the components for the inducing point approximation.
         L_z = B.cholesky(self._K_z)
-        self._A = B.eye(self._K_z) + \
-                  B.qf(K_n, B.transpose(B.trisolve(L_z, K_zx)))
+        self._A = B.add(B.eye(self._K_z),
+                        B.iqf(K_n, B.transpose(B.solve(L_z, K_zx))))
         y_bar = uprank(self.y) - self.e.mean(x_n) - self.graph.means[p_x](x)
-        prod_y_bar = B.trisolve(L_z, B.qf(K_n, B.transpose(K_zx), y_bar))
+        prod_y_bar = B.solve(L_z, B.iqf(K_n, B.transpose(K_zx), y_bar))
 
         # Compute the optimal mean.
-        self._mu = self.graph.means[p_z](z) + \
-                   B.qf(self._A, B.trisolve(L_z, self._K_z), prod_y_bar)
+        self._mu = B.add(self.graph.means[p_z](z),
+                         B.iqf(self._A, B.solve(L_z, self._K_z), prod_y_bar))
 
         # Compute the ELBO.
         # NOTE: The calculation of `trace_part` asserts that `K_n` is diagonal.
         #       The rest, however, is completely generic.
         trace_part = B.ratio(Diagonal(self.graph.kernels[p_x].elwise(x)[:, 0]) -
-                             Diagonal(B.qf_diag(self._K_z, K_zx)), K_n)
+                             Diagonal(B.iqf_diag(self._K_z, K_zx)), K_n)
         det_part = B.logdet(2 * B.pi * K_n) + B.logdet(self._A)
-        qf_part = B.qf(K_n, y_bar)[0, 0] - B.qf(self._A, prod_y_bar)[0, 0]
-        self._elbo = -0.5 * (trace_part + det_part + qf_part)
+        iqf_part = B.iqf(K_n, y_bar)[0, 0] - B.iqf(self._A, prod_y_bar)[0, 0]
+        self._elbo = -0.5 * (trace_part + det_part + iqf_part)
 
     def posterior_kernel(self, p_i, p_j):
         p_z, z = type_parameter(self.z), self.z.get()

@@ -1,9 +1,9 @@
+import lab as B
 import numpy as np
 import pytest
 from stheno.graph import Graph, GP
 from stheno.input import MultiInput
 from stheno.kernel import EQ
-from stheno.matrix import dense
 from stheno.mokernel import MultiOutputKernel
 
 from .util import allclose
@@ -25,11 +25,11 @@ def test_mokernel():
 
     # `B.Numeric` versus `B.Numeric`:
     allclose(mok(x1, x2),
-             np.concatenate([np.concatenate([dense(ks[p1, p1](x1, x2)),
-                                             dense(ks[p1, p2](x1, x2))],
+             np.concatenate([np.concatenate([B.dense(ks[p1, p1](x1, x2)),
+                                             B.dense(ks[p1, p2](x1, x2))],
                                             axis=1),
-                             np.concatenate([dense(ks[p2, p1](x1, x2)),
-                                             dense(ks[p2, p2](x1, x2))],
+                             np.concatenate([B.dense(ks[p2, p1](x1, x2)),
+                                             B.dense(ks[p2, p2](x1, x2))],
                                             axis=1)], axis=0))
     allclose(mok.elwise(x1, x3),
              np.concatenate([ks[p1, p1].elwise(x1, x3),
@@ -37,17 +37,17 @@ def test_mokernel():
 
     # `B.Numeric` versus `At`:
     allclose(mok(p1(x1), x2),
-             np.concatenate([dense(ks[p1, p1](x1, x2)),
-                             dense(ks[p1, p2](x1, x2))], axis=1))
+             np.concatenate([B.dense(ks[p1, p1](x1, x2)),
+                             B.dense(ks[p1, p2](x1, x2))], axis=1))
     allclose(mok(p2(x1), x2),
-             np.concatenate([dense(ks[p2, p1](x1, x2)),
-                             dense(ks[p2, p2](x1, x2))], axis=1))
+             np.concatenate([B.dense(ks[p2, p1](x1, x2)),
+                             B.dense(ks[p2, p2](x1, x2))], axis=1))
     allclose(mok(x1, p1(x2)),
-             np.concatenate([dense(ks[p1, p1](x1, x2)),
-                             dense(ks[p2, p1](x1, x2))], axis=0))
+             np.concatenate([B.dense(ks[p1, p1](x1, x2)),
+                             B.dense(ks[p2, p1](x1, x2))], axis=0))
     allclose(mok(x1, p2(x2)),
-             np.concatenate([dense(ks[p1, p2](x1, x2)),
-                             dense(ks[p2, p2](x1, x2))], axis=0))
+             np.concatenate([B.dense(ks[p1, p2](x1, x2)),
+                             B.dense(ks[p2, p2](x1, x2))], axis=0))
     with pytest.raises(ValueError):
         mok.elwise(x1, p2(x3))
     with pytest.raises(ValueError):
@@ -61,8 +61,8 @@ def test_mokernel():
 
     # `MultiInput` versus `MultiInput`:
     allclose(mok(MultiInput(p2(x1), p1(x2)), MultiInput(p2(x1))),
-             np.concatenate([dense(ks[p2, p2](x1, x1)),
-                             dense(ks[p1, p2](x2, x1))], axis=0))
+             np.concatenate([B.dense(ks[p2, p2](x1, x1)),
+                             B.dense(ks[p1, p2](x2, x1))], axis=0))
     with pytest.raises(ValueError):
         mok.elwise(MultiInput(p2(x1), p1(x3)), MultiInput(p2(x1)))
     allclose(mok.elwise(MultiInput(p2(x1), p1(x3)),
@@ -72,11 +72,11 @@ def test_mokernel():
 
     # `MultiInput` versus `At`:
     allclose(mok(MultiInput(p2(x1), p1(x2)), p2(x1)),
-             np.concatenate([dense(ks[p2, p2](x1, x1)),
-                             dense(ks[p1, p2](x2, x1))], axis=0))
+             np.concatenate([B.dense(ks[p2, p2](x1, x1)),
+                             B.dense(ks[p1, p2](x2, x1))], axis=0))
     allclose(mok(p2(x1), MultiInput(p2(x1), p1(x2))),
-             np.concatenate([dense(ks[p2, p2](x1, x1)),
-                             dense(ks[p2, p1](x1, x2))], axis=1))
+             np.concatenate([B.dense(ks[p2, p2](x1, x1)),
+                             B.dense(ks[p2, p1](x1, x2))], axis=1))
     with pytest.raises(ValueError):
         mok.elwise(MultiInput(p2(x1), p1(x3)), p2(x1))
     with pytest.raises(ValueError):

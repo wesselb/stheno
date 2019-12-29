@@ -167,22 +167,15 @@ def test_properties():
 
     p = p1 + 2 * p2
 
-    assert p.stationary == True, 'stationary'
-    assert p.var == 1 + 2 ** 2, 'var'
-    allclose(p.length_scale, (1 + 2 * 2 ** 2) / (1 + 2 ** 2))
-    assert p.period == np.inf, 'period'
-
-    assert p3.period == 10, 'period'
+    assert p.stationary == True
 
     p = p3 + p
 
-    assert p.stationary == True, 'stationary 2'
-    assert p.var == 1 + 2 ** 2 + 1, 'var 2'
-    assert p.period == np.inf, 'period 2'
+    assert p.stationary == True
 
     p = p + GP(Linear(), graph=model)
 
-    assert p.stationary == False, 'stationary 3'
+    assert p.stationary == False
 
 
 def test_marginals():

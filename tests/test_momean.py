@@ -1,9 +1,9 @@
 import numpy as np
+
 from stheno.graph import Graph, GP
 from stheno.input import MultiInput
 from stheno.kernel import EQ
 from stheno.momean import MultiOutputMean
-
 from .util import allclose
 
 

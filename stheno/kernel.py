@@ -1,22 +1,13 @@
 import logging
 
+import algebra
 import numpy as np
-import ring.function as rf
+from algebra.util import tuple_equal, to_tensor
 from lab import B
+from matrix import Dense, LowRank, Diagonal, Zero, Constant, AbstractMatrix
 from plum import Dispatcher, Self, convert
-from ring.util import tuple_equal, to_tensor
 
 from .input import Input, Unique
-from .matrix import (
-    Dense,
-    LowRank,
-    UniformlyDiagonal,
-    Diagonal,
-    One,
-    Zero,
-    dense,
-    matrix
-)
 from .util import uprank
 
 __all__ = ['Kernel',
@@ -54,7 +45,7 @@ def expand(xs):
     return xs * 2 if len(xs) == 1 else xs
 
 
-class Kernel(rf.Function):
+class Kernel(algebra.Function):
     """Kernel function.
 
     Kernels can be added and multiplied.
@@ -71,7 +62,7 @@ class Kernel(rf.Function):
                 argument.
 
         Returns:
-            :class:`.matrix.Dense:: Kernel matrix.
+            matrix: Kernel matrix.
         """
         raise RuntimeError('For kernel "{}", could not resolve '
                            'arguments "{}" and "{}".'.format(self, x, y))
@@ -153,44 +144,22 @@ class Kernel(rf.Function):
     def _stationary(self):
         return False
 
-    @property
-    def var(self):
-        """Variance of the kernel."""
-        raise RuntimeError('The variance of "{}" could not be determined.'
-                           ''.format(self.__class__.__name__))
 
-    @property
-    def length_scale(self):
-        """Approximation of the length scale of the kernel."""
-        raise RuntimeError('The length scale of "{}" could not be determined.'
-                           ''.format(self.__class__.__name__))
-
-    @property
-    def period(self):
-        """Period of the kernel."""
-        raise RuntimeError('The period of "{}" could not be determined.'
-                           ''.format(self.__class__.__name__))
-
-
-# Register the ring.
-@rf.get_ring.extend(Kernel)
-def get_ring(a):
+# Register the algebra.
+@algebra.get_algebra.extend(Kernel)
+def get_algebra(a):
     return Kernel
 
 
-class OneKernel(Kernel, rf.OneFunction):
+class OneKernel(Kernel, algebra.OneFunction):
     """Constant kernel of `1`."""
 
     _dispatch = Dispatcher(in_class=Self)
 
     @_dispatch(B.Numeric, B.Numeric)
+    @uprank
     def __call__(self, x, y):
-        if x is y:
-            return One(B.dtype(x), B.shape(uprank(x))[0])
-        else:
-            return One(B.dtype(x),
-                       B.shape(uprank(x))[0],
-                       B.shape(uprank(y))[0])
+        return Constant(B.one(x), B.shape(x)[0], B.shape(y)[0])
 
     @_dispatch(B.Numeric, B.Numeric)
     @uprank
@@ -201,32 +170,16 @@ class OneKernel(Kernel, rf.OneFunction):
     def _stationary(self):
         return True
 
-    @property
-    def var(self):
-        return 1
 
-    @property
-    def length_scale(self):
-        return 0
-
-    @property
-    def period(self):
-        return 0
-
-
-class ZeroKernel(Kernel, rf.ZeroFunction):
+class ZeroKernel(Kernel, algebra.ZeroFunction):
     """Constant kernel of `0`."""
 
     _dispatch = Dispatcher(in_class=Self)
 
     @_dispatch(B.Numeric, B.Numeric)
+    @uprank
     def __call__(self, x, y):
-        if x is y:
-            return Zero(B.dtype(x), B.shape(uprank(x))[0])
-        else:
-            return Zero(B.dtype(x),
-                        B.shape(uprank(x))[0],
-                        B.shape(uprank(y))[0])
+        return Zero(B.dtype(x), B.shape(x)[0], B.shape(y)[0])
 
     @_dispatch(B.Numeric, B.Numeric)
     @uprank
@@ -237,20 +190,8 @@ class ZeroKernel(Kernel, rf.ZeroFunction):
     def _stationary(self):
         return True
 
-    @property
-    def var(self):
-        return 0
 
-    @property
-    def length_scale(self):
-        return 0
-
-    @property
-    def period(self):
-        return 0
-
-
-class ScaledKernel(Kernel, rf.ScaledFunction):
+class ScaledKernel(Kernel, algebra.ScaledFunction):
     """Scaled kernel."""
 
     _dispatch = Dispatcher(in_class=Self)
@@ -270,20 +211,8 @@ class ScaledKernel(Kernel, rf.ScaledFunction):
     def _stationary(self):
         return self[0].stationary
 
-    @property
-    def var(self):
-        return self.scale * self[0].var
 
-    @property
-    def length_scale(self):
-        return self[0].length_scale
-
-    @property
-    def period(self):
-        return self[0].period
-
-
-class SumKernel(Kernel, rf.SumFunction):
+class SumKernel(Kernel, algebra.SumFunction):
     """Sum of kernels."""
 
     _dispatch = Dispatcher(in_class=Self)
@@ -300,21 +229,8 @@ class SumKernel(Kernel, rf.SumFunction):
     def _stationary(self):
         return self[0].stationary and self[1].stationary
 
-    @property
-    def var(self):
-        return self[0].var + self[1].var
 
-    @property
-    def length_scale(self):
-        return (self[0].var * self[0].length_scale +
-                self[1].var * self[1].length_scale) / self.var
-
-    @property
-    def period(self):
-        return np.inf
-
-
-class ProductKernel(Kernel, rf.ProductFunction):
+class ProductKernel(Kernel, algebra.ProductFunction):
     """Product of two kernels."""
 
     _dispatch = Dispatcher(in_class=Self)
@@ -331,20 +247,8 @@ class ProductKernel(Kernel, rf.ProductFunction):
     def _stationary(self):
         return self[0].stationary and self[1].stationary
 
-    @property
-    def var(self):
-        return self[0].var * self[1].var
 
-    @property
-    def length_scale(self):
-        return B.minimum(self[0].length_scale, self[1].length_scale)
-
-    @property
-    def period(self):
-        return np.inf
-
-
-class StretchedKernel(Kernel, rf.StretchedFunction):
+class StretchedKernel(Kernel, algebra.StretchedFunction):
     """Stretched kernel."""
 
     _dispatch = Dispatcher(in_class=Self)
@@ -371,33 +275,13 @@ class StretchedKernel(Kernel, rf.StretchedFunction):
             # NOTE: Can do something more clever here.
             return False
 
-    @property
-    def var(self):
-        return self[0].var
-
-    @property
-    def length_scale(self):
-        if len(self.stretches) == 1:
-            return self[0].length_scale * self.stretches[0]
-        else:
-            # NOTE: Can do something more clever here.
-            return Kernel.length_scale.fget(self)
-
-    @property
-    def period(self):
-        if len(self.stretches) == 1:
-            return self[0].period * self.stretches[0]
-        else:
-            # NOTE: Can do something more clever here.
-            return Kernel.period.fget(self)
-
     @_dispatch(Self)
     def __eq__(self, other):
         return self[0] == other[0] and \
                tuple_equal(expand(self.stretches), expand(other.stretches))
 
 
-class ShiftedKernel(Kernel, rf.ShiftedFunction):
+class ShiftedKernel(Kernel, algebra.ShiftedFunction):
     """Shifted kernel."""
 
     _dispatch = Dispatcher(in_class=Self)
@@ -424,29 +308,13 @@ class ShiftedKernel(Kernel, rf.ShiftedFunction):
             # NOTE: Can do something more clever here.
             return False
 
-    @property
-    def var(self):
-        return self[0].var
-
-    @property
-    def length_scale(self):
-        if len(self.shifts) == 1:
-            return self[0].length_scale
-        else:
-            # NOTE: Can do something more clever here.
-            return Kernel.length_scale.fget(self)
-
-    @property
-    def period(self):
-        return self[0].period
-
     @_dispatch(Self)
     def __eq__(self, other):
         return self[0] == other[0] and \
                tuple_equal(expand(self.shifts), expand(other.shifts))
 
 
-class SelectedKernel(Kernel, rf.SelectedFunction):
+class SelectedKernel(Kernel, algebra.SelectedFunction):
     """Kernel with particular input dimensions selected."""
 
     _dispatch = Dispatcher(in_class=Self)
@@ -475,41 +343,13 @@ class SelectedKernel(Kernel, rf.SelectedFunction):
             # NOTE: Can do something more clever here.
             return False
 
-    @property
-    def var(self):
-        return self[0].var
-
-    @property
-    def length_scale(self):
-        length_scale = self[0].length_scale
-        if B.isscalar(length_scale):
-            return length_scale
-        else:
-            if len(self.dims) == 1:
-                return B.take(length_scale, self.dims[0])
-            else:
-                # NOTE: Can do something more clever here.
-                return Kernel.length_scale.fget(self)
-
-    @property
-    def period(self):
-        period = self[0].period
-        if B.isscalar(period):
-            return period
-        else:
-            if len(self.dims) == 1:
-                return B.take(period, self.dims[0])
-            else:
-                # NOTE: Can do something more clever here.
-                return Kernel.period.fget(self)
-
     @_dispatch(Self)
     def __eq__(self, other):
         return self[0] == other[0] and \
                tuple_equal(expand(self.dims), expand(other.dims))
 
 
-class InputTransformedKernel(Kernel, rf.InputTransformedFunction):
+class InputTransformedKernel(Kernel, algebra.InputTransformedFunction):
     """Input-transformed kernel."""
 
     _dispatch = Dispatcher(in_class=Self)
@@ -536,7 +376,7 @@ class InputTransformedKernel(Kernel, rf.InputTransformedFunction):
                tuple_equal(expand(self.fs), expand(other.fs))
 
 
-class PeriodicKernel(Kernel, rf.WrappedFunction):
+class PeriodicKernel(Kernel, algebra.WrappedFunction):
     """Periodic kernel.
 
     Args:
@@ -547,8 +387,8 @@ class PeriodicKernel(Kernel, rf.WrappedFunction):
     _dispatch = Dispatcher(in_class=Self)
 
     def __init__(self, k, period):
-        rf.WrappedFunction.__init__(self, k)
-        self._period = to_tensor(period)
+        algebra.WrappedFunction.__init__(self, k)
+        self.period = to_tensor(period)
 
     @_dispatch(B.Numeric, B.Numeric)
     @uprank
@@ -571,20 +411,8 @@ class PeriodicKernel(Kernel, rf.WrappedFunction):
     def _stationary(self):
         return self[0].stationary
 
-    @property
-    def var(self):
-        return self[0].var
-
-    @property
-    def length_scale(self):
-        return self[0].length_scale
-
-    @property
-    def period(self):
-        return self._period
-
     def render_wrap(self, e, formatter):
-        return '{} per {}'.format(e, formatter(self._period))
+        return '{} per {}'.format(e, formatter(self.period))
 
     @_dispatch(Self)
     def __eq__(self, other):
@@ -612,18 +440,6 @@ class EQ(Kernel):
     @property
     def _stationary(self):
         return True
-
-    @property
-    def var(self):
-        return 1
-
-    @property
-    def length_scale(self):
-        return 1
-
-    @property
-    def period(self):
-        return np.inf
 
     @_dispatch(Self)
     def __eq__(self, other):
@@ -663,18 +479,6 @@ class RQ(Kernel):
     def _stationary(self):
         return True
 
-    @property
-    def var(self):
-        return 1
-
-    @property
-    def length_scale(self):
-        return 1
-
-    @property
-    def period(self):
-        return np.inf
-
     @_dispatch(Self)
     def __eq__(self, other):
         return B.all(self.alpha == other.alpha)
@@ -698,18 +502,6 @@ class Exp(Kernel):
     @property
     def _stationary(self):
         return True
-
-    @property
-    def var(self):
-        return 1
-
-    @property
-    def length_scale(self):
-        return 1
-
-    @property
-    def period(self):
-        return np.inf
 
     @_dispatch(Self)
     def __eq__(self, other):
@@ -742,18 +534,6 @@ class Matern32(Kernel):
     def _stationary(self):
         return True
 
-    @property
-    def var(self):
-        return 1
-
-    @property
-    def length_scale(self):
-        return 1
-
-    @property
-    def period(self):
-        return np.inf
-
     @_dispatch(Self)
     def __eq__(self, other):
         return True
@@ -783,18 +563,6 @@ class Matern52(Kernel):
     def _stationary(self):
         return True
 
-    @property
-    def var(self):
-        return 1
-
-    @property
-    def length_scale(self):
-        return 1
-
-    @property
-    def period(self):
-        return np.inf
-
     @_dispatch(Self)
     def __eq__(self, other):
         return True
@@ -816,7 +584,7 @@ class Delta(Kernel):
     @_dispatch(B.Numeric, B.Numeric)
     def __call__(self, x, y):
         if x is y:
-            return self._eye(uprank(x))
+            return B.fill_diag(B.one(x), B.shape(uprank(x))[0])
         else:
             return Dense(self._compute(B.pw_dists2(uprank(x), uprank(y))))
 
@@ -824,7 +592,7 @@ class Delta(Kernel):
     def __call__(self, x, y):
         x, y = x.get(), y.get()
         if x is y:
-            return self._eye(uprank(x))
+            return B.fill_diag(B.one(x), B.shape(uprank(x))[0])
         else:
             x, y = uprank(x), uprank(y)
             return Zero(B.dtype(x), B.shape(x)[0], B.shape(y)[0])
@@ -843,28 +611,25 @@ class Delta(Kernel):
     def elwise(self, x, y):
         x, y = x.get(), y.get()
         if x is y:
-            return One(B.dtype(x), B.shape(uprank(x))[0], 1)
+            return B.ones(B.dtype(x), B.shape(uprank(x))[0], 1)
         else:
-            return Zero(B.dtype(x), B.shape(uprank(x))[0], 1)
+            return B.zeros(B.dtype(x), B.shape(uprank(x))[0], 1)
 
     @_dispatch(Unique, object)
     def elwise(self, x, y):
         x = x.get()
-        return Zero(B.dtype(x), B.shape(uprank(x))[0], 1)
+        return B.zeros(B.dtype(x), B.shape(uprank(x))[0], 1)
 
     @_dispatch(object, Unique)
     def elwise(self, x, y):
-        return Zero(B.dtype(x), B.shape(uprank(x))[0], 1)
+        return B.zeros(B.dtype(x), B.shape(uprank(x))[0], 1)
 
     @_dispatch(B.Numeric, B.Numeric)
     def elwise(self, x, y):
         if x is y:
-            return One(B.dtype(x), B.shape(uprank(x))[0], 1)
+            return B.ones(B.dtype(x), B.shape(uprank(x))[0], 1)
         else:
             return self._compute(B.ew_dists2(uprank(x), uprank(y)))
-
-    def _eye(self, x):
-        return UniformlyDiagonal(B.cast(B.dtype(x), 1), B.shape(x)[0])
 
     def _compute(self, dists2):
         dtype = B.dtype(dists2)
@@ -873,18 +638,6 @@ class Delta(Kernel):
     @property
     def _stationary(self):
         return True
-
-    @property
-    def var(self):
-        return 1
-
-    @property
-    def length_scale(self):
-        return 0
-
-    @property
-    def period(self):
-        return np.inf
 
     @_dispatch(Self)
     def __eq__(self, other):
@@ -923,18 +676,6 @@ class FixedDelta(Kernel):
     @property
     def _stationary(self):
         return True
-
-    @property
-    def var(self):
-        return 1
-
-    @property
-    def length_scale(self):
-        return 0
-
-    @property
-    def period(self):
-        return np.inf
 
     @_dispatch(Self)
     def __eq__(self, other):
@@ -991,8 +732,8 @@ class DecayingKernel(Kernel):
     @_dispatch(B.Numeric, B.Numeric)
     @uprank
     def __call__(self, x, y):
-        return B.divide(self._compute_beta_raised(),
-                        B.power(B.pw_sums(B.add(x, self.beta), y), self.alpha))
+        pw_sums_raised = B.power(B.pw_sums(B.add(x, self.beta), y), self.alpha)
+        return Dense(B.divide(self._compute_beta_raised(), pw_sums_raised))
 
     @_dispatch(B.Numeric, B.Numeric)
     @uprank
@@ -1028,7 +769,7 @@ class LogKernel(Kernel):
     @uprank
     def __call__(self, x, y):
         dists = B.maximum(B.pw_dists(x, y), 1e-10)
-        return B.divide(B.log(dists + 1), dists)
+        return Dense(B.divide(B.log(dists + 1), dists))
 
     @_dispatch(B.Numeric, B.Numeric)
     @uprank
@@ -1042,18 +783,6 @@ class LogKernel(Kernel):
     @property
     def _stationary(self):
         return True
-
-    @property
-    def var(self):
-        return 1
-
-    @property
-    def length_scale(self):
-        return np.inf
-
-    @property
-    def period(self):
-        return np.inf
 
     @_dispatch(Self)
     def __eq__(self, other):
@@ -1071,7 +800,7 @@ class PosteriorKernel(Kernel):
         k_zj (:class:`.kernel.Kernel`): Kernel between processes
             corresponding to the data and the right input respectively.
         z (input): Locations of data.
-        K_z (:class:`.matrix.Dense`): Kernel matrix of data.
+        K_z (matrix): Kernel matrix of data.
     """
 
     _dispatch = Dispatcher(in_class=Self)
@@ -1081,22 +810,21 @@ class PosteriorKernel(Kernel):
         self.k_zi = k_zi
         self.k_zj = k_zj
         self.z = z
-        self.K_z = matrix(K_z)
+        self.K_z = convert(K_z, AbstractMatrix)
 
     @_dispatch(object, object)
     def __call__(self, x, y):
-        return B.schur(self.k_ij(x, y),
-                       self.k_zi(self.z, x),
-                       self.K_z,
-                       self.k_zj(self.z, y))
+        return B.subtract(self.k_ij(x, y), B.iqf(self.K_z,
+                                                 self.k_zi(self.z, x),
+                                                 self.k_zj(self.z, y)))
 
     @_dispatch(object, object)
     def elwise(self, x, y):
-        qf_diag = B.qf_diag(self.K_z,
-                            self.k_zi(self.z, x),
-                            self.k_zj(self.z, y))
+        iqf_diag = B.iqf_diag(self.K_z,
+                              self.k_zi(self.z, x),
+                              self.k_zj(self.z, y))
         return B.subtract(self.k_ij.elwise(x, y),
-                          B.expand_dims(qf_diag, axis=1))
+                          B.expand_dims(iqf_diag, axis=1))
 
 
 class CorrectiveKernel(Kernel):
@@ -1120,19 +848,19 @@ class CorrectiveKernel(Kernel):
         self.k_zj = k_zj
         self.z = z
         self.A = A
-        self.L = B.cholesky(matrix(K_z))
+        self.L = B.cholesky(convert(K_z, AbstractMatrix))
 
     @_dispatch(object, object)
     def __call__(self, x, y):
-        return B.qf(self.A,
-                    B.trisolve(self.L, self.k_zi(self.z, x)),
-                    B.trisolve(self.L, self.k_zj(self.z, y)))
+        return B.iqf(self.A,
+                     B.solve(self.L, self.k_zi(self.z, x)),
+                     B.solve(self.L, self.k_zj(self.z, y)))
 
     @_dispatch(object, object)
     def elwise(self, x, y):
-        return B.qf_diag(self.A,
-                         B.trisolve(self.L, self.k_zi(self.z, x)),
-                         B.trisolve(self.L, self.k_zj(self.z, y)))[:, None]
+        return B.iqf_diag(self.A,
+                          B.solve(self.L, self.k_zi(self.z, x)),
+                          B.solve(self.L, self.k_zj(self.z, y)))[:, None]
 
 
 def dkx(k_elwise, i):
@@ -1169,7 +897,7 @@ def dkx(k_elwise, i):
             x = B.concat(x[:, :i], xi, x[:, i + 1:], axis=1)
 
             # Perform the derivative computation.
-            out = dense(k_elwise(x, y))
+            out = B.dense(k_elwise(x, y))
             grads = t.gradient(out, xis, unconnected_gradients='zero')
             return B.concat(*grads, axis=1)
 
@@ -1197,7 +925,7 @@ def dkx_elwise(k_elwise, i):
             xi = x[:, i:i + 1]
             t.watch(xi)
             x = B.concat(x[:, :i], xi, x[:, i + 1:], axis=1)
-            out = dense(k_elwise(x, y))
+            out = B.dense(k_elwise(x, y))
             return t.gradient(out, xi, unconnected_gradients='zero')
 
     return _dkx_elwise
@@ -1237,7 +965,7 @@ def dky(k_elwise, i):
             y = B.concat(y[:, :i], yi, y[:, i + 1:], axis=1)
 
             # Perform the derivative computation.
-            out = dense(k_elwise(x, y))
+            out = B.dense(k_elwise(x, y))
             grads = t.gradient(out, yis, unconnected_gradients='zero')
             return B.transpose(B.concat(*grads, axis=1))
 
@@ -1265,7 +993,7 @@ def dky_elwise(k_elwise, i):
             yi = y[:, i:i + 1]
             t.watch(yi)
             y = B.concat(y[:, :i], yi, y[:, i + 1:], axis=1)
-            out = dense(k_elwise(x, y))
+            out = B.dense(k_elwise(x, y))
             return t.gradient(out, yi, unconnected_gradients='zero')
 
     return _dky_elwise
@@ -1290,7 +1018,7 @@ def perturb(x):
                          ''.format(B.dtype(x)))
 
 
-class DerivativeKernel(Kernel, rf.DerivativeFunction):
+class DerivativeKernel(Kernel, algebra.DerivativeFunction):
     """Derivative of kernel."""
     _dispatch = Dispatcher(in_class=Self)
 
@@ -1354,7 +1082,7 @@ class DerivativeKernel(Kernel, rf.DerivativeFunction):
                tuple_equal(expand(self.derivs), expand(other.derivs))
 
 
-class TensorProductKernel(Kernel, rf.TensorProductFunction):
+class TensorProductKernel(Kernel, algebra.TensorProductFunction):
     """Tensor product kernel."""
     _dispatch = Dispatcher(in_class=Self)
 
@@ -1378,7 +1106,7 @@ class TensorProductKernel(Kernel, rf.TensorProductFunction):
         return tuple_equal(expand(self.fs), expand(other.fs))
 
 
-class ReversedKernel(Kernel, rf.ReversedFunction):
+class ReversedKernel(Kernel, algebra.ReversedFunction):
     """Reversed kernel.
 
     Evaluates with its arguments reversed.
@@ -1397,18 +1125,6 @@ class ReversedKernel(Kernel, rf.ReversedFunction):
     def _stationary(self):
         return self[0].stationary
 
-    @property
-    def var(self):
-        return self[0].var
-
-    @property
-    def length_scale(self):
-        return self[0].length_scale
-
-    @property
-    def period(self):
-        return self[0].period
-
 
 # Periodicise kernels.
 
@@ -1422,7 +1138,7 @@ def periodicise(a, b): return a
 
 # Make shifting synergise with stationary kernels.
 
-@rf.shift.extend(Kernel, [object])
+@algebra.shift.extend(Kernel, [object])
 def shift(a, *shifts):
     if a.stationary and len(shifts) == 1:
         return a

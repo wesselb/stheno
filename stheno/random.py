@@ -1,23 +1,19 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import, division, print_function
-
 from lab import B
-from plum import Self, Referentiable, PromisedType, type_parameter
+from matrix import AbstractMatrix
+from plum import (
+    Self,
+    Referentiable,
+    PromisedType,
+    type_parameter,
+    Dispatcher,
+    convert
+)
 
 from .input import Input, At
-from .matrix import (
-    matrix,
-    Dispatcher,
-    UniformlyDiagonal,
-    Diagonal,
-    dense,
-    Dense
-)
 from .mean import ZeroMean
 from .util import uprank
 
-__all__ = ['Normal', 'Normal1D']
+__all__ = ['Normal']
 
 
 class Random(metaclass=Referentiable):
@@ -59,22 +55,21 @@ PromisedGP = PromisedType()
 class Normal(RandomVector, At):
     """Normal random variable.
 
-    A normal random variable also acts as in instance of `At`, which can be
+    A normal random variable also acts as an instance of `At`, which can be
     used to specify a process at particular points.
 
     Args:
-        var (tensor or :class:`.matrix.Dense`): Variance of the
-            distribution.
-        mean (tensor, optional): Mean of the distribution. Defaults to
-            zero.
+        var (matrix): Variance of the distribution.
+        mean (tensor, optional): Mean of the distribution. Defaults to zero.
     """
 
     _dispatch = Dispatcher(in_class=Self)
 
-    @_dispatch({B.Numeric, Dense}, [{B.Numeric, Dense, type(None)}])
+    @_dispatch({B.Numeric, AbstractMatrix},
+               [{B.Numeric, AbstractMatrix, type(None)}])
     def __init__(self, var, mean=None):
-        # Ensure that the variance is stored as a structured matrix.
-        self._var = matrix(var)
+        # Ensure that the variance is an instance of `AbstractMatrix`.
+        self._var = convert(var, AbstractMatrix)
 
         # Resolve mean and check whether it is zero.
         if mean is None:
@@ -83,7 +78,7 @@ class Normal(RandomVector, At):
             self._zero_mean = True
         else:
             # Not useful to retain structure here.
-            self._mean = dense(mean)
+            self._mean = B.dense(mean)
             self._zero_mean = False
 
         # Set `p` and `x` to `None`.
@@ -144,7 +139,7 @@ class Normal(RandomVector, At):
         elif self._mean is None:
             # Mean must be acquired from the saved process. It is not useful
             # to retain structure.
-            self._mean = dense(self.p.mean(self.x))
+            self._mean = B.dense(self.p.mean(self.x))
         return self._mean
 
     @property
@@ -173,8 +168,9 @@ class Normal(RandomVector, At):
         if self.p is None:
             vars = B.diag(self.var)
         else:
-            vars = B.squeeze(dense(self.p.kernel.elwise(self.x)))
-        return mean, mean - 2 * vars ** .5, mean + 2 * vars ** .5
+            vars = B.squeeze(B.dense(self.p.kernel.elwise(self.x)))
+        error = 2 * B.sqrt(vars)
+        return mean, mean - error, mean + error
 
     def logpdf(self, x):
         """Compute the log-pdf.
@@ -190,7 +186,7 @@ class Normal(RandomVector, At):
         logpdfs = -(B.logdet(self.var) +
                     B.cast(self.dtype, self.dim) *
                     B.cast(self.dtype, B.log_2_pi) +
-                    B.qf_diag(self.var, uprank(x) - self.mean)) / 2
+                    B.iqf_diag(self.var, uprank(x) - self.mean)) / 2
         return logpdfs[0] if B.shape(logpdfs) == (1,) else logpdfs
 
     def entropy(self):
@@ -215,7 +211,7 @@ class Normal(RandomVector, At):
             scalar: KL divergence.
         """
         return (B.ratio(self.var, other.var) +
-                B.qf_diag(other.var, other.mean - self.mean)[0] -
+                B.iqf_diag(other.var, other.mean - self.mean)[0] -
                 B.cast(self.dtype, self.dim) +
                 B.logdet(other.var) - B.logdet(self.var)) / 2
 
@@ -230,7 +226,8 @@ class Normal(RandomVector, At):
         Returns:
             scalar: 2-Wasserstein distance.
         """
-        root = B.root(B.matmul(B.root(self.var), other.var, B.root(self.var)))
+        var_root = B.root(self.var)
+        root = B.root(B.matmul(var_root, other.var, var_root))
         var_part = B.trace(self.var) + B.trace(other.var) - 2 * B.trace(root)
         mean_part = B.sum((self.mean - other.mean) ** 2)
         # The sum of `mean_part` and `var_par` should be positive, but this
@@ -252,13 +249,14 @@ class Normal(RandomVector, At):
 
         # Add noise if requested for.
         if noise is not None:
-            var += UniformlyDiagonal.from_(noise, self.var)
+            # Put diagonal matrix first in the sum to ease dispatch.
+            var = B.fill_diag(noise, self.dim) + self.var
 
         # Perform sampling operation.
-        sample = B.sample(var, num)
+        sample = B.sample(var, num=num)
         if not self._zero_mean:
             sample = sample + self.mean
-        return sample
+        return B.dense(sample)
 
     @_dispatch(object)
     def __add__(self, other):
@@ -310,54 +308,3 @@ def type_parameter(a):
         raise RuntimeError('Normal distribution is not a finite-dimensional '
                            'distribution from a process.')
     return a.p
-
-
-class Normal1D(Normal):
-    """A one-dimensional version of :class:`.random.Normal` with convenient
-    broadcasting behaviour.
-
-    Args:
-        var (scalar or vector): Variance of the distribution.
-        mean (scalar or vector): Mean of the distribution, defaults to
-            zero.
-    """
-    _dispatch = Dispatcher(in_class=Self)
-
-    def __init__(self, var, mean=None):
-        # Consider all various ranks of `var` and `mean` for convenient
-        # broadcasting behaviour.
-        if mean is not None:
-            if B.rank(var) == 1:
-                if B.rank(mean) == 0:
-                    mean = mean * B.ones(B.dtype(var), B.shape(var)[0], 1)
-                elif B.rank(mean) == 1:
-                    mean = mean[:, None]
-                else:
-                    raise ValueError('Invalid rank {} of mean.'
-                                     ''.format(B.rank(mean)))
-                var = Diagonal(var)
-
-            elif B.rank(var) == 0:
-                if B.rank(mean) == 0:
-                    mean = mean * B.ones(B.dtype(var), 1, 1)
-                    var = UniformlyDiagonal(var, 1)
-                elif B.rank(mean) == 1:
-                    mean = mean[:, None]
-                    var = UniformlyDiagonal(var, B.shape(mean)[0])
-                else:
-                    raise ValueError('Invalid rank {} of mean.'
-                                     ''.format(B.rank(mean)))
-
-            else:
-                raise ValueError('Invalid rank {} of variance.'
-                                 ''.format(B.rank(var)))
-        else:
-            if B.rank(var) == 0:
-                var = UniformlyDiagonal(var, 1)
-            elif B.rank(var) == 1:
-                var = Diagonal(var)
-            else:
-                raise ValueError('Invalid rank {} of variance.'
-                                 ''.format(B.rank(var)))
-
-        Normal.__init__(self, var, mean)

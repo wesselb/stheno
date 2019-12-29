@@ -2,9 +2,9 @@ from time import time
 
 import numpy as np
 from lab import B
+from matrix import AbstractMatrix
 from numpy.testing import assert_array_almost_equal
 from plum import dispatch
-from stheno.matrix import Dense, dense as _dense
 
 __all__ = ['benchmark', 'to_np', 'allclose', 'approx']
 
@@ -36,9 +36,9 @@ def to_np(a):
     return tuple(to_np(x) for x in a)
 
 
-@dispatch(Dense)
+@dispatch(AbstractMatrix)
 def to_np(a):
-    return _dense(a)
+    return B.dense(a)
 
 
 @dispatch(list)
@@ -51,7 +51,8 @@ def to_np(a):
     return a.numpy()
 
 
-@dispatch({B.Numeric, Dense, list}, {B.Numeric, Dense, list}, [object])
+@dispatch({B.Numeric, AbstractMatrix, list},
+          {B.Numeric, AbstractMatrix, list}, [object])
 def allclose(a, b, desc=None, atol=1e-8, rtol=1e-8):
     np.testing.assert_allclose(to_np(a), to_np(b),
                                atol=atol, rtol=rtol, err_msg=desc)

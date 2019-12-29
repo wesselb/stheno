@@ -1,7 +1,3 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import, division, print_function
-
 import logging
 
 from lab import B
@@ -56,8 +52,7 @@ class MultiOutputKernel(Kernel):
 
     @_dispatch(MultiInput, MultiInput)
     def __call__(self, x, y):
-        return B.block_matrix(*[[self(xi, yi) for yi in y.get()]
-                                for xi in x.get()])
+        return B.block(*[[self(xi, yi) for yi in y.get()] for xi in x.get()])
 
     @_dispatch({B.Numeric, Input}, {B.Numeric, Input})
     def elwise(self, x, y):

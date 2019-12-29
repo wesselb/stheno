@@ -7,7 +7,6 @@ import tensorflow as tf
 from plum import Dispatcher
 from stheno.input import Observed
 from stheno.kernel import EQ
-from stheno.matrix import matrix
 from stheno.mean import (
     TensorProductMean,
     ZeroMean,
@@ -68,7 +67,7 @@ def test_posterior_mean():
     pcm = PosteriorMean(
         TensorProductMean(lambda x: x),
         TensorProductMean(lambda x: x ** 2),
-        EQ(), z, matrix(2 * EQ()(z)), np.random.randn(10)
+        EQ(), z, 2 * EQ()(z), np.random.randn(10)
     )
 
     # Check name.

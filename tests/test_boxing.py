@@ -2,9 +2,11 @@ import lab as B
 import pytest
 import tensorflow as tf
 import torch
+from algebra import Element
 from autograd import grad
 from lab import torch as B
-from ring import Element
+from matrix import AbstractMatrix, Dense
+
 from stheno.torch import EQ
 
 
@@ -15,16 +17,16 @@ def test_boxing_autograd():
     def objective(x):
         x = x + 2
         x = x * 2
-        objs.append(x + k)
-        objs.append(x + k(x))
-        objs.append(x * k)
-        objs.append(x * k(x))
+        objs.append(x[0] + k)
+        objs.append(x[0] + Dense(k(x)))
+        objs.append(x[0] * k)
+        objs.append(x[0] * Dense(k(x)))
         return B.sum(x)
 
     grad(objective)(B.randn(10))
 
     for obj in objs:
-        assert isinstance(obj, Element)
+        assert isinstance(obj, (Element, AbstractMatrix))
 
 
 @pytest.mark.parametrize(
@@ -40,10 +42,10 @@ def test_boxing(generate, Numeric):
 
     # Test addition and multiplication.
     assert isinstance(num + k, Element)
-    assert isinstance(num + k(x), Element)
+    assert isinstance(num + Dense(k(x)), AbstractMatrix)
     assert isinstance(num + num, Numeric)
     assert isinstance(num * k, Element)
-    assert isinstance(num * k(x), Element)
+    assert isinstance(num * Dense(k(x)), AbstractMatrix)
     assert isinstance(num * num, Numeric)
 
 
@@ -65,8 +67,8 @@ def test_boxing_inplace(generate, Numeric):
     assert isinstance(num, Element)
 
     num = generate()
-    num += k(x)
-    assert isinstance(num, Element)
+    num += Dense(k(x))
+    assert isinstance(num, AbstractMatrix)
 
     # Test in-place multiplication.
     num = generate()
@@ -77,5 +79,5 @@ def test_boxing_inplace(generate, Numeric):
     assert isinstance(num, Element)
 
     num = generate()
-    num *= k(x)
-    assert isinstance(num, Element)
+    num *= Dense(k(x))
+    assert isinstance(num, AbstractMatrix)

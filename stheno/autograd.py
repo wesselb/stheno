@@ -2,9 +2,10 @@ import logging
 
 # noinspection PyUnresolvedReferences
 import lab.autograd as B
+from algebra import Element
 from autograd.numpy.numpy_boxes import ArrayBox
 from plum import Dispatcher
-from ring import Element
+from matrix import AbstractMatrix
 
 # noinspection PyUnresolvedReferences
 from . import *  # pragma: no cover
@@ -26,7 +27,7 @@ def __mul__(self, other):
     return __mul__array_box(self, other)
 
 
-@_dispatch(ArrayBox, {Element, Random})
+@_dispatch(ArrayBox, {Element, Random, AbstractMatrix})
 def __mul__(self, other):
     return other.__rmul__(self)
 
@@ -36,7 +37,7 @@ def __add__(self, other):
     return __add__array_box(self, other)
 
 
-@_dispatch(ArrayBox, {Element, Random})
+@_dispatch(ArrayBox, {Element, Random, AbstractMatrix})
 def __add__(self, other):
     return other.__radd__(self)
 

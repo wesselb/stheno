@@ -2,6 +2,7 @@ import numpy as np
 import pytest
 import tensorflow as tf
 from lab.tensorflow import B
+from matrix import Diagonal, Zero
 from stheno.input import Observed, Unique
 from stheno.kernel import (
     EQ,
@@ -23,7 +24,6 @@ from stheno.kernel import (
     LogKernel,
     perturb,
 )
-from stheno.matrix import matrix, Zero, One, UniformlyDiagonal
 
 from .util import allclose
 
@@ -43,7 +43,7 @@ def standard_kernel_tests(k, shapes=None, dtype=np.float64):
         x2 = B.randn(dtype, *shape2)
 
         # Check that the kernel computes consistently.
-        allclose(k(x1, x2), reversed(k)(x2, x1).T)
+        allclose(k(x1, x2), B.transpose(reversed(k)(x2, x1)))
 
         # Check `elwise`.
         x2 = B.randn(dtype, *shape1)
@@ -132,17 +132,9 @@ def test_reversal():
     # Verify that the kernel has the right properties.
     k = reversed(EQ())
     assert k.stationary
-    assert k.var == 1
-    assert k.length_scale == 1
-    assert k.period == np.inf
 
     k = reversed(Linear())
     assert not k.stationary
-    with pytest.raises(RuntimeError):
-        k.var
-    with pytest.raises(RuntimeError):
-        k.length_scale
-    assert k.period == np.inf
     assert str(k) == 'Reversed(Linear())'
 
     # Check equality.
@@ -160,9 +152,6 @@ def test_delta():
 
     # Verify that the kernel has the right properties.
     assert k.stationary
-    assert k.var == 1
-    assert k.length_scale == 0
-    assert k.period == np.inf
     assert str(k) == 'Delta()'
 
     # Check equality.
@@ -171,13 +160,12 @@ def test_delta():
     assert Delta() != EQ()
 
 
-@pytest.mark.parametrize('x1_x2', [(np.array(0), np.array(1)),
-                                   (B.randn(10), B.randn(5)),
-                                   (B.randn(10, 1), B.randn(5, 1)),
-                                   (B.randn(10, 2), B.randn(5, 2))])
-def test_delta_evaluations(x1_x2):
+@pytest.mark.parametrize('x1, x2', [(np.array(0), np.array(1)),
+                                    (B.randn(10), B.randn(5)),
+                                    (B.randn(10, 1), B.randn(5, 1)),
+                                    (B.randn(10, 2), B.randn(5, 2))])
+def test_delta_evaluations(x1, x2):
     k = Delta()
-    x1, x2 = x1_x2
     n1 = B.shape(B.uprank(x1))[0]
     n2 = B.shape(B.uprank(x2))[0]
 
@@ -190,14 +178,14 @@ def test_delta_evaluations(x1_x2):
 
     # Test `Unique` inputs.
     assert isinstance(k(Unique(x1), Unique(x1.copy())), Zero)
-    assert isinstance(k(Unique(x1), Unique(x1)), UniformlyDiagonal)
+    assert isinstance(k(Unique(x1), Unique(x1)), Diagonal)
     assert isinstance(k(Unique(x1), x1), Zero)
     assert isinstance(k(x1, Unique(x1)), Zero)
 
-    assert isinstance(k.elwise(Unique(x1), Unique(x1.copy())), Zero)
-    assert isinstance(k.elwise(Unique(x1), Unique(x1)), One)
-    assert isinstance(k.elwise(Unique(x1), x1), Zero)
-    assert isinstance(k.elwise(x1, Unique(x1)), Zero)
+    allclose(k.elwise(Unique(x1), Unique(x1.copy())), B.zeros(n1, 1))
+    allclose(k.elwise(Unique(x1), Unique(x1)), B.ones(n1, 1))
+    allclose(k.elwise(Unique(x1), x1), B.zeros(n1, 1))
+    allclose(k.elwise(x1, Unique(x1)), B.zeros(n1, 1))
 
 
 def test_fixed_delta():
@@ -206,9 +194,6 @@ def test_fixed_delta():
 
     # Verify that the kernel has the right properties.
     assert k.stationary
-    assert k.var == 1
-    assert k.length_scale == 0
-    assert k.period == np.inf
     assert str(k) == 'FixedDelta()'
 
     # Check equality.
@@ -240,9 +225,6 @@ def test_eq():
 
     # Verify that the kernel has the right properties.
     assert k.stationary
-    assert k.var == 1
-    assert k.length_scale == 1
-    assert k.period == np.inf
     assert str(k) == 'EQ()'
 
     # Test equality.
@@ -259,9 +241,6 @@ def test_rq():
     # Verify that the kernel has the right properties.
     assert k.alpha == 1e-1
     assert k.stationary
-    assert k.var == 1
-    assert k.length_scale == 1
-    assert k.period == np.inf
     assert str(k) == 'RQ(0.1)'
 
     # Test equality.
@@ -278,9 +257,6 @@ def test_exp():
 
     # Verify that the kernel has the right properties.
     assert k.stationary
-    assert k.var == 1
-    assert k.length_scale == 1
-    assert k.period == np.inf
     assert str(k) == 'Exp()'
 
     # Test equality.
@@ -296,9 +272,6 @@ def test_mat32():
 
     # Verify that the kernel has the right properties.
     assert k.stationary
-    assert k.var == 1
-    assert k.length_scale == 1
-    assert k.period == np.inf
     assert str(k) == 'Matern32()'
 
     # Test equality.
@@ -314,9 +287,6 @@ def test_mat52():
 
     # Verify that the kernel has the right properties.
     assert k.stationary
-    assert k.var == 1
-    assert k.length_scale == 1
-    assert k.period == np.inf
     assert str(k) == 'Matern52()'
 
     # Test equality.
@@ -338,9 +308,6 @@ def test_one():
 
     # Verify that the kernel has the right properties.
     assert k.stationary
-    assert k.var == 1
-    assert k.length_scale == 0
-    assert k.period == 0
     assert str(k) == '1'
 
     # Test equality.
@@ -361,9 +328,6 @@ def test_zero():
 
     # Verify that the kernel has the right properties.
     assert k.stationary
-    assert k.var == 0
-    assert k.length_scale == 0
-    assert k.period == 0
     assert str(k) == '0'
 
     # Test equality.
@@ -379,11 +343,6 @@ def test_linear():
 
     # Verify that the kernel has the right properties.
     assert not k.stationary
-    with pytest.raises(RuntimeError):
-        k.var
-    with pytest.raises(RuntimeError):
-        k.length_scale
-    assert k.period == np.inf
     assert str(k) == 'Linear()'
 
     # Test equality.
@@ -398,11 +357,6 @@ def test_decaying_kernel():
     k = DecayingKernel(3.0, 4.0)
 
     assert not k.stationary
-    with pytest.raises(RuntimeError):
-        k.length_scale
-    with pytest.raises(RuntimeError):
-        k.var
-    assert k.period == np.inf
     assert str(k) == 'DecayingKernel(3.0, 4.0)'
 
     # Standard tests:
@@ -420,9 +374,6 @@ def test_log_kernel():
 
     # Verify that the kernel has the right properties.
     assert k.stationary
-    assert k.var == 1
-    assert k.length_scale == np.inf
-    assert k.period == np.inf
     assert str(k) == 'LogKernel()'
 
     # Test equality.
@@ -436,17 +387,11 @@ def test_log_kernel():
 def test_posterior_kernel():
     k = PosteriorKernel(
         EQ(), EQ(), EQ(),
-        np.random.randn(5, 2), matrix(EQ()(np.random.randn(5, 1)))
+        np.random.randn(5, 2), EQ()(np.random.randn(5, 1))
     )
 
     # Verify that the kernel has the right properties.
     assert not k.stationary
-    with pytest.raises(RuntimeError):
-        k.var
-    with pytest.raises(RuntimeError):
-        k.length_scale
-    with pytest.raises(RuntimeError):
-        k.period
     assert str(k) == 'PosteriorKernel()'
 
     # Standard tests:
@@ -457,16 +402,10 @@ def test_corrective_kernel():
     a, b = np.random.randn(3, 3), np.random.randn(3, 3)
     a, b = a.dot(a.T), b.dot(b.T)
     z = np.random.randn(3, 2)
-    k = CorrectiveKernel(EQ(), EQ(), z, a, matrix(b))
+    k = CorrectiveKernel(EQ(), EQ(), z, a, b)
 
     # Verify that the kernel has the right properties.
     assert not k.stationary
-    with pytest.raises(RuntimeError):
-        k.var
-    with pytest.raises(RuntimeError):
-        k.length_scale
-    with pytest.raises(RuntimeError):
-        k.period
     assert str(k) == 'CorrectiveKernel()'
 
     # Standard tests:
@@ -479,12 +418,6 @@ def test_sum():
     k = k1 + k2
 
     assert k.stationary
-    allclose(k.length_scale, (1 * 2 + 3 * 5) / 4)
-    assert k.period == np.inf
-    assert k.var == 4
-
-    allclose((EQ() + EQ()).length_scale, 1)
-    allclose((EQ().stretch(2) + EQ().stretch(2)).length_scale, 2)
 
     assert EQ() + Linear() == EQ() + Linear()
     assert EQ() + Linear() == Linear() + EQ()
@@ -499,9 +432,6 @@ def test_stretched():
     k = EQ().stretch(2)
 
     assert k.stationary
-    assert k.length_scale == 2
-    assert k.period == np.inf
-    assert k.var == 1
 
     # Test equality.
     assert EQ().stretch(2) == EQ().stretch(2)
@@ -514,11 +444,6 @@ def test_stretched():
     k = EQ().stretch(1, 2)
 
     assert not k.stationary
-    with pytest.raises(RuntimeError):
-        k.length_scale
-    with pytest.raises(RuntimeError):
-        k.period
-    assert k.var == 1
 
     # Check passing in a list.
     k = EQ().stretch(np.array([1, 2]))
@@ -529,9 +454,6 @@ def test_periodic():
     k = EQ().stretch(2).periodic(3)
 
     assert k.stationary
-    assert k.length_scale == 2
-    assert k.period == 3
-    assert k.var == 1
 
     # Test equality.
     assert EQ().periodic(2) == EQ().periodic(2)
@@ -544,9 +466,6 @@ def test_periodic():
     k = 5 * k.stretch(5)
 
     assert k.stationary
-    assert k.length_scale == 10
-    assert k.period == 15
-    assert k.var == 5
 
     # Check passing in a list.
     k = EQ().periodic(np.array([1, 2]))
@@ -557,9 +476,6 @@ def test_scaled():
     k = 2 * EQ()
 
     assert k.stationary
-    assert k.length_scale == 1
-    assert k.period == np.inf
-    assert k.var == 2
 
     # Test equality.
     assert 2 * EQ() == 2 * EQ()
@@ -574,9 +490,6 @@ def test_shifted():
     k = ShiftedKernel(2 * EQ(), 5)
 
     assert k.stationary
-    assert k.length_scale == 1
-    assert k.period == np.inf
-    assert k.var == 2
 
     # Test equality.
     assert Linear().shift(2) == Linear().shift(2)
@@ -589,10 +502,6 @@ def test_shifted():
     k = (2 * EQ()).shift(5, 6)
 
     assert not k.stationary
-    with pytest.raises(RuntimeError):
-        k.length_scale
-    assert k.period == np.inf
-    assert k.var == 2
 
     # Check computation.
     x1 = np.random.randn(10, 2)
@@ -609,9 +518,6 @@ def test_product():
     k = (2 * EQ().stretch(10)) * (3 * RQ(1e-2).stretch(20))
 
     assert k.stationary
-    assert k.length_scale == 10
-    assert k.period == np.inf
-    assert k.var == 6
 
     # Test equality.
     assert EQ() * Linear() == EQ() * Linear()
@@ -627,9 +533,6 @@ def test_selection():
     k = (2 * EQ().stretch(5)).select(0)
 
     assert k.stationary
-    assert k.length_scale == 5
-    assert k.period == np.inf
-    assert k.var == 2
 
     # Test equality.
     assert EQ().select(0) == EQ().select(0)
@@ -642,40 +545,22 @@ def test_selection():
     k = (2 * EQ().stretch(5)).select([2, 3])
 
     assert k.stationary
-    assert k.length_scale == 5
-    assert k.period == np.inf
-    assert k.var == 2
 
     k = (2 * EQ().stretch(np.array([1, 2, 3]))).select([0, 2])
 
     assert k.stationary
-    allclose(k.length_scale, [1, 3])
-    allclose(k.period, [np.inf, np.inf])
-    assert k.var == 2
 
     k = (2 * EQ().periodic(np.array([1, 2, 3]))).select([1, 2])
 
     assert k.stationary
-    allclose(k.length_scale, [1, 1])
-    allclose(k.period, [2, 3])
-    assert k.var == 2
 
     k = (2 * EQ().stretch(np.array([1, 2, 3]))).select([0, 2], [1, 2])
 
     assert not k.stationary
-    with pytest.raises(RuntimeError):
-        k.length_scale
-    with pytest.raises(RuntimeError):
-        k.period
-    assert k.var == 2
 
     k = (2 * EQ().periodic(np.array([1, 2, 3]))).select([0, 2], [1, 2])
 
     assert not k.stationary
-    assert k.length_scale == 1
-    with pytest.raises(RuntimeError):
-        k.period
-    assert k.var == 2
 
     # Test that computation is valid.
     k1 = EQ().select([1, 2])
@@ -688,12 +573,6 @@ def test_input_transform():
     k = Linear().transform(lambda x: x - 5)
 
     assert not k.stationary
-    with pytest.raises(RuntimeError):
-        k.length_scale
-    with pytest.raises(RuntimeError):
-        k.var
-    with pytest.raises(RuntimeError):
-        k.period
 
     def f1(x):
         return x
@@ -724,12 +603,6 @@ def test_tensor_product():
     k = TensorProductKernel(lambda x: B.sum(x ** 2, axis=1))
 
     assert not k.stationary
-    with pytest.raises(RuntimeError):
-        k.length_scale
-    with pytest.raises(RuntimeError):
-        k.var
-    with pytest.raises(RuntimeError):
-        k.period
 
     # Test equality.
     assert k == k
@@ -758,12 +631,6 @@ def test_derivative():
     k = EQ().diff(0)
 
     assert not k.stationary
-    with pytest.raises(RuntimeError):
-        k.length_scale
-    with pytest.raises(RuntimeError):
-        k.var
-    with pytest.raises(RuntimeError):
-        k.period
 
     # Test equality.
     assert EQ().diff(0) == EQ().diff(0)
