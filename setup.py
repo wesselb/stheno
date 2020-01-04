@@ -8,7 +8,8 @@ requirements = ['numpy>=1.16',
 
                 'fdm',
                 'plum-dispatch',
-                'backends>=0.3']
+                'backends>=0.3',
+                'backends-matrix']
 
 setup(packages=find_packages(exclude=['docs']),
       python_requires='>=3.6',
