@@ -1,6 +1,12 @@
 from plum import parametric, kind
 
-__all__ = ['Input', 'Observed', 'Latent', 'Component', 'At', 'Unique']
+__all__ = ['Input',
+           'Observed',
+           'Latent',
+           'Component',
+           'At',
+           'Unique',
+           'WeightedUnique']
 
 
 class Input:
@@ -34,7 +40,20 @@ class MultiInput(Input):
 
 
 class Unique(Input):
-    """One cannot learn about noise at these inputs"""
+    """One cannot learn about noise at these inputs."""
+
+
+class WeightedUnique(Unique):
+    """One cannot learn about noise at these inputs.
+
+    Args:
+        x (tensor): Input.
+        w (tensor): Weights.
+    """
+
+    def __init__(self, x, w):
+        self.w = w
+        Unique.__init__(self, x)
 
 
 Observed = Component('observed')  #: Observed points

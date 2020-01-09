@@ -7,7 +7,7 @@ from lab import B
 from matrix import Dense, LowRank, Diagonal, Zero, Constant, AbstractMatrix
 from plum import Dispatcher, Self, convert
 
-from .input import Input, Unique
+from .input import Input, Unique, WeightedUnique
 from .util import uprank
 
 __all__ = ['Kernel',
@@ -597,6 +597,16 @@ class Delta(Kernel):
             x, y = uprank(x), uprank(y)
             return Zero(B.dtype(x), B.shape(x)[0], B.shape(y)[0])
 
+    @_dispatch(WeightedUnique, WeightedUnique)
+    def __call__(self, x, y):
+        w_x, w_y = x.w, y.w
+        x, y = x.get(), y.get()
+        if x is y:
+            return Diagonal(1 / w_x)
+        else:
+            x, y = uprank(x), uprank(y)
+            return Zero(B.dtype(x), B.shape(x)[0], B.shape(y)[0])
+
     @_dispatch(Unique, object)
     def __call__(self, x, y):
         x, y = uprank(x.get()), uprank(y)
@@ -612,6 +622,15 @@ class Delta(Kernel):
         x, y = x.get(), y.get()
         if x is y:
             return B.ones(B.dtype(x), B.shape(uprank(x))[0], 1)
+        else:
+            return B.zeros(B.dtype(x), B.shape(uprank(x))[0], 1)
+
+    @_dispatch(WeightedUnique, WeightedUnique)
+    def elwise(self, x, y):
+        w_x, w_y = x.w, y.w
+        x, y = x.get(), y.get()
+        if x is y:
+            return B.uprank(1 / w_x)
         else:
             return B.zeros(B.dtype(x), B.shape(uprank(x))[0], 1)
 
