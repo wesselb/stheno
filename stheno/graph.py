@@ -799,21 +799,6 @@ class GP(RandomProcess):
         """Stationarity of the GP."""
         return self.kernel.stationary
 
-    @property
-    def var(self):
-        """Variance of the GP."""
-        return self.kernel.var
-
-    @property
-    def length_scale(self):
-        """Length scale of the GP."""
-        return self.kernel.length_scale
-
-    @property
-    def period(self):
-        """Period of the GP."""
-        return self.kernel.period
-
     def __str__(self):
         return self.display()
 

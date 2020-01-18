@@ -723,10 +723,6 @@ class Linear(Kernel):
     def _stationary(self):
         return False
 
-    @property
-    def period(self):
-        return np.inf
-
     @_dispatch(Self)
     def __eq__(self, other):
         return True
@@ -768,10 +764,6 @@ class DecayingKernel(Kernel):
     def render(self, formatter):
         return 'DecayingKernel({}, {})'.format(formatter(self.alpha),
                                                formatter(self.beta))
-
-    @property
-    def period(self):
-        return np.inf
 
     @_dispatch(Self)
     def __eq__(self, other):
