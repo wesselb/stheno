@@ -7,11 +7,8 @@
 Stheno is an implementation of Gaussian process modelling in Python. See 
 also [Stheno.jl](https://github.com/willtebbutt/Stheno.jl).
 
-*Note:* Stheno requires Python 3.6 or higher and TensorFlow 2 if TensorFlow is
-used.
-
 * [Nonlinear Regression in 20 Seconds](#nonlinear-regression-in-20-seconds)
-* [Installation](#installation)
+* [Requirements and Installation](#requirements-and-installation)
 * [Manual](#manual)
     - [Kernel and Mean Design](#kernel-and-mean-design)
         * [Available Kernels](#available-kernels)
@@ -56,14 +53,9 @@ array([[8.48258669]])
 
 Moar?! Then read on!
 
-## Installation
+## Requirements and Installation
 
-Before installing the package, please ensure that `gcc` and `gfortran` are 
-available.
-On OS X, these are both installed with `brew install gcc`;
-users of Anaconda may want to instead consider `conda install gcc`.
-On Linux, `gcc` is most likely already available, and `gfortran` can be
-installed with `apt-get install gfortran`.
+See [the instructions here](https://gist.github.com/wesselb/4b44bf87f3789425f96e26c4308d0adc).
 Then simply
 
 ```
