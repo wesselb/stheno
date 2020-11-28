@@ -1,33 +1,34 @@
 import lab as B
 import numpy as np
 import pytest
-from matrix import Dense, Diagonal
+from matrix import Dense
 from scipy.stats import multivariate_normal
 
-from stheno.graph import GP
 from stheno.random import Normal, RandomVector
 from .util import approx
 
 
 @pytest.fixture()
 def normal1():
-    mean = np.random.randn(3, 1)
-    chol = np.random.randn(3, 3)
+    mean = B.randn(3, 1)
+    chol = B.randn(3, 3)
     var = chol @ chol.T
     return Normal(mean, var)
 
 
 @pytest.fixture()
 def normal2():
-    mean = np.random.randn(3, 1)
-    chol = np.random.randn(3, 3)
+    mean = B.randn(3, 1)
+    chol = B.randn(3, 3)
     var = chol @ chol.T
     return Normal(mean, var)
 
 
-def test_normal_mean_is_zero():
-    assert Normal(np.eye(3))._mean_is_zero
-    assert not Normal(np.random.randn(3, 1), np.eye(3))._mean_is_zero
+def test_normal_zero_mean():
+    dist = Normal(B.eye(3))
+    assert dist._mean_is_zero
+    approx(dist.mean, B.zeros(3, 1))
+    assert not Normal(B.randn(3, 1), B.eye(3))._mean_is_zero
 
 
 def test_normal_m2(normal1):
@@ -43,12 +44,12 @@ def test_normal_marginals(normal1):
 
 def test_normal_logpdf(normal1):
     normal1_sp = multivariate_normal(normal1.mean[:, 0], B.dense(normal1.var))
-    x = np.random.randn(3, 10)
+    x = B.randn(3, 10)
     approx(normal1.logpdf(x), normal1_sp.logpdf(x.T))
 
     # Test the the output of `logpdf` is flattened appropriately.
-    assert np.shape(normal1.logpdf(np.ones((3, 1)))) == ()
-    assert np.shape(normal1.logpdf(np.ones((3, 2)))) == (2,)
+    assert B.shape(normal1.logpdf(B.ones(3, 1))) == ()
+    assert B.shape(normal1.logpdf(B.ones(3, 2))) == (2,)
 
 
 def test_normal_entropy(normal1):
@@ -62,24 +63,29 @@ def test_normal_kl(normal1, normal2):
 
     # Test against Monte Carlo estimate.
     samples = normal1.sample(50_000)
-    kl_est = np.mean(normal1.logpdf(samples)) - np.mean(normal2.logpdf(samples))
+    kl_est = B.mean(normal1.logpdf(samples)) - B.mean(normal2.logpdf(samples))
     kl = normal1.kl(normal2)
     approx(kl_est, kl, rtol=0.05)
 
 
+def test_normal_w2(normal1, normal2):
+    assert normal1.w2(normal1) < 1e-6
+    assert normal1.w2(normal2) > 0.1
+
+
 def test_normal_sampling():
     for mean in [0, 1]:
-        dist = Normal(mean, 3 * np.eye(200, dtype=np.integer))
+        dist = Normal(mean, 3 * B.eye(np.int32, 200))
 
         # Sample without noise.
         samples = dist.sample(2000)
-        approx(np.mean(samples), mean, atol=5e-2)
-        approx(np.var(samples), 3, atol=5e-2)
+        approx(B.mean(samples), mean, atol=5e-2)
+        approx(B.std(samples) ** 2, 3, atol=5e-2)
 
         # Sample with noise
         samples = dist.sample(2000, noise=2)
-        approx(np.mean(samples), mean, atol=5e-2)
-        approx(np.var(samples), 5, atol=5e-2)
+        approx(B.mean(samples), mean, atol=5e-2)
+        approx(B.std(samples) ** 2, 5, atol=5e-2)
 
 
 def test_normal_display(normal1):
@@ -88,7 +94,7 @@ def test_normal_display(normal1):
 
 
 def test_normal_arithmetic(normal1, normal2):
-    a = Dense(np.random.randn(3, 3))
+    a = Dense(B.randn(3, 3))
     b = 5.0
 
     # Test matrix multiplication.
@@ -110,5 +116,25 @@ def test_normal_arithmetic(normal1, normal2):
     # Test addition.
     approx((normal1 + normal2).mean, normal1.mean + normal2.mean)
     approx((normal1 + normal2).var, normal1.var + normal2.var)
-    approx((normal1.__add__(b)).mean, normal1.mean + b)
-    approx((normal1.__radd__(b)).mean, normal1.mean + b)
+    approx(normal1.__radd__(b).mean, normal1.mean + b)
+    approx(normal1.__radd__(b).mean, normal1.mean + b)
+    with pytest.raises(NotImplementedError):
+        normal1.__add__(RandomVector())
+    with pytest.raises(NotImplementedError):
+        normal1.__radd__(RandomVector())
+
+    # Test negation.
+    approx((-normal1).mean, -normal1.mean)
+    approx((-normal1).var, normal1.var)
+
+    # Test substraction.
+    approx((normal1 - normal2).mean, normal1.mean - normal2.mean)
+    approx((normal1 - normal2).var, normal1.var + normal2.var)
+    approx(normal1.__rsub__(normal2).mean, normal2.mean - normal1.mean)
+    approx(normal1.__rsub__(normal2).var, normal1.var + normal2.var)
+
+    # Test division.
+    approx(normal1.__div__(b).mean, normal1.mean / b)
+    approx(normal1.__div__(b).var, normal1.var / b ** 2)
+    approx(normal1.__truediv__(b).mean, normal1.mean / b)
+    approx(normal1.__truediv__(b).var, normal1.var / b ** 2)
