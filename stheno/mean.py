@@ -6,7 +6,7 @@ from matrix import AbstractMatrix
 from plum import Dispatcher, Self, convert
 
 from .input import Input
-from .util import uprank
+from .util import num_elements, uprank
 
 __all__ = ['TensorProductMean', 'DerivativeMean']
 
@@ -81,7 +81,6 @@ class StretchedMean(Mean, algebra.StretchedFunction):
     _dispatch = Dispatcher(in_class=Self)
 
     @_dispatch(object)
-    @uprank
     def __call__(self, x):
         return self[0](B.divide(x, self.stretches[0]))
 
@@ -92,7 +91,6 @@ class ShiftedMean(Mean, algebra.ShiftedFunction):
     _dispatch = Dispatcher(in_class=Self)
 
     @_dispatch(object)
-    @uprank
     def __call__(self, x):
         return self[0](B.subtract(x, self.shifts[0]))
 
@@ -115,7 +113,7 @@ class InputTransformedMean(Mean, algebra.InputTransformedFunction):
 
     @_dispatch(object)
     def __call__(self, x):
-        return self[0](uprank(self.fs[0](x)))
+        return self[0](uprank(self.fs[0](uprank(x))))
 
 
 class OneMean(Mean, algebra.OneFunction):
@@ -124,9 +122,8 @@ class OneMean(Mean, algebra.OneFunction):
     _dispatch = Dispatcher(in_class=Self)
 
     @_dispatch(B.Numeric)
-    @uprank
     def __call__(self, x):
-        return B.ones(B.dtype(x), B.shape(x)[0], 1)
+        return B.ones(B.dtype(x), num_elements(x), 1)
 
 
 class ZeroMean(Mean, algebra.ZeroFunction):
@@ -135,18 +132,16 @@ class ZeroMean(Mean, algebra.ZeroFunction):
     _dispatch = Dispatcher(in_class=Self)
 
     @_dispatch(B.Numeric)
-    @uprank
     def __call__(self, x):
-        return B.zeros(B.dtype(x), B.shape(x)[0], 1)
+        return B.zeros(B.dtype(x), num_elements(x), 1)
 
 
 class TensorProductMean(Mean, algebra.TensorProductFunction):
     _dispatch = Dispatcher(in_class=Self)
 
     @_dispatch(B.Numeric)
-    @uprank
     def __call__(self, x):
-        return uprank(self.fs[0](x))
+        return uprank(self.fs[0](uprank(x)))
 
 
 class DerivativeMean(Mean, algebra.DerivativeFunction):
