@@ -3,7 +3,7 @@ import pytest
 import tensorflow as tf
 from lab.tensorflow import B
 from matrix import Diagonal, Zero
-from stheno.input import Observed, Unique
+from stheno.input import Observed, Unique, WeightedUnique
 from stheno.kernel import (
     EQ,
     RQ,
@@ -23,19 +23,24 @@ from stheno.kernel import (
     DecayingKernel,
     LogKernel,
     perturb,
+    num_elements,
 )
 
-from .util import allclose
+from .util import approx
 
 
 def standard_kernel_tests(k, shapes=None, dtype=np.float64):
     if shapes is None:
-        shapes = [((10, 2), (5, 2)),
-                  ((10, 1), (5, 1)),
-                  ((10,), (5,)),
-                  ((10,), ()),
-                  ((), (5,)),
-                  ((), ())]
+        shapes = [
+            ((10, 2), (5, 2)),
+            ((10, 1), (5, 1)),
+            ((10,), (5, 1)),
+            ((10, 1), (5,)),
+            ((10,), (5,)),
+            ((10,), ()),
+            ((), (5,)),
+            ((), ()),
+        ]
 
     # Check various shapes of arguments.
     for shape1, shape2 in shapes:
@@ -43,24 +48,22 @@ def standard_kernel_tests(k, shapes=None, dtype=np.float64):
         x2 = B.randn(dtype, *shape2)
 
         # Check that the kernel computes consistently.
-        allclose(k(x1, x2), B.transpose(reversed(k)(x2, x1)))
+        approx(k(x1, x2), B.transpose(reversed(k)(x2, x1)))
 
         # Check `elwise`.
         x2 = B.randn(dtype, *shape1)
-
-        allclose(k.elwise(x1, x2)[:, 0], B.diag(k(x1, x2)))
-        allclose(k.elwise(x1, x2), Kernel.elwise(k, x1, x2))
-        # The element-wise computation is more accurate, which is why we allow
-        # a discrepancy a bit larger than the square root of the machine
-        # epsilon.
-        allclose(k.elwise(x1)[:, 0], B.diag(k(x1)),
-                 desc='', atol=1e-6, rtol=1e-6)
-        allclose(k.elwise(x1), Kernel.elwise(k, x1))
+        approx(k.elwise(x1, x2), B.diag(k(x1, x2))[:, None])
+        # Check againtst fallback brute force computation.
+        approx(k.elwise(x1, x2), Kernel.elwise(k, x1, x2))
+        # The element-wise computation is more accurate, which is why we allow a
+        # discrepancy a bit larger than the square root of the machine epsilon.
+        approx(k.elwise(x1)[:, 0], B.diag(k(x1)), atol=1e-6, rtol=1e-6)
+        approx(k.elwise(x1), Kernel.elwise(k, x1))
 
 
 def test_corner_cases():
     with pytest.raises(RuntimeError):
-        Kernel()(1.)
+        Kernel()(1.0)
 
 
 def test_construction():
@@ -96,19 +99,19 @@ def test_basic_arithmetic():
     xs1 = np.random.randn(10, 2), np.random.randn(20, 2)
     xs2 = np.random.randn(), np.random.randn()
 
-    allclose(k6(xs1[0]), k6(xs1[0], xs1[0]))
-    allclose((k1 * k2)(*xs1), k1(*xs1) * k2(*xs1))
-    allclose((k1 * k2)(*xs2), k1(*xs2) * k2(*xs2))
-    allclose((k3 + k4)(*xs1), k3(*xs1) + k4(*xs1))
-    allclose((k3 + k4)(*xs2), k3(*xs2) + k4(*xs2))
-    allclose((5. * k5)(*xs1), 5. * k5(*xs1))
-    allclose((5. * k5)(*xs2), 5. * k5(*xs2))
-    allclose((5. + k7)(*xs1), 5. + k7(*xs1))
-    allclose((5. + k7)(*xs2), 5. + k7(*xs2))
-    allclose(k1.stretch(2.)(*xs1), k1(xs1[0] / 2., xs1[1] / 2.))
-    allclose(k1.stretch(2.)(*xs2), k1(xs2[0] / 2., xs2[1] / 2.))
-    allclose(k1.periodic(1.)(*xs1), k1.periodic(1.)(xs1[0], xs1[1] + 5.))
-    allclose(k1.periodic(1.)(*xs2), k1.periodic(1.)(xs2[0], xs2[1] + 5.))
+    approx(k6(xs1[0]), k6(xs1[0], xs1[0]))
+    approx((k1 * k2)(*xs1), k1(*xs1) * k2(*xs1))
+    approx((k1 * k2)(*xs2), k1(*xs2) * k2(*xs2))
+    approx((k3 + k4)(*xs1), k3(*xs1) + k4(*xs1))
+    approx((k3 + k4)(*xs2), k3(*xs2) + k4(*xs2))
+    approx((5.0 * k5)(*xs1), 5.0 * k5(*xs1))
+    approx((5.0 * k5)(*xs2), 5.0 * k5(*xs2))
+    approx((5.0 + k7)(*xs1), 5.0 + k7(*xs1))
+    approx((5.0 + k7)(*xs2), 5.0 + k7(*xs2))
+    approx(k1.stretch(2.0)(*xs1), k1(xs1[0] / 2.0, xs1[1] / 2.0))
+    approx(k1.stretch(2.0)(*xs2), k1(xs2[0] / 2.0, xs2[1] / 2.0))
+    approx(k1.periodic(1.0)(*xs1), k1.periodic(1.0)(xs1[0], xs1[1] + 5.0))
+    approx(k1.periodic(1.0)(*xs2), k1.periodic(1.0)(xs2[0], xs2[1] + 5.0))
 
 
 def test_reversal():
@@ -118,16 +121,16 @@ def test_reversal():
 
     # Test with a stationary and non-stationary kernel.
     for k in [EQ(), Linear()]:
-        allclose(k(x1), reversed(k)(x1))
-        allclose(k(x3), reversed(k)(x3))
-        allclose(k(x1, x2), reversed(k)(x1, x2))
-        allclose(k(x1, x2), reversed(k)(x2, x1).T)
+        approx(k(x1), reversed(k)(x1))
+        approx(k(x3), reversed(k)(x3))
+        approx(k(x1, x2), reversed(k)(x1, x2))
+        approx(k(x1, x2), reversed(k)(x2, x1).T)
 
         # Test double reversal does the right thing.
-        allclose(k(x1), reversed(reversed(k))(x1))
-        allclose(k(x3), reversed(reversed(k))(x3))
-        allclose(k(x1, x2), reversed(reversed(k))(x1, x2))
-        allclose(k(x1, x2), reversed(reversed(k))(x2, x1).T)
+        approx(k(x1), reversed(reversed(k))(x1))
+        approx(k(x3), reversed(reversed(k))(x3))
+        approx(k(x1, x2), reversed(reversed(k))(x1, x2))
+        approx(k(x1, x2), reversed(reversed(k))(x2, x1).T)
 
     # Verify that the kernel has the right properties.
     k = reversed(EQ())
@@ -135,7 +138,7 @@ def test_reversal():
 
     k = reversed(Linear())
     assert not k.stationary
-    assert str(k) == 'Reversed(Linear())'
+    assert str(k) == "Reversed(Linear())"
 
     # Check equality.
     assert reversed(Linear()) == reversed(Linear())
@@ -152,7 +155,7 @@ def test_delta():
 
     # Verify that the kernel has the right properties.
     assert k.stationary
-    assert str(k) == 'Delta()'
+    assert str(k) == "Delta()"
 
     # Check equality.
     assert Delta() == Delta()
@@ -160,18 +163,23 @@ def test_delta():
     assert Delta() != EQ()
 
 
-@pytest.mark.parametrize('x1, x2', [(np.array(0), np.array(1)),
-                                    (B.randn(10), B.randn(5)),
-                                    (B.randn(10, 1), B.randn(5, 1)),
-                                    (B.randn(10, 2), B.randn(5, 2))])
-def test_delta_evaluations(x1, x2):
+@pytest.mark.parametrize(
+    "x1, w1, x2, w2",
+    [
+        (np.array(0), np.ones(1), np.array(1), np.ones(1)),
+        (B.randn(10), np.ones(10), B.randn(5), np.ones(5)),
+        (B.randn(10, 1), np.ones(10), B.randn(5, 1), np.ones(5)),
+        (B.randn(10, 2), np.ones(10), B.randn(5, 2), np.ones(5)),
+    ],
+)
+def test_delta_evaluations(x1, w1, x2, w2):
     k = Delta()
-    n1 = B.shape(B.uprank(x1))[0]
-    n2 = B.shape(B.uprank(x2))[0]
+    n1 = num_elements(x1)
+    n2 = num_elements(x2)
 
     # Check uniqueness checks.
-    allclose(k(x1), B.eye(n1))
-    allclose(k(x1, x2), B.zeros(n1, n2))
+    approx(k(x1), B.eye(n1))
+    approx(k(x1, x2), B.zeros(n1, n2))
 
     # Standard tests:
     standard_kernel_tests(k)
@@ -182,10 +190,23 @@ def test_delta_evaluations(x1, x2):
     assert isinstance(k(Unique(x1), x1), Zero)
     assert isinstance(k(x1, Unique(x1)), Zero)
 
-    allclose(k.elwise(Unique(x1), Unique(x1.copy())), B.zeros(n1, 1))
-    allclose(k.elwise(Unique(x1), Unique(x1)), B.ones(n1, 1))
-    allclose(k.elwise(Unique(x1), x1), B.zeros(n1, 1))
-    allclose(k.elwise(x1, Unique(x1)), B.zeros(n1, 1))
+    approx(k.elwise(Unique(x1), Unique(x1.copy())), B.zeros(n1, 1))
+    approx(k.elwise(Unique(x1), Unique(x1)), B.ones(n1, 1))
+    approx(k.elwise(Unique(x1), x1), B.zeros(n1, 1))
+
+    # Test `WeightedUnique` inputs.
+    assert isinstance(k(WeightedUnique(x1, w1), WeightedUnique(x1.copy(), w1)), Zero)
+    assert isinstance(k(WeightedUnique(x1, w1), WeightedUnique(x1, w1)), Diagonal)
+    assert isinstance(k(WeightedUnique(x1, w1), x1), Zero)
+    assert isinstance(k(x1, WeightedUnique(x1, w1)), Zero)
+
+    approx(
+        k.elwise(WeightedUnique(x1, w1), WeightedUnique(x1.copy(), w1)), B.zeros(n1, 1)
+    )
+    approx(k.elwise(WeightedUnique(x1, w1), WeightedUnique(x1, w1)), B.ones(n1, 1))
+    approx(k.elwise(WeightedUnique(x1, w1), x1), B.zeros(n1, 1))
+    approx(k.elwise(x1, WeightedUnique(x1, w1)), B.zeros(n1, 1))
+    approx(k.elwise(x1, WeightedUnique(x1, w1)), B.zeros(n1, 1))
 
 
 def test_fixed_delta():
@@ -194,7 +215,7 @@ def test_fixed_delta():
 
     # Verify that the kernel has the right properties.
     assert k.stationary
-    assert str(k) == 'FixedDelta()'
+    assert str(k) == "FixedDelta()"
 
     # Check equality.
     assert FixedDelta(noises) == FixedDelta(noises)
@@ -207,17 +228,17 @@ def test_fixed_delta():
     # Check correctness.
     x1 = B.randn(5)
     x2 = B.randn(5)
-    allclose(k(x1), B.zeros(5, 5))
-    allclose(k.elwise(x1), B.zeros(5, 1))
-    allclose(k(x1, x2), B.zeros(5, 5))
-    allclose(k.elwise(x1, x2), B.zeros(5, 1))
+    approx(k(x1), B.zeros(5, 5))
+    approx(k.elwise(x1), B.zeros(5, 1))
+    approx(k(x1, x2), B.zeros(5, 5))
+    approx(k.elwise(x1, x2), B.zeros(5, 1))
 
     x1 = B.randn(3)
     x2 = B.randn(3)
-    allclose(k(x1), B.diag(noises))
-    allclose(k.elwise(x1), B.uprank(noises))
-    allclose(k(x1, x2), B.zeros(3, 3))
-    allclose(k.elwise(x1, x2), B.zeros(3, 1))
+    approx(k(x1), B.diag(noises))
+    approx(k.elwise(x1), B.uprank(noises))
+    approx(k(x1, x2), B.zeros(3, 3))
+    approx(k.elwise(x1, x2), B.zeros(3, 1))
 
 
 def test_eq():
@@ -225,7 +246,7 @@ def test_eq():
 
     # Verify that the kernel has the right properties.
     assert k.stationary
-    assert str(k) == 'EQ()'
+    assert str(k) == "EQ()"
 
     # Test equality.
     assert EQ() == EQ()
@@ -241,7 +262,7 @@ def test_rq():
     # Verify that the kernel has the right properties.
     assert k.alpha == 1e-1
     assert k.stationary
-    assert str(k) == 'RQ(0.1)'
+    assert str(k) == "RQ(0.1)"
 
     # Test equality.
     assert RQ(1e-1) == RQ(1e-1)
@@ -257,7 +278,7 @@ def test_exp():
 
     # Verify that the kernel has the right properties.
     assert k.stationary
-    assert str(k) == 'Exp()'
+    assert str(k) == "Exp()"
 
     # Test equality.
     assert Matern12() == Matern12()
@@ -272,7 +293,7 @@ def test_mat32():
 
     # Verify that the kernel has the right properties.
     assert k.stationary
-    assert str(k) == 'Matern32()'
+    assert str(k) == "Matern32()"
 
     # Test equality.
     assert Matern32() == Matern32()
@@ -287,7 +308,7 @@ def test_mat52():
 
     # Verify that the kernel has the right properties.
     assert k.stationary
-    assert str(k) == 'Matern52()'
+    assert str(k) == "Matern52()"
 
     # Test equality.
     assert Matern52() == Matern52()
@@ -304,11 +325,11 @@ def test_one():
     x2 = np.random.randn(5, 2)
 
     # Test that the kernel computes correctly.
-    allclose(k(x1, x2), np.ones((10, 5)))
+    approx(k(x1, x2), np.ones((10, 5)))
 
     # Verify that the kernel has the right properties.
     assert k.stationary
-    assert str(k) == '1'
+    assert str(k) == "1"
 
     # Test equality.
     assert OneKernel() == OneKernel()
@@ -324,11 +345,11 @@ def test_zero():
     x2 = np.random.randn(5, 2)
 
     # Test that the kernel computes correctly.
-    allclose(k(x1, x2), np.zeros((10, 5)))
+    approx(k(x1, x2), np.zeros((10, 5)))
 
     # Verify that the kernel has the right properties.
     assert k.stationary
-    assert str(k) == '0'
+    assert str(k) == "0"
 
     # Test equality.
     assert ZeroKernel() == ZeroKernel()
@@ -343,7 +364,7 @@ def test_linear():
 
     # Verify that the kernel has the right properties.
     assert not k.stationary
-    assert str(k) == 'Linear()'
+    assert str(k) == "Linear()"
 
     # Test equality.
     assert Linear() == Linear()
@@ -356,11 +377,9 @@ def test_linear():
 def test_decaying_kernel():
     k = DecayingKernel(3.0, 4.0)
 
+    # Verify that the kernel has the right properties.
     assert not k.stationary
-    assert str(k) == 'DecayingKernel(3.0, 4.0)'
-
-    # Standard tests:
-    standard_kernel_tests(k)
+    assert str(k) == "DecayingKernel(3.0, 4.0)"
 
     # Test equality.
     assert DecayingKernel(3.0, 4.0) == DecayingKernel(3.0, 4.0)
@@ -368,13 +387,16 @@ def test_decaying_kernel():
     assert DecayingKernel(3.0, 4.0) != DecayingKernel(4.0, 4.0)
     assert DecayingKernel(3.0, 4.0) != EQ()
 
+    # Standard tests:
+    standard_kernel_tests(k)
+
 
 def test_log_kernel():
     k = LogKernel()
 
     # Verify that the kernel has the right properties.
     assert k.stationary
-    assert str(k) == 'LogKernel()'
+    assert str(k) == "LogKernel()"
 
     # Test equality.
     assert LogKernel() == LogKernel()
@@ -386,13 +408,12 @@ def test_log_kernel():
 
 def test_posterior_kernel():
     k = PosteriorKernel(
-        EQ(), EQ(), EQ(),
-        np.random.randn(5, 2), EQ()(np.random.randn(5, 1))
+        EQ(), EQ(), EQ(), np.random.randn(5, 2), EQ()(np.random.randn(5, 1))
     )
 
     # Verify that the kernel has the right properties.
     assert not k.stationary
-    assert str(k) == 'PosteriorKernel()'
+    assert str(k) == "PosteriorKernel()"
 
     # Standard tests:
     standard_kernel_tests(k, shapes=[((10, 2), (5, 2))])
@@ -406,7 +427,7 @@ def test_corrective_kernel():
 
     # Verify that the kernel has the right properties.
     assert not k.stationary
-    assert str(k) == 'CorrectiveKernel()'
+    assert str(k) == "CorrectiveKernel()"
 
     # Standard tests:
     standard_kernel_tests(k, shapes=[((10, 2), (5, 2))])
@@ -417,8 +438,10 @@ def test_sum():
     k2 = 3 * RQ(1e-2).stretch(5)
     k = k1 + k2
 
+    # Verify that the kernel has the right properties.
     assert k.stationary
 
+    # Test equality.
     assert EQ() + Linear() == EQ() + Linear()
     assert EQ() + Linear() == Linear() + EQ()
     assert EQ() + Linear() != EQ() + RQ(1e-1)
@@ -431,6 +454,7 @@ def test_sum():
 def test_stretched():
     k = EQ().stretch(2)
 
+    # Verify that the kernel has the right properties.
     assert k.stationary
 
     # Test equality.
@@ -443,6 +467,7 @@ def test_stretched():
 
     k = EQ().stretch(1, 2)
 
+    # Verify that the kernel has the right properties.
     assert not k.stationary
 
     # Check passing in a list.
@@ -453,6 +478,8 @@ def test_stretched():
 def test_periodic():
     k = EQ().stretch(2).periodic(3)
 
+    # Verify that the kernel has the right properties.
+    assert str(k) == "(EQ() > 2) per 3"
     assert k.stationary
 
     # Test equality.
@@ -465,16 +492,22 @@ def test_periodic():
 
     k = 5 * k.stretch(5)
 
+    # Verify that the kernel has the right properties.
     assert k.stationary
 
     # Check passing in a list.
     k = EQ().periodic(np.array([1, 2]))
     k(np.random.randn(10, 2))
 
+    # Check periodication of a zero.
+    k = ZeroKernel()
+    assert k.periodic(3) is k
+
 
 def test_scaled():
     k = 2 * EQ()
 
+    # Verify that the kernel has the right properties.
     assert k.stationary
 
     # Test equality.
@@ -489,6 +522,7 @@ def test_scaled():
 def test_shifted():
     k = ShiftedKernel(2 * EQ(), 5)
 
+    # Verify that the kernel has the right properties.
     assert k.stationary
 
     # Test equality.
@@ -501,13 +535,14 @@ def test_shifted():
 
     k = (2 * EQ()).shift(5, 6)
 
+    # Verify that the kernel has the right properties.
     assert not k.stationary
 
     # Check computation.
     x1 = np.random.randn(10, 2)
     x2 = np.random.randn(5, 2)
     k = Linear()
-    allclose(k.shift(5)(x1, x2), k(x1 - 5, x2 - 5))
+    approx(k.shift(5)(x1, x2), k(x1 - 5, x2 - 5))
 
     # Check passing in a list.
     k = Linear().shift(np.array([1, 2]))
@@ -517,6 +552,7 @@ def test_shifted():
 def test_product():
     k = (2 * EQ().stretch(10)) * (3 * RQ(1e-2).stretch(20))
 
+    # Verify that the kernel has the right properties.
     assert k.stationary
 
     # Test equality.
@@ -532,6 +568,7 @@ def test_product():
 def test_selection():
     k = (2 * EQ().stretch(5)).select(0)
 
+    # Verify that the kernel has the right properties.
     assert k.stationary
 
     # Test equality.
@@ -542,36 +579,33 @@ def test_selection():
     # Standard tests:
     standard_kernel_tests(k)
 
+    # Verify that the kernel has the right properties.
     k = (2 * EQ().stretch(5)).select([2, 3])
-
     assert k.stationary
 
     k = (2 * EQ().stretch(np.array([1, 2, 3]))).select([0, 2])
-
     assert k.stationary
 
     k = (2 * EQ().periodic(np.array([1, 2, 3]))).select([1, 2])
-
     assert k.stationary
 
     k = (2 * EQ().stretch(np.array([1, 2, 3]))).select([0, 2], [1, 2])
-
     assert not k.stationary
 
     k = (2 * EQ().periodic(np.array([1, 2, 3]))).select([0, 2], [1, 2])
-
     assert not k.stationary
 
-    # Test that computation is valid.
+    # Test computation of the kernel.
     k1 = EQ().select([1, 2])
     k2 = EQ()
     x = np.random.randn(10, 3)
-    allclose(k1(x), k2(x[:, [1, 2]]))
+    approx(k1(x), k2(x[:, [1, 2]]))
 
 
 def test_input_transform():
     k = Linear().transform(lambda x: x - 5)
 
+    # Verify that the kernel has the right properties.
     assert not k.stationary
 
     def f1(x):
@@ -595,13 +629,14 @@ def test_input_transform():
     k2 = k.transform(lambda x: x ** 2)
     k3 = k.transform(lambda x: x ** 2, lambda x: x - 5)
 
-    allclose(k(x1 ** 2, x2 ** 2), k2(x1, x2))
-    allclose(k(x1 ** 2, x2 - 5), k3(x1, x2))
+    approx(k(x1 ** 2, x2 ** 2), k2(x1, x2))
+    approx(k(x1 ** 2, x2 - 5), k3(x1, x2))
 
 
 def test_tensor_product():
     k = TensorProductKernel(lambda x: B.sum(x ** 2, axis=1))
 
+    # Verify that the kernel has the right properties.
     assert not k.stationary
 
     # Test equality.
@@ -612,24 +647,22 @@ def test_tensor_product():
     # Standard tests:
     standard_kernel_tests(k)
 
-    # Check computation of kernel.
+    # Test computation of the kernel.
     k = TensorProductKernel(lambda x: x)
     x1 = np.linspace(0, 1, 100)[:, None]
     x2 = np.linspace(0, 1, 50)[:, None]
-
-    allclose(k(x1), x1 * x1.T)
-    allclose(k(x1, x2), x1 * x2.T)
+    approx(k(x1), x1 * x1.T)
+    approx(k(x1, x2), x1 * x2.T)
 
     k = TensorProductKernel(lambda x: x ** 2)
-
-    allclose(k(x1), x1 ** 2 * (x1 ** 2).T)
-    allclose(k(x1, x2), (x1 ** 2) * (x2 ** 2).T)
+    approx(k(x1), x1 ** 2 * (x1 ** 2).T)
+    approx(k(x1, x2), (x1 ** 2) * (x2 ** 2).T)
 
 
 def test_derivative():
-    # First, check properties.
     k = EQ().diff(0)
 
+    # Check that the kernel has the right properties.
     assert not k.stationary
 
     # Test equality.
@@ -655,20 +688,20 @@ def test_derivative_eq():
     x2 = B.randn(tf.float64, 5, 1)
 
     # Test derivative with respect to first input.
-    allclose(k.diff(0, None)(x1, x2), -k(x1, x2) * (x1 - B.transpose(x2)))
-    allclose(k.diff(0, None)(x1), -k(x1) * (x1 - B.transpose(x1)))
+    approx(k.diff(0, None)(x1, x2), -k(x1, x2) * (x1 - B.transpose(x2)))
+    approx(k.diff(0, None)(x1), -k(x1) * (x1 - B.transpose(x1)))
 
     # Test derivative with respect to second input.
-    allclose(k.diff(None, 0)(x1, x2), -k(x1, x2) * (B.transpose(x2) - x1))
-    allclose(k.diff(None, 0)(x1), -k(x1) * (B.transpose(x1) - x1))
+    approx(k.diff(None, 0)(x1, x2), -k(x1, x2) * (B.transpose(x2) - x1))
+    approx(k.diff(None, 0)(x1), -k(x1) * (B.transpose(x1) - x1))
 
     # Test derivative with respect to both inputs.
     ref = k(x1, x2) * (1 - (x1 - B.transpose(x2)) ** 2)
-    allclose(k.diff(0, 0)(x1, x2), ref)
-    allclose(k.diff(0)(x1, x2), ref)
+    approx(k.diff(0, 0)(x1, x2), ref)
+    approx(k.diff(0)(x1, x2), ref)
     ref = k(x1) * (1 - (x1 - B.transpose(x1)) ** 2)
-    allclose(k.diff(0, 0)(x1), ref)
-    allclose(k.diff(0)(x1), ref)
+    approx(k.diff(0, 0)(x1), ref)
+    approx(k.diff(0)(x1), ref)
 
 
 def test_derivative_linear():
@@ -678,27 +711,29 @@ def test_derivative_linear():
     x2 = B.randn(tf.float64, 5, 1)
 
     # Test derivative with respect to first input.
-    allclose(k.diff(0, None)(x1, x2),
-             B.ones(tf.float64, 10, 5) * B.transpose(x2))
-    allclose(k.diff(0, None)(x1),
-             B.ones(tf.float64, 10, 10) * B.transpose(x1))
+    approx(k.diff(0, None)(x1, x2), B.ones(tf.float64, 10, 5) * B.transpose(x2))
+    approx(k.diff(0, None)(x1), B.ones(tf.float64, 10, 10) * B.transpose(x1))
 
     # Test derivative with respect to second input.
-    allclose(k.diff(None, 0)(x1, x2), B.ones(tf.float64, 10, 5) * x1)
-    allclose(k.diff(None, 0)(x1), B.ones(tf.float64, 10, 10) * x1)
+    approx(k.diff(None, 0)(x1, x2), B.ones(tf.float64, 10, 5) * x1)
+    approx(k.diff(None, 0)(x1), B.ones(tf.float64, 10, 10) * x1)
 
     # Test derivative with respect to both inputs.
     ref = B.ones(tf.float64, 10, 5)
-    allclose(k.diff(0, 0)(x1, x2), ref)
-    allclose(k.diff(0)(x1, x2), ref)
+    approx(k.diff(0, 0)(x1, x2), ref)
+    approx(k.diff(0)(x1, x2), ref)
     ref = B.ones(tf.float64, 10, 10)
-    allclose(k.diff(0, 0)(x1), ref)
-    allclose(k.diff(0)(x1), ref)
+    approx(k.diff(0, 0)(x1), ref)
+    approx(k.diff(0)(x1), ref)
 
 
-@pytest.mark.parametrize('x,result',
-                         [(np.float64([1]), np.float64([1e-20 + 1 + 1e-14])),
-                          (np.float32([1]), np.float32([1e-20 + 1 + 1e-7]))])
+@pytest.mark.parametrize(
+    "x,result",
+    [
+        (np.float64([1]), np.float64([1e-20 + 1 + 1e-14])),
+        (np.float32([1]), np.float32([1e-20 + 1 + 1e-7])),
+    ],
+)
 def test_perturb(x, result):
     assert perturb(x) == result  # Test NumPy.
     assert perturb(tf.constant(x)).numpy() == result  # Test TF.
@@ -709,7 +744,7 @@ def test_perturb_type_check():
         perturb(0)
 
 
-@pytest.mark.parametrize('dtype', [tf.float32, tf.float64])
+@pytest.mark.parametrize("dtype", [tf.float32, tf.float64])
 def test_nested_derivatives(dtype):
     x = B.randn(dtype, 10, 2)
 
