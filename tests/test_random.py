@@ -1,100 +1,114 @@
 import lab as B
 import numpy as np
 import pytest
-from matrix import Diagonal
+from matrix import Dense, Diagonal
 from scipy.stats import multivariate_normal
 
 from stheno.graph import GP
 from stheno.random import Normal, RandomVector
-from .util import allclose
+from .util import approx
 
 
-def test_normal():
+@pytest.fixture()
+def normal1():
     mean = np.random.randn(3, 1)
     chol = np.random.randn(3, 3)
-    var = chol.dot(chol.T)
+    var = chol @ chol.T
+    return Normal(mean, var)
 
-    dist = Normal(var, mean)
-    dist_sp = multivariate_normal(mean[:, 0], var)
 
-    # Test second moment.
-    allclose(dist.m2, var + mean.dot(mean.T))
+@pytest.fixture()
+def normal2():
+    mean = np.random.randn(3, 1)
+    chol = np.random.randn(3, 3)
+    var = chol @ chol.T
+    return Normal(mean, var)
 
-    # Test marginals.
-    marg_mean, lower, upper = dist.marginals()
-    allclose(mean.squeeze(), marg_mean)
-    allclose(lower, marg_mean - 2 * np.diag(var) ** .5)
-    allclose(upper, marg_mean + 2 * np.diag(var) ** .5)
 
-    # Test `logpdf` and `entropy`.
-    for _ in range(5):
-        x = np.random.randn(3, 10)
-        allclose(dist.logpdf(x), dist_sp.logpdf(x.T), desc='logpdf')
-        allclose(dist.entropy(), dist_sp.entropy(), desc='entropy')
+def test_normal_mean_is_zero():
+    assert Normal(np.eye(3))._mean_is_zero
+    assert not Normal(np.random.randn(3, 1), np.eye(3))._mean_is_zero
+
+
+def test_normal_m2(normal1):
+    approx(normal1.m2, normal1.var + normal1.mean @ normal1.mean.T)
+
+
+def test_normal_marginals(normal1):
+    mean, lower, upper = normal1.marginals()
+    approx(mean, normal1.mean.squeeze())
+    approx(lower, normal1.mean.squeeze() - 1.96 * B.diag(normal1.var) ** 0.5)
+    approx(upper, normal1.mean.squeeze() + 1.96 * B.diag(normal1.var) ** 0.5)
+
+
+def test_normal_logpdf(normal1):
+    normal1_sp = multivariate_normal(normal1.mean[:, 0], B.dense(normal1.var))
+    x = np.random.randn(3, 10)
+    approx(normal1.logpdf(x), normal1_sp.logpdf(x.T))
 
     # Test the the output of `logpdf` is flattened appropriately.
-    assert np.shape(dist.logpdf(np.ones((3, 1)))) == ()
-    assert np.shape(dist.logpdf(np.ones((3, 2)))) == (2,)
+    assert np.shape(normal1.logpdf(np.ones((3, 1)))) == ()
+    assert np.shape(normal1.logpdf(np.ones((3, 2)))) == (2,)
 
-    # Test KL with Monte Carlo estimate.
-    mean2 = np.random.randn(3, 1)
-    chol2 = np.random.randn(3, 3)
-    var2 = chol2.dot(chol2.T)
-    dist2 = Normal(var2, mean2)
-    samples = dist.sample(50000)
-    kl_est = np.mean(dist.logpdf(samples)) - np.mean(dist2.logpdf(samples))
-    kl = dist.kl(dist2)
-    assert np.abs(kl_est - kl) / np.abs(kl) < 5e-2, 'kl sampled'
+
+def test_normal_entropy(normal1):
+    normal1_sp = multivariate_normal(normal1.mean[:, 0], B.dense(normal1.var))
+    approx(normal1.entropy(), normal1_sp.entropy())
+
+
+def test_normal_kl(normal1, normal2):
+    assert normal1.kl(normal1) < 1e-6
+    assert normal1.kl(normal2) > 0.1
+
+    # Test against Monte Carlo estimate.
+    samples = normal1.sample(50_000)
+    kl_est = np.mean(normal1.logpdf(samples)) - np.mean(normal2.logpdf(samples))
+    kl = normal1.kl(normal2)
+    approx(kl_est, kl, rtol=0.05)
 
 
 def test_normal_sampling():
-    # Test sampling and dtype conversion.
-    dist = Normal(3 * np.eye(200, dtype=np.integer))
-    assert np.abs(np.std(dist.sample(1000)) ** 2 - 3) <= 5e-2, 'full'
-    assert np.abs(np.std(dist.sample(1000, noise=2)) ** 2 - 5) <= 5e-2, 'full 2'
+    for mean in [0, 1]:
+        dist = Normal(mean, 3 * np.eye(200, dtype=np.integer))
 
-    # Test `__str__` and `__repr__`.
-    assert str(dist) == RandomVector.__str__(dist)
-    assert repr(dist) == RandomVector.__repr__(dist)
+        # Sample without noise.
+        samples = dist.sample(2000)
+        approx(np.mean(samples), mean, atol=5e-2)
+        approx(np.var(samples), 3, atol=5e-2)
 
-    # Test zero mean determination.
-    assert Normal(np.eye(3))._zero_mean
-    assert not Normal(np.eye(3), np.random.randn(3, 1))._zero_mean
-
-    x = np.random.randn(3)
-    assert GP(1)(x)._zero_mean
-    assert not GP(1, 1)(x)._zero_mean
-    assert GP(1, 0)(x)._zero_mean
+        # Sample with noise
+        samples = dist.sample(2000, noise=2)
+        approx(np.mean(samples), mean, atol=5e-2)
+        approx(np.var(samples), 5, atol=5e-2)
 
 
-def test_normal_arithmetic():
-    chol = np.random.randn(3, 3)
-    dist = Normal(chol.dot(chol.T), np.random.randn(3, 1))
-    chol = np.random.randn(3, 3)
-    dist2 = Normal(chol.dot(chol.T), np.random.randn(3, 1))
+def test_normal_display(normal1):
+    assert str(normal1) == RandomVector.__str__(normal1)
+    assert repr(normal1) == RandomVector.__repr__(normal1)
 
-    A = np.random.randn(3, 3)
-    a = np.random.randn(1, 3)
-    b = 5.
+
+def test_normal_arithmetic(normal1, normal2):
+    a = Dense(np.random.randn(3, 3))
+    b = 5.0
 
     # Test matrix multiplication.
-    allclose((dist.rmatmul(a)).mean, dist.mean.dot(a))
-    allclose((dist.rmatmul(a)).var, a.dot(B.dense(dist.var)).dot(a.T))
-    allclose((dist.lmatmul(A)).mean, A.dot(dist.mean))
-    allclose((dist.lmatmul(A)).var, A.dot(B.dense(dist.var)).dot(A.T))
+    approx(normal1.lmatmul(a).mean, a @ normal1.mean)
+    approx(normal1.lmatmul(a).var, a @ normal1.var @ a.T)
+    approx(normal1.rmatmul(a).mean, a.T @ normal1.mean)
+    approx(normal1.rmatmul(a).var, a.T @ normal1.var @ a)
 
     # Test multiplication.
-    allclose((dist * b).mean, dist.mean * b)
-    allclose((dist * b).var, dist.var * b ** 2)
-    allclose((b * dist).mean, dist.mean * b)
-    allclose((b * dist).var, dist.var * b ** 2)
+    approx((normal1 * b).mean, normal1.mean * b)
+    approx((normal1 * b).var, normal1.var * b ** 2)
+    approx((b * normal1).mean, normal1.mean * b)
+    approx((b * normal1).var, normal1.var * b ** 2)
     with pytest.raises(NotImplementedError):
-        dist.__mul__(dist)
+        normal1.__mul__(normal1)
     with pytest.raises(NotImplementedError):
-        dist.__rmul__(dist)
+        normal1.__rmul__(normal1)
 
     # Test addition.
-    allclose((dist + dist2).mean, dist.mean + dist2.mean)
-    allclose((dist + dist2).var, dist.var + dist2.var)
-    allclose((dist.__add__(b)).mean, dist.mean + b)
-    allclose((dist.__radd__(b)).mean, dist.mean + b)
+    approx((normal1 + normal2).mean, normal1.mean + normal2.mean)
+    approx((normal1 + normal2).var, normal1.var + normal2.var)
+    approx((normal1.__add__(b)).mean, normal1.mean + b)
+    approx((normal1.__radd__(b)).mean, normal1.mean + b)
