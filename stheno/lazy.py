@@ -1,4 +1,5 @@
 import logging
+import abc
 
 from plum import Dispatcher, Referentiable, Self
 
@@ -6,174 +7,69 @@ __all__ = []
 
 log = logging.getLogger(__name__)
 
-
-def replace_at(tup, i, val):
-    """Replace a value in a tuple.
-
-    Args:
-        tup (tuple): Tuple to replace value in.
-        i (int): Index to replace value at.
-        val (obj): New value.
-
-    Returns:
-        tuple: Tuple with the value replaced.
-    """
-    listed = list(tup)
-    listed[i] = val
-    return tuple(listed)
+_dispatch = Dispatcher()
 
 
-class Rule:
-    """A rule for an :class:`.lazy.LazyTensor`.
+@_dispatch(object)
+def _resolve_index(key):
+    return id(key)
 
-    Note:
-        For performance reasons, `indices` must already be resolved!
 
-    Args:
-        pattern (tuple): Rule pattern. Each element must be a `None` or an
-            element from `indices`. A `None` represents a wildcard.
-        indices (set): Values to match wildcards with. These must already have
-            been resolved.
-        builder (function): Function that builds the element. Only the wildcard
-            elements are fed to the function.
-    """
+@_dispatch(int)
+def _resolve_index(i):
+    return i
 
-    def __init__(self, pattern, indices, builder):
-        self.pattern = pattern
-        self.indices = set(indices)
-        self.builder = builder
-        self._args = None
 
-    def applies(self, key):
-        """Check whether this rule applies to a certain key.
-
-        Args:
-            key (tuple): Key.
-
-        Returns:
-            bool: Boolean indicating whether the rule applies.
-        """
-        # Already keep track of arguments for building.
-        self._args = ()
-
-        for (i, j) in zip(self.pattern, key):
-            if i is None:
-                if j not in self.indices:
-                    return False
-                else:
-                    self._args += (j,)
-            elif i != j:
-                return False
-        return True
-
-    def build(self):
-        """After checking, build the element."""
-        return self.builder(*self._args)
-
-    def __repr__(self):
-        return 'Rule(pattern={!r}, indices={!r}, builder={!r})' \
-               ''.format(self.pattern, self.indices, self.builder)
+@_dispatch({tuple, reversed})
+def _resolve_index(x):
+    return tuple(_resolve_index(key) for key in x)
 
 
 class LazyTensor(metaclass=Referentiable):
     """A lazy tensor that indexes by the identity of its indices.
 
     Args:
-        d (int): Rank of the tensor.
+        rank (int): Rank of the tensor.
     """
+
     _dispatch = Dispatcher(in_class=Self)
 
     def __init__(self, rank):
-        self.rank = rank
-        self._rules = {}
+        self._rank = rank
         self._store = {}
 
-    @_dispatch(object)
-    def _resolve_index(self, i):
-        return id(i)
-
-    @_dispatch(type(None))
-    def _resolve_index(self, i):
-        return None
-
-    @_dispatch(int)
-    def _resolve_index(self, i):
-        return i
+    @_dispatch(tuple)
+    def _expand_key(self, key):
+        # Nothing to do.
+        return key
 
     @_dispatch(object)
-    def _resolve_key(self, key):
-        return (self._resolve_index(key),) * self.rank
-
-    @_dispatch({tuple, reversed})
-    def _resolve_key(self, key):
-        return tuple(self._resolve_index(i) for i in key)
+    def _expand_key(self, key):
+        return (key,) * self._rank
 
     def __setitem__(self, key, value):
-        return self._set(self._resolve_key(key), value)
+        return self._set(_resolve_index(self._expand_key(key)), value)
 
     def __getitem__(self, key):
-        return self._get(self._resolve_key(key))
+        return self._get(_resolve_index(self._expand_key(key)))
 
-    def _set(self, key, value):
-        self._store[key] = value
+    def _set(self, i, value):
+        self._store[i] = value
 
-    def _get(self, key):
+    def _get(self, i):
         try:
-            return self._store[key]
+            return self._store[i]
         except KeyError:
             pass
 
-        # Finally, try building the element.
-        value = self._build(key)
-        self._store[key] = value
+        # Could not find element. Try building it.
+        value = self._build(i)
+        self._store[i] = value
         return value
 
-    def _build(self, key):
-        # NOTE: The building patterns should go from least specific to most
-        # specific.
-        # Try a universal match.
-        building_patterns = [(None,) * self.rank]
-        # Try single dimension patterns.
-        building_patterns += [replace_at(key, i, None) for i in
-                              range(self.rank)]
-        # Try key.
-        building_patterns += [key]
-
-        for pattern in building_patterns:
-            # Check if a rules exists for the pattern.
-            if pattern in self._rules:
-                # Rules exist! Build with the first one that applies.
-                for rule in self._rules[pattern]:
-                    if rule.applies(key):
-                        return rule.build()
-
-        # Unable to build value for key.
-        raise RuntimeError('Could not build value for key "{}".'.format(key))
-
-    @_dispatch([object])
-    def add_rule(self, pattern, indices, builder):
-        """Add a building rule.
-
-        See :class:`.lazy.Rule`.
-
-        Note:
-            For performance reasons, `indices` must already be resolved!
-
-        Args:
-            pattern (tuple): Rule pattern. Each element must be a `None` or an
-                element from `indices`. A `None` represents a wildcard.
-            indices (set): Values to match wildcards with. These must already have
-                been resolved.
-            builder (function): Function that builds the element. Only the wildcard
-                elements are fed to the function.
-        """
-        pattern = self._resolve_key(pattern)
-        # IMPORTANT: This assumes that the indices already have been resolved!
-        rule = Rule(pattern, indices, builder)
-        try:
-            self._rules[pattern].append(rule)
-        except KeyError:
-            self._rules[pattern] = [rule]
+    @abc.abstractmethod
+    def _build(self, i):
+        pass
 
 
 class LazyVector(LazyTensor):
@@ -181,10 +77,97 @@ class LazyVector(LazyTensor):
 
     def __init__(self):
         LazyTensor.__init__(self, 1)
+        self._rules = []
+
+    def add_rule(self, indices, builder):
+        """Add a building rule.
+
+        Note:
+            For performance reasons, `indices` must already be resolved!
+
+        Args:
+            indices (set): Domain of the rule.
+            builder (function): Function that takes in an index and gives back the
+                corresponding element.
+        """
+        self._rules.append((indices, builder))
+
+    def _build(self, i):
+        i = i[0]  # This will be a one-tuple.
+        for indices, builder in self._rules:
+            if i in indices:
+                return builder(i)
+        raise RuntimeError(f'Could not build value for index "{i}".')
 
 
 class LazyMatrix(LazyTensor):
     """A lazy matrix."""
 
+    _dispatch = Dispatcher(in_class=Self)
+
     def __init__(self):
         LazyTensor.__init__(self, 2)
+        self._left_rules = []
+        self._right_rules = []
+        self._rules = []
+
+    def add_rule(self, indices, builder):
+        """Add a building rule.
+
+        Note:
+            For performance reasons, `indices` must already be resolved!
+
+        Args:
+            indices (set): Domain of the rule.
+            builder (function): Function that takes in an index and gives back the
+                corresponding element.
+        """
+        self._rules.append((indices, builder))
+
+    def add_left_rule(self, i_left, indices, builder):
+        """Add a building rule for a given left index.
+
+        Note:
+            For performance reasons, `indices` must already be resolved!
+
+        Args:
+            i_left (int): Fixed left index.
+            indices (set): Domain of the rule.
+            builder (function): Function that takes in a right index and gives back the
+                corresponding element.
+        """
+        self._left_rules.append((i_left, indices, builder))
+
+    def add_right_rule(self, i_right, indices, builder):
+        """Add a building rule for a given right index.
+
+        Note:
+            For performance reasons, `indices` must already be resolved!
+
+        Args:
+            i_right (int): Fixed right index.
+            indices (set): Domain of the rule.
+            builder (function): Function that takes in a left index and gives back the
+                corresponding element.
+        """
+        self._right_rules.append((i_right, indices, builder))
+
+    def _build(self, i):
+        i_left, i_right = i
+
+        # Check universal rules.
+        for indices, builder in self._rules:
+            if i_left in indices and i_right in indices:
+                return builder(i_left, i_right)
+
+        # Check left rules.
+        for i_left_rule, indices, builder in self._left_rules:
+            if i_left == i_left_rule and i_right in indices:
+                return builder(i_right)
+
+        # Check right rules.
+        for i_right_rule, indices, builder in self._right_rules:
+            if i_left in indices and i_right == i_right_rule:
+                return builder(i_left)
+
+        raise RuntimeError(f"Could not build value for index {i}.")
