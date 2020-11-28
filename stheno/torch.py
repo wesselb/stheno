@@ -3,9 +3,9 @@ import logging
 # noinspection PyUnresolvedReferences
 import lab.torch
 from algebra import Element
+from matrix import AbstractMatrix
 from plum import Dispatcher
 from torch import Tensor
-from matrix import AbstractMatrix
 
 # noinspection PyUnresolvedReferences
 from . import *  # pragma: no cover

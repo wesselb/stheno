@@ -3,9 +3,9 @@ import logging
 # noinspection PyUnresolvedReferences
 import lab.tensorflow
 from algebra import Element
+from matrix import AbstractMatrix
 from plum import Dispatcher
 from tensorflow import Tensor, Variable
-from matrix import AbstractMatrix
 
 # noinspection PyUnresolvedReferences
 from . import *  # pragma: no cover
@@ -33,8 +33,10 @@ def __mul__(self, other):
     return __add__variable(self, other)
 
 
-@_dispatch.multi((Tensor, {Element, Random, AbstractMatrix}),
-                 (Variable, {Element, Random, AbstractMatrix}))
+@_dispatch.multi(
+    (Tensor, {Element, Random, AbstractMatrix}),
+    (Variable, {Element, Random, AbstractMatrix}),
+)
 def __mul__(self, other):
     return other.__rmul__(self)
 
@@ -49,8 +51,10 @@ def __add__(self, other):
     return __add__variable(self, other)
 
 
-@_dispatch.multi((Tensor, {Element, Random, AbstractMatrix}),
-                 (Variable, {Element, Random, AbstractMatrix}))
+@_dispatch.multi(
+    (Tensor, {Element, Random, AbstractMatrix}),
+    (Variable, {Element, Random, AbstractMatrix}),
+)
 def __add__(self, other):
     return other.__radd__(self)
 

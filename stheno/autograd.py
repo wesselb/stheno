@@ -4,8 +4,8 @@ import logging
 import lab.autograd as B
 from algebra import Element
 from autograd.numpy.numpy_boxes import ArrayBox
-from plum import Dispatcher
 from matrix import AbstractMatrix
+from plum import Dispatcher
 
 # noinspection PyUnresolvedReferences
 from . import *  # pragma: no cover
