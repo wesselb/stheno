@@ -8,7 +8,7 @@ from matrix import Dense, LowRank, Diagonal, Zero, Constant, AbstractMatrix
 from plum import Dispatcher, Self, convert
 
 from .input import Input, Unique, WeightedUnique
-from .util import uprank
+from .util import num_elements, uprank
 
 __all__ = [
     "Kernel",
@@ -32,24 +32,6 @@ __all__ = [
 log = logging.getLogger(__name__)
 
 _dispatch = Dispatcher()
-
-
-def num_elements(x):
-    """Determine the number of elements in an input.
-
-    Deals with scalars, vectors, and matrices.
-
-    Args:
-        x (tensor): Input.
-
-    Returns:
-        int: Number of elements.
-    """
-    shape = B.shape(x)
-    if shape == ():
-        return 1
-    else:
-        return shape[0]
 
 
 def expand(xs):
