@@ -1,20 +1,29 @@
 import numpy as np
 import pytest
 from lab import B
+
 from stheno.graph import GP, Graph
 from stheno.input import Component
 from stheno.kernel import OneKernel, EQ
 from stheno.mean import OneMean
-from stheno.util import uprank
+from stheno.util import uprank, num_elements
+from .util import approx
 
-from .util import allclose, approx
+
+def test_num_elements():
+    assert num_elements(B.randn()) == 1
+    assert num_elements(B.randn(2)) == 2
+    assert num_elements(B.randn(2, 2)) == 2
 
 
 def test_uprank():
-    allclose(uprank(0), [[0]])
-    allclose(uprank(np.array([0])), [[0]])
-    allclose(uprank(np.array([[0]])), [[0]])
-    assert type(uprank(Component('test')(0))) == Component('test')
+    # Check upranking behaviour.
+    approx(uprank(0), [[0]])
+    approx(uprank(np.array([0])), [[0]])
+    approx(uprank(np.array([[0]])), [[0]])
+
+    # Check that it leaves objects alone.
+    assert type(uprank(Component("test")(0))) == Component("test")
 
     k = OneKernel()
 
@@ -30,11 +39,6 @@ def test_uprank():
     assert B.shape(k(np.ones((5, 2)), np.ones(5))) == (5, 5)
     assert B.shape(k(np.ones((5, 2)), np.ones((5, 2)))) == (5, 5)
 
-    with pytest.raises(ValueError):
-        k(0, np.ones((5, 2, 1)))
-    with pytest.raises(ValueError):
-        k(np.ones((5, 2, 1)))
-
     m = OneMean()
 
     assert B.shape(m(0)) == (1, 1)
@@ -42,7 +46,8 @@ def test_uprank():
     assert B.shape(m(np.ones((5, 2)))) == (5, 1)
 
     p = GP(EQ(), graph=Graph())
-    x = np.linspace(0, 10, 10)
+
+    x = B.linspace(0, 10, 10)
 
     approx(p.condition(1, 1)(1).mean, np.array([[1]]))
     approx(p.condition(x, x)(x).mean, x[:, None])
