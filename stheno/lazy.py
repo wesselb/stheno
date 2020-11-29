@@ -40,7 +40,7 @@ class LazyTensor(metaclass=Referentiable):
 
     @_dispatch(tuple)
     def _expand_key(self, key):
-        # Nothing to do.
+        # Nothing to do. The key needs to be a tuple.
         return key
 
     @_dispatch(object)
@@ -68,7 +68,7 @@ class LazyTensor(metaclass=Referentiable):
         return value
 
     @abc.abstractmethod
-    def _build(self, i):
+    def _build(self, i):  # pragma: no cover
         pass
 
 
@@ -90,7 +90,7 @@ class LazyVector(LazyTensor):
             builder (function): Function that takes in an index and gives back the
                 corresponding element.
         """
-        self._rules.append((indices, builder))
+        self._rules.append((frozenset(indices), builder))
 
     def _build(self, i):
         i = i[0]  # This will be a one-tuple.
@@ -122,7 +122,7 @@ class LazyMatrix(LazyTensor):
             builder (function): Function that takes in an index and gives back the
                 corresponding element.
         """
-        self._rules.append((indices, builder))
+        self._rules.append((frozenset(indices), builder))
 
     def add_left_rule(self, i_left, indices, builder):
         """Add a building rule for a given left index.
@@ -136,7 +136,7 @@ class LazyMatrix(LazyTensor):
             builder (function): Function that takes in a right index and gives back the
                 corresponding element.
         """
-        self._left_rules.append((i_left, indices, builder))
+        self._left_rules.append((i_left, frozenset(indices), builder))
 
     def add_right_rule(self, i_right, indices, builder):
         """Add a building rule for a given right index.
@@ -150,7 +150,7 @@ class LazyMatrix(LazyTensor):
             builder (function): Function that takes in a left index and gives back the
                 corresponding element.
         """
-        self._right_rules.append((i_right, indices, builder))
+        self._right_rules.append((i_right, frozenset(indices), builder))
 
     def _build(self, i):
         i_left, i_right = i
