@@ -6,7 +6,7 @@ from matrix import AbstractMatrix
 from numpy.testing import assert_array_almost_equal
 from plum import dispatch
 
-__all__ = ['benchmark', 'to_np', 'allclose', 'approx']
+__all__ = ['benchmark', 'to_np', 'approx']
 
 
 def benchmark(f, args, n=1000, get_output=False):
@@ -53,16 +53,14 @@ def to_np(a):
 
 @dispatch({B.Numeric, AbstractMatrix, list},
           {B.Numeric, AbstractMatrix, list}, [object])
-def allclose(a, b, desc=None, atol=1e-8, rtol=1e-8):
+def approx(a, b, desc=None, atol=1e-8, rtol=1e-8):
     np.testing.assert_allclose(to_np(a), to_np(b),
                                atol=atol, rtol=rtol, err_msg=desc)
 
 
 @dispatch(tuple, tuple, [object])
-def allclose(a, b, desc=None, atol=1e-8, rtol=1e-8):
+def approx(a, b, desc=None, atol=1e-8, rtol=1e-8):
     assert len(a) == len(b)
     for x, y in zip(a, b):
-        allclose(x, y, desc, atol=atol, rtol=rtol)
+        approx(x, y, desc, atol=atol, rtol=rtol)
 
-
-approx = assert_array_almost_equal
