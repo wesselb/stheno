@@ -3,7 +3,7 @@ from types import FunctionType
 
 from fdm import central_fdm
 from lab import B
-from matrix import Diagonal, AbstractMatrix
+from matrix import Diagonal, AbstractMatrix, Constant
 from plum import (
     Dispatcher,
     Self,
@@ -74,8 +74,7 @@ class AbstractObservations(metaclass=Referentiable):
     @_dispatch(tuple, [tuple])
     def __init__(self, *pairs):
         fdds, ys = zip(*pairs)
-        ps, xs = zip(*[(fdd.p, fdd.x) for fdd in fdds])
-        self.fdd = cross(*ps)(MultiInput(*xs))
+        self.fdd = cross(*[fdd.p for fdd in fdds])(MultiInput(*fdds))
         self.y = B.concat(*[uprank(y) for y in ys], axis=0)
 
     def posterior_kernel(self, measure, p_i, p_j):  # pragma: no cover
@@ -154,7 +153,7 @@ class Observations(AbstractObservations):
     def posterior_mean(self, measure, p):
         if num_elements(self.fdd.x) == 0:
             # There are no observations! Just return prior.
-            return self.measure.means[p]
+            return measure.means[p]
 
         return PosteriorMean(
             measure.means[p],
@@ -290,8 +289,6 @@ class SparseObservations(AbstractObservations):
 
         # The approximation can only handle diagonal noise matrices.
         if not isinstance(K_n, Diagonal):
-            print(repr(K_n))
-            print(B.sum(K_n, axis=1))
             raise RuntimeError("Kernel matrix of noise must be diagonal.")
 
         # And construct the components for the inducing point approximation.
@@ -445,13 +442,13 @@ class Measure(metaclass=Referentiable):
     def __call__(self, fdd):
         return Normal(self.means[fdd.p](fdd.x), self.kernels[fdd.p](fdd.x))
 
-    def add_independent_gp(self, p, kernel, mean):
+    def add_independent_gp(self, p, mean, kernel):
         """Add an independent GP to the model.
 
         Args:
             p (:class:`.measure.GP`): GP to add.
-            kernel (:class:`.kernel.Kernel`): Kernel function of GP.
             mean (:class:`.mean.Mean`): Mean function of GP.
+            kernel (:class:`.kernel.Kernel`): Kernel function of GP.
 
         Returns:
             :class:`.measure.GP`: The newly added independent GP.
@@ -483,7 +480,7 @@ class Measure(metaclass=Referentiable):
         """
         return self.sum(p_sum, p, other)
 
-    @_dispatch(PromisedGP, PromisedGP, object)
+    @_dispatch(PromisedGP, PromisedGP, B.Numeric)
     def sum(self, p_sum, p, other):
         return self._update(
             p_sum,
@@ -522,7 +519,7 @@ class Measure(metaclass=Referentiable):
         """
         return self.mul(p_mul, p, other)
 
-    @_dispatch(PromisedGP, PromisedGP, object)
+    @_dispatch(PromisedGP, PromisedGP, B.Numeric)
     def mul(self, p_mul, p, other):
         return self._update(
             p_mul,
@@ -534,7 +531,7 @@ class Measure(metaclass=Referentiable):
     @_dispatch(PromisedGP, PromisedGP, FunctionType)
     def mul(self, p_mul, p, f):
         def ones(x):
-            return B.ones(B.dtype(x), num_elements(x), 1)
+            return Constant(B.one(x), num_elements(x), 1)
 
         return self._update(
             p_mul,
@@ -677,14 +674,21 @@ class Measure(metaclass=Referentiable):
 
         return posterior
 
-    @_dispatch(AbstractObservations)
-    def __or__(self, other):
-        return self.condition(other)
+    @_dispatch(PromisedFDD, B.Numeric)
+    def condition(self, fdd, y):
+        return self.condition(Obs(fdd, y))
 
     @_dispatch(tuple)
-    def __or__(self, fdd_y):
-        fdd, y = fdd_y
-        return self.condition(Observations(fdd, y))
+    def condition(self, pair):
+        return self.condition(Obs(*pair))
+
+    @_dispatch(tuple, tuple, [tuple])
+    def condition(self, *pairs):
+        return self.condition(Obs(*pairs))
+
+    @_dispatch(object)
+    def __or__(self, *args):
+        return self.condition(*args)
 
     @_dispatch(PromisedGP, PromisedGP, [PromisedGP])
     def cross(self, p_cross, *ps):
@@ -716,10 +720,10 @@ class Measure(metaclass=Referentiable):
         Returns:
             tuple: Tuple of samples.
         """
-        sample = self.cross(*self.ps)(MultiInput(*fdds)).sample(n)
+        sample = cross(*self.ps)(MultiInput(*fdds)).sample(n)
 
         # Unpack sample.
-        lengths = [num_elements(fdd.x) for fdd in fdds]
+        lengths = [num_elements(fdd) for fdd in fdds]
         i, samples = 0, []
         for length in lengths:
             samples.append(sample[i : i + length, :])
@@ -732,7 +736,7 @@ class Measure(metaclass=Referentiable):
 
     @_dispatch([{list, tuple}])
     def logpdf(self, *pairs):
-        """Compute the logpdf of multiple observations.
+        """Compute the logpdf of one multiple observations.
 
         Can also give an `AbstractObservations`.
 
@@ -745,7 +749,9 @@ class Measure(metaclass=Referentiable):
         """
         fdds, ys = zip(*pairs)
         y = B.concat(*[uprank(y) for y in ys], axis=0)
-        return self(self.cross(GP(), *self.ps)(MultiInput(*fdds))).logpdf(y)
+        return self(
+            self.cross(GP(), *[fdd.p for fdd in fdds])(MultiInput(*fdds))
+        ).logpdf(y)
 
     @_dispatch(PromisedFDD, B.Numeric)
     def logpdf(self, fdd, y):
@@ -753,11 +759,11 @@ class Measure(metaclass=Referentiable):
 
     @_dispatch(Observations)
     def logpdf(self, obs):
-        return self.logpdf(obs.fdd)
+        return self.logpdf(obs.fdd, obs.y)
 
     @_dispatch(SparseObservations)
     def logpdf(self, obs):
-        return obs.elbo
+        return obs.elbo(self)
 
 
 class GP(RandomProcess):
@@ -766,8 +772,8 @@ class GP(RandomProcess):
     Args:
         kernel (:class:`.kernel.Kernel`): Kernel of the
             process.
-        mean (:class:`.mean.Mean`, optional): Mean function of the
-            process. Defaults to zero.
+        mean (:class:`.mean.Mean`, optional): Mean function of the process. Defaults
+            to zero.
         measure (:class:`.measure.Measure`): Measure to attach to. Must be given as
             a keyword argument.
         name (:obj:`str`, optional): Name. Must be given as a keyword argment.
@@ -797,7 +803,7 @@ class GP(RandomProcess):
 
         # Add a new `GP` to the measure with the resolved kernel and mean. The measure
         # will add itself to `self.measures`.
-        measure.add_independent_gp(self, kernel, mean)
+        measure.add_independent_gp(self, mean, kernel)
 
         # If a name is given, set the name.
         if name:
@@ -1007,7 +1013,12 @@ class FDD(Normal):
         return f"FDD({self.p}, {self.x})"
 
     def __repr__(self):
-        return str(self)
+        return f"FDD({self.p!r}, {self.x!r})"
 
 
 PromisedFDD.deliver(FDD)
+
+
+@num_elements.extend(FDD)
+def num_elements(fdd):
+    return num_elements(fdd.x)
