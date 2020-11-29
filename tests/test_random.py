@@ -1,7 +1,7 @@
 import lab as B
 import numpy as np
 import pytest
-from matrix import Dense
+from matrix import Dense, Zero
 from scipy.stats import multivariate_normal
 
 from stheno.random import Normal, RandomVector
@@ -24,11 +24,47 @@ def normal2():
     return Normal(mean, var)
 
 
-def test_normal_zero_mean():
+def test_normal_mean_is_zero():
+    # Check zero case.
     dist = Normal(B.eye(3))
-    assert dist._mean_is_zero
+    assert dist.mean_is_zero
     approx(dist.mean, B.zeros(3, 1))
-    assert not Normal(B.randn(3, 1), B.eye(3))._mean_is_zero
+
+    # Check another zero case.
+    dist = Normal(Zero(np.float32, 3, 1), B.eye(3))
+    assert dist.mean_is_zero
+    approx(dist.mean, B.zeros(3, 1))
+
+    # Check nonzero case.
+    assert not Normal(B.randn(3, 1), B.eye(3)).mean_is_zero
+
+
+def test_normal_lazy_zero_mean():
+    dist = Normal(lambda: B.eye(3))
+
+    assert dist.mean_is_zero
+    assert dist._mean is 0
+    assert dist._var is None
+
+    approx(dist.mean, B.zeros(3, 1))
+    # At this point, the variance should be constructed, because it is used to get the
+    # dimensionality and data type for the mean.
+    assert dist._var is not None
+
+    approx(dist.var, B.eye(3))
+
+
+def test_normal_lazy_nonzero_mean():
+    dist = Normal(lambda: B.ones(3, 1), lambda: B.eye(3))
+
+    assert not dist.mean_is_zero
+    approx(dist._mean, B.ones(3, 1))
+    assert dist._var is None
+
+    approx(dist.mean, B.ones(3, 1))
+    assert dist._var is None
+
+    approx(dist.var, B.eye(3))
 
 
 def test_normal_m2(normal1):

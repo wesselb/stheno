@@ -1,6 +1,8 @@
+from types import FunctionType
+
 from lab import B
-from matrix import AbstractMatrix
-from plum import Self, Referentiable, PromisedType, Dispatcher, convert
+from matrix import AbstractMatrix, Zero
+from plum import Self, Referentiable, Dispatcher, convert
 
 from .util import uprank
 
@@ -40,14 +42,16 @@ class RandomVector(Random):
     """A random vector."""
 
 
-PromisedGP = PromisedType()
-
-
 class Normal(RandomVector):
     """Normal random variable.
 
+    Attributes:
+        mean (column vector): Mean of the distribution.
+        mean_is_zero (bool): `True` if it is determined that `mean` is all zeros.
+        var (matrix): Variance of the distribution.
+
     Args:
-        mean (tensor, optional): Mean of the distribution. Defaults to zero.
+        mean (column vector, optional): Mean of the distribution. Defaults to zero.
         var (matrix): Variance of the distribution.
     """
 
@@ -55,35 +59,56 @@ class Normal(RandomVector):
 
     @_dispatch({B.Numeric, AbstractMatrix}, {B.Numeric, AbstractMatrix})
     def __init__(self, mean, var):
-        # Resolve mean and check whether it is zero.
-        if mean is 0:
-            # Set to an actual zero that indicates that it is all zeros. This is an
-            # optimised common case.
-            self._mean = 0
-            self._mean_is_zero = True
-        else:
-            # Not useful to retain structure here.
-            self._mean = B.dense(mean)
-            self._mean_is_zero = False
-
-        # Ensure that the variance is an instance of `AbstractMatrix`.
-        self._var = convert(var, AbstractMatrix)
+        self._mean = mean
+        self._mean_is_zero = None
+        self._var = var
 
     @_dispatch({B.Numeric, AbstractMatrix})
     def __init__(self, var):
-        self.__init__(0, var)
+        Normal.__init__(self, 0, var)
+
+    @_dispatch(FunctionType, FunctionType)
+    def __init__(self, construct_mean, construct_var):
+        self._mean = None
+        self._construct_mean = construct_mean
+        self._mean_is_zero = None
+        self._var = None
+        self._construct_var = construct_var
+
+    @_dispatch(FunctionType)
+    def __init__(self, construct_var):
+        Normal.__init__(self, lambda: 0, construct_var)
+
+    def _resolve_mean(self, construct_zeros):
+        if self._mean is None:
+            self._mean = self._construct_mean()
+        if self._mean_is_zero is None:
+            self._mean_is_zero = self._mean is 0 or isinstance(self._mean, Zero)
+        if self._mean is 0 and construct_zeros:
+            self._mean = B.zeros(self.dtype, self.dim, 1)
+
+    def _resolve_var(self):
+        if self._var is None:
+            self._var = self._construct_var()
+        # Ensure that the variance is a structured matrix for efficient operations.
+        self._var = convert(self._var, AbstractMatrix)
 
     @property
     def mean(self):
         """Mean."""
-        if self._mean is 0:
-            # Mean is all zeros. We now need to construct it.
-            self._mean = B.zeros(self.dtype, self.dim, 1)
+        self._resolve_mean(construct_zeros=True)
         return self._mean
+
+    @property
+    def mean_is_zero(self):
+        """The mean is zero."""
+        self._resolve_mean(construct_zeros=False)
+        return self._mean_is_zero
 
     @property
     def var(self):
         """Variance."""
+        self._resolve_var()
         return self._var
 
     @property
@@ -202,7 +227,7 @@ class Normal(RandomVector):
 
         # Perform sampling operation.
         sample = B.sample(var, num=num)
-        if not self._mean_is_zero:
+        if not self.mean_is_zero:
             sample = sample + self.mean
 
         return B.dense(sample)
