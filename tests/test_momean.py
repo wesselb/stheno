@@ -1,26 +1,26 @@
-import numpy as np
+import lab as B
 
-from stheno.graph import Graph, GP
+from stheno.measure import Measure, GP
 from stheno.input import MultiInput
 from stheno.kernel import EQ
 from stheno.momean import MultiOutputMean
-from .util import allclose
+from .util import approx
 
 
 def test_momean():
-    m = Graph()
-    p1 = GP(1 * EQ(), lambda x: 2 * x, graph=m)
-    p2 = GP(2 * EQ().stretch(2), 1, graph=m)
+    m = Measure()
+    p1 = GP(lambda x: 2 * x, 1 * EQ(), measure=m)
+    p2 = GP(1, 2 * EQ().stretch(2), measure=m)
 
-    mom = MultiOutputMean(p1, p2)
+    mom = MultiOutputMean(m, p1, p2)
     ms = m.means
 
-    x = np.linspace(0, 1, 10)
+    # Check representation.
+    assert str(mom) == "MultiOutputMean(<lambda>, 1)"
 
-    assert str(mom) == 'MultiOutputMean(<lambda>, 1)'
-
-    allclose(mom(x), np.concatenate([ms[p1](x), ms[p2](x)], axis=0))
-    allclose(mom(p1(x)), ms[p1](x))
-    allclose(mom(p2(x)), ms[p2](x))
-    allclose(mom(MultiInput(p2(x), p1(x))),
-             np.concatenate([ms[p2](x), ms[p1](x)], axis=0))
+    # Check computation.
+    x = B.linspace(0, 1, 10)
+    approx(mom(x), B.concat(ms[p1](x), ms[p2](x), axis=0))
+    approx(mom(p1(x)), ms[p1](x))
+    approx(mom(p2(x)), ms[p2](x))
+    approx(mom(MultiInput(p2(x), p1(x))), B.concat(ms[p2](x), ms[p1](x), axis=0))
