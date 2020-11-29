@@ -1,12 +1,6 @@
-from plum import parametric, kind
+import lab as B
 
-__all__ = ['Input',
-           'Observed',
-           'Latent',
-           'Component',
-           'At',
-           'Unique',
-           'WeightedUnique']
+__all__ = ["Input", "Unique", "WeightedUnique"]
 
 
 class Input:
@@ -22,14 +16,6 @@ class Input:
     def get(self):
         """Get the wrapped input."""
         return self._xs[0] if len(self._xs) == 1 else self._xs
-
-
-@parametric
-class Component(Input):
-    """A particular component.
-
-    This is a parametric type.
-    """
 
 
 class MultiInput(Input):
@@ -56,8 +42,6 @@ class WeightedUnique(Unique):
         Unique.__init__(self, x)
 
 
-Observed = Component('observed')  #: Observed points
-Latent = Component('latent')  #: Latent points
-
-#: A generic parametric type used to specify locations at a particular process.
-At = kind(Input)
+@B.shape.extend(WeightedUnique)
+def shape(x):
+    return B.shape(x.get())
