@@ -9,6 +9,7 @@ __all__ = ["num_elements", "uprank"]
 _dispatch = Dispatcher()
 
 
+@_dispatch(object)
 def num_elements(x):
     """Determine the number of elements in an input.
 
