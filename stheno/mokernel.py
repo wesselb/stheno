@@ -31,11 +31,15 @@ class MultiOutputKernel(Kernel):
         self.measure = measure
         self.ps = ps
 
+    # No `FDD` nor `MultiInput`.
+
     @_dispatch({B.Numeric, Input}, {B.Numeric, Input})
     def __call__(self, x, y):
         return self(
             MultiInput(*(p(x) for p in self.ps)), MultiInput(*(p(y) for p in self.ps))
         )
+
+    # One `FDD`.
 
     @_dispatch(FDD, {B.Numeric, Input})
     def __call__(self, x, y):
@@ -45,27 +49,45 @@ class MultiOutputKernel(Kernel):
     def __call__(self, x, y):
         return self(MultiInput(*(p(x) for p in self.ps)), MultiInput(y))
 
+    # Two `FDD`.
+
     @_dispatch(FDD, FDD)
     def __call__(self, x, y):
         return self.measure.kernels[x.p, y.p](x.x, y.x)
+
+    # One `MultiInput`.
 
     @_dispatch(MultiInput, FDD)
     def __call__(self, x, y):
         return self(x, MultiInput(y))
 
+    @_dispatch(MultiInput, {B.Numeric, Input})
+    def __call__(self, x, y):
+        return self(x, MultiInput(*(p(y) for p in self.ps)))
+
     @_dispatch(FDD, MultiInput)
     def __call__(self, x, y):
         return self(MultiInput(x), y)
 
+    @_dispatch({B.Numeric, Input}, MultiInput)
+    def __call__(self, x, y):
+        return self(MultiInput(*(p(x) for p in self.ps)), y)
+
+    # Two `MultiInput`s.
+
     @_dispatch(MultiInput, MultiInput)
     def __call__(self, x, y):
         return B.block(*[[self(xi, yi) for yi in y.get()] for xi in x.get()])
+
+    # No `FDD` nor `MultiInput`.
 
     @_dispatch({B.Numeric, Input}, {B.Numeric, Input})
     def elwise(self, x, y):
         return self.elwise(
             MultiInput(*(p(x) for p in self.ps)), MultiInput(*(p(y) for p in self.ps))
         )
+
+    # One `FDD`.
 
     @_dispatch(FDD, {B.Numeric, Input})
     def elwise(self, x, y):
@@ -79,21 +101,27 @@ class MultiOutputKernel(Kernel):
             "Unclear combination of arguments given to " "MultiOutputKernel.elwise."
         )
 
+    # Two `FDD`s.
+
     @_dispatch(FDD, FDD)
     def elwise(self, x, y):
         return self.measure.kernels[x.p, y.p].elwise(x.x, y.x)
 
-    @_dispatch(MultiInput, FDD)
+    # One `MultiInput`.
+
+    @_dispatch.multi(*((MultiInput, other) for other in [B.Numeric, Input, FDD]))
     def elwise(self, x, y):
         raise ValueError(
             "Unclear combination of arguments given to MultiOutputKernel.elwise."
         )
 
-    @_dispatch(FDD, MultiInput)
+    @_dispatch.multi(*((other, MultiInput) for other in [B.Numeric, Input, FDD]))
     def elwise(self, x, y):
         raise ValueError(
             "Unclear combination of arguments given to MultiOutputKernel.elwise."
         )
+
+    # Two `MultiInput`s.
 
     @_dispatch(MultiInput, MultiInput)
     def elwise(self, x, y):
