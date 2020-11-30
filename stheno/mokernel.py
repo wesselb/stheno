@@ -1,7 +1,7 @@
 import logging
 
 from lab import B
-from plum import Dispatcher, Self
+from plum import Dispatcher, Self, Union
 
 from . import PromisedFDD as FDD
 from .input import MultiInput, Input
@@ -49,7 +49,7 @@ class MultiOutputKernel(Kernel):
     def __call__(self, x, y):
         return self(MultiInput(*(p(x) for p in self.ps)), MultiInput(y))
 
-    # Two `FDD`.
+    # Two `FDD`s.
 
     @_dispatch(FDD, FDD)
     def __call__(self, x, y):
@@ -109,13 +109,13 @@ class MultiOutputKernel(Kernel):
 
     # One `MultiInput`.
 
-    @_dispatch.multi(*((MultiInput, other) for other in [B.Numeric, Input, FDD]))
+    @_dispatch(MultiInput, Union(B.Numeric, Input, FDD), precedence=1)
     def elwise(self, x, y):
         raise ValueError(
             "Unclear combination of arguments given to MultiOutputKernel.elwise."
         )
 
-    @_dispatch.multi(*((other, MultiInput) for other in [B.Numeric, Input, FDD]))
+    @_dispatch(Union(B.Numeric, Input, FDD), MultiInput, precedence=1)
     def elwise(self, x, y):
         raise ValueError(
             "Unclear combination of arguments given to MultiOutputKernel.elwise."
