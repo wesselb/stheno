@@ -133,7 +133,7 @@ class Normal(RandomVector):
             tuple: A tuple containing the predictive means and lower and
                 upper 95% central credible interval bounds.
         """
-        mean = B.squeeze(self.mean)
+        mean = B.squeeze(B.dense(self.mean))
         error = 1.96 * B.sqrt(B.diag(self.var))
         return mean, mean - error, mean + error
 
@@ -152,7 +152,7 @@ class Normal(RandomVector):
             -(
                 B.logdet(self.var)
                 + B.cast(self.dtype, self.dim) * B.cast(self.dtype, B.log_2_pi)
-                + B.iqf_diag(self.var, uprank(x) - self.mean)
+                + B.iqf_diag(self.var, B.subtract(uprank(x), self.mean))
             )
             / 2
         )
