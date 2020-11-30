@@ -31,7 +31,7 @@ m = 2
 p = 4
 H = B.randn(p, m)
 
-# Construct latent functions
+# Construct latent functions.
 prior = Measure()
 us = VGP([GP(EQ(), measure=prior) for _ in range(m)])
 fs = us.lmatmul(H)

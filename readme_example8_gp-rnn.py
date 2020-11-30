@@ -8,7 +8,7 @@ from wbml.plot import tweak
 
 from stheno.tensorflow import B, Measure, GP, Delta, EQ
 
-# Increase regularisation because we are dealing with `np.float32`s.
+# Increase regularisation because we are dealing with `tf.float32`s.
 B.epsilon = 1e-6
 
 # Construct points which to predict at.
