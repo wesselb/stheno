@@ -16,7 +16,7 @@ examples = [
     },
     {
         "title": "Multi-Output Regression",
-        "toc": "multi-ouput-regression",
+        "toc": "multi-output-regression",
         "file": "readme_example4_multi-output",
     },
     {

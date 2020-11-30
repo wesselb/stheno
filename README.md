@@ -21,7 +21,7 @@ also [Stheno.jl](https://github.com/willtebbutt/Stheno.jl).
     - [Simple Regression](#simple-regression)
     - [Decomposition of Prediction](#decomposition-of-prediction)
     - [Learn a Function, Incorporating Prior Knowledge About Its Form](#learn-a-function-incorporating-prior-knowledge-about-its-form)
-    - [Multi-Output Regression](#multi-ouput-regression)
+    - [Multi-Output Regression](#multi-output-regression)
     - [Approximate Integration](#approximate-integration)
     - [Bayesian Linear Regression](#bayesian-linear-regression)
     - [GPAR](#gpar)
@@ -1214,7 +1214,7 @@ m = 2
 p = 4
 H = B.randn(p, m)
 
-# Construct latent functions
+# Construct latent functions.
 prior = Measure()
 us = VGP([GP(EQ(), measure=prior) for _ in range(m)])
 fs = us.lmatmul(H)
@@ -1507,7 +1507,7 @@ from wbml.plot import tweak
 
 from stheno.tensorflow import B, Measure, GP, Delta, EQ
 
-# Increase regularisation because we are dealing with `np.float32`s.
+# Increase regularisation because we are dealing with `tf.float32`s.
 B.epsilon = 1e-6
 
 # Construct points which to predict at.
