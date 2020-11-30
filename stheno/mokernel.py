@@ -135,5 +135,5 @@ class MultiOutputKernel(Kernel):
         )
 
     def render(self, formatter):
-        ks = [self.measure.kernels[p].render(formatter) for p in self.ps]
+        ks = [str(self.measure.kernels[p]) for p in self.ps]
         return "MultiOutputKernel({})".format(", ".join(ks))
