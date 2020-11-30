@@ -1,18 +1,19 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
-import wbml.plot
+from varz.spec import parametrised, Positive
 from varz.tensorflow import Vars, minimise_adam
 from wbml.net import rnn as rnn_constructor
+from wbml.plot import tweak
 
-from stheno.tensorflow import B, Graph, GP, Delta, EQ, Obs
+from stheno.tensorflow import B, Measure, GP, Delta, EQ
 
-# Increase regularisation because we are dealing with float32.
+# Increase regularisation because we are dealing with `np.float32`s.
 B.epsilon = 1e-6
 
 # Construct points which to predict at.
 x = B.linspace(tf.float32, 0, 1, 100)[:, None]
-inds_obs = np.arange(0, int(0.75 * len(x)))  # Train on the first 75% only.
+inds_obs = B.range(0, int(0.75 * len(x)))  # Train on the first 75% only.
 x_obs = B.take(x, inds_obs)
 
 # Construct function and observations.
@@ -30,24 +31,26 @@ y_true = (y_true - B.mean(y_true)) / B.std(y_true)
 y_obs = B.take(y_true, inds_obs)
 
 
-def model(vs):
-    g = Graph()
+@parametrised
+def model(
+    vs, a_scale: Positive = 0.1, b_scale: Positive = 0.1, noise: Positive = 0.01
+):
+    prior = Measure()
 
     # Construct an RNN.
-    f_rnn = rnn_constructor(output_size=1,
-                            widths=(10,),
-                            nonlinearity=B.tanh,
-                            final_dense=True)
+    f_rnn = rnn_constructor(
+        output_size=1, widths=(10,), nonlinearity=B.tanh, final_dense=True
+    )
 
     # Set the weights for the RNN.
     num_weights = f_rnn.num_weights(input_size=1)
-    weights = Vars(tf.float32, source=vs.get(shape=(num_weights,), name='rnn'))
+    weights = Vars(tf.float32, source=vs.get(shape=(num_weights,), name="rnn"))
     f_rnn.initialise(input_size=1, vs=weights)
 
     # Construct GPs that modulate the RNN.
-    a = GP(1e-2 * EQ().stretch(vs.pos(0.1, name='a/scale')), graph=g)
-    b = GP(1e-2 * EQ().stretch(vs.pos(0.1, name='b/scale')), graph=g)
-    e = GP(vs.pos(1e-2, name='e/var') * Delta(), graph=g)
+    a = GP(1e-2 * EQ().stretch(a_scale), measure=prior)
+    b = GP(1e-2 * EQ().stretch(b_scale), measure=prior)
+    e = GP(noise * Delta(), measure=prior)
 
     # GP-RNN model:
     f_gp_rnn = (1 + a) * (lambda x: f_rnn(x)) + b
@@ -69,46 +72,49 @@ def objective_gp_rnn(vs):
 
 # Pretrain the RNN.
 vs = Vars(tf.float32)
-minimise_adam(tf.function(objective_rnn, autograph=False),
-              vs, rate=1e-2, iters=1000, trace=True)
+minimise_adam(
+    tf.function(objective_rnn, autograph=False), vs, rate=1e-2, iters=1000, trace=True
+)
 
 # Jointly train the RNN and GPs.
-minimise_adam(tf.function(objective_gp_rnn, autograph=False),
-              vs, rate=1e-3, iters=1000, trace=True)
+minimise_adam(
+    tf.function(objective_gp_rnn, autograph=False),
+    vs,
+    rate=1e-3,
+    iters=1000,
+    trace=True,
+)
 
 _, f_gp_rnn, y_gp_rnn, a, b = model(vs)
 
 # Condition.
-f_gp_rnn, a, b = (f_gp_rnn, a, b) | Obs(y_gp_rnn(x_obs), y_obs)
+post = f_gp_rnn.measure | (y_gp_rnn(x_obs), y_obs)
 
 # Predict and plot results.
 plt.figure(figsize=(10, 6))
 
 plt.subplot(2, 1, 1)
-plt.title('$(1 + a)\\cdot {}$RNN${} + b$')
-plt.plot(x, f_true, label='True', c='tab:blue')
-plt.scatter(x_obs, y_obs, label='Observations', c='tab:red')
-mean, lower, upper = f_gp_rnn(x).marginals()
-plt.plot(x, mean, label='Prediction', c='tab:green')
-plt.plot(x, lower, ls='--', c='tab:green')
-plt.plot(x, upper, ls='--', c='tab:green')
-wbml.plot.tweak()
+plt.title("$(1 + a)\\cdot {}$RNN${} + b$")
+plt.plot(x, f_true, label="True", style="test")
+plt.scatter(x_obs, y_obs, label="Observations", style="train", s=20)
+mean, lower, upper = post(f_gp_rnn(x)).marginals()
+plt.plot(x, mean, label="Prediction", style="pred")
+plt.fill_between(x, lower, upper, style="pred")
+tweak()
 
 plt.subplot(2, 2, 3)
-plt.title('$a$')
-mean, lower, upper = a(x).marginals()
-plt.plot(x, mean, label='Prediction', c='tab:green')
-plt.plot(x, lower, ls='--', c='tab:green')
-plt.plot(x, upper, ls='--', c='tab:green')
-wbml.plot.tweak()
+plt.title("$a$")
+mean, lower, upper = post(a(x)).marginals()
+plt.plot(x, mean, label="Prediction", style="pred")
+plt.fill_between(x, lower, upper, style="pred")
+tweak()
 
 plt.subplot(2, 2, 4)
-plt.title('$b$')
-mean, lower, upper = b(x).marginals()
-plt.plot(x, mean, label='Prediction', c='tab:green')
-plt.plot(x, lower, ls='--', c='tab:green')
-plt.plot(x, upper, ls='--', c='tab:green')
-wbml.plot.tweak()
+plt.title("$b$")
+mean, lower, upper = post(b(x)).marginals()
+plt.plot(x, mean, label="Prediction", style="pred")
+plt.fill_between(x, lower, upper, style="pred")
+tweak()
 
-plt.savefig(f'readme_example8_gp-rnn.png')
+plt.savefig(f"readme_example8_gp-rnn.png")
 plt.show()

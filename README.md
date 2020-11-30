@@ -7,17 +7,22 @@
 Stheno is an implementation of Gaussian process modelling in Python. See 
 also [Stheno.jl](https://github.com/willtebbutt/Stheno.jl).
 
+*Note:* Stheno requires Python 3.6 or higher and TensorFlow 2 if TensorFlow is
+used.
+
 * [Nonlinear Regression in 20 Seconds](#nonlinear-regression-in-20-seconds)
-* [Requirements and Installation](#requirements-and-installation)
+* [Installation](#installation)
 * [Manual](#manual)
     - [Kernel and Mean Design](#kernel-and-mean-design)
         * [Available Kernels](#available-kernels)
         * [Available Means](#available-means)
         * [Compositional Design](#compositional-design)
         * [Displaying Kernels and Means](#displaying-kernels-and-mean)
+        * [Properties of Kernels](#properties-of-kernels)
     - [Model Design](#model-design)
         * [Compositional Design](#compositional-design)
         * [Displaying GPs](#displaying-gps)
+        * [Properties of GPs](#properties-of-gps)
         * [Naming GPs](#naming-gps)
     - [Finite-Dimensional Distributions, Inference, and Sampling](#finite-dimensional-distributions-inference-and-sampling)
     - [Inducing Points](#inducing-points)
@@ -41,21 +46,35 @@ also [Stheno.jl](https://github.com/willtebbutt/Stheno.jl).
 ```python
 >>> import numpy as np
 
->>> from stheno import GP, EQ
+>>> from stheno import Measure, GP, EQ
 
->>> x = np.linspace(0, 2, 10)    # Points to predict at
+>>> x = np.linspace(0, 2, 10)          # Some points to predict at
 
->>> y = x ** 2                   # Observations
+>>> y = x ** 2                         # Some observations
 
->>> (GP(EQ()) | (x, y))(3).mean  # Go GP!
-array([[8.48258669]])
+>>> prior = Measure()                  # Construct a prior.
+
+>>> f = GP(EQ())                       # Define our probabilistic model.
+
+>>> post = prior | (f(x), y)           # Compute the posterior distribution.
+
+>>> post(f).mean(np.array([1, 2, 3]))  # Predict!
+<dense matrix: shape=3x1, dtype=float64
+ mat=[[1.   ]
+      [4.   ]
+      [8.483]]>
 ```
 
 Moar?! Then read on!
 
-## Requirements and Installation
+## Installation
 
-See [the instructions here](https://gist.github.com/wesselb/4b44bf87f3789425f96e26c4308d0adc).
+Before installing the package, please ensure that `gcc` and `gfortran` are 
+available.
+On OS X, these are both installed with `brew install gcc`;
+users of Anaconda may want to instead consider `conda install gcc`.
+On Linux, `gcc` is most likely already available, and `gfortran` can be
+installed with `apt-get install gfortran`.
 Then simply
 
 ```
@@ -419,6 +438,51 @@ Tensor("Const_1:0", shape=(), dtype=int32) * EQ()
 2 * EQ()
 ```
 
+#### Properties of Kernels
+
+The stationarity of a kernel `k` can always be determined by querying
+`k.stationary`. In many cases, the variance `k.var`, length scale
+`k.length_scale`, and period `k.period` can also be determined.
+
+Example of querying the stationarity:
+
+```python
+>>> EQ().stationary
+True
+
+>>> (EQ() + Linear()).stationary
+False
+```
+
+Example of querying the variance:
+
+```python
+>>> EQ().var
+1
+
+>>> (2 * EQ()).var
+2
+```
+
+Example of querying the length scale:
+
+```python
+>>> EQ().length_scale
+1
+
+>>> (EQ() + EQ().stretch(2)).length_scale
+1.5
+```
+
+Example of querying the period:
+
+```python
+>>> EQ().periodic(1).period
+1
+
+>>> EQ().periodic(1).stretch(2).period
+2
+```
 
 ### Model Design
 
@@ -430,7 +494,7 @@ If the graph is left unspecified, new GPs are appended to a provided default
 graph `model`, which is exported by Stheno:
 
 ```python
-from stheno import model
+from stheno import prior
 ```
 
 Here's an example model:
@@ -587,6 +651,20 @@ Example:
 GP(2.12 * EQ(), 0)
 ```
 
+#### Properties of GPs
+
+Properties of kernels can be queried on GPs directly.
+
+Example:
+
+```python
+>>> GP(EQ()).stationary
+True
+
+>>> GP(RQ(1e-1)).length_scale
+1
+```
+
 ### Naming GPs
 
 It is possible to give a name to GPs.
@@ -612,7 +690,8 @@ GP(EQ(), 0)
 
 ### Finite-Dimensional Distributions, Inference, and Sampling
 
-Simply call a GP to construct the corresponding finite-dimensional distribution:
+
+Simply call a GP to construct its finite-dimensional distribution:
 
 ```python
 >>> type(f(x))
@@ -760,8 +839,23 @@ from stheno.torch import GP, EQ
            [-1.15642448]])
     ```
 
+* `stheno.eis` offers kernels on an extended input space that allows one to 
+design kernels in an alternative, flexible way.
+
+    Example:
+
+    ```python
+    >>> p = GP(NoisyKernel(EQ(), Delta()))
+
+    >>> prediction = p.condition(Observed(x), y)(Latent(x)).marginals()
+    ```
+    
 * `stheno.normal` offers an efficient implementation `Normal` of the normal 
-distribution.
+distribution, and a convenience constructor `Normal1D` for 1-dimensional normal
+distributions.
+
+* `stheno.matrix` offers structured representations of matrices and efficient
+operations thereon.
 
 * Approximate multiplication between GPs is implemented. This is an 
 experimental feature.
@@ -785,35 +879,34 @@ utility from [WBML](https://github.com/wesselb/wbml).
 
 ```python
 import matplotlib.pyplot as plt
-import numpy as np
-import wbml.plot
+from wbml.plot import tweak
 
-from stheno import GP, EQ, Delta, model
+from stheno import B, Measure, GP, EQ, Delta
 
 # Define points to predict at.
-x = np.linspace(0, 10, 100)
-x_obs = np.linspace(0, 7, 20)
+x = B.linspace(0, 10, 100)
+x_obs = B.linspace(0, 7, 20)
 
 # Construct a prior.
-f = GP(EQ().periodic(5.))  # Latent function.
-e = GP(Delta())  # Noise.
-y = f + .5 * e
+prior = Measure()
+f = GP(EQ().periodic(5.0), measure=prior)  # Latent function
+e = GP(Delta(), measure=prior)  # Noise
+y = f + 0.5 * e
 
 # Sample a true, underlying function and observations.
-f_true, y_obs = model.sample(f(x), y(x_obs))
+f_true, y_obs = prior.sample(f(x), y(x_obs))
 
 # Now condition on the observations to make predictions.
-mean, lower, upper = (f | (y(x_obs), y_obs))(x).marginals()
+post = prior | (y(x_obs), y_obs)
+mean, lower, upper = post(f)(x).marginals()
 
 # Plot result.
-plt.plot(x, f_true, label='True', c='tab:blue')
-plt.scatter(x_obs, y_obs, label='Observations', c='tab:red')
-plt.plot(x, mean, label='Prediction', c='tab:green')
-plt.plot(x, lower, ls='--', c='tab:green')
-plt.plot(x, upper, ls='--', c='tab:green')
-
-wbml.plot.tweak()
-plt.savefig('readme_example1_simple_regression.png')
+plt.plot(x, f_true, label="True", style="test")
+plt.scatter(x_obs, y_obs, label="Observations", style="train", s=20)
+plt.plot(x, mean, label="Prediction", style="pred")
+plt.fill_between(x, lower, upper, style="pred")
+tweak()
+plt.savefig("readme_example1_simple_regression.png")
 plt.show()
 ```
 
@@ -823,91 +916,90 @@ plt.show()
 
 ```python
 import matplotlib.pyplot as plt
-import numpy as np
-import wbml.plot
+from wbml.plot import tweak
 
-from stheno import GP, model, EQ, RQ, Linear, Delta, Exp, Obs, B
+from stheno import B, Measure, GP, EQ, RQ, Linear, Delta, Exp, Obs, B
 
 B.epsilon = 1e-10
 
 # Define points to predict at.
-x = np.linspace(0, 10, 200)
-x_obs = np.linspace(0, 7, 50)
+x = B.linspace(0, 10, 200)
+x_obs = B.linspace(0, 7, 50)
 
 # Construct a latent function consisting of four different components.
-f_smooth = GP(EQ())
-f_wiggly = GP(RQ(1e-1).stretch(.5))
-f_periodic = GP(EQ().periodic(1.))
-f_linear = GP(Linear())
+prior = Measure()
+f_smooth = GP(EQ(), measure=prior)
+f_wiggly = GP(RQ(1e-1).stretch(0.5), measure=prior)
+f_periodic = GP(EQ().periodic(1.0), measure=prior)
+f_linear = GP(Linear(), measure=prior)
 
-f = f_smooth + f_wiggly + f_periodic + .2 * f_linear
+f = f_smooth + f_wiggly + f_periodic + 0.2 * f_linear
 
 # Let the observation noise consist of a bit of exponential noise.
-e_indep = GP(Delta())
-e_exp = GP(Exp())
+e_indep = GP(Delta(), measure=prior)
+e_exp = GP(Exp(), measure=prior)
 
-e = e_indep + .3 * e_exp
+e = e_indep + 0.3 * e_exp
 
 # Sum the latent function and observation noise to get a model for the
 # observations.
-y = f + .5 * e
+y = f + 0.5 * e
 
 # Sample a true, underlying function and observations.
-f_true_smooth, f_true_wiggly, f_true_periodic, f_true_linear, f_true, y_obs = \
-    model.sample(f_smooth(x),
-                 f_wiggly(x),
-                 f_periodic(x),
-                 f_linear(x),
-                 f(x),
-                 y(x_obs))
+(
+    f_true_smooth,
+    f_true_wiggly,
+    f_true_periodic,
+    f_true_linear,
+    f_true,
+    y_obs,
+) = prior.sample(f_smooth(x), f_wiggly(x), f_periodic(x), f_linear(x), f(x), y(x_obs))
 
 # Now condition on the observations and make predictions for the latent
 # function and its various components.
-f_smooth, f_wiggly, f_periodic, f_linear, f = \
-    (f_smooth, f_wiggly, f_periodic, f_linear, f) | Obs(y(x_obs), y_obs)
+post = prior | (y(x_obs), y_obs)
 
-pred_smooth = f_smooth(x).marginals()
-pred_wiggly = f_wiggly(x).marginals()
-pred_periodic = f_periodic(x).marginals()
-pred_linear = f_linear(x).marginals()
-pred_f = f(x).marginals()
+pred_smooth = post(f_smooth(x)).marginals()
+pred_wiggly = post(f_wiggly(x)).marginals()
+pred_periodic = post(f_periodic(x)).marginals()
+pred_linear = post(f_linear(x)).marginals()
+pred_f = post(f(x)).marginals()
 
 
 # Plot results.
 def plot_prediction(x, f, pred, x_obs=None, y_obs=None):
-    plt.plot(x, f, label='True', c='tab:blue')
+    plt.plot(x, f, label="True", style="test")
     if x_obs is not None:
-        plt.scatter(x_obs, y_obs, label='Observations', c='tab:red')
+        plt.scatter(x_obs, y_obs, label="Observations", style="train", s=20)
     mean, lower, upper = pred
-    plt.plot(x, mean, label='Prediction', c='tab:green')
-    plt.plot(x, lower, ls='--', c='tab:green')
-    plt.plot(x, upper, ls='--', c='tab:green')
-    wbml.plot.tweak()
+    plt.plot(x, mean, label="Prediction", style="pred")
+    plt.fill_between(x, lower, upper, style="pred")
+    tweak()
 
 
 plt.figure(figsize=(10, 6))
 
 plt.subplot(3, 1, 1)
-plt.title('Prediction')
+plt.title("Prediction")
 plot_prediction(x, f_true, pred_f, x_obs, y_obs)
 
 plt.subplot(3, 2, 3)
-plt.title('Smooth Component')
+plt.title("Smooth Component")
 plot_prediction(x, f_true_smooth, pred_smooth)
 
 plt.subplot(3, 2, 4)
-plt.title('Wiggly Component')
+plt.title("Wiggly Component")
 plot_prediction(x, f_true_wiggly, pred_wiggly)
 
 plt.subplot(3, 2, 5)
-plt.title('Periodic Component')
+plt.title("Periodic Component")
 plot_prediction(x, f_true_periodic, pred_periodic)
 
 plt.subplot(3, 2, 6)
-plt.title('Linear Component')
+plt.title("Linear Component")
 plot_prediction(x, f_true_linear, pred_linear)
 
-plt.savefig('readme_example2_decomposition.png')
+plt.savefig("readme_example2_decomposition.png")
 plt.show()
 ```
 
@@ -918,29 +1010,35 @@ plt.show()
 ```python
 import matplotlib.pyplot as plt
 import tensorflow as tf
-import wbml.out
-import wbml.plot
+import wbml.out as out
+from varz.spec import parametrised, Positive
 from varz.tensorflow import Vars, minimise_l_bfgs_b
+from wbml.plot import tweak
 
-from stheno.tensorflow import B, Graph, GP, EQ, Delta
+from stheno.tensorflow import B, Measure, GP, EQ, Delta
 
 # Define points to predict at.
 x = B.linspace(tf.float64, 0, 5, 100)
 x_obs = B.linspace(tf.float64, 0, 3, 20)
 
 
-def model(vs):
-    g = Graph()
+@parametrised
+def model(
+    vs,
+    u_var: Positive = 0.5,
+    u_scale: Positive = 0.5,
+    e_var: Positive = 0.5,
+    alpha: Positive = 1.2,
+):
+    prior = Measure()
 
     # Random fluctuation:
-    u = GP(vs.pos(.5, name='u/var') *
-           EQ().stretch(vs.pos(0.5, name='u/scale')), graph=g)
+    u = GP(u_var * EQ() > u_scale, measure=prior)
 
     # Noise:
-    e = GP(vs.pos(0.5, name='e/var') * Delta(), graph=g)
+    e = GP(e_var * Delta(), measure=prior)
 
     # Construct model:
-    alpha = vs.pos(1.2, name='alpha')
     f = u + (lambda x: x ** alpha)
     y = f + e
 
@@ -951,7 +1049,8 @@ def model(vs):
 vs = Vars(tf.float64)
 f_true = x ** 1.8 + B.sin(2 * B.pi * x)
 f, y = model(vs)
-y_obs = (y | (f(x), f_true))(x_obs).sample()
+post = f.measure | (f(x), f_true)
+y_obs = post(f(x_obs)).sample()
 
 
 def objective(vs):
@@ -965,21 +1064,21 @@ minimise_l_bfgs_b(tf.function(objective, autograph=False), vs)
 f, y = model(vs)
 
 # Print the learned parameters.
-wbml.out.kv('Alpha', vs['alpha'])
-wbml.out.kv('Prior', y.display(wbml.out.format))
+out.kv("Prior", y.display(out.format))
+vs.print()
 
 # Condition on the observations to make predictions.
-mean, lower, upper = (f | (y(x_obs), y_obs))(x).marginals()
+post = f.measure | (y(x_obs), y_obs)
+mean, lower, upper = post(f(x)).marginals()
 
 # Plot result.
-plt.plot(x, B.squeeze(f_true), label='True', c='tab:blue')
-plt.scatter(x_obs, B.squeeze(y_obs), label='Observations', c='tab:red')
-plt.plot(x, mean, label='Prediction', c='tab:green')
-plt.plot(x, lower, ls='--', c='tab:green')
-plt.plot(x, upper, ls='--', c='tab:green')
-wbml.plot.tweak()
+plt.plot(x, B.squeeze(f_true), label="True", style="test")
+plt.scatter(x_obs, B.squeeze(y_obs), label="Observations", style="train", s=20)
+plt.plot(x, mean, label="Prediction", style="pred")
+plt.fill_between(x, lower, upper, style="pred")
+tweak()
 
-plt.savefig('readme_example3_parametric.png')
+plt.savefig("readme_example3_parametric.png")
 plt.show()
 ```
 
@@ -989,103 +1088,75 @@ plt.show()
 
 ```python
 import matplotlib.pyplot as plt
-import numpy as np
-from plum import Dispatcher, Referentiable, Self
-import wbml.plot
+from wbml.plot import tweak
 
-from stheno import GP, EQ, Delta, model, Kernel, Obs
+from stheno import B, Measure, GP, EQ, Delta
 
 
-class VGP(metaclass=Referentiable):
-    """A vector-valued GP.
+class VGP:
+    """A vector-valued GP."""
 
-    Args:
-        dim (int): Dimensionality.
-        kernel (instance of :class:`stheno.kernel.Kernel`): Kernel.
-    """
-    dispatch = Dispatcher(in_class=Self)
-
-    @dispatch(int, Kernel)
-    def __init__(self, dim, kernel):
-        self.ps = [GP(kernel) for _ in range(dim)]
-
-    @dispatch([GP])
-    def __init__(self, *ps):
+    def __init__(self, ps):
         self.ps = ps
 
-    @dispatch(Self)
     def __add__(self, other):
-        return VGP(*[f + g for f, g in zip(self.ps, other.ps)])
+        return VGP([f + g for f, g in zip(self.ps, other.ps)])
 
-    @dispatch(np.ndarray)
     def lmatmul(self, A):
         m, n = A.shape
         ps = [0 for _ in range(m)]
         for i in range(m):
             for j in range(n):
                 ps[i] += A[i, j] * self.ps[j]
-        return VGP(*ps)
-
-    def sample(self, x):
-        return model.sample(*(p(x) for p in self.ps))
-
-    def __or__(self, obs):
-        return VGP(*(p | obs for p in self.ps))
-
-    def obs(self, x, ys):
-        return Obs(*((p(x), y) for p, y in zip(self.ps, ys)))
-
-    def marginals(self, x):
-        return [p(x).marginals() for p in self.ps]
+        return VGP(ps)
 
 
 # Define points to predict at.
-x = np.linspace(0, 10, 100)
-x_obs = np.linspace(0, 10, 10)
+x = B.linspace(0, 10, 100)
+x_obs = B.linspace(0, 10, 10)
 
 # Model parameters:
 m = 2
 p = 4
-H = np.random.randn(p, m)
+H = B.randn(p, m)
 
 # Construct latent functions
-us = VGP(m, EQ())
+prior = Measure()
+us = VGP([GP(EQ(), measure=prior) for _ in range(m)])
 fs = us.lmatmul(H)
 
 # Construct noise.
-e = VGP(p, 0.5 * Delta())
+e = VGP([GP(0.5 * Delta(), measure=prior) for _ in range(p)])
 
 # Construct observation model.
 ys = e + fs
 
 # Sample a true, underlying function and observations.
-fs_true = fs.sample(x)
-ys_obs = (ys | fs.obs(x, fs_true)).sample(x_obs)
+samples = prior.sample(*(p(x) for p in fs.ps), *(p(x_obs) for p in ys.ps))
+fs_true, ys_obs = samples[:p], samples[p:]
 
-# Condition the model on the observations to make predictions.
-preds = (fs | ys.obs(x_obs, ys_obs)).marginals(x)
+# Compute the posterior and make predictions.
+post = prior | (*((p(x_obs), y_obs) for p, y_obs in zip(ys.ps, ys_obs)),)
+preds = [post(p(x)).marginals() for p in fs.ps]
 
 
 # Plot results.
 def plot_prediction(x, f, pred, x_obs=None, y_obs=None):
-    plt.plot(x, f, label='True', c='tab:blue')
+    plt.plot(x, f, label="True", style="test")
     if x_obs is not None:
-        plt.scatter(x_obs, y_obs, label='Observations', c='tab:red')
+        plt.scatter(x_obs, y_obs, label="Observations", style="train", s=20)
     mean, lower, upper = pred
-    plt.plot(x, mean, label='Prediction', c='tab:green')
-    plt.plot(x, lower, ls='--', c='tab:green')
-    plt.plot(x, upper, ls='--', c='tab:green')
-    wbml.plot.tweak()
+    plt.plot(x, mean, label="Prediction", style="pred")
+    plt.fill_between(x, lower, upper, style="pred")
+    tweak()
 
 
 plt.figure(figsize=(10, 6))
-
-for i in range(p):
-    plt.subplot(int(p ** .5), int(p ** .5), i + 1)
-    plt.title('Output {}'.format(i + 1))
+for i in range(4):
+    plt.subplot(2, 2, i + 1)
+    plt.title(f"Output {i + 1}")
     plot_prediction(x, fs_true[i], preds[i], x_obs, ys_obs[i])
-
-plt.savefig('readme_example4_multi-output.png')
+plt.savefig("readme_example4_multi-output.png")
 plt.show()
 ```
 
@@ -1099,15 +1170,16 @@ import numpy as np
 import tensorflow as tf
 import wbml.plot
 
-from stheno.tensorflow import B, GP, EQ, Delta, Obs
+from stheno.tensorflow import B, Measure, GP, EQ, Delta
 
 # Define points to predict at.
 x = B.linspace(tf.float64, 0, 10, 200)
 x_obs = B.linspace(tf.float64, 0, 10, 10)
 
 # Construct the model.
-f = 0.7 * GP(EQ()).stretch(1.5)
-e = 0.2 * GP(Delta())
+prior = Measure()
+f = 0.7 * GP(EQ(), measure=prior).stretch(1.5)
+e = 0.2 * GP(Delta(), measure=prior)
 
 # Construct derivatives.
 df = f.diff()
@@ -1115,56 +1187,53 @@ ddf = df.diff()
 dddf = ddf.diff() + e
 
 # Fix the integration constants.
-zero = tf.constant(0, dtype=tf.float64)
-one = tf.constant(1, dtype=tf.float64)
-f, df, ddf, dddf = (f, df, ddf, dddf) | Obs((f(zero), one),
-                                            (df(zero), zero),
-                                            (ddf(zero), -one))
+zero = B.cast(tf.float64, 0)
+one = B.cast(tf.float64, 1)
+prior = prior | ((f(zero), one), (df(zero), zero), (ddf(zero), -one))
 
 # Sample observations.
 y_obs = B.sin(x_obs) + 0.2 * B.randn(*x_obs.shape)
 
 # Condition on the observations to make predictions.
-f, df, ddf, dddf = (f, df, ddf, dddf) | Obs(dddf(x_obs), y_obs)
+post = prior | (dddf(x_obs), y_obs)
 
 # And make predictions.
-pred_iiif = f(x).marginals()
-pred_iif = df(x).marginals()
-pred_if = ddf(x).marginals()
-pred_f = dddf(x).marginals()
+pred_iiif = post(f)(x).marginals()
+pred_iif = post(df)(x).marginals()
+pred_if = post(ddf)(x).marginals()
+pred_f = post(dddf)(x).marginals()
 
 
 # Plot result.
 def plot_prediction(x, f, pred, x_obs=None, y_obs=None):
-    plt.plot(x, f, label='True', c='tab:blue')
+    plt.plot(x, f, label="True", style="test")
     if x_obs is not None:
-        plt.scatter(x_obs, y_obs, label='Observations', c='tab:red')
+        plt.scatter(x_obs, y_obs, label="Observations", style="train", s=20)
     mean, lower, upper = pred
-    plt.plot(x, mean, label='Prediction', c='tab:green')
-    plt.plot(x, lower, ls='--', c='tab:green')
-    plt.plot(x, upper, ls='--', c='tab:green')
+    plt.plot(x, mean, label="Prediction", style="pred")
+    plt.fill_between(x, lower, upper, style="pred")
     wbml.plot.tweak()
 
 
 plt.figure(figsize=(10, 6))
 
 plt.subplot(2, 2, 1)
-plt.title('Function')
+plt.title("Function")
 plot_prediction(x, np.sin(x), pred_f, x_obs=x_obs, y_obs=y_obs)
 
 plt.subplot(2, 2, 2)
-plt.title('Integral of Function')
+plt.title("Integral of Function")
 plot_prediction(x, -np.cos(x), pred_if)
 
 plt.subplot(2, 2, 3)
-plt.title('Second Integral of Function')
+plt.title("Second Integral of Function")
 plot_prediction(x, -np.sin(x), pred_iif)
 
 plt.subplot(2, 2, 4)
-plt.title('Third Integral of Function')
+plt.title("Third Integral of Function")
 plot_prediction(x, np.cos(x), pred_iiif)
 
-plt.savefig('readme_example5_integration.png')
+plt.savefig("readme_example5_integration.png")
 plt.show()
 ```
 
@@ -1174,47 +1243,47 @@ plt.show()
 
 ```python
 import matplotlib.pyplot as plt
-import numpy as np
-import wbml.out
-import wbml.plot
+import wbml.out as out
+from wbml.plot import tweak
 
-from stheno import GP, Delta, model, Obs
+from stheno import B, Measure, GP, Delta
 
 # Define points to predict at.
-x = np.linspace(0, 10, 200)
-x_obs = np.linspace(0, 10, 10)
+x = B.linspace(0, 10, 200)
+x_obs = B.linspace(0, 10, 10)
 
 # Construct the model.
-slope = GP(1)
-intercept = GP(5)
+prior = Measure()
+slope = GP(1, measure=prior)
+intercept = GP(5, measure=prior)
 f = slope * (lambda x: x) + intercept
 
-e = 0.2 * GP(Delta())  # Noise model
+e = 0.2 * GP(Delta(), measure=prior)  # Noise model
 
 y = f + e  # Observation model
 
 # Sample a slope, intercept, underlying function, and observations.
-true_slope, true_intercept, f_true, y_obs = \
-    model.sample(slope(0), intercept(0), f(x), y(x_obs))
+true_slope, true_intercept, f_true, y_obs = prior.sample(
+    slope(0), intercept(0), f(x), y(x_obs)
+)
 
 # Condition on the observations to make predictions.
-slope, intercept, f = (slope, intercept, f) | Obs(y(x_obs), y_obs)
-mean, lower, upper = f(x).marginals()
+post = prior | (y(x_obs), y_obs)
+mean, lower, upper = post(f(x)).marginals()
 
-wbml.out.kv('True slope', true_slope[0, 0])
-wbml.out.kv('Predicted slope', slope(0).mean[0, 0])
-wbml.out.kv('True intercept', true_intercept[0, 0])
-wbml.out.kv('Predicted intercept', intercept(0).mean[0, 0])
+out.kv("True slope", true_slope[0, 0])
+out.kv("Predicted slope", post(slope(0)).mean[0, 0])
+out.kv("True intercept", true_intercept[0, 0])
+out.kv("Predicted intercept", post(intercept(0)).mean[0, 0])
 
 # Plot result.
-plt.plot(x, f_true, label='True', c='tab:blue')
-plt.scatter(x_obs, y_obs, label='Observations', c='tab:red')
-plt.plot(x, mean, label='Prediction', c='tab:green')
-plt.plot(x, lower, ls='--', c='tab:green')
-plt.plot(x, upper, ls='--', c='tab:green')
-wbml.plot.tweak()
+plt.plot(x, f_true, label="True", style="test")
+plt.scatter(x_obs, y_obs, label="Observations", style="train", s=20)
+plt.plot(x, mean, label="Prediction", style="pred")
+plt.fill_between(x, lower, upper, style="pred")
+tweak()
 
-plt.savefig('readme_example6_blr.png')
+plt.savefig("readme_example6_blr.png")
 plt.show()
 ```
 
@@ -1224,12 +1293,13 @@ plt.show()
 
 ```python
 import matplotlib.pyplot as plt
-import numpy as np
 import tensorflow as tf
-import wbml.plot
+import numpy as np
+from wbml.plot import tweak
 from varz.tensorflow import Vars, minimise_l_bfgs_b
+from varz.spec import parametrised, Positive
 
-from stheno.tensorflow import B, Graph, GP, Delta, EQ
+from stheno.tensorflow import B, Measure, GP, Delta, EQ
 
 # Define points to predict at.
 x = B.linspace(tf.float64, 0, 10, 200)
@@ -1245,19 +1315,26 @@ y1_obs = B.sin(x_obs1) + 0.1 * B.randn(*x_obs1.shape)
 y2_obs = B.sin(x_obs2) ** 2 + 0.1 * B.randn(*x_obs2.shape)
 
 
-def model(vs):
-    g = Graph()
-
+@parametrised
+def model(
+    vs,
+    var1: Positive = 1,
+    scale1: Positive = 1,
+    noise1: Positive = 0.1,
+    var2: Positive = 1,
+    scale2: Positive = 1,
+    noise2: Positive = 0.1,
+):
     # Construct model for first layer:
-    f1 = GP(vs.pos(1., name='f1/var') *
-            EQ().stretch(vs.pos(1., name='f1/scale')), graph=g)
-    e1 = GP(vs.pos(0.1, name='e1/var') * Delta(), graph=g)
+    prior1 = Measure()
+    f1 = GP(var1 * EQ() > scale1, measure=prior1)
+    e1 = GP(noise1 * Delta(), measure=prior1)
     y1 = f1 + e1
 
     # Construct model for second layer:
-    f2 = GP(vs.pos(1., name='f2/var') *
-            EQ().stretch(vs.pos(np.array([1., .5]), name='f2/scale')), graph=g)
-    e2 = GP(vs.pos(0.1, name='e2/var') * Delta(), graph=g)
+    prior2 = Measure()
+    f2 = GP(var2 * EQ() > scale2, measure=prior2)
+    e2 = GP(noise2 * Delta(), measure=prior2)
     y2 = f2 + e2
 
     return f1, y1, f2, y2
@@ -1276,20 +1353,24 @@ def objective(vs):
 # Learn hyperparameters.
 vs = Vars(tf.float64)
 minimise_l_bfgs_b(objective, vs)
-f1, y1, f2, y2 = model(vs)
 
-# Condition to make predictions.
+# Compute posteriors.
+f1, y1, f2, y2 = model(vs)
 x1 = x_obs1
 x2 = B.stack(x_obs2, B.take(y1_obs, inds2), axis=1)
-f1 = f1 | (y1(x1), y1_obs)
-f2 = f2 | (y2(x2), y2_obs)
+post1 = f1.measure | (y1(x1), y1_obs)
+post2 = f2.measure | (y2(x2), y2_obs)
+f1_post = post1(f1)
+f2_post = post2(f2)
 
 # Predict first output.
-mean1, lower1, upper1 = f1(x).marginals()
+mean1, lower1, upper1 = f1_post(x).marginals()
 
 # Predict second output with Monte Carlo.
-samples = [f2(B.stack(x, f1(x).sample()[:, 0], axis=1)).sample()[:, 0]
-           for _ in range(100)]
+samples = [
+    f2_post(B.stack(x, f1_post(x).sample()[:, 0], axis=1)).sample()[:, 0]
+    for _ in range(100)
+]
 mean2 = np.mean(samples, axis=0)
 lower2 = np.percentile(samples, 2.5, axis=0)
 upper2 = np.percentile(samples, 100 - 2.5, axis=0)
@@ -1298,24 +1379,22 @@ upper2 = np.percentile(samples, 100 - 2.5, axis=0)
 plt.figure()
 
 plt.subplot(2, 1, 1)
-plt.title('Output 1')
-plt.plot(x, f1_true, label='True', c='tab:blue')
-plt.scatter(x_obs1, y1_obs, label='Observations', c='tab:red')
-plt.plot(x, mean1, label='Prediction', c='tab:green')
-plt.plot(x, lower1, ls='--', c='tab:green')
-plt.plot(x, upper1, ls='--', c='tab:green')
-wbml.plot.tweak()
+plt.title("Output 1")
+plt.plot(x, f1_true, label="True", style="test")
+plt.scatter(x_obs1, y1_obs, label="Observations", style="train", s=20)
+plt.plot(x, mean1, label="Prediction", style="pred")
+plt.fill_between(x, lower1, upper1, style="pred")
+tweak()
 
 plt.subplot(2, 1, 2)
-plt.title('Output 2')
-plt.plot(x, f2_true, label='True', c='tab:blue')
-plt.scatter(x_obs2, y2_obs, label='Observations', c='tab:red')
-plt.plot(x, mean2, label='Prediction', c='tab:green')
-plt.plot(x, lower2, ls='--', c='tab:green')
-plt.plot(x, upper2, ls='--', c='tab:green')
-wbml.plot.tweak()
+plt.title("Output 2")
+plt.plot(x, f2_true, label="True", style="test")
+plt.scatter(x_obs2, y2_obs, label="Observations", style="train", s=20)
+plt.plot(x, mean2, label="Prediction", style="pred")
+plt.fill_between(x, lower2, upper2, style="pred")
+tweak()
 
-plt.savefig('readme_example7_gpar.png')
+plt.savefig("readme_example7_gpar.png")
 plt.show()
 ```
 
@@ -1327,18 +1406,19 @@ plt.show()
 import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
-import wbml.plot
+from varz.spec import parametrised, Positive
 from varz.tensorflow import Vars, minimise_adam
 from wbml.net import rnn as rnn_constructor
+from wbml.plot import tweak
 
-from stheno.tensorflow import B, Graph, GP, Delta, EQ, Obs
+from stheno.tensorflow import B, Measure, GP, Delta, EQ
 
-# Increase regularisation because we are dealing with float32.
+# Increase regularisation because we are dealing with `np.float32`s.
 B.epsilon = 1e-6
 
 # Construct points which to predict at.
 x = B.linspace(tf.float32, 0, 1, 100)[:, None]
-inds_obs = np.arange(0, int(0.75 * len(x)))  # Train on the first 75% only.
+inds_obs = B.range(0, int(0.75 * len(x)))  # Train on the first 75% only.
 x_obs = B.take(x, inds_obs)
 
 # Construct function and observations.
@@ -1356,24 +1436,26 @@ y_true = (y_true - B.mean(y_true)) / B.std(y_true)
 y_obs = B.take(y_true, inds_obs)
 
 
-def model(vs):
-    g = Graph()
+@parametrised
+def model(
+    vs, a_scale: Positive = 0.1, b_scale: Positive = 0.1, noise: Positive = 0.01
+):
+    prior = Measure()
 
     # Construct an RNN.
-    f_rnn = rnn_constructor(output_size=1,
-                            widths=(10,),
-                            nonlinearity=B.tanh,
-                            final_dense=True)
+    f_rnn = rnn_constructor(
+        output_size=1, widths=(10,), nonlinearity=B.tanh, final_dense=True
+    )
 
     # Set the weights for the RNN.
     num_weights = f_rnn.num_weights(input_size=1)
-    weights = Vars(tf.float32, source=vs.get(shape=(num_weights,), name='rnn'))
+    weights = Vars(tf.float32, source=vs.get(shape=(num_weights,), name="rnn"))
     f_rnn.initialise(input_size=1, vs=weights)
 
     # Construct GPs that modulate the RNN.
-    a = GP(1e-2 * EQ().stretch(vs.pos(0.1, name='a/scale')), graph=g)
-    b = GP(1e-2 * EQ().stretch(vs.pos(0.1, name='b/scale')), graph=g)
-    e = GP(vs.pos(1e-2, name='e/var') * Delta(), graph=g)
+    a = GP(1e-2 * EQ().stretch(a_scale), measure=prior)
+    b = GP(1e-2 * EQ().stretch(b_scale), measure=prior)
+    e = GP(noise * Delta(), measure=prior)
 
     # GP-RNN model:
     f_gp_rnn = (1 + a) * (lambda x: f_rnn(x)) + b
@@ -1395,48 +1477,51 @@ def objective_gp_rnn(vs):
 
 # Pretrain the RNN.
 vs = Vars(tf.float32)
-minimise_adam(tf.function(objective_rnn, autograph=False),
-              vs, rate=1e-2, iters=1000, trace=True)
+minimise_adam(
+    tf.function(objective_rnn, autograph=False), vs, rate=1e-2, iters=1000, trace=True
+)
 
 # Jointly train the RNN and GPs.
-minimise_adam(tf.function(objective_gp_rnn, autograph=False),
-              vs, rate=1e-3, iters=1000, trace=True)
+minimise_adam(
+    tf.function(objective_gp_rnn, autograph=False),
+    vs,
+    rate=1e-3,
+    iters=1000,
+    trace=True,
+)
 
 _, f_gp_rnn, y_gp_rnn, a, b = model(vs)
 
 # Condition.
-f_gp_rnn, a, b = (f_gp_rnn, a, b) | Obs(y_gp_rnn(x_obs), y_obs)
+post = f_gp_rnn.measure | (y_gp_rnn(x_obs), y_obs)
 
 # Predict and plot results.
 plt.figure(figsize=(10, 6))
 
 plt.subplot(2, 1, 1)
-plt.title('$(1 + a)\\cdot {}$RNN${} + b$')
-plt.plot(x, f_true, label='True', c='tab:blue')
-plt.scatter(x_obs, y_obs, label='Observations', c='tab:red')
-mean, lower, upper = f_gp_rnn(x).marginals()
-plt.plot(x, mean, label='Prediction', c='tab:green')
-plt.plot(x, lower, ls='--', c='tab:green')
-plt.plot(x, upper, ls='--', c='tab:green')
-wbml.plot.tweak()
+plt.title("$(1 + a)\\cdot {}$RNN${} + b$")
+plt.plot(x, f_true, label="True", style="test")
+plt.scatter(x_obs, y_obs, label="Observations", style="train", s=20)
+mean, lower, upper = post(f_gp_rnn(x)).marginals()
+plt.plot(x, mean, label="Prediction", style="pred")
+plt.fill_between(x, lower, upper, style="pred")
+tweak()
 
 plt.subplot(2, 2, 3)
-plt.title('$a$')
-mean, lower, upper = a(x).marginals()
-plt.plot(x, mean, label='Prediction', c='tab:green')
-plt.plot(x, lower, ls='--', c='tab:green')
-plt.plot(x, upper, ls='--', c='tab:green')
-wbml.plot.tweak()
+plt.title("$a$")
+mean, lower, upper = post(a(x)).marginals()
+plt.plot(x, mean, label="Prediction", style="pred")
+plt.fill_between(x, lower, upper, style="pred")
+tweak()
 
 plt.subplot(2, 2, 4)
-plt.title('$b$')
-mean, lower, upper = b(x).marginals()
-plt.plot(x, mean, label='Prediction', c='tab:green')
-plt.plot(x, lower, ls='--', c='tab:green')
-plt.plot(x, upper, ls='--', c='tab:green')
-wbml.plot.tweak()
+plt.title("$b$")
+mean, lower, upper = post(b(x)).marginals()
+plt.plot(x, mean, label="Prediction", style="pred")
+plt.fill_between(x, lower, upper, style="pred")
+tweak()
 
-plt.savefig(f'readme_example8_gp-rnn.png')
+plt.savefig(f"readme_example8_gp-rnn.png")
 plt.show()
 ```
 
@@ -1446,37 +1531,37 @@ plt.show()
 
 ```python
 import matplotlib.pyplot as plt
-import numpy as np
-import wbml.plot
+from wbml.plot import tweak
 
-from stheno import GP, EQ, model, Obs
+from stheno import B, Measure, GP, EQ
 
 # Define points to predict at.
-x = np.linspace(0, 10, 100)
+x = B.linspace(0, 10, 100)
 
 # Construct a prior.
-f1 = GP(EQ(), 3)
-f2 = GP(EQ(), 3)
+prior = Measure()
+f1 = GP(3, EQ(), measure=prior)
+f2 = GP(3, EQ(), measure=prior)
 
 # Compute the approximate product.
 f_prod = f1 * f2
 
 # Sample two functions.
-s1, s2 = model.sample(f1(x), f2(x))
+s1, s2 = prior.sample(f1(x), f2(x))
 
 # Predict.
-mean, lower, upper = (f_prod | ((f1(x), s1), (f2(x), s2)))(x).marginals()
+post = prior | ((f1(x), s1), (f2(x), s2))
+mean, lower, upper = post(f_prod(x)).marginals()
 
 # Plot result.
-plt.plot(x, s1, label='Sample 1', c='tab:red')
-plt.plot(x, s2, label='Sample 2', c='tab:blue')
-plt.plot(x, s1 * s2, label='True product', c='tab:orange')
-plt.plot(x, mean, label='Approximate posterior', c='tab:green')
-plt.plot(x, lower, ls='--', c='tab:green')
-plt.plot(x, upper, ls='--', c='tab:green')
-wbml.plot.tweak()
+plt.plot(x, s1, label="Sample 1", style="train")
+plt.plot(x, s2, label="Sample 2", style="train", ls="--")
+plt.plot(x, s1 * s2, label="True product", style="test")
+plt.plot(x, mean, label="Approximate posterior", style="pred")
+plt.fill_between(x, lower, upper, style="pred")
+tweak()
 
-plt.savefig('readme_example9_product.png')
+plt.savefig("readme_example9_product.png")
 plt.show()
 ```
 
@@ -1486,44 +1571,55 @@ plt.show()
 
 ```python
 import matplotlib.pyplot as plt
-import numpy as np
-import wbml.out
-import wbml.plot
+import wbml.out as out
+from wbml.plot import tweak
 
-from stheno import GP, EQ, Delta, SparseObs
+from stheno import B, Measure, GP, EQ, Delta, SparseObs
 
 # Define points to predict at.
-x = np.linspace(0, 10, 100)
-x_obs = np.linspace(0, 7, 50_000)
-x_ind = np.linspace(0, 10, 20)
+x = B.linspace(0, 10, 100)
+x_obs = B.linspace(0, 7, 50_000)
+x_ind = B.linspace(0, 10, 20)
 
 # Construct a prior.
-f = GP(EQ().periodic(2 * np.pi))  # Latent function.
-e = GP(Delta())  # Noise.
-y = f + .5 * e
+prior = Measure()
+f = GP(EQ().periodic(2 * B.pi), measure=prior)  # Latent function.
+e = GP(Delta(), measure=prior)  # Noise.
+y = f + 0.5 * e
 
 # Sample a true, underlying function and observations.
-f_true = np.sin(x)
-y_obs = np.sin(x_obs) + .5 * np.random.randn(*x_obs.shape)
+f_true = B.sin(x)
+y_obs = B.sin(x_obs) + 0.5 * B.randn(*x_obs.shape)
 
 # Now condition on the observations to make predictions.
-obs = SparseObs(f(x_ind),  # Inducing points.
-                .5 * e,  # Noise process.
-                # Observations _without_ the noise process added on.
-                f(x_obs), y_obs)
-wbml.out.kv('elbo', obs.elbo)
-mean, lower, upper = (f | obs)(x).marginals()
+obs = SparseObs(
+    f(x_ind),  # Inducing points.
+    0.5 * e,  # Noise process.
+    # Observations _without_ the noise process added on.
+    f(x_obs),
+    y_obs,
+)
+out.kv("ELBO", obs.elbo(prior))
+post = prior | obs
+mean, lower, upper = post(f(x)).marginals()
 
 # Plot result.
-plt.plot(x, f_true, label='True', c='tab:blue')
-plt.scatter(x_obs, y_obs, label='Observations', c='tab:red')
-plt.scatter(x_ind, 0 * x_ind, label='Inducing Points', c='black')
-plt.plot(x, mean, label='Prediction', c='tab:green')
-plt.plot(x, lower, ls='--', c='tab:green')
-plt.plot(x, upper, ls='--', c='tab:green')
-wbml.plot.tweak()
+plt.plot(x, f_true, label="True", style="test")
+plt.scatter(
+    x_obs, y_obs, label="Observations", style="train", c="tab:green", alpha=0.35
+)
+plt.scatter(
+    x_ind,
+    obs.mu(prior)[:, 0],
+    label="Inducing Points",
+    style="train",
+    s=20,
+)
+plt.plot(x, mean, label="Prediction", style="pred")
+plt.fill_between(x, lower, upper, style="pred")
+tweak()
 
-plt.savefig('readme_example10_sparse.png')
+plt.savefig("readme_example10_sparse.png")
 plt.show()
 ```
 
@@ -1533,43 +1629,41 @@ plt.show()
 
 ```python
 import matplotlib.pyplot as plt
-import numpy as np
-import wbml.plot
+from wbml.plot import tweak
 
-from stheno import GP, EQ, Delta, model, Obs
+from stheno import B, Measure, GP, EQ, Delta
 
 # Define points to predict at.
-x = np.linspace(0, 10, 100)
-x_obs = np.linspace(0, 10, 20)
+x = B.linspace(0, 10, 100)
+x_obs = B.linspace(0, 10, 20)
 
 # Constuct a prior:
-w = lambda x: np.exp(-x ** 2 / 0.5)  # Window
-b = [(GP(EQ()) * w).shift(xi) for xi in x_obs]  # Weighted basis functions
+prior = Measure()
+w = lambda x: B.exp(-(x ** 2) / 0.5)  # Window
+b = [(w * GP(EQ(), measure=prior)).shift(xi) for xi in x_obs]  # Weighted basis funs
 f = sum(b)  # Latent function
-e = GP(Delta())  # Noise
+e = GP(Delta(), measure=prior)  # Noise
 y = f + 0.2 * e  # Observation model
 
 # Sample a true, underlying function and observations.
-f_true, y_obs = model.sample(f(x), y(x_obs))
+f_true, y_obs = prior.sample(f(x), y(x_obs))
 
 # Condition on the observations to make predictions.
-obs = Obs(y(x_obs), y_obs)
-f, b = (f | obs, b | obs)
+post = prior | (y(x_obs), y_obs)
 
 # Plot result.
 for i, bi in enumerate(b):
-    mean, lower, upper = bi(x).marginals()
-    kw_args = {'label': 'Basis functions'} if i == 0 else {}
-    plt.plot(x, mean, c='tab:orange', **kw_args)
-plt.plot(x, f_true, label='True', c='tab:blue')
-plt.scatter(x_obs, y_obs, label='Observations', c='tab:red')
-mean, lower, upper = f(x).marginals()
-plt.plot(x, mean, label='Prediction', c='tab:green')
-plt.plot(x, lower, ls='--', c='tab:green')
-plt.plot(x, upper, ls='--', c='tab:green')
-wbml.plot.tweak()
+    mean, lower, upper = post(bi(x)).marginals()
+    kw_args = {"label": "Basis functions"} if i == 0 else {}
+    plt.plot(x, mean, style="pred2", **kw_args)
+plt.plot(x, f_true, label="True", style="test")
+plt.scatter(x_obs, y_obs, label="Observations", style="train", s=20)
+mean, lower, upper = post(f(x)).marginals()
+plt.plot(x, mean, label="Prediction", style="pred")
+plt.fill_between(x, lower, upper, style="pred")
+tweak()
 
-plt.savefig('readme_example11_nonparametric_basis.png')
+plt.savefig("readme_example11_nonparametric_basis.png")
 plt.show()
 ```
 

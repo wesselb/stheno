@@ -1,43 +1,43 @@
 import matplotlib.pyplot as plt
-import numpy as np
-import wbml.out
-import wbml.plot
+import wbml.out as out
+from wbml.plot import tweak
 
-from stheno import GP, Delta, model, Obs
+from stheno import B, Measure, GP, Delta
 
 # Define points to predict at.
-x = np.linspace(0, 10, 200)
-x_obs = np.linspace(0, 10, 10)
+x = B.linspace(0, 10, 200)
+x_obs = B.linspace(0, 10, 10)
 
 # Construct the model.
-slope = GP(1)
-intercept = GP(5)
+prior = Measure()
+slope = GP(1, measure=prior)
+intercept = GP(5, measure=prior)
 f = slope * (lambda x: x) + intercept
 
-e = 0.2 * GP(Delta())  # Noise model
+e = 0.2 * GP(Delta(), measure=prior)  # Noise model
 
 y = f + e  # Observation model
 
 # Sample a slope, intercept, underlying function, and observations.
-true_slope, true_intercept, f_true, y_obs = \
-    model.sample(slope(0), intercept(0), f(x), y(x_obs))
+true_slope, true_intercept, f_true, y_obs = prior.sample(
+    slope(0), intercept(0), f(x), y(x_obs)
+)
 
 # Condition on the observations to make predictions.
-slope, intercept, f = (slope, intercept, f) | Obs(y(x_obs), y_obs)
-mean, lower, upper = f(x).marginals()
+post = prior | (y(x_obs), y_obs)
+mean, lower, upper = post(f(x)).marginals()
 
-wbml.out.kv('True slope', true_slope[0, 0])
-wbml.out.kv('Predicted slope', slope(0).mean[0, 0])
-wbml.out.kv('True intercept', true_intercept[0, 0])
-wbml.out.kv('Predicted intercept', intercept(0).mean[0, 0])
+out.kv("True slope", true_slope[0, 0])
+out.kv("Predicted slope", post(slope(0)).mean[0, 0])
+out.kv("True intercept", true_intercept[0, 0])
+out.kv("Predicted intercept", post(intercept(0)).mean[0, 0])
 
 # Plot result.
-plt.plot(x, f_true, label='True', c='tab:blue')
-plt.scatter(x_obs, y_obs, label='Observations', c='tab:red')
-plt.plot(x, mean, label='Prediction', c='tab:green')
-plt.plot(x, lower, ls='--', c='tab:green')
-plt.plot(x, upper, ls='--', c='tab:green')
-wbml.plot.tweak()
+plt.plot(x, f_true, label="True", style="test")
+plt.scatter(x_obs, y_obs, label="Observations", style="train", s=20)
+plt.plot(x, mean, label="Prediction", style="pred")
+plt.fill_between(x, lower, upper, style="pred")
+tweak()
 
-plt.savefig('readme_example6_blr.png')
+plt.savefig("readme_example6_blr.png")
 plt.show()

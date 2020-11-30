@@ -1,28 +1,34 @@
 import matplotlib.pyplot as plt
 import tensorflow as tf
-import wbml.out
-import wbml.plot
+import wbml.out as out
+from varz.spec import parametrised, Positive
 from varz.tensorflow import Vars, minimise_l_bfgs_b
+from wbml.plot import tweak
 
-from stheno.tensorflow import B, Graph, GP, EQ, Delta
+from stheno.tensorflow import B, Measure, GP, EQ, Delta
 
 # Define points to predict at.
 x = B.linspace(tf.float64, 0, 5, 100)
 x_obs = B.linspace(tf.float64, 0, 3, 20)
 
 
-def model(vs):
-    g = Graph()
+@parametrised
+def model(
+    vs,
+    u_var: Positive = 0.5,
+    u_scale: Positive = 0.5,
+    e_var: Positive = 0.5,
+    alpha: Positive = 1.2,
+):
+    prior = Measure()
 
     # Random fluctuation:
-    u = GP(vs.pos(.5, name='u/var') *
-           EQ().stretch(vs.pos(0.5, name='u/scale')), graph=g)
+    u = GP(u_var * EQ() > u_scale, measure=prior)
 
     # Noise:
-    e = GP(vs.pos(0.5, name='e/var') * Delta(), graph=g)
+    e = GP(e_var * Delta(), measure=prior)
 
     # Construct model:
-    alpha = vs.pos(1.2, name='alpha')
     f = u + (lambda x: x ** alpha)
     y = f + e
 
@@ -33,7 +39,8 @@ def model(vs):
 vs = Vars(tf.float64)
 f_true = x ** 1.8 + B.sin(2 * B.pi * x)
 f, y = model(vs)
-y_obs = (y | (f(x), f_true))(x_obs).sample()
+post = f.measure | (f(x), f_true)
+y_obs = post(f(x_obs)).sample()
 
 
 def objective(vs):
@@ -47,19 +54,19 @@ minimise_l_bfgs_b(tf.function(objective, autograph=False), vs)
 f, y = model(vs)
 
 # Print the learned parameters.
-wbml.out.kv('Alpha', vs['alpha'])
-wbml.out.kv('Prior', y.display(wbml.out.format))
+out.kv("Prior", y.display(out.format))
+vs.print()
 
 # Condition on the observations to make predictions.
-mean, lower, upper = (f | (y(x_obs), y_obs))(x).marginals()
+post = f.measure | (y(x_obs), y_obs)
+mean, lower, upper = post(f(x)).marginals()
 
 # Plot result.
-plt.plot(x, B.squeeze(f_true), label='True', c='tab:blue')
-plt.scatter(x_obs, B.squeeze(y_obs), label='Observations', c='tab:red')
-plt.plot(x, mean, label='Prediction', c='tab:green')
-plt.plot(x, lower, ls='--', c='tab:green')
-plt.plot(x, upper, ls='--', c='tab:green')
-wbml.plot.tweak()
+plt.plot(x, B.squeeze(f_true), label="True", style="test")
+plt.scatter(x_obs, B.squeeze(y_obs), label="Observations", style="train", s=20)
+plt.plot(x, mean, label="Prediction", style="pred")
+plt.fill_between(x, lower, upper, style="pred")
+tweak()
 
-plt.savefig('readme_example3_parametric.png')
+plt.savefig("readme_example3_parametric.png")
 plt.show()

@@ -1,33 +1,33 @@
 import matplotlib.pyplot as plt
-import numpy as np
-import wbml.plot
+from wbml.plot import tweak
 
-from stheno import GP, EQ, model, Obs
+from stheno import B, Measure, GP, EQ
 
 # Define points to predict at.
-x = np.linspace(0, 10, 100)
+x = B.linspace(0, 10, 100)
 
 # Construct a prior.
-f1 = GP(EQ(), 3)
-f2 = GP(EQ(), 3)
+prior = Measure()
+f1 = GP(3, EQ(), measure=prior)
+f2 = GP(3, EQ(), measure=prior)
 
 # Compute the approximate product.
 f_prod = f1 * f2
 
 # Sample two functions.
-s1, s2 = model.sample(f1(x), f2(x))
+s1, s2 = prior.sample(f1(x), f2(x))
 
 # Predict.
-mean, lower, upper = (f_prod | ((f1(x), s1), (f2(x), s2)))(x).marginals()
+post = prior | ((f1(x), s1), (f2(x), s2))
+mean, lower, upper = post(f_prod(x)).marginals()
 
 # Plot result.
-plt.plot(x, s1, label='Sample 1', c='tab:red')
-plt.plot(x, s2, label='Sample 2', c='tab:blue')
-plt.plot(x, s1 * s2, label='True product', c='tab:orange')
-plt.plot(x, mean, label='Approximate posterior', c='tab:green')
-plt.plot(x, lower, ls='--', c='tab:green')
-plt.plot(x, upper, ls='--', c='tab:green')
-wbml.plot.tweak()
+plt.plot(x, s1, label="Sample 1", style="train")
+plt.plot(x, s2, label="Sample 2", style="train", ls="--")
+plt.plot(x, s1 * s2, label="True product", style="test")
+plt.plot(x, mean, label="Approximate posterior", style="pred")
+plt.fill_between(x, lower, upper, style="pred")
+tweak()
 
-plt.savefig('readme_example9_product.png')
+plt.savefig("readme_example9_product.png")
 plt.show()

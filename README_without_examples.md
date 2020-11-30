@@ -36,14 +36,23 @@ used.
 ```python
 >>> import numpy as np
 
->>> from stheno import GP, EQ
+>>> from stheno import Measure, GP, EQ
 
->>> x = np.linspace(0, 2, 10)    # Points to predict at
+>>> x = np.linspace(0, 2, 10)          # Some points to predict at
 
->>> y = x ** 2                   # Observations
+>>> y = x ** 2                         # Some observations
 
->>> (GP(EQ()) | (x, y))(3).mean  # Go GP!
-array([[8.48258669]])
+>>> prior = Measure()                  # Construct a prior.
+
+>>> f = GP(EQ())                       # Define our probabilistic model.
+
+>>> post = prior | (f(x), y)           # Compute the posterior distribution.
+
+>>> post(f).mean(np.array([1, 2, 3]))  # Predict!
+<dense matrix: shape=3x1, dtype=float64
+ mat=[[1.   ]
+      [4.   ]
+      [8.483]]>
 ```
 
 Moar?! Then read on!
@@ -475,7 +484,7 @@ If the graph is left unspecified, new GPs are appended to a provided default
 graph `model`, which is exported by Stheno:
 
 ```python
-from stheno import model
+from stheno import prior
 ```
 
 Here's an example model:
