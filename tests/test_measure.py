@@ -2,6 +2,7 @@ import numpy as np
 import pytest
 import tensorflow as tf
 from lab import B
+from plum import NotFoundLookupError
 
 from stheno.input import Input
 from stheno.kernel import (
@@ -47,9 +48,9 @@ def test_corner_cases():
         p1 * p2
 
     # Test incompatible operations.
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(NotFoundLookupError):
         p1 + p1(x)
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(NotFoundLookupError):
         p1 * p1(x)
 
     # Check display of GPs.
@@ -58,7 +59,7 @@ def test_corner_cases():
 
     # Check test for prior.
     with pytest.raises(RuntimeError):
-        GP().prior
+        GP().measure
 
 
 def test_construction():
@@ -110,8 +111,8 @@ def test_sum_other():
     for p_sum in [
         p + 5.0,
         5.0 + p,
-        p.prior.sum(GP(), p, 5.0),
-        p.prior.sum(GP(), 5.0, p),
+        p.measure.sum(GP(), p, 5.0),
+        p.measure.sum(GP(), 5.0, p),
     ]:
         approx(p.mean(x) + 5.0, p_sum.mean(x))
         approx(p.mean(x) + 5.0, p_sum.mean(x))
@@ -119,9 +120,9 @@ def test_sum_other():
         approx(p.kernel(x), p_sum.kernel(x))
 
     # Check that a `GP` cannot be summed with a `Normal`.
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(NotFoundLookupError):
         p + Normal(np.eye(3))
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(NotFoundLookupError):
         Normal(np.eye(3)) + p
 
 
@@ -132,8 +133,8 @@ def test_mul_other():
     for p_mul in [
         p * 5.0,
         5.0 * p,
-        p.prior.mul(GP(), p, 5.0),
-        p.prior.mul(GP(), 5.0, p),
+        p.measure.mul(GP(), p, 5.0),
+        p.measure.mul(GP(), 5.0, p),
     ]:
         approx(5.0 * p.mean(x), p_mul.mean(x))
         approx(5.0 * p.mean(x), p_mul.mean(x))
@@ -141,9 +142,9 @@ def test_mul_other():
         approx(25.0 * p.kernel(x), p_mul.kernel(x))
 
     # Check that a `GP` cannot be multiplied with a `Normal`.
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(NotFoundLookupError):
         p * Normal(np.eye(3))
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(NotFoundLookupError):
         Normal(np.eye(3)) * p
 
 
@@ -166,6 +167,45 @@ def test_fdd():
     # Check representation.
     assert str(p(A())) == "FDD(GP(0, EQ()), str)"
     assert repr(p(A())) == "FDD(GP(0, EQ()), repr)"
+
+
+def test_measure_groups():
+    prior = Measure()
+    f1 = GP(EQ(), measure=prior)
+    f2 = GP(EQ(), measure=prior)
+
+    assert f1._measures == f2._measures
+
+    x = B.linspace(0, 5, 10)
+    y = f1(x).sample()
+
+    post = prior | (f1(x), y)
+
+    assert f1._measures == f2._measures == [prior, post]
+
+    # Further extend the prior.
+
+    f_sum = f1 + f2
+    assert f_sum._measures == [prior, post]
+
+    f3 = GP(EQ(), measure=prior)
+    f_sum = f1 + f3
+    assert f3._measures == f_sum._measures == [prior]
+
+    with pytest.raises(AssertionError):
+        post(f1) + f3
+
+    # Extend the posterior.
+
+    f_sum = post(f1) + post(f2)
+    assert f_sum._measures == [post]
+
+    f3 = GP(EQ(), measure=post)
+    f_sum = post(f1) + f3
+    assert f3._measures == f_sum._measures == [post]
+
+    with pytest.raises(AssertionError):
+        f1 + f3
 
 
 def test_shorthands():
@@ -208,7 +248,7 @@ def test_marginals():
 
     # Test correctness.
     y = p(x).sample()
-    post = p.prior | (p(x), y)
+    post = p.measure | (p(x), y)
 
     mean, lower, upper = post(p)(x).marginals()
     approx(mean, y[:, 0])
@@ -262,7 +302,7 @@ def test_conditioning_prior():
     p = GP(EQ())
     x = B.zeros(0, 1)
     y = B.zeros(0, 1)
-    post = p.prior | (p(x), y)
+    post = p.measure | (p(x), y)
     assert post(p).mean is p.mean
     assert post(p).kernel is p.kernel
 
@@ -389,7 +429,7 @@ def test_stretching():
     x = B.linspace(0, 5, 10)
     y = p_stretched(x).sample()
 
-    post = p.prior | (p_stretched(x), y)
+    post = p.measure | (p_stretched(x), y)
     assert_equal_normals(post(p(x / 5)), post(p_stretched(x)))
     assert_equal_normals(post(p(x)), post(p_stretched(x * 5)))
 
@@ -406,7 +446,7 @@ def test_shifting():
     x = B.linspace(0, 5, 10)
     y = p_shifted(x).sample()
 
-    post = p.prior | (p_shifted(x), y)
+    post = p.measure | (p_shifted(x), y)
     assert_equal_normals(post(p(x - 5)), post(p_shifted(x)))
     assert_equal_normals(post(p(x)), post(p_shifted(x + 5)))
 
@@ -426,7 +466,7 @@ def test_input_transform():
     x = B.linspace(0, 5, 10)
     y = p_transformed(x).sample()
 
-    post = p.prior | (p_transformed(x), y)
+    post = p.measure | (p_transformed(x), y)
     assert_equal_normals(post(p(B.sqrt(x))), post(p_transformed(x)))
     assert_equal_normals(post(p(x)), post(p_transformed(x * x)))
 
@@ -446,15 +486,15 @@ def test_selection():
     x22 = B.stack(x, B.randn(10), axis=1)
     y = p2(x).sample()
 
-    post = p.prior | (p2(x21), y)
+    post = p.measure | (p2(x21), y)
     approx(post(p(x)).mean, y)
     assert_equal_normals(post(p(x)), post(p2(x21)))
 
-    post = p.prior | (p2(x22), y)
+    post = p.measure | (p2(x22), y)
     approx(post(p(x)).mean, y)
     assert_equal_normals(post(p(x)), post(p2(x22)))
 
-    post = p.prior | (p(x), y)
+    post = p.measure | (p(x), y)
     approx(post(p2(x21)).mean, y)
     approx(post(p2(x22)).mean, y)
     assert_equal_normals(post(p2(x21)), post(p(x)))
@@ -476,12 +516,12 @@ def test_derivative():
     x_check = B.linspace(tf.float64, 0.2, 0.8, 100)
 
     # Test conditioning on function.
-    post = p.prior | (p(x), y)
+    post = p.measure | (p(x), y)
     approx(post(dp)(x_check).mean, 2 * B.ones(100, 1), atol=1e-4)
 
     # Test conditioning on derivative.
     zero = B.cast(tf.float64, 0)
-    post = p.prior | ((p(zero), zero), (dp(x), y))
+    post = p.measure | ((p(zero), zero), (dp(x), y))
     approx(post(p)(x_check).mean, x_check[:, None] ** 2, atol=1e-4)
 
 
@@ -585,7 +625,7 @@ def test_case_summation_with_itself():
     approx(p_many(x).mean, B.zeros(5, 1))
 
     y = B.randn(5, 1)
-    post = p.prior | (p(x), y)
+    post = p.measure | (p(x), y)
     approx(post(p_many)(x).mean, 5 * y)
 
 
@@ -630,7 +670,7 @@ def test_case_fd_derivative():
     p = GP(0.7 * EQ().stretch(1.0))
     dp = (p.shift(-1e-3) - p.shift(1e-3)) / 2e-3
 
-    post = p.prior | (p(x), y)
+    post = p.measure | (p(x), y)
     approx(post(dp)(x).mean, np.cos(x)[:, None], atol=1e-4)
 
 
@@ -641,10 +681,10 @@ def test_case_reflection():
     x = B.linspace(0, 5, 10)
     y = p(x).sample()
 
-    post = p.prior | (p(x), y)
+    post = p.measure | (p(x), y)
     approx(post(p2)(x).mean, 5 - y)
 
-    post = p.prior | (p2(x), 5 - y)
+    post = p.measure | (p2(x), 5 - y)
     approx(post(p)(x).mean, y)
 
 
@@ -655,10 +695,10 @@ def test_case_negation():
     x = B.linspace(0, 5, 10)
     y = p(x).sample()
 
-    post = p.prior | (p(x), y)
+    post = p.measure | (p(x), y)
     approx(post(p2)(x).mean, -y)
 
-    post = p.prior | (p2(x), -y)
+    post = p.measure | (p2(x), -y)
     approx(post(p)(x).mean, y)
 
 
@@ -672,13 +712,13 @@ def test_case_approximate_derivative():
     x_check = B.linspace(0.2, 0.8, 100)
 
     # Test conditioning on function.
-    post = p.prior | (p(x), y)
+    post = p.measure | (p(x), y)
     approx(post(dp)(x_check).mean, 2 * B.ones(100, 1), atol=1e-3)
 
     # Test conditioning on derivative.
     orig_epsilon = B.epsilon
     B.epsilon = 1e-10
-    post = p.prior | ((p(0), 0), (dp(x), y))
+    post = p.measure | ((p(0), 0), (dp(x), y))
     approx(post(p)(x_check).mean, x_check[:, None] ** 2, atol=1e-3)
     B.epsilon = orig_epsilon
 

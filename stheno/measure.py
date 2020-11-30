@@ -42,18 +42,31 @@ __all__ = [
 log = logging.getLogger(__name__)
 
 
-def _assert_same_measure_group(*ps):
+def assert_same_measure(*ps):
+    """Assert that processes are associated to the same measure.
+
+    Args:
+        *ps (:class:`.measure.GP`): Processes.
+    """
+    # First check that all processes are constructed from the same measure.
+    for p in ps[1:]:
+        if ps[0].measure != p.measure:
+            raise AssertionError(
+                f"Processes {ps[0]} and {p} are associated to different measures."
+            )
+
+
+def intersection_measure_group(*ps):
     """Assert that processes have equal measure groups.
 
     Args:
         *ps (:class:`.measure.GP`): Processes.
     """
-    p1 = ps[0]
-    for p2 in ps[1:]:
-        if p1._measures != p2._measures:
-            raise AssertionError(
-                f"Processes {p1} and {p2} are associated to different measures."
-            )
+    assert_same_measure(*ps)
+    intersection = set(ps[0]._measures)
+    for p in ps[1:]:
+        intersection &= set(p._measures)
+    return intersection
 
 
 class AbstractObservations(metaclass=Referentiable):
@@ -307,7 +320,7 @@ class SparseObservations(AbstractObservations):
 
         # Compute the ELBO.
         # NOTE: The calculation of `trace_part` asserts that `K_n` is diagonal.
-        #       The rest, however, is completely generic.
+        # The rest, however, is completely generic.
         trace_part = B.ratio(
             Diagonal(measure.kernels[p_x].elwise(x)[:, 0])
             - Diagonal(B.iqf_diag(K_z, K_zx)),
@@ -367,6 +380,11 @@ class Measure(metaclass=Referentiable):
         # Store named GPs in both ways.
         self._gps_by_name = {}
         self._names_by_gp = {}
+
+    def __hash__(self):
+        # This is needed for :func:`.measure.intersection_measure_group`, which puts
+        # many :class:`.measure.Measure`s in a `set`. Every measure is unique.
+        return id(self)
 
     @_dispatch(str)
     def __getitem__(self, name):
@@ -491,7 +509,7 @@ class Measure(metaclass=Referentiable):
 
     @_dispatch(PromisedGP, PromisedGP, PromisedGP)
     def sum(self, p_sum, p1, p2):
-        _assert_same_measure_group(p1, p2)
+        assert_same_measure(p1, p2)
         return self._update(
             p_sum,
             self.means[p1] + self.means[p2],
@@ -542,7 +560,7 @@ class Measure(metaclass=Referentiable):
 
     @_dispatch(PromisedGP, PromisedGP, PromisedGP)
     def mul(self, p_mul, p1, p2):
-        _assert_same_measure_group(p1, p2)
+        assert_same_measure(p1, p2)
         term1 = self.sum(
             GP(),
             self.mul(GP(), lambda x: self.means[p1](x), p2),
@@ -779,7 +797,7 @@ class GP(RandomProcess):
         name (:obj:`str`, optional): Name. Must be given as a keyword argment.
 
     Attributes:
-        prior (:class:`.measure.Measure`): Measure that was given to the GP at
+        measure (:class:`.measure.Measure`): Measure that was given to the GP at
             construction.
     """
 
@@ -818,27 +836,27 @@ class GP(RandomProcess):
         self._measures = []
 
     @property
-    def prior(self):
+    def measure(self):
         """Measure that the GP was constructed with."""
         if len(self._measures) == 0:
-            raise RuntimeError("GP does not have a prior.")
+            raise RuntimeError("GP is not associated to a measure.")
         else:
             return self._measures[0]
 
     @property
     def kernel(self):
         """Kernel of the GP."""
-        return self.prior.kernels[self]
+        return self.measure.kernels[self]
 
     @property
     def mean(self):
         """Mean function of the GP."""
-        return self.prior.means[self]
+        return self.measure.means[self]
 
     @property
     def name(self):
         """Name of the GP."""
-        return self.prior[self]
+        return self.measure[self]
 
     @name.setter
     @_dispatch(str)
@@ -857,29 +875,33 @@ class GP(RandomProcess):
         """
         return FDD(self, x)
 
-    @_dispatch.multi((object,), (Self,))
+    @_dispatch({B.Numeric, FunctionType})
     def __add__(self, other):
         res = GP()
         for measure in self._measures:
             measure.sum(res, self, other)
         return res
 
-    @_dispatch(Random)
+    @_dispatch(Self)
     def __add__(self, other):
-        raise NotImplementedError(f'Cannot add a GP and a "{type(other).__name__}".')
+        res = GP()
+        for measure in intersection_measure_group(self, other):
+            measure.sum(res, self, other)
+        return res
 
-    @_dispatch.multi((object,), (Self,))
+    @_dispatch({B.Numeric, FunctionType})
     def __mul__(self, other):
         res = GP()
         for measure in self._measures:
             measure.mul(res, self, other)
         return res
 
-    @_dispatch(Random)
+    @_dispatch(Self)
     def __mul__(self, other):
-        raise NotImplementedError(
-            f'Cannot multiply a GP and a "{type(other).__name__}".'
-        )
+        res = GP()
+        for measure in intersection_measure_group(self, other):
+            measure.mul(res, self, other)
+        return res
 
     def shift(self, shift):
         """Shift the GP. See :meth:`.measure.Graph.shift`."""
@@ -985,9 +1007,8 @@ def cross(*ps):
     Returns:
         :class:`.measure.GP`: The Cartesian product of `ps`.
     """
-    _assert_same_measure_group(*ps)
     p_cross = GP()
-    for measure in ps[0]._measures:
+    for measure in intersection_measure_group(*ps):
         measure.cross(p_cross, *ps)
     return p_cross
 
