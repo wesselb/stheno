@@ -7,7 +7,7 @@ from plum import Dispatcher, Self, convert, Union
 
 from . import PromisedFDD as FDD
 from .input import Input, MultiInput
-from .kernel import simplify
+from .kernel import unwrap
 from .util import num_elements, uprank
 
 __all__ = ["TensorProductMean", "DerivativeMean"]
@@ -37,7 +37,7 @@ class Mean(algebra.Function):
 
     @_dispatch(Union(Input, FDD))
     def __call__(self, x):
-        return self(simplify(x))
+        return self(unwrap(x))
 
     @_dispatch(MultiInput)
     def __call__(self, x):

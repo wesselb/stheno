@@ -35,26 +35,35 @@ log = logging.getLogger(__name__)
 _dispatch = Dispatcher()
 
 
+@_dispatch({tuple, list})
 def expand(xs):
-    """Expand a sequence to the same element repeated twice if there is only
-    one element.
+    """Expand a sequence to the same element repeated twice if there is only one
+    element.
 
     Args:
-        xs (sequence): Sequence to expand.
+        xs (:obj:`tuple` or :obj:`list`): Sequence to expand.
 
     Returns:
-        object: `xs * 2` or `xs`.
+        :obj:`tuple` or :obj:`list`: `xs * 2` or `xs`.
     """
     return xs * 2 if len(xs) == 1 else xs
 
 
 @_dispatch(Input)
-def simplify(x):
+def unwrap(x):
+    """Unwrap a wrapped input.
+
+    Args:
+        x (input): Wrapped input.
+
+    Returns:
+        tensor: Unwrapped input.
+    """
     return x.get()
 
 
 @_dispatch(FDD)
-def simplify(fdd):
+def unwrap(fdd):
     return fdd.x
 
 
@@ -88,15 +97,15 @@ class Kernel(algebra.Function):
 
     @_dispatch(Union(Input, FDD), Union(Input, FDD))
     def __call__(self, x, y):
-        return self(simplify(x), simplify(y))
+        return self(unwrap(x), unwrap(y))
 
     @_dispatch(Union(Input, FDD), object)
     def __call__(self, x, y):
-        return self(simplify(x), y)
+        return self(unwrap(x), y)
 
     @_dispatch(object, Union(Input, FDD))
     def __call__(self, x, y):
-        return self(x, simplify(y))
+        return self(x, unwrap(y))
 
     @_dispatch(MultiInput, object, precedence=1)
     def __call__(self, x, y):
@@ -131,15 +140,15 @@ class Kernel(algebra.Function):
 
     @_dispatch(Union(Input, FDD), Union(Input, FDD))
     def elwise(self, x, y):
-        return self.elwise(simplify(x), simplify(y))
+        return self.elwise(unwrap(x), unwrap(y))
 
     @_dispatch(Union(Input, FDD), object)
     def elwise(self, x, y):
-        return self.elwise(simplify(x), y)
+        return self.elwise(unwrap(x), y)
 
     @_dispatch(object, Union(Input, FDD))
     def elwise(self, x, y):
-        return self.elwise(x, simplify(y))
+        return self.elwise(x, unwrap(y))
 
     @_dispatch(MultiInput, object, precedence=1)
     def elwise(self, x, y):
