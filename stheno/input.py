@@ -1,6 +1,7 @@
 import lab as B
+from .util import num_elements
 
-__all__ = ["Input", "Unique", "WeightedUnique"]
+__all__ = ["Input", "MultiInput", "Unique", "WeightedUnique"]
 
 
 class Input:
@@ -16,6 +17,11 @@ class Input:
     def get(self):
         """Get the wrapped input."""
         return self._xs[0] if len(self._xs) == 1 else self._xs
+
+
+@num_elements.extend(Input)
+def num_elements(x):
+    return sum(map(num_elements, x.get()))
 
 
 class MultiInput(Input):
@@ -40,8 +46,3 @@ class WeightedUnique(Unique):
     def __init__(self, x, w):
         self.w = w
         Unique.__init__(self, x)
-
-
-@B.shape.extend(WeightedUnique)
-def shape(x):
-    return B.shape(x.get())
