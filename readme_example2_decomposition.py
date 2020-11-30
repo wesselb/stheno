@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 from wbml.plot import tweak
 
-from stheno import B, Measure, GP, EQ, RQ, Linear, Delta, Exp, Obs, B
+from stheno import Measure, GP, EQ, RQ, Linear, Delta, Exp, B
 
 B.epsilon = 1e-10
 

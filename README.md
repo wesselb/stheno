@@ -918,7 +918,7 @@ plt.show()
 import matplotlib.pyplot as plt
 from wbml.plot import tweak
 
-from stheno import B, Measure, GP, EQ, RQ, Linear, Delta, Exp, Obs, B
+from stheno import Measure, GP, EQ, RQ, Linear, Delta, Exp, B
 
 B.epsilon = 1e-10
 
@@ -1292,11 +1292,11 @@ plt.show()
 
 ```python
 import matplotlib.pyplot as plt
-import tensorflow as tf
 import numpy as np
-from wbml.plot import tweak
-from varz.tensorflow import Vars, minimise_l_bfgs_b
+import tensorflow as tf
 from varz.spec import parametrised, Positive
+from varz.tensorflow import Vars, minimise_l_bfgs_b
+from wbml.plot import tweak
 
 from stheno.tensorflow import B, Measure, GP, Delta, EQ
 
