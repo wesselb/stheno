@@ -2,6 +2,6 @@ stheno.torch module
 ===================
 
 .. automodule:: stheno.torch
-    :members:
-    :undoc-members:
-    :show-inheritance:
+   :members:
+   :undoc-members:
+   :show-inheritance:

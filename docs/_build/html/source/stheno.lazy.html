@@ -1,8 +1,7 @@
 
 
 <!DOCTYPE html>
-<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
-<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<html class="writer-html5" lang="en" >
 <head>
   <meta charset="utf-8">
   
@@ -12,31 +11,33 @@
   
 
   
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+
+  
   
   
   
 
   
-  <script type="text/javascript" src="../_static/js/modernizr.min.js"></script>
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
   
     
       <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
-        <script type="text/javascript" src="../_static/jquery.js"></script>
-        <script type="text/javascript" src="../_static/underscore.js"></script>
-        <script type="text/javascript" src="../_static/doctools.js"></script>
-        <script type="text/javascript" src="../_static/language_data.js"></script>
-        <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/language_data.js"></script>
+        <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
     
     <script type="text/javascript" src="../_static/js/theme.js"></script>
 
     
-
-  
-  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
-  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="stheno.matrix module" href="stheno.matrix.html" />
+    <link rel="next" title="stheno.mean module" href="stheno.mean.html" />
     <link rel="prev" title="stheno.kernel module" href="stheno.kernel.html" /> 
 </head>
 
@@ -51,7 +52,7 @@
           
 
           
-            <a href="../index.html" class="icon icon-home"> stheno
+            <a href="../index.html" class="icon icon-home" alt="Documentation Home"> stheno
           
 
           
@@ -78,6 +79,7 @@
           
         </div>
 
+        
         <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
           
             
@@ -89,15 +91,12 @@
 <li class="toctree-l1"><a class="reference internal" href="../readme.html">Stheno</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../api.html">Application Programming Interface</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="stheno.autograd.html">stheno.autograd module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stheno.eis.html">stheno.eis module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stheno.field.html">stheno.field module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stheno.function_field.html">stheno.function_field module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stheno.graph.html">stheno.graph module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stheno.input.html">stheno.input module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stheno.jax.html">stheno.jax module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stheno.kernel.html">stheno.kernel module</a></li>
 <li class="toctree-l2 current"><a class="current reference internal" href="#">stheno.lazy module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stheno.matrix.html">stheno.matrix module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stheno.mean.html">stheno.mean module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stheno.measure.html">stheno.measure module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stheno.mokernel.html">stheno.mokernel module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stheno.momean.html">stheno.momean module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stheno.random.html">stheno.random module</a></li>
@@ -111,6 +110,7 @@
             
           
         </div>
+        
       </div>
     </nav>
 
@@ -149,7 +149,7 @@
 
   <ul class="wy-breadcrumbs">
     
-      <li><a href="../index.html">Docs</a> &raquo;</li>
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
         
           <li><a href="../api.html">Application Programming Interface</a> &raquo;</li>
         
@@ -174,6 +174,110 @@
             
   <div class="section" id="module-stheno.lazy">
 <span id="stheno-lazy-module"></span><h1>stheno.lazy module<a class="headerlink" href="#module-stheno.lazy" title="Permalink to this headline">¶</a></h1>
+<dl class="py class">
+<dt id="stheno.lazy.LazyMatrix">
+<em class="property">class </em><code class="sig-prename descclassname">stheno.lazy.</code><code class="sig-name descname">LazyMatrix</code><a class="reference internal" href="../_modules/stheno/lazy.html#LazyMatrix"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.lazy.LazyMatrix" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#stheno.lazy.LazyTensor" title="stheno.lazy.LazyTensor"><code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.lazy.LazyTensor</span></code></a></p>
+<p>A lazy matrix.</p>
+<dl class="py method">
+<dt id="stheno.lazy.LazyMatrix.add_left_rule">
+<code class="sig-name descname">add_left_rule</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">i_left</span></em>, <em class="sig-param"><span class="n">indices</span></em>, <em class="sig-param"><span class="n">builder</span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/stheno/lazy.html#LazyMatrix.add_left_rule"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.lazy.LazyMatrix.add_left_rule" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a building rule for a given left index.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>For performance reasons, <cite>indices</cite> must already be resolved!</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>i_left</strong> (<em>int</em>) – Fixed left index.</p></li>
+<li><p><strong>indices</strong> (<em>set</em>) – Domain of the rule.</p></li>
+<li><p><strong>builder</strong> (<em>function</em>) – Function that takes in a right index and gives back the
+corresponding element.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="stheno.lazy.LazyMatrix.add_right_rule">
+<code class="sig-name descname">add_right_rule</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">i_right</span></em>, <em class="sig-param"><span class="n">indices</span></em>, <em class="sig-param"><span class="n">builder</span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/stheno/lazy.html#LazyMatrix.add_right_rule"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.lazy.LazyMatrix.add_right_rule" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a building rule for a given right index.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>For performance reasons, <cite>indices</cite> must already be resolved!</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>i_right</strong> (<em>int</em>) – Fixed right index.</p></li>
+<li><p><strong>indices</strong> (<em>set</em>) – Domain of the rule.</p></li>
+<li><p><strong>builder</strong> (<em>function</em>) – Function that takes in a left index and gives back the
+corresponding element.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="stheno.lazy.LazyMatrix.add_rule">
+<code class="sig-name descname">add_rule</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">indices</span></em>, <em class="sig-param"><span class="n">builder</span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/stheno/lazy.html#LazyMatrix.add_rule"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.lazy.LazyMatrix.add_rule" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a building rule.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>For performance reasons, <cite>indices</cite> must already be resolved!</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>indices</strong> (<em>set</em>) – Domain of the rule.</p></li>
+<li><p><strong>builder</strong> (<em>function</em>) – Function that takes in an index and gives back the
+corresponding element.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="stheno.lazy.LazyTensor">
+<em class="property">class </em><code class="sig-prename descclassname">stheno.lazy.</code><code class="sig-name descname">LazyTensor</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">rank</span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/stheno/lazy.html#LazyTensor"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.lazy.LazyTensor" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>A lazy tensor that indexes by the identity of its indices.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>rank</strong> (<em>int</em>) – Rank of the tensor.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt id="stheno.lazy.LazyVector">
+<em class="property">class </em><code class="sig-prename descclassname">stheno.lazy.</code><code class="sig-name descname">LazyVector</code><a class="reference internal" href="../_modules/stheno/lazy.html#LazyVector"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.lazy.LazyVector" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#stheno.lazy.LazyTensor" title="stheno.lazy.LazyTensor"><code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.lazy.LazyTensor</span></code></a></p>
+<p>A lazy vector.</p>
+<dl class="py method">
+<dt id="stheno.lazy.LazyVector.add_rule">
+<code class="sig-name descname">add_rule</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">indices</span></em>, <em class="sig-param"><span class="n">builder</span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/stheno/lazy.html#LazyVector.add_rule"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.lazy.LazyVector.add_rule" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a building rule.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>For performance reasons, <cite>indices</cite> must already be resolved!</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>indices</strong> (<em>set</em>) – Domain of the rule.</p></li>
+<li><p><strong>builder</strong> (<em>function</em>) – Function that takes in an index and gives back the
+corresponding element.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
 </div>
 
 
@@ -184,7 +288,7 @@
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="stheno.matrix.html" class="btn btn-neutral float-right" title="stheno.matrix module" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="stheno.mean.html" class="btn btn-neutral float-right" title="stheno.mean module" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
         <a href="stheno.kernel.html" class="btn btn-neutral float-left" title="stheno.kernel module" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
@@ -196,11 +300,19 @@
 
   <div role="contentinfo">
     <p>
+        
         &copy; Copyright 2017, Wessel Bruinsma
 
     </p>
   </div>
-  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
 
 </footer>
 
@@ -211,7 +323,6 @@
 
   </div>
   
-
 
   <script type="text/javascript">
       jQuery(function () {

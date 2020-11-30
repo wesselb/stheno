@@ -1,8 +1,7 @@
 
 
 <!DOCTYPE html>
-<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
-<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<html class="writer-html5" lang="en" >
 <head>
   <meta charset="utf-8">
   
@@ -12,31 +11,33 @@
   
 
   
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+
+  
   
   
   
 
   
-  <script type="text/javascript" src="../_static/js/modernizr.min.js"></script>
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
   
     
       <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
-        <script type="text/javascript" src="../_static/jquery.js"></script>
-        <script type="text/javascript" src="../_static/underscore.js"></script>
-        <script type="text/javascript" src="../_static/doctools.js"></script>
-        <script type="text/javascript" src="../_static/language_data.js"></script>
-        <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/language_data.js"></script>
+        <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
     
     <script type="text/javascript" src="../_static/js/theme.js"></script>
 
     
-
-  
-  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
-  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="stheno.eis module" href="stheno.eis.html" />
+    <link rel="next" title="stheno.input module" href="stheno.input.html" />
     <link rel="prev" title="Application Programming Interface" href="../api.html" /> 
 </head>
 
@@ -51,7 +52,7 @@
           
 
           
-            <a href="../index.html" class="icon icon-home"> stheno
+            <a href="../index.html" class="icon icon-home" alt="Documentation Home"> stheno
           
 
           
@@ -78,6 +79,7 @@
           
         </div>
 
+        
         <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
           
             
@@ -89,15 +91,12 @@
 <li class="toctree-l1"><a class="reference internal" href="../readme.html">Stheno</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../api.html">Application Programming Interface</a><ul class="current">
 <li class="toctree-l2 current"><a class="current reference internal" href="#">stheno.autograd module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stheno.eis.html">stheno.eis module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stheno.field.html">stheno.field module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stheno.function_field.html">stheno.function_field module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stheno.graph.html">stheno.graph module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stheno.input.html">stheno.input module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stheno.jax.html">stheno.jax module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stheno.kernel.html">stheno.kernel module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stheno.lazy.html">stheno.lazy module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stheno.matrix.html">stheno.matrix module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stheno.mean.html">stheno.mean module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stheno.measure.html">stheno.measure module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stheno.mokernel.html">stheno.mokernel module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stheno.momean.html">stheno.momean module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stheno.random.html">stheno.random module</a></li>
@@ -111,6 +110,7 @@
             
           
         </div>
+        
       </div>
     </nav>
 
@@ -149,7 +149,7 @@
 
   <ul class="wy-breadcrumbs">
     
-      <li><a href="../index.html">Docs</a> &raquo;</li>
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
         
           <li><a href="../api.html">Application Programming Interface</a> &raquo;</li>
         
@@ -184,7 +184,7 @@
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="stheno.eis.html" class="btn btn-neutral float-right" title="stheno.eis module" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="stheno.input.html" class="btn btn-neutral float-right" title="stheno.input module" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
         <a href="../api.html" class="btn btn-neutral float-left" title="Application Programming Interface" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
@@ -196,11 +196,19 @@
 
   <div role="contentinfo">
     <p>
+        
         &copy; Copyright 2017, Wessel Bruinsma
 
     </p>
   </div>
-  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
 
 </footer>
 
@@ -211,7 +219,6 @@
 
   </div>
   
-
 
   <script type="text/javascript">
       jQuery(function () {

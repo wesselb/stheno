@@ -1,8 +1,7 @@
 
 
 <!DOCTYPE html>
-<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
-<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<html class="writer-html5" lang="en" >
 <head>
   <meta charset="utf-8">
   
@@ -12,32 +11,34 @@
   
 
   
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+
+  
   
   
   
 
   
-  <script type="text/javascript" src="../_static/js/modernizr.min.js"></script>
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
   
     
       <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
-        <script type="text/javascript" src="../_static/jquery.js"></script>
-        <script type="text/javascript" src="../_static/underscore.js"></script>
-        <script type="text/javascript" src="../_static/doctools.js"></script>
-        <script type="text/javascript" src="../_static/language_data.js"></script>
-        <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/language_data.js"></script>
+        <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
     
     <script type="text/javascript" src="../_static/js/theme.js"></script>
 
     
-
-  
-  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
-  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="stheno.lazy module" href="stheno.lazy.html" />
-    <link rel="prev" title="stheno.input module" href="stheno.input.html" /> 
+    <link rel="prev" title="stheno.jax module" href="stheno.jax.html" /> 
 </head>
 
 <body class="wy-body-for-nav">
@@ -51,7 +52,7 @@
           
 
           
-            <a href="../index.html" class="icon icon-home"> stheno
+            <a href="../index.html" class="icon icon-home" alt="Documentation Home"> stheno
           
 
           
@@ -78,6 +79,7 @@
           
         </div>
 
+        
         <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
           
             
@@ -89,15 +91,12 @@
 <li class="toctree-l1"><a class="reference internal" href="../readme.html">Stheno</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../api.html">Application Programming Interface</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="stheno.autograd.html">stheno.autograd module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stheno.eis.html">stheno.eis module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stheno.field.html">stheno.field module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stheno.function_field.html">stheno.function_field module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stheno.graph.html">stheno.graph module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stheno.input.html">stheno.input module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stheno.jax.html">stheno.jax module</a></li>
 <li class="toctree-l2 current"><a class="current reference internal" href="#">stheno.kernel module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stheno.lazy.html">stheno.lazy module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stheno.matrix.html">stheno.matrix module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stheno.mean.html">stheno.mean module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stheno.measure.html">stheno.measure module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stheno.mokernel.html">stheno.mokernel module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stheno.momean.html">stheno.momean module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stheno.random.html">stheno.random module</a></li>
@@ -111,6 +110,7 @@
             
           
         </div>
+        
       </div>
     </nav>
 
@@ -149,7 +149,7 @@
 
   <ul class="wy-breadcrumbs">
     
-      <li><a href="../index.html">Docs</a> &raquo;</li>
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
         
           <li><a href="../api.html">Application Programming Interface</a> &raquo;</li>
         
@@ -174,32 +174,135 @@
             
   <div class="section" id="module-stheno.kernel">
 <span id="stheno-kernel-module"></span><h1>stheno.kernel module<a class="headerlink" href="#module-stheno.kernel" title="Permalink to this headline">¶</a></h1>
-<dl class="class">
-<dt id="stheno.kernel.Kernel">
-<em class="property">class </em><code class="descclassname">stheno.kernel.</code><code class="descname">Kernel</code><a class="reference internal" href="../_modules/stheno/kernel.html#Kernel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.kernel.Kernel" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.function_field.Function</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">plum.resolvable.Referentiable</span></code></p>
-<p>Kernel function.</p>
-<p>Kernels can be added and multiplied.</p>
-<dl class="attribute">
-<dt id="stheno.kernel.Kernel.elwise">
-<code class="descname">elwise</code><em class="property"> = &lt;function &lt;function Kernel.elwise&gt; with 5 method(s)&gt;</em><a class="reference internal" href="../_modules/stheno/kernel.html#Kernel.elwise"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.kernel.Kernel.elwise" title="Permalink to this definition">¶</a></dt>
+<dl class="py class">
+<dt id="stheno.kernel.DecayingKernel">
+<em class="property">class </em><code class="sig-prename descclassname">stheno.kernel.</code><code class="sig-name descname">DecayingKernel</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">alpha</span></em>, <em class="sig-param"><span class="n">beta</span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/stheno/kernel.html#DecayingKernel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.kernel.DecayingKernel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#stheno.kernel.Kernel" title="stheno.kernel.Kernel"><code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.kernel.Kernel</span></code></a></p>
+<p>Decaying kernel.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>alpha</strong> (<em>tensor</em>) – Shape of the gamma distribution governing the
+distribution of decaying exponentials.</p></li>
+<li><p><strong>beta</strong> (<em>tensor</em>) – Rate of the gamma distribution governing the
+distribution of decaying exponentials.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt id="stheno.kernel.DecayingKernel.elwise">
+<code class="sig-name descname">elwise</code><em class="property"> = &lt;function &lt;function DecayingKernel.elwise&gt; with 1 method(s)&gt;</em><a class="reference internal" href="../_modules/stheno/kernel.html#DecayingKernel.elwise"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.kernel.DecayingKernel.elwise" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
-<dl class="attribute">
-<dt id="stheno.kernel.Kernel.length_scale">
-<code class="descname">length_scale</code><a class="headerlink" href="#stheno.kernel.Kernel.length_scale" title="Permalink to this definition">¶</a></dt>
-<dd><p>Approximation of the length scale of the kernel.</p>
+<dl class="py method">
+<dt id="stheno.kernel.DecayingKernel.render">
+<code class="sig-name descname">render</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">formatter</span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/stheno/kernel.html#DecayingKernel.render"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.kernel.DecayingKernel.render" title="Permalink to this definition">¶</a></dt>
+<dd><p>Render the element.</p>
+<p>This is the lowest-level operation in  pretty printing an element,
+and should produce a string representation of the element. This
+method should be implemented to determine how to render a custom
+element.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>formatter</strong> (<em>elements</em><em>, </em><em>optional</em>) – Function to format values.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Rendering of the element.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
 </dd></dl>
 
-<dl class="attribute">
-<dt id="stheno.kernel.Kernel.period">
-<code class="descname">period</code><a class="headerlink" href="#stheno.kernel.Kernel.period" title="Permalink to this definition">¶</a></dt>
-<dd><p>Period of the kernel.</p>
 </dd></dl>
 
-<dl class="method">
+<dl class="py class">
+<dt id="stheno.kernel.Delta">
+<em class="property">class </em><code class="sig-prename descclassname">stheno.kernel.</code><code class="sig-name descname">Delta</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">epsilon</span><span class="o">=</span><span class="default_value">1e-10</span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/stheno/kernel.html#Delta"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.kernel.Delta" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#stheno.kernel.Kernel" title="stheno.kernel.Kernel"><code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.kernel.Kernel</span></code></a></p>
+<p>Kronecker delta kernel.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>epsilon</strong> (<em>float</em><em>, </em><em>optional</em>) – Tolerance for equality in squared distance.
+Defaults to <cite>1e-10</cite>.</p>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt id="stheno.kernel.Delta.elwise">
+<code class="sig-name descname">elwise</code><em class="property"> = &lt;function &lt;function Delta.elwise&gt; with 5 method(s)&gt;</em><a class="reference internal" href="../_modules/stheno/kernel.html#Delta.elwise"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.kernel.Delta.elwise" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="stheno.kernel.DerivativeKernel">
+<em class="property">class </em><code class="sig-prename descclassname">stheno.kernel.</code><code class="sig-name descname">DerivativeKernel</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">e</span></em>, <em class="sig-param"><span class="o">*</span><span class="n">derivs</span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/stheno/kernel.html#DerivativeKernel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.kernel.DerivativeKernel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#stheno.kernel.Kernel" title="stheno.kernel.Kernel"><code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.kernel.Kernel</span></code></a>, <code class="xref py py-class docutils literal notranslate"><span class="pre">algebra.ops.diff.DerivativeFunction</span></code></p>
+<p>Derivative of kernel.</p>
+<dl class="py attribute">
+<dt id="stheno.kernel.DerivativeKernel.elwise">
+<code class="sig-name descname">elwise</code><em class="property"> = &lt;function &lt;function DerivativeKernel.elwise&gt; with 1 method(s)&gt;</em><a class="reference internal" href="../_modules/stheno/kernel.html#DerivativeKernel.elwise"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.kernel.DerivativeKernel.elwise" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="stheno.kernel.EQ">
+<em class="property">class </em><code class="sig-prename descclassname">stheno.kernel.</code><code class="sig-name descname">EQ</code><a class="reference internal" href="../_modules/stheno/kernel.html#EQ"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.kernel.EQ" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#stheno.kernel.Kernel" title="stheno.kernel.Kernel"><code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.kernel.Kernel</span></code></a></p>
+<p>Exponentiated quadratic kernel.</p>
+<dl class="py attribute">
+<dt id="stheno.kernel.EQ.elwise">
+<code class="sig-name descname">elwise</code><em class="property"> = &lt;function &lt;function EQ.elwise&gt; with 1 method(s)&gt;</em><a class="reference internal" href="../_modules/stheno/kernel.html#EQ.elwise"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.kernel.EQ.elwise" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="stheno.kernel.Exp">
+<em class="property">class </em><code class="sig-prename descclassname">stheno.kernel.</code><code class="sig-name descname">Exp</code><a class="reference internal" href="../_modules/stheno/kernel.html#Exp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.kernel.Exp" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#stheno.kernel.Kernel" title="stheno.kernel.Kernel"><code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.kernel.Kernel</span></code></a></p>
+<p>Exponential kernel.</p>
+<dl class="py attribute">
+<dt id="stheno.kernel.Exp.elwise">
+<code class="sig-name descname">elwise</code><em class="property"> = &lt;function &lt;function Exp.elwise&gt; with 1 method(s)&gt;</em><a class="reference internal" href="../_modules/stheno/kernel.html#Exp.elwise"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.kernel.Exp.elwise" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="stheno.kernel.FixedDelta">
+<em class="property">class </em><code class="sig-prename descclassname">stheno.kernel.</code><code class="sig-name descname">FixedDelta</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">noises</span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/stheno/kernel.html#FixedDelta"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.kernel.FixedDelta" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#stheno.kernel.Kernel" title="stheno.kernel.Kernel"><code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.kernel.Kernel</span></code></a></p>
+<p>Kronecker delta kernel that produces a diagonal matrix with given
+noises if and only if the inputs are identical and of the right shape.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>noises</strong> (<em>vector</em>) – Noises.</p>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt id="stheno.kernel.FixedDelta.elwise">
+<code class="sig-name descname">elwise</code><em class="property"> = &lt;function &lt;function FixedDelta.elwise&gt; with 1 method(s)&gt;</em><a class="reference internal" href="../_modules/stheno/kernel.html#FixedDelta.elwise"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.kernel.FixedDelta.elwise" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="stheno.kernel.Kernel">
+<em class="property">class </em><code class="sig-prename descclassname">stheno.kernel.</code><code class="sig-name descname">Kernel</code><a class="reference internal" href="../_modules/stheno/kernel.html#Kernel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.kernel.Kernel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">algebra.function.Function</span></code></p>
+<p>Kernel function.</p>
+<p>Kernels can be added and multiplied.</p>
+<dl class="py attribute">
+<dt id="stheno.kernel.Kernel.elwise">
+<code class="sig-name descname">elwise</code><em class="property"> = &lt;function &lt;function Kernel.elwise&gt; with 8 method(s)&gt;</em><a class="reference internal" href="../_modules/stheno/kernel.html#Kernel.elwise"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.kernel.Kernel.elwise" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
 <dt id="stheno.kernel.Kernel.periodic">
-<code class="descname">periodic</code><span class="sig-paren">(</span><em>period=1</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/stheno/kernel.html#Kernel.periodic"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.kernel.Kernel.periodic" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">periodic</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">period</span><span class="o">=</span><span class="default_value">1</span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/stheno/kernel.html#Kernel.periodic"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.kernel.Kernel.periodic" title="Permalink to this definition">¶</a></dt>
 <dd><p>Map to a periodic space.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -214,144 +317,106 @@
 </dl>
 </dd></dl>
 
-<dl class="attribute">
+<dl class="py method">
 <dt id="stheno.kernel.Kernel.stationary">
-<code class="descname">stationary</code><a class="headerlink" href="#stheno.kernel.Kernel.stationary" title="Permalink to this definition">¶</a></dt>
+<em class="property">property </em><code class="sig-name descname">stationary</code><a class="headerlink" href="#stheno.kernel.Kernel.stationary" title="Permalink to this definition">¶</a></dt>
 <dd><p>Stationarity of the kernel.</p>
 </dd></dl>
 
-<dl class="attribute">
-<dt id="stheno.kernel.Kernel.var">
-<code class="descname">var</code><a class="headerlink" href="#stheno.kernel.Kernel.var" title="Permalink to this definition">¶</a></dt>
-<dd><p>Variance of the kernel.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt id="stheno.kernel.Linear">
+<em class="property">class </em><code class="sig-prename descclassname">stheno.kernel.</code><code class="sig-name descname">Linear</code><a class="reference internal" href="../_modules/stheno/kernel.html#Linear"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.kernel.Linear" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#stheno.kernel.Kernel" title="stheno.kernel.Kernel"><code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.kernel.Kernel</span></code></a></p>
+<p>Linear kernel.</p>
+<dl class="py attribute">
+<dt id="stheno.kernel.Linear.elwise">
+<code class="sig-name descname">elwise</code><em class="property"> = &lt;function &lt;function Linear.elwise&gt; with 1 method(s)&gt;</em><a class="reference internal" href="../_modules/stheno/kernel.html#Linear.elwise"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.kernel.Linear.elwise" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="stheno.kernel.LogKernel">
+<em class="property">class </em><code class="sig-prename descclassname">stheno.kernel.</code><code class="sig-name descname">LogKernel</code><a class="reference internal" href="../_modules/stheno/kernel.html#LogKernel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.kernel.LogKernel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#stheno.kernel.Kernel" title="stheno.kernel.Kernel"><code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.kernel.Kernel</span></code></a></p>
+<p>Logarithm kernel.</p>
+<dl class="py attribute">
+<dt id="stheno.kernel.LogKernel.elwise">
+<code class="sig-name descname">elwise</code><em class="property"> = &lt;function &lt;function LogKernel.elwise&gt; with 1 method(s)&gt;</em><a class="reference internal" href="../_modules/stheno/kernel.html#LogKernel.elwise"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.kernel.LogKernel.elwise" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="stheno.kernel.LogKernel.render">
+<code class="sig-name descname">render</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">formatter</span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/stheno/kernel.html#LogKernel.render"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.kernel.LogKernel.render" title="Permalink to this definition">¶</a></dt>
+<dd><p>Render the element.</p>
+<p>This is the lowest-level operation in  pretty printing an element,
+and should produce a string representation of the element. This
+method should be implemented to determine how to render a custom
+element.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>formatter</strong> (<em>elements</em><em>, </em><em>optional</em>) – Function to format values.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Rendering of the element.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
 </dd></dl>
 
 </dd></dl>
 
-<dl class="class">
+<dl class="py attribute">
+<dt id="stheno.kernel.Matern12">
+<code class="sig-prename descclassname">stheno.kernel.</code><code class="sig-name descname">Matern12</code><a class="headerlink" href="#stheno.kernel.Matern12" title="Permalink to this definition">¶</a></dt>
+<dd><p>Alias for the exponential kernel.</p>
+<p>alias of <a class="reference internal" href="#stheno.kernel.Exp" title="stheno.kernel.Exp"><code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.kernel.Exp</span></code></a></p>
+</dd></dl>
+
+<dl class="py class">
+<dt id="stheno.kernel.Matern32">
+<em class="property">class </em><code class="sig-prename descclassname">stheno.kernel.</code><code class="sig-name descname">Matern32</code><a class="reference internal" href="../_modules/stheno/kernel.html#Matern32"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.kernel.Matern32" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#stheno.kernel.Kernel" title="stheno.kernel.Kernel"><code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.kernel.Kernel</span></code></a></p>
+<p>Matern–3/2 kernel.</p>
+<dl class="py attribute">
+<dt id="stheno.kernel.Matern32.elwise">
+<code class="sig-name descname">elwise</code><em class="property"> = &lt;function &lt;function Matern32.elwise&gt; with 1 method(s)&gt;</em><a class="reference internal" href="../_modules/stheno/kernel.html#Matern32.elwise"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.kernel.Matern32.elwise" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="stheno.kernel.Matern52">
+<em class="property">class </em><code class="sig-prename descclassname">stheno.kernel.</code><code class="sig-name descname">Matern52</code><a class="reference internal" href="../_modules/stheno/kernel.html#Matern52"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.kernel.Matern52" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#stheno.kernel.Kernel" title="stheno.kernel.Kernel"><code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.kernel.Kernel</span></code></a></p>
+<p>Matern–5/2 kernel.</p>
+<dl class="py attribute">
+<dt id="stheno.kernel.Matern52.elwise">
+<code class="sig-name descname">elwise</code><em class="property"> = &lt;function &lt;function Matern52.elwise&gt; with 1 method(s)&gt;</em><a class="reference internal" href="../_modules/stheno/kernel.html#Matern52.elwise"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.kernel.Matern52.elwise" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
 <dt id="stheno.kernel.OneKernel">
-<em class="property">class </em><code class="descclassname">stheno.kernel.</code><code class="descname">OneKernel</code><a class="reference internal" href="../_modules/stheno/kernel.html#OneKernel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.kernel.OneKernel" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference internal" href="#stheno.kernel.Kernel" title="stheno.kernel.Kernel"><code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.kernel.Kernel</span></code></a>, <code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.function_field.OneFunction</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">plum.resolvable.Referentiable</span></code></p>
+<em class="property">class </em><code class="sig-prename descclassname">stheno.kernel.</code><code class="sig-name descname">OneKernel</code><a class="reference internal" href="../_modules/stheno/kernel.html#OneKernel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.kernel.OneKernel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#stheno.kernel.Kernel" title="stheno.kernel.Kernel"><code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.kernel.Kernel</span></code></a>, <code class="xref py py-class docutils literal notranslate"><span class="pre">algebra.function.OneFunction</span></code></p>
 <p>Constant kernel of <cite>1</cite>.</p>
-<dl class="attribute">
+<dl class="py attribute">
 <dt id="stheno.kernel.OneKernel.elwise">
-<code class="descname">elwise</code><em class="property"> = &lt;function &lt;function OneKernel.elwise&gt; with 1 method(s)&gt;</em><a class="reference internal" href="../_modules/stheno/kernel.html#OneKernel.elwise"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.kernel.OneKernel.elwise" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">elwise</code><em class="property"> = &lt;function &lt;function OneKernel.elwise&gt; with 1 method(s)&gt;</em><a class="reference internal" href="../_modules/stheno/kernel.html#OneKernel.elwise"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.kernel.OneKernel.elwise" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
-<dl class="attribute">
-<dt id="stheno.kernel.OneKernel.length_scale">
-<code class="descname">length_scale</code><a class="headerlink" href="#stheno.kernel.OneKernel.length_scale" title="Permalink to this definition">¶</a></dt>
-<dd><p>Approximation of the length scale of the kernel.</p>
 </dd></dl>
 
-<dl class="attribute">
-<dt id="stheno.kernel.OneKernel.period">
-<code class="descname">period</code><a class="headerlink" href="#stheno.kernel.OneKernel.period" title="Permalink to this definition">¶</a></dt>
-<dd><p>Period of the kernel.</p>
-</dd></dl>
-
-<dl class="attribute">
-<dt id="stheno.kernel.OneKernel.var">
-<code class="descname">var</code><a class="headerlink" href="#stheno.kernel.OneKernel.var" title="Permalink to this definition">¶</a></dt>
-<dd><p>Variance of the kernel.</p>
-</dd></dl>
-
-</dd></dl>
-
-<dl class="class">
-<dt id="stheno.kernel.ZeroKernel">
-<em class="property">class </em><code class="descclassname">stheno.kernel.</code><code class="descname">ZeroKernel</code><a class="reference internal" href="../_modules/stheno/kernel.html#ZeroKernel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.kernel.ZeroKernel" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference internal" href="#stheno.kernel.Kernel" title="stheno.kernel.Kernel"><code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.kernel.Kernel</span></code></a>, <code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.function_field.ZeroFunction</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">plum.resolvable.Referentiable</span></code></p>
-<p>Constant kernel of <cite>0</cite>.</p>
-<dl class="attribute">
-<dt id="stheno.kernel.ZeroKernel.elwise">
-<code class="descname">elwise</code><em class="property"> = &lt;function &lt;function ZeroKernel.elwise&gt; with 1 method(s)&gt;</em><a class="reference internal" href="../_modules/stheno/kernel.html#ZeroKernel.elwise"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.kernel.ZeroKernel.elwise" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="attribute">
-<dt id="stheno.kernel.ZeroKernel.length_scale">
-<code class="descname">length_scale</code><a class="headerlink" href="#stheno.kernel.ZeroKernel.length_scale" title="Permalink to this definition">¶</a></dt>
-<dd><p>Approximation of the length scale of the kernel.</p>
-</dd></dl>
-
-<dl class="attribute">
-<dt id="stheno.kernel.ZeroKernel.period">
-<code class="descname">period</code><a class="headerlink" href="#stheno.kernel.ZeroKernel.period" title="Permalink to this definition">¶</a></dt>
-<dd><p>Period of the kernel.</p>
-</dd></dl>
-
-<dl class="attribute">
-<dt id="stheno.kernel.ZeroKernel.var">
-<code class="descname">var</code><a class="headerlink" href="#stheno.kernel.ZeroKernel.var" title="Permalink to this definition">¶</a></dt>
-<dd><p>Variance of the kernel.</p>
-</dd></dl>
-
-</dd></dl>
-
-<dl class="class">
-<dt id="stheno.kernel.ScaledKernel">
-<em class="property">class </em><code class="descclassname">stheno.kernel.</code><code class="descname">ScaledKernel</code><span class="sig-paren">(</span><em>e</em>, <em>scale</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/stheno/kernel.html#ScaledKernel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.kernel.ScaledKernel" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference internal" href="#stheno.kernel.Kernel" title="stheno.kernel.Kernel"><code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.kernel.Kernel</span></code></a>, <code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.function_field.ScaledFunction</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">plum.resolvable.Referentiable</span></code></p>
-<p>Scaled kernel.</p>
-<dl class="attribute">
-<dt id="stheno.kernel.ScaledKernel.elwise">
-<code class="descname">elwise</code><em class="property"> = &lt;function &lt;function ScaledKernel.elwise&gt; with 1 method(s)&gt;</em><a class="reference internal" href="../_modules/stheno/kernel.html#ScaledKernel.elwise"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.kernel.ScaledKernel.elwise" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="attribute">
-<dt id="stheno.kernel.ScaledKernel.length_scale">
-<code class="descname">length_scale</code><a class="headerlink" href="#stheno.kernel.ScaledKernel.length_scale" title="Permalink to this definition">¶</a></dt>
-<dd><p>Approximation of the length scale of the kernel.</p>
-</dd></dl>
-
-<dl class="attribute">
-<dt id="stheno.kernel.ScaledKernel.period">
-<code class="descname">period</code><a class="headerlink" href="#stheno.kernel.ScaledKernel.period" title="Permalink to this definition">¶</a></dt>
-<dd><p>Period of the kernel.</p>
-</dd></dl>
-
-<dl class="attribute">
-<dt id="stheno.kernel.ScaledKernel.var">
-<code class="descname">var</code><a class="headerlink" href="#stheno.kernel.ScaledKernel.var" title="Permalink to this definition">¶</a></dt>
-<dd><p>Variance of the kernel.</p>
-</dd></dl>
-
-</dd></dl>
-
-<dl class="class">
-<dt id="stheno.kernel.EQ">
-<em class="property">class </em><code class="descclassname">stheno.kernel.</code><code class="descname">EQ</code><a class="reference internal" href="../_modules/stheno/kernel.html#EQ"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.kernel.EQ" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference internal" href="#stheno.kernel.Kernel" title="stheno.kernel.Kernel"><code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.kernel.Kernel</span></code></a>, <code class="xref py py-class docutils literal notranslate"><span class="pre">plum.resolvable.Referentiable</span></code></p>
-<p>Exponentiated quadratic kernel.</p>
-<dl class="attribute">
-<dt id="stheno.kernel.EQ.elwise">
-<code class="descname">elwise</code><em class="property"> = &lt;function &lt;function EQ.elwise&gt; with 1 method(s)&gt;</em><a class="reference internal" href="../_modules/stheno/kernel.html#EQ.elwise"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.kernel.EQ.elwise" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="attribute">
-<dt id="stheno.kernel.EQ.length_scale">
-<code class="descname">length_scale</code><a class="headerlink" href="#stheno.kernel.EQ.length_scale" title="Permalink to this definition">¶</a></dt>
-<dd><p>Approximation of the length scale of the kernel.</p>
-</dd></dl>
-
-<dl class="attribute">
-<dt id="stheno.kernel.EQ.period">
-<code class="descname">period</code><a class="headerlink" href="#stheno.kernel.EQ.period" title="Permalink to this definition">¶</a></dt>
-<dd><p>Period of the kernel.</p>
-</dd></dl>
-
-<dl class="attribute">
-<dt id="stheno.kernel.EQ.var">
-<code class="descname">var</code><a class="headerlink" href="#stheno.kernel.EQ.var" title="Permalink to this definition">¶</a></dt>
-<dd><p>Variance of the kernel.</p>
-</dd></dl>
-
-</dd></dl>
-
-<dl class="class">
+<dl class="py class">
 <dt id="stheno.kernel.RQ">
-<em class="property">class </em><code class="descclassname">stheno.kernel.</code><code class="descname">RQ</code><span class="sig-paren">(</span><em>alpha</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/stheno/kernel.html#RQ"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.kernel.RQ" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference internal" href="#stheno.kernel.Kernel" title="stheno.kernel.Kernel"><code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.kernel.Kernel</span></code></a>, <code class="xref py py-class docutils literal notranslate"><span class="pre">plum.resolvable.Referentiable</span></code></p>
+<em class="property">class </em><code class="sig-prename descclassname">stheno.kernel.</code><code class="sig-name descname">RQ</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">alpha</span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/stheno/kernel.html#RQ"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.kernel.RQ" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#stheno.kernel.Kernel" title="stheno.kernel.Kernel"><code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.kernel.Kernel</span></code></a></p>
 <p>Rational quadratic kernel.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -359,300 +424,55 @@
 weight of the tails of the kernel. Must be positive.</p>
 </dd>
 </dl>
-<dl class="attribute">
-<dt id="stheno.kernel.RQ.display">
-<code class="descname">display</code><em class="property"> = &lt;function &lt;function RQ.display&gt; with 1 method(s)&gt;</em><a class="reference internal" href="../_modules/stheno/kernel.html#RQ.display"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.kernel.RQ.display" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="attribute">
+<dl class="py attribute">
 <dt id="stheno.kernel.RQ.elwise">
-<code class="descname">elwise</code><em class="property"> = &lt;function &lt;function RQ.elwise&gt; with 1 method(s)&gt;</em><a class="reference internal" href="../_modules/stheno/kernel.html#RQ.elwise"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.kernel.RQ.elwise" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">elwise</code><em class="property"> = &lt;function &lt;function RQ.elwise&gt; with 1 method(s)&gt;</em><a class="reference internal" href="../_modules/stheno/kernel.html#RQ.elwise"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.kernel.RQ.elwise" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
-<dl class="attribute">
-<dt id="stheno.kernel.RQ.length_scale">
-<code class="descname">length_scale</code><a class="headerlink" href="#stheno.kernel.RQ.length_scale" title="Permalink to this definition">¶</a></dt>
-<dd><p>Approximation of the length scale of the kernel.</p>
-</dd></dl>
-
-<dl class="attribute">
-<dt id="stheno.kernel.RQ.period">
-<code class="descname">period</code><a class="headerlink" href="#stheno.kernel.RQ.period" title="Permalink to this definition">¶</a></dt>
-<dd><p>Period of the kernel.</p>
-</dd></dl>
-
-<dl class="attribute">
-<dt id="stheno.kernel.RQ.var">
-<code class="descname">var</code><a class="headerlink" href="#stheno.kernel.RQ.var" title="Permalink to this definition">¶</a></dt>
-<dd><p>Variance of the kernel.</p>
-</dd></dl>
-
-</dd></dl>
-
-<dl class="attribute">
-<dt id="stheno.kernel.Matern12">
-<code class="descclassname">stheno.kernel.</code><code class="descname">Matern12</code><a class="headerlink" href="#stheno.kernel.Matern12" title="Permalink to this definition">¶</a></dt>
-<dd><p>Alias for the exponential kernel.</p>
-<p>alias of <a class="reference internal" href="#stheno.kernel.Exp" title="stheno.kernel.Exp"><code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.kernel.Exp</span></code></a></p>
-</dd></dl>
-
-<dl class="class">
-<dt id="stheno.kernel.Exp">
-<em class="property">class </em><code class="descclassname">stheno.kernel.</code><code class="descname">Exp</code><a class="reference internal" href="../_modules/stheno/kernel.html#Exp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.kernel.Exp" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference internal" href="#stheno.kernel.Kernel" title="stheno.kernel.Kernel"><code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.kernel.Kernel</span></code></a>, <code class="xref py py-class docutils literal notranslate"><span class="pre">plum.resolvable.Referentiable</span></code></p>
-<p>Exponential kernel.</p>
-<dl class="attribute">
-<dt id="stheno.kernel.Exp.elwise">
-<code class="descname">elwise</code><em class="property"> = &lt;function &lt;function Exp.elwise&gt; with 1 method(s)&gt;</em><a class="reference internal" href="../_modules/stheno/kernel.html#Exp.elwise"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.kernel.Exp.elwise" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="attribute">
-<dt id="stheno.kernel.Exp.length_scale">
-<code class="descname">length_scale</code><a class="headerlink" href="#stheno.kernel.Exp.length_scale" title="Permalink to this definition">¶</a></dt>
-<dd><p>Approximation of the length scale of the kernel.</p>
-</dd></dl>
-
-<dl class="attribute">
-<dt id="stheno.kernel.Exp.period">
-<code class="descname">period</code><a class="headerlink" href="#stheno.kernel.Exp.period" title="Permalink to this definition">¶</a></dt>
-<dd><p>Period of the kernel.</p>
-</dd></dl>
-
-<dl class="attribute">
-<dt id="stheno.kernel.Exp.var">
-<code class="descname">var</code><a class="headerlink" href="#stheno.kernel.Exp.var" title="Permalink to this definition">¶</a></dt>
-<dd><p>Variance of the kernel.</p>
-</dd></dl>
-
-</dd></dl>
-
-<dl class="class">
-<dt id="stheno.kernel.Matern32">
-<em class="property">class </em><code class="descclassname">stheno.kernel.</code><code class="descname">Matern32</code><a class="reference internal" href="../_modules/stheno/kernel.html#Matern32"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.kernel.Matern32" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference internal" href="#stheno.kernel.Kernel" title="stheno.kernel.Kernel"><code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.kernel.Kernel</span></code></a>, <code class="xref py py-class docutils literal notranslate"><span class="pre">plum.resolvable.Referentiable</span></code></p>
-<p>Matern–3/2 kernel.</p>
-<dl class="attribute">
-<dt id="stheno.kernel.Matern32.elwise">
-<code class="descname">elwise</code><em class="property"> = &lt;function &lt;function Matern32.elwise&gt; with 1 method(s)&gt;</em><a class="reference internal" href="../_modules/stheno/kernel.html#Matern32.elwise"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.kernel.Matern32.elwise" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="attribute">
-<dt id="stheno.kernel.Matern32.length_scale">
-<code class="descname">length_scale</code><a class="headerlink" href="#stheno.kernel.Matern32.length_scale" title="Permalink to this definition">¶</a></dt>
-<dd><p>Approximation of the length scale of the kernel.</p>
-</dd></dl>
-
-<dl class="attribute">
-<dt id="stheno.kernel.Matern32.period">
-<code class="descname">period</code><a class="headerlink" href="#stheno.kernel.Matern32.period" title="Permalink to this definition">¶</a></dt>
-<dd><p>Period of the kernel.</p>
-</dd></dl>
-
-<dl class="attribute">
-<dt id="stheno.kernel.Matern32.var">
-<code class="descname">var</code><a class="headerlink" href="#stheno.kernel.Matern32.var" title="Permalink to this definition">¶</a></dt>
-<dd><p>Variance of the kernel.</p>
-</dd></dl>
-
-</dd></dl>
-
-<dl class="class">
-<dt id="stheno.kernel.Matern52">
-<em class="property">class </em><code class="descclassname">stheno.kernel.</code><code class="descname">Matern52</code><a class="reference internal" href="../_modules/stheno/kernel.html#Matern52"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.kernel.Matern52" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference internal" href="#stheno.kernel.Kernel" title="stheno.kernel.Kernel"><code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.kernel.Kernel</span></code></a>, <code class="xref py py-class docutils literal notranslate"><span class="pre">plum.resolvable.Referentiable</span></code></p>
-<p>Matern–5/2 kernel.</p>
-<dl class="attribute">
-<dt id="stheno.kernel.Matern52.elwise">
-<code class="descname">elwise</code><em class="property"> = &lt;function &lt;function Matern52.elwise&gt; with 1 method(s)&gt;</em><a class="reference internal" href="../_modules/stheno/kernel.html#Matern52.elwise"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.kernel.Matern52.elwise" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="attribute">
-<dt id="stheno.kernel.Matern52.length_scale">
-<code class="descname">length_scale</code><a class="headerlink" href="#stheno.kernel.Matern52.length_scale" title="Permalink to this definition">¶</a></dt>
-<dd><p>Approximation of the length scale of the kernel.</p>
-</dd></dl>
-
-<dl class="attribute">
-<dt id="stheno.kernel.Matern52.period">
-<code class="descname">period</code><a class="headerlink" href="#stheno.kernel.Matern52.period" title="Permalink to this definition">¶</a></dt>
-<dd><p>Period of the kernel.</p>
-</dd></dl>
-
-<dl class="attribute">
-<dt id="stheno.kernel.Matern52.var">
-<code class="descname">var</code><a class="headerlink" href="#stheno.kernel.Matern52.var" title="Permalink to this definition">¶</a></dt>
-<dd><p>Variance of the kernel.</p>
-</dd></dl>
-
-</dd></dl>
-
-<dl class="class">
-<dt id="stheno.kernel.Delta">
-<em class="property">class </em><code class="descclassname">stheno.kernel.</code><code class="descname">Delta</code><span class="sig-paren">(</span><em>epsilon=1e-10</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/stheno/kernel.html#Delta"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.kernel.Delta" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference internal" href="#stheno.kernel.Kernel" title="stheno.kernel.Kernel"><code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.kernel.Kernel</span></code></a>, <code class="xref py py-class docutils literal notranslate"><span class="pre">plum.resolvable.Referentiable</span></code></p>
-<p>Kronecker delta kernel.</p>
+<dl class="py method">
+<dt id="stheno.kernel.RQ.render">
+<code class="sig-name descname">render</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">formatter</span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/stheno/kernel.html#RQ.render"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.kernel.RQ.render" title="Permalink to this definition">¶</a></dt>
+<dd><p>Render the element.</p>
+<p>This is the lowest-level operation in  pretty printing an element,
+and should produce a string representation of the element. This
+method should be implemented to determine how to render a custom
+element.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>epsilon</strong> (<em>float</em><em>, </em><em>optional</em>) – Tolerance for equality in squared distance.
-Defaults to <cite>1e-10</cite>.</p>
+<dd class="field-odd"><p><strong>formatter</strong> (<em>elements</em><em>, </em><em>optional</em>) – Function to format values.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Rendering of the element.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>str</p>
 </dd>
 </dl>
-<dl class="attribute">
-<dt id="stheno.kernel.Delta.elwise">
-<code class="descname">elwise</code><em class="property"> = &lt;function &lt;function Delta.elwise&gt; with 4 method(s)&gt;</em><a class="reference internal" href="../_modules/stheno/kernel.html#Delta.elwise"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.kernel.Delta.elwise" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="attribute">
-<dt id="stheno.kernel.Delta.length_scale">
-<code class="descname">length_scale</code><a class="headerlink" href="#stheno.kernel.Delta.length_scale" title="Permalink to this definition">¶</a></dt>
-<dd><p>Approximation of the length scale of the kernel.</p>
-</dd></dl>
-
-<dl class="attribute">
-<dt id="stheno.kernel.Delta.period">
-<code class="descname">period</code><a class="headerlink" href="#stheno.kernel.Delta.period" title="Permalink to this definition">¶</a></dt>
-<dd><p>Period of the kernel.</p>
-</dd></dl>
-
-<dl class="attribute">
-<dt id="stheno.kernel.Delta.var">
-<code class="descname">var</code><a class="headerlink" href="#stheno.kernel.Delta.var" title="Permalink to this definition">¶</a></dt>
-<dd><p>Variance of the kernel.</p>
 </dd></dl>
 
 </dd></dl>
 
-<dl class="class">
-<dt id="stheno.kernel.FixedDelta">
-<em class="property">class </em><code class="descclassname">stheno.kernel.</code><code class="descname">FixedDelta</code><span class="sig-paren">(</span><em>noises</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/stheno/kernel.html#FixedDelta"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.kernel.FixedDelta" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference internal" href="#stheno.kernel.Kernel" title="stheno.kernel.Kernel"><code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.kernel.Kernel</span></code></a>, <code class="xref py py-class docutils literal notranslate"><span class="pre">plum.resolvable.Referentiable</span></code></p>
-<p>Kronecker delta kernel that produces a diagonal matrix with given
-noises if and only if the inputs are identical and of the right shape.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>noises</strong> (<em>vector</em>) – Noises.</p>
-</dd>
-</dl>
-<dl class="attribute">
-<dt id="stheno.kernel.FixedDelta.elwise">
-<code class="descname">elwise</code><em class="property"> = &lt;function &lt;function FixedDelta.elwise&gt; with 1 method(s)&gt;</em><a class="reference internal" href="../_modules/stheno/kernel.html#FixedDelta.elwise"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.kernel.FixedDelta.elwise" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="attribute">
-<dt id="stheno.kernel.FixedDelta.length_scale">
-<code class="descname">length_scale</code><a class="headerlink" href="#stheno.kernel.FixedDelta.length_scale" title="Permalink to this definition">¶</a></dt>
-<dd><p>Approximation of the length scale of the kernel.</p>
-</dd></dl>
-
-<dl class="attribute">
-<dt id="stheno.kernel.FixedDelta.period">
-<code class="descname">period</code><a class="headerlink" href="#stheno.kernel.FixedDelta.period" title="Permalink to this definition">¶</a></dt>
-<dd><p>Period of the kernel.</p>
-</dd></dl>
-
-<dl class="attribute">
-<dt id="stheno.kernel.FixedDelta.var">
-<code class="descname">var</code><a class="headerlink" href="#stheno.kernel.FixedDelta.var" title="Permalink to this definition">¶</a></dt>
-<dd><p>Variance of the kernel.</p>
-</dd></dl>
-
-</dd></dl>
-
-<dl class="class">
-<dt id="stheno.kernel.Linear">
-<em class="property">class </em><code class="descclassname">stheno.kernel.</code><code class="descname">Linear</code><a class="reference internal" href="../_modules/stheno/kernel.html#Linear"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.kernel.Linear" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference internal" href="#stheno.kernel.Kernel" title="stheno.kernel.Kernel"><code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.kernel.Kernel</span></code></a>, <code class="xref py py-class docutils literal notranslate"><span class="pre">plum.resolvable.Referentiable</span></code></p>
-<p>Linear kernel.</p>
-<dl class="attribute">
-<dt id="stheno.kernel.Linear.elwise">
-<code class="descname">elwise</code><em class="property"> = &lt;function &lt;function Linear.elwise&gt; with 1 method(s)&gt;</em><a class="reference internal" href="../_modules/stheno/kernel.html#Linear.elwise"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.kernel.Linear.elwise" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="attribute">
-<dt id="stheno.kernel.Linear.period">
-<code class="descname">period</code><a class="headerlink" href="#stheno.kernel.Linear.period" title="Permalink to this definition">¶</a></dt>
-<dd><p>Period of the kernel.</p>
-</dd></dl>
-
-</dd></dl>
-
-<dl class="class">
-<dt id="stheno.kernel.DerivativeKernel">
-<em class="property">class </em><code class="descclassname">stheno.kernel.</code><code class="descname">DerivativeKernel</code><span class="sig-paren">(</span><em>e</em>, <em>*derivs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/stheno/kernel.html#DerivativeKernel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.kernel.DerivativeKernel" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference internal" href="#stheno.kernel.Kernel" title="stheno.kernel.Kernel"><code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.kernel.Kernel</span></code></a>, <code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.function_field.DerivativeFunction</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">plum.resolvable.Referentiable</span></code></p>
-<p>Derivative of kernel.</p>
-<dl class="attribute">
-<dt id="stheno.kernel.DerivativeKernel.elwise">
-<code class="descname">elwise</code><em class="property"> = &lt;function &lt;function DerivativeKernel.elwise&gt; with 1 method(s)&gt;</em><a class="reference internal" href="../_modules/stheno/kernel.html#DerivativeKernel.elwise"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.kernel.DerivativeKernel.elwise" title="Permalink to this definition">¶</a></dt>
+<dl class="py class">
+<dt id="stheno.kernel.ScaledKernel">
+<em class="property">class </em><code class="sig-prename descclassname">stheno.kernel.</code><code class="sig-name descname">ScaledKernel</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">e</span></em>, <em class="sig-param"><span class="n">scale</span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/stheno/kernel.html#ScaledKernel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.kernel.ScaledKernel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#stheno.kernel.Kernel" title="stheno.kernel.Kernel"><code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.kernel.Kernel</span></code></a>, <code class="xref py py-class docutils literal notranslate"><span class="pre">algebra.function.ScaledFunction</span></code></p>
+<p>Scaled kernel.</p>
+<dl class="py attribute">
+<dt id="stheno.kernel.ScaledKernel.elwise">
+<code class="sig-name descname">elwise</code><em class="property"> = &lt;function &lt;function ScaledKernel.elwise&gt; with 1 method(s)&gt;</em><a class="reference internal" href="../_modules/stheno/kernel.html#ScaledKernel.elwise"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.kernel.ScaledKernel.elwise" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 </dd></dl>
 
-<dl class="class">
-<dt id="stheno.kernel.DecayingKernel">
-<em class="property">class </em><code class="descclassname">stheno.kernel.</code><code class="descname">DecayingKernel</code><span class="sig-paren">(</span><em>alpha</em>, <em>beta</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/stheno/kernel.html#DecayingKernel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.kernel.DecayingKernel" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference internal" href="#stheno.kernel.Kernel" title="stheno.kernel.Kernel"><code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.kernel.Kernel</span></code></a>, <code class="xref py py-class docutils literal notranslate"><span class="pre">plum.resolvable.Referentiable</span></code></p>
-<p>Decaying kernel.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>alpha</strong> (<em>tensor</em>) – Shape of the gamma distribution governing the
-distribution of decaying exponentials.</p></li>
-<li><p><strong>beta</strong> (<em>tensor</em>) – Rate of the gamma distribution governing the
-distribution of decaying exponentials.</p></li>
-</ul>
-</dd>
-</dl>
-<dl class="attribute">
-<dt id="stheno.kernel.DecayingKernel.display">
-<code class="descname">display</code><em class="property"> = &lt;function &lt;function DecayingKernel.display&gt; with 1 method(s)&gt;</em><a class="reference internal" href="../_modules/stheno/kernel.html#DecayingKernel.display"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.kernel.DecayingKernel.display" title="Permalink to this definition">¶</a></dt>
+<dl class="py class">
+<dt id="stheno.kernel.ZeroKernel">
+<em class="property">class </em><code class="sig-prename descclassname">stheno.kernel.</code><code class="sig-name descname">ZeroKernel</code><a class="reference internal" href="../_modules/stheno/kernel.html#ZeroKernel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.kernel.ZeroKernel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#stheno.kernel.Kernel" title="stheno.kernel.Kernel"><code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.kernel.Kernel</span></code></a>, <code class="xref py py-class docutils literal notranslate"><span class="pre">algebra.function.ZeroFunction</span></code></p>
+<p>Constant kernel of <cite>0</cite>.</p>
+<dl class="py attribute">
+<dt id="stheno.kernel.ZeroKernel.elwise">
+<code class="sig-name descname">elwise</code><em class="property"> = &lt;function &lt;function ZeroKernel.elwise&gt; with 1 method(s)&gt;</em><a class="reference internal" href="../_modules/stheno/kernel.html#ZeroKernel.elwise"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.kernel.ZeroKernel.elwise" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
-
-<dl class="attribute">
-<dt id="stheno.kernel.DecayingKernel.elwise">
-<code class="descname">elwise</code><em class="property"> = &lt;function &lt;function DecayingKernel.elwise&gt; with 1 method(s)&gt;</em><a class="reference internal" href="../_modules/stheno/kernel.html#DecayingKernel.elwise"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.kernel.DecayingKernel.elwise" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="attribute">
-<dt id="stheno.kernel.DecayingKernel.period">
-<code class="descname">period</code><a class="headerlink" href="#stheno.kernel.DecayingKernel.period" title="Permalink to this definition">¶</a></dt>
-<dd><p>Period of the kernel.</p>
-</dd></dl>
-
-</dd></dl>
-
-<dl class="class">
-<dt id="stheno.kernel.LogKernel">
-<em class="property">class </em><code class="descclassname">stheno.kernel.</code><code class="descname">LogKernel</code><a class="reference internal" href="../_modules/stheno/kernel.html#LogKernel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.kernel.LogKernel" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference internal" href="#stheno.kernel.Kernel" title="stheno.kernel.Kernel"><code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.kernel.Kernel</span></code></a>, <code class="xref py py-class docutils literal notranslate"><span class="pre">plum.resolvable.Referentiable</span></code></p>
-<p>Logarithm kernel.</p>
-<dl class="attribute">
-<dt id="stheno.kernel.LogKernel.display">
-<code class="descname">display</code><em class="property"> = &lt;function &lt;function LogKernel.display&gt; with 1 method(s)&gt;</em><a class="reference internal" href="../_modules/stheno/kernel.html#LogKernel.display"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.kernel.LogKernel.display" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="attribute">
-<dt id="stheno.kernel.LogKernel.elwise">
-<code class="descname">elwise</code><em class="property"> = &lt;function &lt;function LogKernel.elwise&gt; with 1 method(s)&gt;</em><a class="reference internal" href="../_modules/stheno/kernel.html#LogKernel.elwise"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.kernel.LogKernel.elwise" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="attribute">
-<dt id="stheno.kernel.LogKernel.length_scale">
-<code class="descname">length_scale</code><a class="headerlink" href="#stheno.kernel.LogKernel.length_scale" title="Permalink to this definition">¶</a></dt>
-<dd><p>Approximation of the length scale of the kernel.</p>
-</dd></dl>
-
-<dl class="attribute">
-<dt id="stheno.kernel.LogKernel.period">
-<code class="descname">period</code><a class="headerlink" href="#stheno.kernel.LogKernel.period" title="Permalink to this definition">¶</a></dt>
-<dd><p>Period of the kernel.</p>
-</dd></dl>
-
-<dl class="attribute">
-<dt id="stheno.kernel.LogKernel.var">
-<code class="descname">var</code><a class="headerlink" href="#stheno.kernel.LogKernel.var" title="Permalink to this definition">¶</a></dt>
-<dd><p>Variance of the kernel.</p>
-</dd></dl>
 
 </dd></dl>
 
@@ -669,7 +489,7 @@ distribution of decaying exponentials.</p></li>
         <a href="stheno.lazy.html" class="btn btn-neutral float-right" title="stheno.lazy module" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="stheno.input.html" class="btn btn-neutral float-left" title="stheno.input module" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="stheno.jax.html" class="btn btn-neutral float-left" title="stheno.jax module" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -678,11 +498,19 @@ distribution of decaying exponentials.</p></li>
 
   <div role="contentinfo">
     <p>
+        
         &copy; Copyright 2017, Wessel Bruinsma
 
     </p>
   </div>
-  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
 
 </footer>
 
@@ -693,7 +521,6 @@ distribution of decaying exponentials.</p></li>
 
   </div>
   
-
 
   <script type="text/javascript">
       jQuery(function () {

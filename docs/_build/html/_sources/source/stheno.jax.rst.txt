@@ -1,0 +1,7 @@
+stheno.jax module
+=================
+
+.. automodule:: stheno.jax
+   :members:
+   :undoc-members:
+   :show-inheritance:

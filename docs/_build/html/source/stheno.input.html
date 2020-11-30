@@ -1,8 +1,7 @@
 
 
 <!DOCTYPE html>
-<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
-<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<html class="writer-html5" lang="en" >
 <head>
   <meta charset="utf-8">
   
@@ -12,32 +11,34 @@
   
 
   
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+
+  
   
   
   
 
   
-  <script type="text/javascript" src="../_static/js/modernizr.min.js"></script>
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
   
     
       <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
-        <script type="text/javascript" src="../_static/jquery.js"></script>
-        <script type="text/javascript" src="../_static/underscore.js"></script>
-        <script type="text/javascript" src="../_static/doctools.js"></script>
-        <script type="text/javascript" src="../_static/language_data.js"></script>
-        <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/language_data.js"></script>
+        <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
     
     <script type="text/javascript" src="../_static/js/theme.js"></script>
 
     
-
-  
-  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
-  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="stheno.kernel module" href="stheno.kernel.html" />
-    <link rel="prev" title="stheno.graph module" href="stheno.graph.html" /> 
+    <link rel="next" title="stheno.jax module" href="stheno.jax.html" />
+    <link rel="prev" title="stheno.autograd module" href="stheno.autograd.html" /> 
 </head>
 
 <body class="wy-body-for-nav">
@@ -51,7 +52,7 @@
           
 
           
-            <a href="../index.html" class="icon icon-home"> stheno
+            <a href="../index.html" class="icon icon-home" alt="Documentation Home"> stheno
           
 
           
@@ -78,6 +79,7 @@
           
         </div>
 
+        
         <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
           
             
@@ -89,15 +91,12 @@
 <li class="toctree-l1"><a class="reference internal" href="../readme.html">Stheno</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../api.html">Application Programming Interface</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="stheno.autograd.html">stheno.autograd module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stheno.eis.html">stheno.eis module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stheno.field.html">stheno.field module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stheno.function_field.html">stheno.function_field module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stheno.graph.html">stheno.graph module</a></li>
 <li class="toctree-l2 current"><a class="current reference internal" href="#">stheno.input module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stheno.jax.html">stheno.jax module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stheno.kernel.html">stheno.kernel module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stheno.lazy.html">stheno.lazy module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stheno.matrix.html">stheno.matrix module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stheno.mean.html">stheno.mean module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stheno.measure.html">stheno.measure module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stheno.mokernel.html">stheno.mokernel module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stheno.momean.html">stheno.momean module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stheno.random.html">stheno.random module</a></li>
@@ -111,6 +110,7 @@
             
           
         </div>
+        
       </div>
     </nav>
 
@@ -149,7 +149,7 @@
 
   <ul class="wy-breadcrumbs">
     
-      <li><a href="../index.html">Docs</a> &raquo;</li>
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
         
           <li><a href="../api.html">Application Programming Interface</a> &raquo;</li>
         
@@ -174,9 +174,9 @@
             
   <div class="section" id="module-stheno.input">
 <span id="stheno-input-module"></span><h1>stheno.input module<a class="headerlink" href="#module-stheno.input" title="Permalink to this headline">¶</a></h1>
-<dl class="class">
+<dl class="py class">
 <dt id="stheno.input.Input">
-<em class="property">class </em><code class="descclassname">stheno.input.</code><code class="descname">Input</code><span class="sig-paren">(</span><em>*xs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/stheno/input.html#Input"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.input.Input" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">stheno.input.</code><code class="sig-name descname">Input</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">*</span><span class="n">xs</span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/stheno/input.html#Input"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.input.Input" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>Input type.</p>
 <dl class="field-list simple">
@@ -184,47 +184,47 @@
 <dd class="field-odd"><p><strong>*xs</strong> (<em>tensor</em>) – Inputs to type.</p>
 </dd>
 </dl>
-<dl class="method">
+<dl class="py method">
 <dt id="stheno.input.Input.get">
-<code class="descname">get</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/stheno/input.html#Input.get"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.input.Input.get" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">get</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/stheno/input.html#Input.get"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.input.Input.get" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get the wrapped input.</p>
 </dd></dl>
 
 </dd></dl>
 
-<dl class="attribute">
-<dt id="stheno.input.Observed">
-<code class="descclassname">stheno.input.</code><code class="descname">Observed</code><a class="headerlink" href="#stheno.input.Observed" title="Permalink to this definition">¶</a></dt>
-<dd><p>Observed points</p>
-<p>alias of <code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.input.Component{observed}</span></code></p>
-</dd></dl>
-
-<dl class="attribute">
-<dt id="stheno.input.Latent">
-<code class="descclassname">stheno.input.</code><code class="descname">Latent</code><a class="headerlink" href="#stheno.input.Latent" title="Permalink to this definition">¶</a></dt>
-<dd><p>Latent points</p>
-<p>alias of <code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.input.Component{latent}</span></code></p>
-</dd></dl>
-
-<dl class="class">
-<dt id="stheno.input.Component">
-<em class="property">class </em><code class="descclassname">stheno.input.</code><code class="descname">Component</code><span class="sig-paren">(</span><em>*xs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/stheno/input.html#Component"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.input.Component" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference internal" href="#stheno.input.Component" title="stheno.input.Component"><code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.input.Component</span></code></a></p>
-<p>A particular component.</p>
-<p>This is a parametric type.</p>
-</dd></dl>
-
-<dl class="attribute">
-<dt id="stheno.input.At">
-<code class="descclassname">stheno.input.</code><code class="descname">At</code><a class="headerlink" href="#stheno.input.At" title="Permalink to this definition">¶</a></dt>
-<dd><p>alias of <code class="xref py py-class docutils literal notranslate"><span class="pre">plum.parametric.Kind</span></code></p>
-</dd></dl>
-
-<dl class="class">
-<dt id="stheno.input.Unique">
-<em class="property">class </em><code class="descclassname">stheno.input.</code><code class="descname">Unique</code><span class="sig-paren">(</span><em>*xs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/stheno/input.html#Unique"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.input.Unique" title="Permalink to this definition">¶</a></dt>
+<dl class="py class">
+<dt id="stheno.input.MultiInput">
+<em class="property">class </em><code class="sig-prename descclassname">stheno.input.</code><code class="sig-name descname">MultiInput</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">*</span><span class="n">xs</span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/stheno/input.html#MultiInput"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.input.MultiInput" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#stheno.input.Input" title="stheno.input.Input"><code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.input.Input</span></code></a></p>
-<p>One cannot learn about noise at these inputs</p>
+<p>Multiple inputs.</p>
+<dl class="py method">
+<dt id="stheno.input.MultiInput.get">
+<code class="sig-name descname">get</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/stheno/input.html#MultiInput.get"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.input.MultiInput.get" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the wrapped input.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="stheno.input.Unique">
+<em class="property">class </em><code class="sig-prename descclassname">stheno.input.</code><code class="sig-name descname">Unique</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">*</span><span class="n">xs</span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/stheno/input.html#Unique"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.input.Unique" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#stheno.input.Input" title="stheno.input.Input"><code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.input.Input</span></code></a></p>
+<p>One cannot learn about noise at these inputs.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt id="stheno.input.WeightedUnique">
+<em class="property">class </em><code class="sig-prename descclassname">stheno.input.</code><code class="sig-name descname">WeightedUnique</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">x</span></em>, <em class="sig-param"><span class="n">w</span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/stheno/input.html#WeightedUnique"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.input.WeightedUnique" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#stheno.input.Unique" title="stheno.input.Unique"><code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.input.Unique</span></code></a></p>
+<p>One cannot learn about noise at these inputs.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> (<em>tensor</em>) – Input.</p></li>
+<li><p><strong>w</strong> (<em>tensor</em>) – Weights.</p></li>
+</ul>
+</dd>
+</dl>
 </dd></dl>
 
 </div>
@@ -237,10 +237,10 @@
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="stheno.kernel.html" class="btn btn-neutral float-right" title="stheno.kernel module" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="stheno.jax.html" class="btn btn-neutral float-right" title="stheno.jax module" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="stheno.graph.html" class="btn btn-neutral float-left" title="stheno.graph module" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="stheno.autograd.html" class="btn btn-neutral float-left" title="stheno.autograd module" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -249,11 +249,19 @@
 
   <div role="contentinfo">
     <p>
+        
         &copy; Copyright 2017, Wessel Bruinsma
 
     </p>
   </div>
-  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
 
 </footer>
 
@@ -264,7 +272,6 @@
 
   </div>
   
-
 
   <script type="text/javascript">
       jQuery(function () {

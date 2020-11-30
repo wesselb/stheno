@@ -2,6 +2,6 @@ stheno.tensorflow module
 ========================
 
 .. automodule:: stheno.tensorflow
-    :members:
-    :undoc-members:
-    :show-inheritance:
+   :members:
+   :undoc-members:
+   :show-inheritance:

@@ -1,8 +1,7 @@
 
 
 <!DOCTYPE html>
-<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
-<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<html class="writer-html5" lang="en" >
 <head>
   <meta charset="utf-8">
   
@@ -12,28 +11,30 @@
   
 
   
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+
+  
   
   
   
 
   
-  <script type="text/javascript" src="_static/js/modernizr.min.js"></script>
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
   
     
       <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
-        <script type="text/javascript" src="_static/jquery.js"></script>
-        <script type="text/javascript" src="_static/underscore.js"></script>
-        <script type="text/javascript" src="_static/doctools.js"></script>
-        <script type="text/javascript" src="_static/language_data.js"></script>
-        <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/language_data.js"></script>
+        <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
     
     <script type="text/javascript" src="_static/js/theme.js"></script>
 
     
-
-  
-  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
-  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="Stheno" href="readme.html" /> 
@@ -50,7 +51,7 @@
           
 
           
-            <a href="#" class="icon icon-home"> stheno
+            <a href="#" class="icon icon-home" alt="Documentation Home"> stheno
           
 
           
@@ -77,6 +78,7 @@
           
         </div>
 
+        
         <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
           
             
@@ -92,6 +94,7 @@
             
           
         </div>
+        
       </div>
     </nav>
 
@@ -130,7 +133,7 @@
 
   <ul class="wy-breadcrumbs">
     
-      <li><a href="#">Docs</a> &raquo;</li>
+      <li><a href="#" class="icon icon-home"></a> &raquo;</li>
         
       <li>Welcome</li>
     
@@ -159,13 +162,12 @@
 <li class="toctree-l2"><a class="reference internal" href="readme.html#nonlinear-regression-in-20-seconds">Nonlinear Regression in 20 Seconds</a></li>
 <li class="toctree-l2"><a class="reference internal" href="readme.html#installation">Installation</a></li>
 <li class="toctree-l2"><a class="reference internal" href="readme.html#manual">Manual</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="readme.html#kernel-and-mean-design">Kernel and Mean Design</a></li>
+<li class="toctree-l3"><a class="reference internal" href="readme.html#autograd-tensorflow-pytorch-or-jax-your-choice">AutoGrad, TensorFlow, PyTorch, or Jax? Your Choice!</a></li>
 <li class="toctree-l3"><a class="reference internal" href="readme.html#model-design">Model Design</a></li>
-<li class="toctree-l3"><a class="reference internal" href="readme.html#naming-gps">Naming GPs</a></li>
-<li class="toctree-l3"><a class="reference internal" href="readme.html#finite-dimensional-distributions-inference-and-sampling">Finite-Dimensional Distributions, Inference, and Sampling</a></li>
+<li class="toctree-l3"><a class="reference internal" href="readme.html#finite-dimensional-distributions">Finite-Dimensional Distributions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="readme.html#prior-and-posterior-measures">Prior and Posterior Measures</a></li>
 <li class="toctree-l3"><a class="reference internal" href="readme.html#inducing-points">Inducing Points</a></li>
-<li class="toctree-l3"><a class="reference internal" href="readme.html#autograd-tensorflow-or-pytorch">AutoGrad, TensorFlow, or PyTorch?</a></li>
-<li class="toctree-l3"><a class="reference internal" href="readme.html#undiscussed-features">Undiscussed Features</a></li>
+<li class="toctree-l3"><a class="reference internal" href="readme.html#mean-and-kernel-design">Mean and Kernel Design</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="readme.html#examples">Examples</a><ul>
@@ -186,15 +188,12 @@
 </li>
 <li class="toctree-l1"><a class="reference internal" href="api.html">Application Programming Interface</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="source/stheno.autograd.html">stheno.autograd module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="source/stheno.eis.html">stheno.eis module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="source/stheno.field.html">stheno.field module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="source/stheno.function_field.html">stheno.function_field module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="source/stheno.graph.html">stheno.graph module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="source/stheno.input.html">stheno.input module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/stheno.jax.html">stheno.jax module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="source/stheno.kernel.html">stheno.kernel module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="source/stheno.lazy.html">stheno.lazy module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="source/stheno.matrix.html">stheno.matrix module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="source/stheno.mean.html">stheno.mean module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/stheno.measure.html">stheno.measure module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="source/stheno.mokernel.html">stheno.mokernel module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="source/stheno.momean.html">stheno.momean module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="source/stheno.random.html">stheno.random module</a></li>
@@ -233,11 +232,19 @@
 
   <div role="contentinfo">
     <p>
+        
         &copy; Copyright 2017, Wessel Bruinsma
 
     </p>
   </div>
-  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
 
 </footer>
 
@@ -248,7 +255,6 @@
 
   </div>
   
-
 
   <script type="text/javascript">
       jQuery(function () {
