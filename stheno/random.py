@@ -222,39 +222,26 @@ class Normal(RandomVector):
 
         # Add noise.
         if noise is not None:
-            # Put diagonal matrix first in the sum to ease dispatch.
-            var = B.fill_diag(noise, self.dim) + self.var
+            var = B.add(var, B.fill_diag(noise, self.dim))
 
         # Perform sampling operation.
         sample = B.sample(var, num=num)
         if not self.mean_is_zero:
-            sample = sample + self.mean
+            sample = B.add(sample, self.mean)
 
         return B.dense(sample)
 
-    @_dispatch(object)
+    @_dispatch(B.Numeric)
     def __add__(self, other):
         return Normal(self.mean + other, self.var)
 
-    @_dispatch(Random)
-    def __add__(self, other):
-        raise NotImplementedError(
-            f'Cannot add a normal and a "{type(other).__name__}".'
-        )
-
     @_dispatch(Self)
     def __add__(self, other):
-        return Normal(self.mean + other.mean, self.var + other.var)
+        return Normal(B.add(self.mean, other.mean), B.add(self.var, other.var))
 
-    @_dispatch(object)
+    @_dispatch(B.Numeric)
     def __mul__(self, other):
-        return Normal(self.mean * other, self.var * other ** 2)
-
-    @_dispatch(Random)
-    def __mul__(self, other):
-        raise NotImplementedError(
-            f'Cannot multiply a normal and a f"{type(other).__name__}".'
-        )
+        return Normal(B.multiply(self.mean, other), B.multiply(self.var, other ** 2))
 
     def lmatmul(self, other):
         return Normal(

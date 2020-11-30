@@ -3,6 +3,7 @@ import numpy as np
 import pytest
 from matrix import Dense, Zero
 from scipy.stats import multivariate_normal
+from plum import NotFoundLookupError
 
 from stheno.random import Normal, RandomVector
 from .util import approx
@@ -144,9 +145,9 @@ def test_normal_arithmetic(normal1, normal2):
     approx((normal1 * b).var, normal1.var * b ** 2)
     approx((b * normal1).mean, normal1.mean * b)
     approx((b * normal1).var, normal1.var * b ** 2)
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(NotFoundLookupError):
         normal1.__mul__(normal1)
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(NotFoundLookupError):
         normal1.__rmul__(normal1)
 
     # Test addition.
@@ -154,9 +155,9 @@ def test_normal_arithmetic(normal1, normal2):
     approx((normal1 + normal2).var, normal1.var + normal2.var)
     approx(normal1.__radd__(b).mean, normal1.mean + b)
     approx(normal1.__radd__(b).mean, normal1.mean + b)
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(NotFoundLookupError):
         normal1.__add__(RandomVector())
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(NotFoundLookupError):
         normal1.__radd__(RandomVector())
 
     # Test negation.
