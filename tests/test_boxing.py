@@ -1,16 +1,19 @@
+import jax
+import jax.numpy as jnp
 import lab as B
 import pytest
 import tensorflow as tf
 import torch
 from algebra import Element
-from autograd import grad
+import autograd
 from lab import torch as B
 from matrix import AbstractMatrix, Dense
 
 from stheno.torch import EQ
 
 
-def test_boxing_autograd():
+@pytest.mark.parametrize("grad", [autograd.grad, lambda f: jax.jit(jax.grad(f))])
+def test_boxing_objective(grad):
     k = EQ()
     objs = []
 
@@ -30,12 +33,14 @@ def test_boxing_autograd():
 
 
 @pytest.mark.parametrize(
-    'generate, Numeric',
-    [(lambda *shape: B.randn(torch.float64, *shape), B.TorchNumeric),
-     (lambda *shape: B.randn(tf.float64, *shape), B.TFNumeric),
-     (lambda *shape: tf.Variable(B.randn(tf.float64, *shape)), B.TFNumeric)]
+    "generate, Numeric",
+    [
+        (lambda *shape: B.randn(torch.float64, *shape), B.TorchNumeric),
+        (lambda *shape: B.randn(tf.float64, *shape), B.TFNumeric),
+        (lambda *shape: tf.Variable(B.randn(tf.float64, *shape)), B.TFNumeric),
+    ],
 )
-def test_boxing(generate, Numeric):
+def test_boxing_direct(generate, Numeric):
     k = EQ()
     num = generate()
     x = generate(10)
@@ -50,9 +55,11 @@ def test_boxing(generate, Numeric):
 
 
 @pytest.mark.parametrize(
-    'generate, Numeric',
-    [(lambda *shape: B.randn(torch.float64, *shape), B.TorchNumeric),
-     (lambda *shape: B.randn(tf.float64, *shape), B.TFNumeric)]
+    "generate, Numeric",
+    [
+        (lambda *shape: B.randn(torch.float64, *shape), B.TorchNumeric),
+        (lambda *shape: B.randn(tf.float64, *shape), B.TFNumeric),
+    ],
 )
 def test_boxing_inplace(generate, Numeric):
     k = EQ()
