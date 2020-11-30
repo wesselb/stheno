@@ -134,6 +134,6 @@ class MultiOutputKernel(Kernel):
             *[self.elwise(xi, yi) for xi, yi in zip(x.get(), y.get())], axis=0
         )
 
-    def __str__(self):
-        ks = [str(self.measure.kernels[p]) for p in self.ps]
+    def render(self, formatter):
+        ks = [self.measure.kernels[p].render(formatter) for p in self.ps]
         return "MultiOutputKernel({})".format(", ".join(ks))

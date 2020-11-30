@@ -42,6 +42,6 @@ class MultiOutputMean(Mean):
     def __call__(self, x):
         return B.concat(*[self(xi) for xi in x.get()], axis=0)
 
-    def __str__(self):
-        ks = [str(self.measure.means[p]) for p in self.ps]
-        return "MultiOutputMean({})".format(", ".join(ks))
+    def render(self, formatter):
+        ms = [self.measure.means[p].render(formatter) for p in self.ps]
+        return "MultiOutputMean({})".format(", ".join(ms))
