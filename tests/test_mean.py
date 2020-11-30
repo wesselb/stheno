@@ -6,9 +6,10 @@ import pytest
 import tensorflow as tf
 from plum import Dispatcher
 
-from stheno.input import Observed
+from stheno.input import Input, MultiInput
 from stheno.kernel import EQ
 from stheno.mean import TensorProductMean, ZeroMean, Mean, OneMean, PosteriorMean
+from stheno.measure import FDD
 from .util import approx
 
 _dispatch = Dispatcher()
@@ -35,16 +36,17 @@ def f2(x):
 
 
 def test_corner_cases():
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(RuntimeError):
         Mean()(1.0)
 
 
-def test_construction():
-    m = TensorProductMean(lambda x: x ** 2)
-
-    x = B.randn(10, 3)
+@pytest.mark.parametrize("x", [B.randn(10), Input(B.randn(10)), FDD(None, B.randn(10))])
+def test_construction(x):
+    m = TensorProductMean(lambda y: y ** 2)
     m(x)
-    m(Observed(x))
+
+    # Test `MultiInput` construction.
+    approx(m(MultiInput(x, x)), B.concat(m(x), m(x), axis=0))
 
 
 def test_basic_arithmetic():

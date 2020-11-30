@@ -5,10 +5,11 @@ import numpy as np
 from algebra.util import tuple_equal, to_tensor
 from lab import B
 from matrix import Dense, LowRank, Diagonal, Zero, Constant, AbstractMatrix
-from plum import Dispatcher, Self, convert
+from plum import Dispatcher, Self, convert, Union
 
-from .input import Input, Unique, WeightedUnique
+from .input import Input, Unique, WeightedUnique, MultiInput
 from .util import num_elements, uprank
+from . import PromisedFDD as FDD
 
 __all__ = [
     "Kernel",
@@ -47,6 +48,16 @@ def expand(xs):
     return xs * 2 if len(xs) == 1 else xs
 
 
+@_dispatch(Input)
+def simplify(x):
+    return x.get()
+
+
+@_dispatch(FDD)
+def simplify(fdd):
+    return fdd.x
+
+
 class Kernel(algebra.Function):
     """Kernel function.
 
@@ -75,20 +86,29 @@ class Kernel(algebra.Function):
     def __call__(self, x):
         return self(x, x)
 
-    @_dispatch(Input, Input)
+    @_dispatch(Union(Input, FDD), Union(Input, FDD))
     def __call__(self, x, y):
-        # Both input types were not used. Unwrap.
-        return self(x.get(), y.get())
+        return self(simplify(x), simplify(y))
 
-    @_dispatch(Input, object)
+    @_dispatch(Union(Input, FDD), object)
     def __call__(self, x, y):
-        # Left input type was not used. Unwrap.
-        return self(x.get(), y)
+        return self(simplify(x), y)
 
-    @_dispatch(object, Input)
+    @_dispatch(object, Union(Input, FDD))
     def __call__(self, x, y):
-        # Right input type was not used. Unwrap.
-        return self(x, y.get())
+        return self(x, simplify(y))
+
+    @_dispatch(MultiInput, object, precedence=1)
+    def __call__(self, x, y):
+        return self(x, MultiInput(y))
+
+    @_dispatch(object, MultiInput, precedence=1)
+    def __call__(self, x, y):
+        return self(MultiInput(x), y)
+
+    @_dispatch(MultiInput, MultiInput)
+    def __call__(self, x, y):
+        return B.block(*[[self(xi, yi) for yi in y.get()] for xi in x.get()])
 
     @_dispatch(object, object)
     def elwise(self, x, y):
@@ -109,20 +129,35 @@ class Kernel(algebra.Function):
     def elwise(self, x):
         return self.elwise(x, x)
 
-    @_dispatch(Input, Input)
+    @_dispatch(Union(Input, FDD), Union(Input, FDD))
     def elwise(self, x, y):
-        # Both input types were not used. Unwrap.
-        return self.elwise(x.get(), y.get())
+        return self.elwise(simplify(x), simplify(y))
 
-    @_dispatch(Input, object)
+    @_dispatch(Union(Input, FDD), object)
     def elwise(self, x, y):
-        # Left input type as not used. Unwrap.
-        return self.elwise(x.get(), y)
+        return self.elwise(simplify(x), y)
 
-    @_dispatch(object, Input)
+    @_dispatch(object, Union(Input, FDD))
     def elwise(self, x, y):
-        # Right input type was not used. Unwrap.
-        return self.elwise(x, y.get())
+        return self.elwise(x, simplify(y))
+
+    @_dispatch(MultiInput, object, precedence=1)
+    def elwise(self, x, y):
+        raise ValueError("Unclear combination of arguments given to Kernel.elwise.")
+
+    @_dispatch(object, MultiInput, precedence=1)
+    def elwise(self, x, y):
+        raise ValueError("Unclear combination of arguments given to Kernel.elwise.")
+
+    @_dispatch(MultiInput, MultiInput)
+    def elwise(self, x, y):
+        if len(x.get()) != len(y.get()):
+            raise ValueError(
+                "Kernel.elwise must be called with similarly sized MultiInputs."
+            )
+        return B.concat(
+            *[self.elwise(xi, yi) for xi, yi in zip(x.get(), y.get())], axis=0
+        )
 
     def periodic(self, period=1):
         """Map to a periodic space.
@@ -815,12 +850,10 @@ class CorrectiveKernel(Kernel):
     """Kernel that adds the corrective variance in sparse conditioning.
 
     Args:
-        k_zi (:class:`.kernel.Kernel`): Kernel between the processes
-            corresponding to the left input and the inducing points
-            respectively.
-        k_zj (:class:`.kernel.Kernel`): Kernel between the processes
-            corresponding to the right input and the inducing points
-            respectively.
+        k_zi (:class:`.kernel.Kernel`): Kernel between the processes corresponding to
+            the left input and the inducing points respectively.
+        k_zj (:class:`.kernel.Kernel`): Kernel between the processes corresponding to
+            the right input and the inducing points respectively.
         z (input): Locations of the inducing points.
         A (tensor): Corrective matrix.
         L (tensor): Kernel matrix of the inducing points.
@@ -1064,7 +1097,7 @@ class DerivativeKernel(Kernel, algebra.DerivativeFunction):
     @property
     def _stationary(self):
         # NOTE: In the one-dimensional case, if derivatives with respect to both
-        #     arguments are taken, then the result is in fact stationary.
+        # arguments are taken, then the result is in fact stationary.
         return False
 
     @_dispatch(Self)

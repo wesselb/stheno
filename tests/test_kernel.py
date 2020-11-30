@@ -3,7 +3,8 @@ import pytest
 import tensorflow as tf
 from lab.tensorflow import B
 from matrix import Diagonal, Zero
-from stheno.input import Observed, Unique, WeightedUnique
+
+from stheno.input import Input, Unique, WeightedUnique, MultiInput
 from stheno.kernel import (
     EQ,
     RQ,
@@ -25,7 +26,7 @@ from stheno.kernel import (
     perturb,
     num_elements,
 )
-
+from stheno.measure import FDD
 from .util import approx
 
 
@@ -66,26 +67,39 @@ def test_corner_cases():
         Kernel()(1.0)
 
 
-def test_construction():
+@pytest.mark.parametrize(
+    "x1", [B.randn(10), Input(B.randn(10)), FDD(None, B.randn(10))]
+)
+@pytest.mark.parametrize(
+    "x2", [B.randn(10), Input(B.randn(10)), FDD(None, B.randn(10))]
+)
+def test_construction(x1, x2):
     k = EQ()
 
-    x = np.random.randn(10, 1)
+    k(x1)
+    k(x1, x2)
 
-    k(x)
-    k(x, x)
+    k.elwise(x1)
+    k.elwise(x1, x2)
 
-    k(Observed(x))
-    k(Observed(x), Observed(x))
-    k(x, Observed(x))
-    k(Observed(x), x)
+    # Test `MultiInput` construction.
+    approx(
+        k(MultiInput(x1, x2)),
+        B.concat2d([k(x1, x1), k(x1, x2)], [k(x2, x1), k(x2, x2)]),
+    )
+    approx(k(x1, MultiInput(x1, x2)), B.concat(k(x1, x1), k(x1, x2), axis=1))
+    approx(k(MultiInput(x1, x2), x2), B.concat(k(x1, x2), k(x2, x2), axis=0))
 
-    k.elwise(x)
-    k.elwise(x, x)
-
-    k.elwise(Observed(x))
-    k.elwise(Observed(x), Observed(x))
-    k.elwise(x, Observed(x))
-    k.elwise(Observed(x), x)
+    approx(
+        k.elwise(MultiInput(x1, x2)),
+        B.concat(k.elwise(x1, x1), k.elwise(x2, x2), axis=0),
+    )
+    with pytest.raises(ValueError):
+        k.elwise(MultiInput(x1), MultiInput(x1, x2))
+    with pytest.raises(ValueError):
+        k.elwise(x1, MultiInput(x1, x2))
+    with pytest.raises(ValueError):
+        k.elwise(MultiInput(x1, x2), x2)
 
 
 def test_basic_arithmetic():
@@ -96,8 +110,8 @@ def test_basic_arithmetic():
     k5 = Matern52()
     k6 = Delta()
     k7 = Linear()
-    xs1 = np.random.randn(10, 2), np.random.randn(20, 2)
-    xs2 = np.random.randn(), np.random.randn()
+    xs1 = B.randn(10, 2), B.randn(20, 2)
+    xs2 = B.randn(), B.randn()
 
     approx(k6(xs1[0]), k6(xs1[0], xs1[0]))
     approx((k1 * k2)(*xs1), k1(*xs1) * k2(*xs1))
@@ -115,9 +129,9 @@ def test_basic_arithmetic():
 
 
 def test_reversal():
-    x1 = np.random.randn(10, 2)
-    x2 = np.random.randn(5, 2)
-    x3 = np.random.randn()
+    x1 = B.randn(10, 2)
+    x2 = B.randn(5, 2)
+    x3 = B.randn()
 
     # Test with a stationary and non-stationary kernel.
     for k in [EQ(), Linear()]:
@@ -321,8 +335,8 @@ def test_mat52():
 def test_one():
     k = OneKernel()
 
-    x1 = np.random.randn(10, 2)
-    x2 = np.random.randn(5, 2)
+    x1 = B.randn(10, 2)
+    x2 = B.randn(5, 2)
 
     # Test that the kernel computes correctly.
     approx(k(x1, x2), np.ones((10, 5)))
@@ -341,8 +355,8 @@ def test_one():
 
 def test_zero():
     k = ZeroKernel()
-    x1 = np.random.randn(10, 2)
-    x2 = np.random.randn(5, 2)
+    x1 = B.randn(10, 2)
+    x2 = B.randn(5, 2)
 
     # Test that the kernel computes correctly.
     approx(k(x1, x2), np.zeros((10, 5)))
@@ -407,9 +421,7 @@ def test_log_kernel():
 
 
 def test_posterior_kernel():
-    k = PosteriorKernel(
-        EQ(), EQ(), EQ(), np.random.randn(5, 2), EQ()(np.random.randn(5, 1))
-    )
+    k = PosteriorKernel(EQ(), EQ(), EQ(), B.randn(5, 2), EQ()(B.randn(5, 1)))
 
     # Verify that the kernel has the right properties.
     assert not k.stationary
@@ -420,9 +432,9 @@ def test_posterior_kernel():
 
 
 def test_corrective_kernel():
-    a, b = np.random.randn(3, 3), np.random.randn(3, 3)
+    a, b = B.randn(3, 3), B.randn(3, 3)
     a, b = a.dot(a.T), b.dot(b.T)
-    z = np.random.randn(3, 2)
+    z = B.randn(3, 2)
     k = CorrectiveKernel(EQ(), EQ(), z, a, b)
 
     # Verify that the kernel has the right properties.
@@ -488,7 +500,7 @@ def test_stretched():
 
     # Check passing in a list.
     k = EQ().stretch(np.array([1, 2]))
-    k(np.random.randn(10, 2))
+    k(B.randn(10, 2))
 
 
 def test_periodic():
@@ -513,7 +525,7 @@ def test_periodic():
 
     # Check passing in a list.
     k = EQ().periodic(np.array([1, 2]))
-    k(np.random.randn(10, 2))
+    k(B.randn(10, 2))
 
     # Check periodication of a zero.
     k = ZeroKernel()
@@ -555,14 +567,14 @@ def test_shifted():
     assert not k.stationary
 
     # Check computation.
-    x1 = np.random.randn(10, 2)
-    x2 = np.random.randn(5, 2)
+    x1 = B.randn(10, 2)
+    x2 = B.randn(5, 2)
     k = Linear()
     approx(k.shift(5)(x1, x2), k(x1 - 5, x2 - 5))
 
     # Check passing in a list.
     k = Linear().shift(np.array([1, 2]))
-    k(np.random.randn(10, 2))
+    k(B.randn(10, 2))
 
 
 def test_selection():
@@ -598,7 +610,7 @@ def test_selection():
     # Test computation of the kernel.
     k1 = EQ().select([1, 2])
     k2 = EQ()
-    x = np.random.randn(10, 3)
+    x = B.randn(10, 3)
     approx(k1(x), k2(x[:, [1, 2]]))
 
 
@@ -624,7 +636,7 @@ def test_input_transform():
 
     # Test computation of the kernel.
     k = Linear()
-    x1, x2 = np.random.randn(10, 2), np.random.randn(10, 2)
+    x1, x2 = B.randn(10, 2), B.randn(10, 2)
 
     k2 = k.transform(lambda x: x ** 2)
     k3 = k.transform(lambda x: x ** 2, lambda x: x - 5)

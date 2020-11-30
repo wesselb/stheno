@@ -3,12 +3,14 @@ import logging
 import algebra as algebra
 from lab import B
 from matrix import AbstractMatrix
-from plum import Dispatcher, Self, convert
+from plum import Dispatcher, Self, convert, Union
 
-from .input import Input
+from . import PromisedFDD as FDD
+from .input import Input, MultiInput
+from .kernel import simplify
 from .util import num_elements, uprank
 
-__all__ = ['TensorProductMean', 'DerivativeMean']
+__all__ = ["TensorProductMean", "DerivativeMean"]
 
 log = logging.getLogger(__name__)
 
@@ -31,12 +33,15 @@ class Mean(algebra.Function):
         Returns:
             tensor: Mean vector as a rank 2 column vector.
         """
-        raise NotImplementedError()
+        raise RuntimeError(f'For mean {self}, could not resolve argument "{x}".')
 
-    @_dispatch(Input)
+    @_dispatch(Union(Input, FDD))
     def __call__(self, x):
-        # This should not have been reached. Attempt to unwrap.
-        return self(x.get())
+        return self(simplify(x))
+
+    @_dispatch(MultiInput)
+    def __call__(self, x):
+        return B.concat(*[self(xi) for xi in x.get()], axis=0)
 
 
 # Register the algebra.
@@ -146,6 +151,7 @@ class TensorProductMean(Mean, algebra.TensorProductFunction):
 
 class DerivativeMean(Mean, algebra.DerivativeFunction):
     """Derivative of mean."""
+
     _dispatch = Dispatcher(in_class=Self)
 
     @_dispatch(B.Numeric)
@@ -155,23 +161,21 @@ class DerivativeMean(Mean, algebra.DerivativeFunction):
 
         i = self.derivs[0]
         with tf.GradientTape() as t:
-            xi = x[:, i:i + 1]
+            xi = x[:, i : i + 1]
             t.watch(xi)
-            x = B.concat(x[:, :i], xi, x[:, i + 1:], axis=1)
+            x = B.concat(x[:, :i], xi, x[:, i + 1 :], axis=1)
             out = B.dense(self[0](x))
-            return t.gradient(out, xi, unconnected_gradients='zero')
+            return t.gradient(out, xi, unconnected_gradients="zero")
 
 
 class PosteriorMean(Mean):
     """Posterior mean.
 
     Args:
-        m_i (:class:`.mean.Mean`): Mean of process corresponding to
-            the input.
-        m_z (:class:`.mean.Mean`): Mean of process corresponding to
-            the data.
-        k_zi (:class:`.kernel.Kernel`): Kernel between processes
-            corresponding to the data and the input respectively.
+        m_i (:class:`.mean.Mean`): Mean of process corresponding to the input.
+        m_z (:class:`.mean.Mean`): Mean of process corresponding to the data.
+        k_zi (:class:`.kernel.Kernel`): Kernel between processes corresponding to the
+            data and the input respectively.
         z (input): Locations of data.
         K_z (matrix): Kernel matrix of data.
         y (tensor): Observations to condition on.
@@ -190,5 +194,4 @@ class PosteriorMean(Mean):
     @_dispatch(object)
     def __call__(self, x):
         diff = B.subtract(self.y, self.m_z(self.z))
-        return B.add(self.m_i(x),
-                     B.iqf(self.K_z, self.k_zi(self.z, x), diff))
+        return B.add(self.m_i(x), B.iqf(self.K_z, self.k_zi(self.z, x), diff))
