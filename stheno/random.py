@@ -45,11 +45,6 @@ class RandomVector(Random):
 class Normal(RandomVector):
     """Normal random variable.
 
-    Attributes:
-        mean (column vector): Mean of the distribution.
-        mean_is_zero (bool): `True` if it is determined that `mean` is all zeros.
-        var (matrix): Variance of the distribution.
-
     Args:
         mean (column vector, optional): Mean of the distribution. Defaults to zero.
         var (matrix): Variance of the distribution.

@@ -788,17 +788,12 @@ class GP(RandomProcess):
     """Gaussian process.
 
     Args:
-        kernel (:class:`.kernel.Kernel`): Kernel of the
-            process.
         mean (:class:`.mean.Mean`, optional): Mean function of the process. Defaults
             to zero.
+        kernel (:class:`.kernel.Kernel`): Kernel of the process.
         measure (:class:`.measure.Measure`): Measure to attach to. Must be given as
             a keyword argument.
         name (:obj:`str`, optional): Name. Must be given as a keyword argment.
-
-    Attributes:
-        measure (:class:`.measure.Measure`): Measure that was given to the GP at
-            construction.
     """
 
     _dispatch = Dispatcher(in_class=Self)
