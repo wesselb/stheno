@@ -657,6 +657,10 @@ available:
 * `DecayingKernel(alpha, beta)`:
 
     $$ k(x, y) = \frac{\|\beta\|^\alpha}{\|x + y + \beta\|^\alpha}; $$
+    
+* `LogKernel()`:
+
+    $$ k(x, y) = \frac{\log(1 + \|x - y\|)}{\|x - y\|}; $$
 
 * `TensorProductKernel(f)`:
 
