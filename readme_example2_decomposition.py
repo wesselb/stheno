@@ -24,8 +24,7 @@ e_exp = GP(Exp(), measure=prior)
 
 e = e_indep + 0.3 * e_exp
 
-# Sum the latent function and observation noise to get a model for the
-# observations.
+# Sum the latent function and observation noise to get a model for the observations.
 y = f + 0.5 * e
 
 # Sample a true, underlying function and observations.
@@ -38,8 +37,8 @@ y = f + 0.5 * e
     y_obs,
 ) = prior.sample(f_smooth(x), f_wiggly(x), f_periodic(x), f_linear(x), f(x), y(x_obs))
 
-# Now condition on the observations and make predictions for the latent
-# function and its various components.
+# Now condition on the observations and make predictions for the latent function and
+# its various components.
 post = prior | (y(x_obs), y_obs)
 
 pred_smooth = post(f_smooth(x)).marginals()
