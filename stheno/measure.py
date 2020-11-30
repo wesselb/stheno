@@ -498,7 +498,7 @@ class Measure(metaclass=Referentiable):
         """
         return self.sum(p_sum, p, other)
 
-    @_dispatch(PromisedGP, PromisedGP, B.Numeric)
+    @_dispatch(PromisedGP, PromisedGP, {B.Numeric, FunctionType})
     def sum(self, p_sum, p, other):
         return self._update(
             p_sum,

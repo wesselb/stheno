@@ -107,12 +107,21 @@ def test_construction():
 def test_sum_other():
     p = GP(TensorProductMean(lambda x: x ** 2), EQ())
 
+    def five(y):
+        return 5 * B.ones(B.shape(y)[0], 1)
+
     x = B.randn(5, 1)
     for p_sum in [
+        # Add a numeric thing.
         p + 5.0,
         5.0 + p,
         p.measure.sum(GP(), p, 5.0),
         p.measure.sum(GP(), 5.0, p),
+        # Add a function.
+        p + five,
+        five + p,
+        p.measure.sum(GP(), p, five),
+        p.measure.sum(GP(), five, p),
     ]:
         approx(p.mean(x) + 5.0, p_sum.mean(x))
         approx(p.mean(x) + 5.0, p_sum.mean(x))
@@ -129,12 +138,21 @@ def test_sum_other():
 def test_mul_other():
     p = GP(TensorProductMean(lambda x: x ** 2), EQ())
 
+    def five(y):
+        return 5 * B.ones(B.shape(y)[0], 1)
+
     x = B.randn(5, 1)
     for p_mul in [
+        # Multiply numeric thing.
         p * 5.0,
         5.0 * p,
         p.measure.mul(GP(), p, 5.0),
         p.measure.mul(GP(), 5.0, p),
+        # Multiply with a function.
+        p * five,
+        five * p,
+        p.measure.mul(GP(), p, five),
+        p.measure.mul(GP(), five, p),
     ]:
         approx(5.0 * p.mean(x), p_mul.mean(x))
         approx(5.0 * p.mean(x), p_mul.mean(x))
