@@ -942,17 +942,12 @@
     <span class="sd">&quot;&quot;&quot;Gaussian process.</span>
 
 <span class="sd">    Args:</span>
-<span class="sd">        kernel (:class:`.kernel.Kernel`): Kernel of the</span>
-<span class="sd">            process.</span>
 <span class="sd">        mean (:class:`.mean.Mean`, optional): Mean function of the process. Defaults</span>
 <span class="sd">            to zero.</span>
+<span class="sd">        kernel (:class:`.kernel.Kernel`): Kernel of the process.</span>
 <span class="sd">        measure (:class:`.measure.Measure`): Measure to attach to. Must be given as</span>
 <span class="sd">            a keyword argument.</span>
 <span class="sd">        name (:obj:`str`, optional): Name. Must be given as a keyword argment.</span>
-
-<span class="sd">    Attributes:</span>
-<span class="sd">        measure (:class:`.measure.Measure`): Measure that was given to the GP at</span>
-<span class="sd">            construction.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="n">_dispatch</span> <span class="o">=</span> <span class="n">Dispatcher</span><span class="p">(</span><span class="n">in_class</span><span class="o">=</span><span class="n">Self</span><span class="p">)</span>
