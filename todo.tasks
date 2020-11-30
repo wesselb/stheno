@@ -1,21 +1,32 @@
 TODO:
-    ☐ Throw warning at fallback for elwise! @critical
-    ☐ Do not automatically TensorFlow at startup! @critical
-    ☐ Optimise select
-    ☐ Remove exceptions for torch 0-dim behaviour
-    ☐ Use ABC with six.
-    ☐ DerivativeKernel for torch and autograd?
-        ☐ Simplify for TensorFlow! Jacobian function?
-    ☐ Update manual, e.g. kernels!
-    ☐ Remove uprank: use B.uprank
+    ☐ Test WeightedUnique @high
 
-    ☐ Fixup examples: they use old versions of wbml, varz, and LAB! @critical
+    Refactor:
+        Stheno 1.0:
+            ☐ Remove duplication in handling of boxing
+            ☐ Let SparseObs take in Obs for consistency
+                ☐ Sparse -> Pseudo
+            ☐ Periodic GP
+            ☐ FixedDelta -> make use of traits
+            ☐ RowVecs
+            ☐ ColVecs
 
-    ☐ Rename tf->tensorflow, but still allow tf @critical
+            ☐ Add eval @low
 
-    ☐ Refactor tests to use PyTest: remove raises, fixtures, and parametrisation. @critical
-        ☐ Fixtures for kernel inputs!
+        Misc:
+            ☐ Throw warning at fallback for elwise
 
+    Optimise:
+        ☐ SelectedKernel
+
+    README:
+        ☐ Additive pseudo-point example
+        ☐ B.epsilon
+
+    Features:
+        ☐ DerivativeKernel for Torch, AutoGrad, and Jax
+
+---- ✄ -----------------------
 
 Features:
     ☐ FITC approximation
@@ -25,16 +36,43 @@ Features:
         ☐ ICM
         ☐ (O)LMM
 
-Structured Matrices:
-    ☐ Block matrix
-    ☐ Kronecker product, and sum thereof
-    ☐ Toeplitz
-
 Profiling:
     ☐ Single sample 100-d normal maximum 20% slower.
 
 ＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿
 Archive:
+ ✓ Remove uprank: use B.uprank @done (21-11-30 19:26) @project(TODO / Refactor / Misc)
+ ✓ Update manual, e.g. kernels @done (20-11-30 19:26) @project(TODO / README)
+ ✓ Note: accumulation to default graph can cause memory problems @critical @done (20-11-30 19:26) @project(TODO / README)
+ ✓ Note that kernel is given first everywhere @done (20-11-30 19:26) @project(TODO / README)
+ ✓ Refactor tests to use PyTest: remove raises, fixtures, and parametrisation. @done (20-11-30 19:25) @project(TODO)
+ ✓ Refactor tests @done (20-11-30 19:25) @project(TODO)
+ ✓ GP composition framework @done (20-11-30 19:25) @project(TODO / Refactor / Stheno 1.0)
+ ✓ Fixtures for kernel inputs @done (20-11-30 19:25) @project(TODO)
+ ✓ Fix coverage @done (20-11-30 19:25) @project(TODO)
+ ✓ Construct GPs and Normals both ways around @done (20-11-30 19:25) @project(TODO / Refactor / Stheno 1.0)
+ ✓ Clean printing @done (20-11-30 19:25) @project(TODO)
+ x Use `mul_matched` for approximate multiplication @cancelled (20-11-30 19:25) @project(TODO / Refactor / Stheno 1.0)
+ ✓ Remove clutter @done (19-12-29 16:22) @project(TODO)
+ ✓ Kernel properties except for `stationary` @done (19-12-29 16:22) @project(TODO)
+ ✓ Normal1D @done (19-12-29 16:18) @project(TODO)
+ ✓ EIS @done (19-12-29 16:18) @project(TODO)
+ ✓ Use ABC with six @done (19-12-29 16:17) @project(TODO / Refactor / Misc)
+ ✓ Do not automatically load TensorFlow at startup @done (19-12-29 16:17) @project(TODO / Refactor / Misc)
+ ✓ Remove exceptions for torch 0-dim behaviour @done (19-12-29 16:16) @project(TODO / Refactor / Misc)
+ ✓ Fix `test_delta_evaluations` for `Unique` inputs @done (19-12-29 16:10) @project(TODO)
+ ✓ Remove diff_approx @done (19-12-29 16:06) @project(TODO / Refactor / Stheno 1.0)
+ ✓ Clean test random @done (19-12-29 16:05) @project(TODO)
+ ✓ Remove Python 2 compat remains @done (19-12-29 16:04) @project(TODO)
+ ✓ Minimise B.dense calls @done (19-12-29 16:02) @project(TODO)
+ ✓ Ensure that cov. matrices are AMs with dispatch @done (19-12-29 16:02) @project(TODO)
+ ✓ StruMat @done (19-12-29 15:29) @project(TODO / Refactor / Stheno 1.0 / Move to external packages)
+ ✓ Rings @done (19-12-29 15:29) @project(TODO / Refactor / Stheno 1.0 / Move to external packages)
+ ✓ Kronecker product, and sum thereof @done (19-12-27 17:42) @project(Structured Matrices)
+ x Toeplitz @cancelled (19-12-27 17:42) @project(Structured Matrices)
+ x Block matrix @cancelled (19-12-27 17:42) @project(Structured Matrices)
+ ✓ Fix examples to use new WBML and LAB @done (19-11-19 16:39) @project(TODO / README)
+ ✓ Rename tf->tensorflow, but still allow tf @critical @done (19-07-10 22:28) @project(TODO)
  ✓ LogKernel @done (19-05-02 16:53) @project(TODO / Test)
  ✓ Kernel powers @done (19-05-02 16:53) @project(TODO / Test)
  ✓ Multi-argument sparse conditioning @done (18-10-14 16:51) @project(Features)
