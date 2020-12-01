@@ -3,6 +3,7 @@ TODO:
 
     Refactor:
         Stheno 1.0:
+            ☐ Anchestral sampling
             ☐ Remove duplication in handling of boxing
             ☐ Let SparseObs take in Obs for consistency
                 ☐ Sparse -> Pseudo
