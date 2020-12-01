@@ -13,6 +13,7 @@ also `Stheno.jl <https://github.com/willtebbutt/Stheno.jl>`__.
 
    -  `AutoGrad, TensorFlow, PyTorch, or Jax? Your
       Choice! <#autograd-tensorflow-pytorch-or-jax-your-choice>`__
+   -  `Important Remarks <#important-remarks>`__
    -  `Model Design <#model-design>`__
    -  `Finite-Dimensional
       Distributions <#finite-dimensional-distributions>`__
@@ -100,6 +101,72 @@ AutoGrad, TensorFlow, PyTorch, or Jax? Your Choice!
 
     from stheno.jax import GP, EQ
 
+Important Remarks
+~~~~~~~~~~~~~~~~~
+
+Stheno uses `LAB <https://github.com/wesselb/lab>`__ to provide an
+implementation that is backend agnostic. Moreover, Stheno uses `an
+extension of LAB <https://github.com/wesselb/matrix>`__ to accelerate
+linear algebra with structured linear algebra primitives. You will
+encounter these primitives:
+
+.. code:: python
+
+    >>> k = 2 * Delta()
+
+    >>> x = np.linspace(0, 5, 10)
+
+    >>> k(x)
+    <diagonal matrix: shape=10x10, dtype=float64
+     diag=[2. 2. 2. 2. 2. 2. 2. 2. 2. 2.]>
+
+If you're using `LAB <https://github.com/wesselb/lab>`__ to further
+process these matrices, then there is absolutely no need to worry: these
+structured matrix types know how to add, multiply, and do other linear
+algebra operations.
+
+.. code:: python
+
+    >>> import lab as B
+
+    >>> B.matmul(k(x), k(x))
+    <diagonal matrix: shape=10x10, dtype=float64
+     diag=[4. 4. 4. 4. 4. 4. 4. 4. 4. 4.]>
+
+If you're not using `LAB <https://github.com/wesselb/lab>`__, you can
+convert these structured primitives to regular
+NumPy/TensorFlow/PyTorch/Jax arrays by calling ``B.dense`` (``B`` is
+from `LAB <https://github.com/wesselb/lab>`__):
+
+.. code:: python
+
+    >>> import lab as B
+
+    >>> B.dense(k(x))
+    array([[2., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+           [0., 2., 0., 0., 0., 0., 0., 0., 0., 0.],
+           [0., 0., 2., 0., 0., 0., 0., 0., 0., 0.],
+           [0., 0., 0., 2., 0., 0., 0., 0., 0., 0.],
+           [0., 0., 0., 0., 2., 0., 0., 0., 0., 0.],
+           [0., 0., 0., 0., 0., 2., 0., 0., 0., 0.],
+           [0., 0., 0., 0., 0., 0., 2., 0., 0., 0.],
+           [0., 0., 0., 0., 0., 0., 0., 2., 0., 0.],
+           [0., 0., 0., 0., 0., 0., 0., 0., 2., 0.],
+           [0., 0., 0., 0., 0., 0., 0., 0., 0., 2.]])
+
+Furthermore, before computing a Cholesky decomposition, Stheno always
+adds a minuscule diagonal to prevent the Cholesky decomposition from
+failing due to positive indefiniteness caused by numerical noise. You
+can change the magnitude of this diagonal by changing ``B.epsilon``:
+
+.. code:: python
+
+    >>> import lab as B
+
+    >>> B.epsilon = 1e-12   # Default regularisation
+
+    >>> B.epsilon = 1e-8    # Strong regularisation
+
 Model Design
 ~~~~~~~~~~~~
 
@@ -119,7 +186,7 @@ can be extracted with ``f.measure == prior``. If the keyword argument
 ``measure`` is not set, then automatically a new measure is created,
 which afterwards can be extracted with ``f.measure``.
 
-Definition:
+Definition, where ``prior = Measure()``:
 
 .. code:: python
 
@@ -167,10 +234,10 @@ Compositional Design
 
    .. code:: python
 
-       >>> GP(EQ()) + GP(Exp())
+       >>> GP(EQ(), measure=prior) + GP(Exp(), measure=prior)
        GP(0, EQ() + Exp())
 
-       >>> GP(EQ()) + GP(EQ())
+       >>> GP(EQ(), measure=prior) + GP(EQ(), measure=prior)
        GP(0, 2 * EQ())
 
        >>> GP(EQ()) + 1
@@ -182,7 +249,7 @@ Compositional Design
        >>> GP(EQ()) + (lambda x: x ** 2)
        GP(<lambda>, EQ())
 
-       >>> GP(2, EQ()) - GP(1, EQ())
+       >>> GP(2, EQ(), measure=prior) - GP(1, EQ(), measure=prior)
        GP(1, 2 * EQ())
 
 -  Multiply GPs by other objects.
@@ -1832,7 +1899,7 @@ Smoothing with Nonparametric Basis Functions
 
 .. |CI| image:: https://github.com/wesselb/stheno/workflows/CI/badge.svg?branch=master
    :target: https://github.com/wesselb/stheno/actions?query=workflow%3ACI
-.. |Coverage Status| image:: https://coveralls.io/repos/github/wesselb/stheno/badge.svg?branch=master&service=github
+.. |Coverage Status| image:: https://coveralls.io/repos/github/wesselb/stheno/badge.svg?branch=master
    :target: https://coveralls.io/github/wesselb/stheno?branch=master
 .. |Latest Docs| image:: https://img.shields.io/badge/docs-latest-blue.svg
    :target: https://wesselb.github.io/stheno

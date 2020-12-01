@@ -93,6 +93,7 @@
 <li class="toctree-l2"><a class="reference internal" href="#installation">Installation</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#manual">Manual</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#autograd-tensorflow-pytorch-or-jax-your-choice">AutoGrad, TensorFlow, PyTorch, or Jax? Your Choice!</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#important-remarks">Important Remarks</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#model-design">Model Design</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#compositional-design">Compositional Design</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#displaying-gps">Displaying GPs</a></li>
@@ -197,7 +198,7 @@
             
   <div class="section" id="stheno">
 <h1><a class="reference external" href="https://github.com/wesselb/stheno">Stheno</a><a class="headerlink" href="#stheno" title="Permalink to this headline">¶</a></h1>
-<p><a class="reference external" href="https://github.com/wesselb/stheno/actions?query=workflow%3ACI"><img alt="CI" src="https://github.com/wesselb/stheno/workflows/CI/badge.svg?branch=master" /></a> <a class="reference external" href="https://coveralls.io/github/wesselb/stheno?branch=master"><img alt="Coverage Status" src="https://coveralls.io/repos/github/wesselb/stheno/badge.svg?branch=master&amp;service=github" /></a> <a class="reference external" href="https://wesselb.github.io/stheno"><img alt="Latest Docs" src="https://img.shields.io/badge/docs-latest-blue.svg" /></a> <a class="reference external" href="https://github.com/psf/black"><img alt="Code style: black" src="https://img.shields.io/badge/code%20style-black-000000.svg" /></a></p>
+<p><a class="reference external" href="https://github.com/wesselb/stheno/actions?query=workflow%3ACI"><img alt="CI" src="https://github.com/wesselb/stheno/workflows/CI/badge.svg?branch=master" /></a> <a class="reference external" href="https://coveralls.io/github/wesselb/stheno?branch=master"><img alt="Coverage Status" src="https://coveralls.io/repos/github/wesselb/stheno/badge.svg?branch=master" /></a> <a class="reference external" href="https://wesselb.github.io/stheno"><img alt="Latest Docs" src="https://img.shields.io/badge/docs-latest-blue.svg" /></a> <a class="reference external" href="https://github.com/psf/black"><img alt="Code style: black" src="https://img.shields.io/badge/code%20style-black-000000.svg" /></a></p>
 <p>Stheno is an implementation of Gaussian process modelling in Python. See
 also <a class="reference external" href="https://github.com/willtebbutt/Stheno.jl">Stheno.jl</a>.</p>
 <ul class="simple">
@@ -208,6 +209,7 @@ Seconds</a></p></li>
 <ul>
 <li><p><a class="reference external" href="#autograd-tensorflow-pytorch-or-jax-your-choice">AutoGrad, TensorFlow, PyTorch, or Jax? Your
 Choice!</a></p></li>
+<li><p><a class="reference external" href="#important-remarks">Important Remarks</a></p></li>
 <li><p><a class="reference external" href="#model-design">Model Design</a></p></li>
 <li><p><a class="reference external" href="#finite-dimensional-distributions">Finite-Dimensional
 Distributions</a></p></li>
@@ -288,6 +290,64 @@ and more readable version of the docs.</p>
 </pre></div>
 </div>
 </div>
+<div class="section" id="important-remarks">
+<h3>Important Remarks<a class="headerlink" href="#important-remarks" title="Permalink to this headline">¶</a></h3>
+<p>Stheno uses <a class="reference external" href="https://github.com/wesselb/lab">LAB</a> to provide an
+implementation that is backend agnostic. Moreover, Stheno uses <a class="reference external" href="https://github.com/wesselb/matrix">an
+extension of LAB</a> to accelerate
+linear algebra with structured linear algebra primitives. You will
+encounter these primitives:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">k</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">Delta</span><span class="p">()</span>
+
+<span class="gp">&gt;&gt;&gt; </span><span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+
+<span class="gp">&gt;&gt;&gt; </span><span class="n">k</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+<span class="go">&lt;diagonal matrix: shape=10x10, dtype=float64</span>
+<span class="go"> diag=[2. 2. 2. 2. 2. 2. 2. 2. 2. 2.]&gt;</span>
+</pre></div>
+</div>
+<p>If you’re using <a class="reference external" href="https://github.com/wesselb/lab">LAB</a> to further
+process these matrices, then there is absolutely no need to worry: these
+structured matrix types know how to add, multiply, and do other linear
+algebra operations.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">lab</span> <span class="k">as</span> <span class="nn">B</span>
+
+<span class="gp">&gt;&gt;&gt; </span><span class="n">B</span><span class="o">.</span><span class="n">matmul</span><span class="p">(</span><span class="n">k</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="n">k</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
+<span class="go">&lt;diagonal matrix: shape=10x10, dtype=float64</span>
+<span class="go"> diag=[4. 4. 4. 4. 4. 4. 4. 4. 4. 4.]&gt;</span>
+</pre></div>
+</div>
+<p>If you’re not using <a class="reference external" href="https://github.com/wesselb/lab">LAB</a>, you can
+convert these structured primitives to regular
+NumPy/TensorFlow/PyTorch/Jax arrays by calling <code class="docutils literal notranslate"><span class="pre">B.dense</span></code> (<code class="docutils literal notranslate"><span class="pre">B</span></code> is
+from <a class="reference external" href="https://github.com/wesselb/lab">LAB</a>):</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">lab</span> <span class="k">as</span> <span class="nn">B</span>
+
+<span class="gp">&gt;&gt;&gt; </span><span class="n">B</span><span class="o">.</span><span class="n">dense</span><span class="p">(</span><span class="n">k</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
+<span class="go">array([[2., 0., 0., 0., 0., 0., 0., 0., 0., 0.],</span>
+<span class="go">       [0., 2., 0., 0., 0., 0., 0., 0., 0., 0.],</span>
+<span class="go">       [0., 0., 2., 0., 0., 0., 0., 0., 0., 0.],</span>
+<span class="go">       [0., 0., 0., 2., 0., 0., 0., 0., 0., 0.],</span>
+<span class="go">       [0., 0., 0., 0., 2., 0., 0., 0., 0., 0.],</span>
+<span class="go">       [0., 0., 0., 0., 0., 2., 0., 0., 0., 0.],</span>
+<span class="go">       [0., 0., 0., 0., 0., 0., 2., 0., 0., 0.],</span>
+<span class="go">       [0., 0., 0., 0., 0., 0., 0., 2., 0., 0.],</span>
+<span class="go">       [0., 0., 0., 0., 0., 0., 0., 0., 2., 0.],</span>
+<span class="go">       [0., 0., 0., 0., 0., 0., 0., 0., 0., 2.]])</span>
+</pre></div>
+</div>
+<p>Furthermore, before computing a Cholesky decomposition, Stheno always
+adds a minuscule diagonal to prevent the Cholesky decomposition from
+failing due to positive indefiniteness caused by numerical noise. You
+can change the magnitude of this diagonal by changing <code class="docutils literal notranslate"><span class="pre">B.epsilon</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">lab</span> <span class="k">as</span> <span class="nn">B</span>
+
+<span class="gp">&gt;&gt;&gt; </span><span class="n">B</span><span class="o">.</span><span class="n">epsilon</span> <span class="o">=</span> <span class="mf">1e-12</span>   <span class="c1"># Default regularisation</span>
+
+<span class="gp">&gt;&gt;&gt; </span><span class="n">B</span><span class="o">.</span><span class="n">epsilon</span> <span class="o">=</span> <span class="mf">1e-8</span>    <span class="c1"># Strong regularisation</span>
+</pre></div>
+</div>
+</div>
 <div class="section" id="model-design">
 <h3>Model Design<a class="headerlink" href="#model-design" title="Permalink to this headline">¶</a></h3>
 <p>The basic building block is a <code class="docutils literal notranslate"><span class="pre">f</span> <span class="pre">=</span> <span class="pre">GP(mean=0,</span> <span class="pre">kernel,</span> <span class="pre">measure=prior)</span></code>,
@@ -305,7 +365,7 @@ measure with which a <code class="docutils literal notranslate"><span class="pre
 can be extracted with <code class="docutils literal notranslate"><span class="pre">f.measure</span> <span class="pre">==</span> <span class="pre">prior</span></code>. If the keyword argument
 <code class="docutils literal notranslate"><span class="pre">measure</span></code> is not set, then automatically a new measure is created,
 which afterwards can be extracted with <code class="docutils literal notranslate"><span class="pre">f.measure</span></code>.</p>
-<p>Definition:</p>
+<p>Definition, where <code class="docutils literal notranslate"><span class="pre">prior</span> <span class="pre">=</span> <span class="pre">Measure()</span></code>:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">f</span> <span class="o">=</span> <span class="n">GP</span><span class="p">(</span><span class="n">kernel</span><span class="p">)</span>
 
 <span class="n">f</span> <span class="o">=</span> <span class="n">GP</span><span class="p">(</span><span class="n">mean</span><span class="p">,</span> <span class="n">kernel</span><span class="p">)</span>
@@ -344,10 +404,10 @@ GPs, which is the primary mechanism used to build cool models.</p>
 <ul>
 <li><p>Add and subtract GPs and other objects.</p>
 <p>Example:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">GP</span><span class="p">(</span><span class="n">EQ</span><span class="p">())</span> <span class="o">+</span> <span class="n">GP</span><span class="p">(</span><span class="n">Exp</span><span class="p">())</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">GP</span><span class="p">(</span><span class="n">EQ</span><span class="p">(),</span> <span class="n">measure</span><span class="o">=</span><span class="n">prior</span><span class="p">)</span> <span class="o">+</span> <span class="n">GP</span><span class="p">(</span><span class="n">Exp</span><span class="p">(),</span> <span class="n">measure</span><span class="o">=</span><span class="n">prior</span><span class="p">)</span>
 <span class="go">GP(0, EQ() + Exp())</span>
 
-<span class="gp">&gt;&gt;&gt; </span><span class="n">GP</span><span class="p">(</span><span class="n">EQ</span><span class="p">())</span> <span class="o">+</span> <span class="n">GP</span><span class="p">(</span><span class="n">EQ</span><span class="p">())</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">GP</span><span class="p">(</span><span class="n">EQ</span><span class="p">(),</span> <span class="n">measure</span><span class="o">=</span><span class="n">prior</span><span class="p">)</span> <span class="o">+</span> <span class="n">GP</span><span class="p">(</span><span class="n">EQ</span><span class="p">(),</span> <span class="n">measure</span><span class="o">=</span><span class="n">prior</span><span class="p">)</span>
 <span class="go">GP(0, 2 * EQ())</span>
 
 <span class="gp">&gt;&gt;&gt; </span><span class="n">GP</span><span class="p">(</span><span class="n">EQ</span><span class="p">())</span> <span class="o">+</span> <span class="mi">1</span>
@@ -359,7 +419,7 @@ GPs, which is the primary mechanism used to build cool models.</p>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">GP</span><span class="p">(</span><span class="n">EQ</span><span class="p">())</span> <span class="o">+</span> <span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
 <span class="go">GP(&lt;lambda&gt;, EQ())</span>
 
-<span class="gp">&gt;&gt;&gt; </span><span class="n">GP</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">EQ</span><span class="p">())</span> <span class="o">-</span> <span class="n">GP</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">EQ</span><span class="p">())</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">GP</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">EQ</span><span class="p">(),</span> <span class="n">measure</span><span class="o">=</span><span class="n">prior</span><span class="p">)</span> <span class="o">-</span> <span class="n">GP</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">EQ</span><span class="p">(),</span> <span class="n">measure</span><span class="o">=</span><span class="n">prior</span><span class="p">)</span>
 <span class="go">GP(1, 2 * EQ())</span>
 </pre></div>
 </div>
