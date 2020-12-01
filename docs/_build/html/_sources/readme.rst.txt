@@ -1,7 +1,7 @@
 `Stheno <https://github.com/wesselb/stheno>`__
 ==============================================
 
-|Build| |Coverage Status| |Latest Docs|
+|CI| |Coverage Status| |Latest Docs| |Code style: black|
 
 Stheno is an implementation of Gaussian process modelling in Python. See
 also `Stheno.jl <https://github.com/willtebbutt/Stheno.jl>`__.
@@ -26,7 +26,7 @@ also `Stheno.jl <https://github.com/willtebbutt/Stheno.jl>`__.
    -  `Decomposition of Prediction <#decomposition-of-prediction>`__
    -  `Learn a Function, Incorporating Prior Knowledge About Its
       Form <#learn-a-function-incorporating-prior-knowledge-about-its-form>`__
-   -  `Multi-Output Regression <#multi-ouput-regression>`__
+   -  `Multi-Output Regression <#multi-output-regression>`__
    -  `Approximate Integration <#approximate-integration>`__
    -  `Bayesian Linear Regression <#bayesian-linear-regression>`__
    -  `GPAR <#gpar>`__
@@ -1256,7 +1256,7 @@ Multi-Output Regression
     p = 4
     H = B.randn(p, m)
 
-    # Construct latent functions
+    # Construct latent functions.
     prior = Measure()
     us = VGP([GP(EQ(), measure=prior) for _ in range(m)])
     fs = us.lmatmul(H)
@@ -1565,7 +1565,7 @@ A GP-RNN Model
 
     from stheno.tensorflow import B, Measure, GP, Delta, EQ
 
-    # Increase regularisation because we are dealing with `np.float32`s.
+    # Increase regularisation because we are dealing with `tf.float32`s.
     B.epsilon = 1e-6
 
     # Construct points which to predict at.
@@ -1830,9 +1830,11 @@ Smoothing with Nonparametric Basis Functions
     plt.savefig("readme_example11_nonparametric_basis.png")
     plt.show()
 
-.. |Build| image:: https://travis-ci.org/wesselb/stheno.svg?branch=master
-   :target: https://travis-ci.org/wesselb/stheno
+.. |CI| image:: https://github.com/wesselb/stheno/workflows/CI/badge.svg?branch=master
+   :target: https://github.com/wesselb/stheno/actions?query=workflow%3ACI
 .. |Coverage Status| image:: https://coveralls.io/repos/github/wesselb/stheno/badge.svg?branch=master&service=github
    :target: https://coveralls.io/github/wesselb/stheno?branch=master
 .. |Latest Docs| image:: https://img.shields.io/badge/docs-latest-blue.svg
    :target: https://wesselb.github.io/stheno
+.. |Code style: black| image:: https://img.shields.io/badge/code%20style-black-000000.svg
+   :target: https://github.com/psf/black

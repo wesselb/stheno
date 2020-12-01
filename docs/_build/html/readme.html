@@ -197,7 +197,7 @@
             
   <div class="section" id="stheno">
 <h1><a class="reference external" href="https://github.com/wesselb/stheno">Stheno</a><a class="headerlink" href="#stheno" title="Permalink to this headline">¶</a></h1>
-<p><a class="reference external" href="https://travis-ci.org/wesselb/stheno"><img alt="Build" src="https://travis-ci.org/wesselb/stheno.svg?branch=master" /></a> <a class="reference external" href="https://coveralls.io/github/wesselb/stheno?branch=master"><img alt="Coverage Status" src="https://coveralls.io/repos/github/wesselb/stheno/badge.svg?branch=master&amp;service=github" /></a> <a class="reference external" href="https://wesselb.github.io/stheno"><img alt="Latest Docs" src="https://img.shields.io/badge/docs-latest-blue.svg" /></a></p>
+<p><a class="reference external" href="https://github.com/wesselb/stheno/actions?query=workflow%3ACI"><img alt="CI" src="https://github.com/wesselb/stheno/workflows/CI/badge.svg?branch=master" /></a> <a class="reference external" href="https://coveralls.io/github/wesselb/stheno?branch=master"><img alt="Coverage Status" src="https://coveralls.io/repos/github/wesselb/stheno/badge.svg?branch=master&amp;service=github" /></a> <a class="reference external" href="https://wesselb.github.io/stheno"><img alt="Latest Docs" src="https://img.shields.io/badge/docs-latest-blue.svg" /></a> <a class="reference external" href="https://github.com/psf/black"><img alt="Code style: black" src="https://img.shields.io/badge/code%20style-black-000000.svg" /></a></p>
 <p>Stheno is an implementation of Gaussian process modelling in Python. See
 also <a class="reference external" href="https://github.com/willtebbutt/Stheno.jl">Stheno.jl</a>.</p>
 <ul class="simple">
@@ -222,7 +222,7 @@ Distributions</a></p></li>
 <li><p><a class="reference external" href="#decomposition-of-prediction">Decomposition of Prediction</a></p></li>
 <li><p><a class="reference external" href="#learn-a-function-incorporating-prior-knowledge-about-its-form">Learn a Function, Incorporating Prior Knowledge About Its
 Form</a></p></li>
-<li><p><a class="reference external" href="#multi-ouput-regression">Multi-Output Regression</a></p></li>
+<li><p><a class="reference external" href="#multi-output-regression">Multi-Output Regression</a></p></li>
 <li><p><a class="reference external" href="#approximate-integration">Approximate Integration</a></p></li>
 <li><p><a class="reference external" href="#bayesian-linear-regression">Bayesian Linear Regression</a></p></li>
 <li><p><a class="reference external" href="#gpar">GPAR</a></p></li>
@@ -1311,7 +1311,7 @@ some utility from <a class="reference external" href="https://github.com/wesselb
 <span class="n">p</span> <span class="o">=</span> <span class="mi">4</span>
 <span class="n">H</span> <span class="o">=</span> <span class="n">B</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">m</span><span class="p">)</span>
 
-<span class="c1"># Construct latent functions</span>
+<span class="c1"># Construct latent functions.</span>
 <span class="n">prior</span> <span class="o">=</span> <span class="n">Measure</span><span class="p">()</span>
 <span class="n">us</span> <span class="o">=</span> <span class="n">VGP</span><span class="p">([</span><span class="n">GP</span><span class="p">(</span><span class="n">EQ</span><span class="p">(),</span> <span class="n">measure</span><span class="o">=</span><span class="n">prior</span><span class="p">)</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">m</span><span class="p">)])</span>
 <span class="n">fs</span> <span class="o">=</span> <span class="n">us</span><span class="o">.</span><span class="n">lmatmul</span><span class="p">(</span><span class="n">H</span><span class="p">)</span>
@@ -1612,7 +1612,7 @@ some utility from <a class="reference external" href="https://github.com/wesselb
 
 <span class="kn">from</span> <span class="nn">stheno.tensorflow</span> <span class="kn">import</span> <span class="n">B</span><span class="p">,</span> <span class="n">Measure</span><span class="p">,</span> <span class="n">GP</span><span class="p">,</span> <span class="n">Delta</span><span class="p">,</span> <span class="n">EQ</span>
 
-<span class="c1"># Increase regularisation because we are dealing with `np.float32`s.</span>
+<span class="c1"># Increase regularisation because we are dealing with `tf.float32`s.</span>
 <span class="n">B</span><span class="o">.</span><span class="n">epsilon</span> <span class="o">=</span> <span class="mf">1e-6</span>
 
 <span class="c1"># Construct points which to predict at.</span>
