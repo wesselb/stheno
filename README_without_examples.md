@@ -96,7 +96,7 @@ extracted with `f.measure == prior`.
 If the keyword argument `measure` is not set, then automatically a new measure is
 created, which afterwards can be extracted with `f.measure`.
 
-Definition:
+Definition, where `prior = Measure()`:
 
 ```python
 f = GP(kernel)
@@ -142,10 +142,10 @@ AssertionError: Processes GP(<lambda>, EQ() + Linear()) and GP(0, EQ()) are asso
     Example:
     
     ```python
-    >>> GP(EQ()) + GP(Exp())
+    >>> GP(EQ(), measure=prior) + GP(Exp(), measure=prior)
     GP(0, EQ() + Exp())
 
-    >>> GP(EQ()) + GP(EQ())
+    >>> GP(EQ(), measure=prior) + GP(EQ(), measure=prior)
     GP(0, 2 * EQ())
   
     >>> GP(EQ()) + 1
@@ -157,7 +157,7 @@ AssertionError: Processes GP(<lambda>, EQ() + Linear()) and GP(0, EQ()) are asso
     >>> GP(EQ()) + (lambda x: x ** 2)
     GP(<lambda>, EQ())
 
-    >>> GP(2, EQ()) - GP(1, EQ())
+    >>> GP(2, EQ(), measure=prior) - GP(1, EQ(), measure=prior)
     GP(1, 2 * EQ())
     ```
     
