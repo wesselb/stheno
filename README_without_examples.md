@@ -132,7 +132,7 @@ array([[2., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
 
 Furthermore, before computing a Cholesky decomposition, Stheno always adds a minuscule
 diagonal to prevent the Cholesky decomposition from failing due to positive
-indefinite caused by numerical noise.
+indefiniteness caused by numerical noise.
 You can change the magnitude of this diagonal by changing `B.epsilon`:
 
 ```python
