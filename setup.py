@@ -5,7 +5,7 @@ requirements = [
     "fdm",
     "plum-dispatch>=0.2.3",
     "backends>=0.4.3",
-    "backends-matrix>=0.2.1",
+    "backends-matrix>=0.2.2",
 ]
 
 setup(
