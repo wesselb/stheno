@@ -206,7 +206,12 @@ class OneKernel(Kernel, algebra.OneFunction):
 
     @_dispatch(B.Numeric, B.Numeric)
     def __call__(self, x, y):
-        return Constant(B.one(x), num_elements(x), num_elements(y))
+        if x is y:
+            # TODO: Optimise this.
+            # Return as a low-rank matrix to encode positive definiteness.
+            return LowRank(left=B.ones(B.dtype(x), num_elements(x), 1))
+        else:
+            return Constant(B.one(x), num_elements(x), num_elements(y))
 
     @_dispatch(B.Numeric, B.Numeric)
     def elwise(self, x, y):
