@@ -3,9 +3,9 @@ from setuptools import find_packages, setup
 requirements = [
     "numpy>=1.16",
     "fdm",
-    "plum-dispatch",
-    "backends>=0.3",
-    "backends-matrix",
+    "plum-dispatch>=0.2.3",
+    "backends>=0.4.3",
+    "backends-matrix>=0.2.1",
 ]
 
 setup(
