@@ -7,9 +7,9 @@ from lab import B
 from matrix import Dense, LowRank, Diagonal, Zero, Constant, AbstractMatrix
 from plum import Dispatcher, Self, convert, Union
 
+from . import PromisedFDD as FDD
 from .input import Input, Unique, WeightedUnique, MultiInput
 from .util import num_elements, uprank
-from . import PromisedFDD as FDD
 
 __all__ = [
     "Kernel",
@@ -206,12 +206,7 @@ class OneKernel(Kernel, algebra.OneFunction):
 
     @_dispatch(B.Numeric, B.Numeric)
     def __call__(self, x, y):
-        if x is y:
-            # TODO: Optimise this.
-            # Return as a low-rank matrix to encode positive definiteness.
-            return LowRank(left=B.ones(B.dtype(x), num_elements(x), 1))
-        else:
-            return Constant(B.one(x), num_elements(x), num_elements(y))
+        return Constant(B.one(x), num_elements(x), num_elements(y))
 
     @_dispatch(B.Numeric, B.Numeric)
     def elwise(self, x, y):
