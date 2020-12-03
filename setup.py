@@ -4,8 +4,8 @@ requirements = [
     "numpy>=1.16",
     "fdm",
     "plum-dispatch>=0.2.3",
-    "backends>=0.4.3",
-    "backends-matrix>=0.3.0",
+    "backends>=0.4.4",
+    "backends-matrix>=0.3.1",
 ]
 
 setup(
