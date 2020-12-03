@@ -575,7 +575,7 @@ obs = SparseObs((u1(z1), u2(z2), ...), (e1, f1(x1), y1), (e2, f2(x2), y2), ...)
 ```
 
 The approximate posterior measure can be constructed with `prior | obs`
-where `prior = Measure()` is the measure of your models.
+where `prior = Measure()` is the measure of your model.
 To quantify the quality of the approximation, you can compute the ELBO with 
 `obs.elbo(prior)`.
 
