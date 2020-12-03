@@ -236,7 +236,7 @@ AssertionError: Processes GP(<lambda>, EQ() + Linear()) and GP(0, EQ()) are asso
     GP(1, 2 * EQ())
     ```
     
-* Add and substract GPs and other objects.
+* Add and subtract GPs and other objects.
 
     *Warning:*
     The product of two GPs it *not* a Gaussian process.
