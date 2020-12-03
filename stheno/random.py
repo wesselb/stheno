@@ -129,7 +129,9 @@ class Normal(RandomVector):
                 upper 95% central credible interval bounds.
         """
         mean = B.squeeze(B.dense(self.mean))
-        error = 1.96 * B.sqrt(B.diag(self.var))
+        # It can happen that the variances are slightly negative due to numerical noise.
+        # Prevent NaNs from the following square root by taking the maximum with zero.
+        error = 1.96 * B.sqrt(B.maximum(B.diag(self.var), B.cast(self.dtype, 0)))
         return mean, mean - error, mean + error
 
     def logpdf(self, x):
@@ -200,7 +202,7 @@ class Normal(RandomVector):
         mean_part = B.sum((self.mean - other.mean) ** 2)
         # The sum of `mean_part` and `var_par` should be positive, but this
         # may not be the case due to numerical errors.
-        return B.abs(mean_part + var_part) ** 0.5
+        return B.sqrt(B.maximum(mean_part + var_part, B.cast(self.dtype, 0)))
 
     def sample(self, num=1, noise=None):
         """Sample from the distribution.
