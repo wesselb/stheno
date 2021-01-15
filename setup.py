@@ -3,7 +3,7 @@ from setuptools import find_packages, setup
 requirements = [
     "numpy>=1.16",
     "fdm",
-    "algbebra>=0.3.0",
+    "algebra>=0.3.0",
     "plum-dispatch>=0.2.3",
     "backends>=0.4.5",
     "backends-matrix>=0.3.1",
