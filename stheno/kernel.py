@@ -2,7 +2,7 @@ import logging
 
 import algebra
 import numpy as np
-from algebra.util import tuple_equal, to_tensor
+from algebra.util import identical, to_tensor
 from lab import B
 from matrix import Dense, LowRank, Diagonal, Zero, Constant, AbstractMatrix
 from plum import Dispatcher, Self, convert, Union
@@ -41,10 +41,10 @@ def expand(xs):
     element.
 
     Args:
-        xs (:obj:`tuple` or :obj:`list`): Sequence to expand.
+        xs (tuple or list): Sequence to expand.
 
     Returns:
-        :obj:`tuple` or :obj:`list`: `xs * 2` or `xs`.
+        tuple or list: `xs * 2` or `xs`.
     """
     return xs * 2 if len(xs) == 1 else xs
 
@@ -319,9 +319,8 @@ class StretchedKernel(Kernel, algebra.StretchedFunction):
 
     @_dispatch(Self)
     def __eq__(self, other):
-        return self[0] == other[0] and tuple_equal(
-            expand(self.stretches), expand(other.stretches)
-        )
+        identical_stretches = identical(expand(self.stretches), expand(other.stretches))
+        return self[0] == other[0] and identical_stretches
 
 
 class ShiftedKernel(Kernel, algebra.ShiftedFunction):
@@ -351,9 +350,8 @@ class ShiftedKernel(Kernel, algebra.ShiftedFunction):
 
     @_dispatch(Self)
     def __eq__(self, other):
-        return self[0] == other[0] and tuple_equal(
-            expand(self.shifts), expand(other.shifts)
-        )
+        identical_shifts = identical(expand(self.shifts), expand(other.shifts))
+        return self[0] == other[0] and identical_shifts
 
 
 class SelectedKernel(Kernel, algebra.SelectedFunction):
@@ -386,9 +384,7 @@ class SelectedKernel(Kernel, algebra.SelectedFunction):
 
     @_dispatch(Self)
     def __eq__(self, other):
-        return self[0] == other[0] and tuple_equal(
-            expand(self.dims), expand(other.dims)
-        )
+        return self[0] == other[0] and identical(expand(self.dims), expand(other.dims))
 
 
 class InputTransformedKernel(Kernel, algebra.InputTransformedFunction):
@@ -412,7 +408,7 @@ class InputTransformedKernel(Kernel, algebra.InputTransformedFunction):
 
     @_dispatch(Self)
     def __eq__(self, other):
-        return self[0] == other[0] and tuple_equal(expand(self.fs), expand(other.fs))
+        return self[0] == other[0] and identical(expand(self.fs), expand(other.fs))
 
 
 class PeriodicKernel(Kernel, algebra.WrappedFunction):
@@ -1111,9 +1107,8 @@ class DerivativeKernel(Kernel, algebra.DerivativeFunction):
 
     @_dispatch(Self)
     def __eq__(self, other):
-        return self[0] == other[0] and tuple_equal(
-            expand(self.derivs), expand(other.derivs)
-        )
+        identical_derivs = identical(expand(self.derivs), expand(other.derivs))
+        return self[0] == other[0] and identical_derivs
 
 
 class TensorProductKernel(Kernel, algebra.TensorProductFunction):
@@ -1139,7 +1134,7 @@ class TensorProductKernel(Kernel, algebra.TensorProductFunction):
 
     @_dispatch(Self)
     def __eq__(self, other):
-        return tuple_equal(expand(self.fs), expand(other.fs))
+        return identical(expand(self.fs), expand(other.fs))
 
 
 class ReversedKernel(Kernel, algebra.ReversedFunction):
