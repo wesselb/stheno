@@ -28,7 +28,7 @@ jobs:
           COVERALLS_PARALLEL: true
         run: |
           pytest -v --cov=stheno --cov-report term-missing
-          coveralls
+          coveralls --service=github
   coveralls:
     name: Finish coverage
     needs: test
