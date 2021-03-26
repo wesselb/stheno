@@ -1,7 +1,7 @@
 from setuptools import find_packages, setup
 
 requirements = [
-    "numpy>=1.16",
+    "numpy>=1.20",
     "fdm",
     "algebra>=0.3.0",
     "plum-dispatch>=0.2.3",
