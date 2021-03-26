@@ -8,10 +8,14 @@
 Stheno is an implementation of Gaussian process modelling in Python. See 
 also [Stheno.jl](https://github.com/willtebbutt/Stheno.jl).
 
+[Check out our post about linear models with Stheno and JAX.](https://wesselb.github.io/2021/01/19/linear-models-with-stheno-and-jax.html)
+
+Contents:
+
 * [Nonlinear Regression in 20 Seconds](#nonlinear-regression-in-20-seconds)
 * [Installation](#installation)
 * [Manual](#manual)
-    - [AutoGrad, TensorFlow, PyTorch, or Jax? Your Choice!](#autograd-tensorflow-pytorch-or-jax-your-choice)
+    - [AutoGrad, TensorFlow, PyTorch, or JAX? Your Choice!](#autograd-tensorflow-pytorch-or-jax-your-choice)
     - [Important Remarks](#important-remarks)
     - [Model Design](#model-design)
     - [Finite-Dimensional Distributions](#finite-dimensional-distributions)
@@ -71,7 +75,7 @@ pip install stheno
 Note: [here](https://wesselb.github.io/stheno) is a nicely rendered and more
 readable version of the docs.
 
-### AutoGrad, TensorFlow, PyTorch, or Jax? Your Choice!
+### AutoGrad, TensorFlow, PyTorch, or JAX? Your Choice!
 
 ```python
 from stheno.autograd import GP, EQ
@@ -121,7 +125,7 @@ operations.
 ```
 
 If you're not using [LAB](https://github.com/wesselb/lab), you can convert these
-structured primitives to regular NumPy/TensorFlow/PyTorch/Jax arrays by calling
+structured primitives to regular NumPy/TensorFlow/PyTorch/JAX arrays by calling
 `B.dense` (`B` is from [LAB](https://github.com/wesselb/lab)):
 
 ```python
