@@ -1,13 +1,15 @@
 import logging
 
 from lab import B
-from plum import Dispatcher, Self
+from plum import Dispatcher
 
 from . import PromisedFDD as FDD
 from .input import MultiInput
 from .mean import Mean
 
 __all__ = ["MultiOutputMean"]
+
+_dispatch = Dispatcher()
 
 log = logging.getLogger(__name__)
 
@@ -24,22 +26,20 @@ class MultiOutputMean(Mean):
         ps (tuple[:class:`.graph.GP`]): Processes that make up the multi-valued process.
     """
 
-    _dispatch = Dispatcher(in_class=Self)
-
     def __init__(self, measure, *ps):
         self.measure = measure
         self.ps = ps
 
-    @_dispatch(B.Numeric)
-    def __call__(self, x):
+    @_dispatch
+    def __call__(self, x: B.Numeric):
         return self(MultiInput(*(p(x) for p in self.ps)))
 
-    @_dispatch(FDD)
-    def __call__(self, x):
+    @_dispatch
+    def __call__(self, x: FDD):
         return self.measure.means[x.p](x.x)
 
-    @_dispatch(MultiInput)
-    def __call__(self, x):
+    @_dispatch
+    def __call__(self, x: MultiInput):
         return B.concat(*[self(xi) for xi in x.get()], axis=0)
 
     def render(self, formatter):

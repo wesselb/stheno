@@ -1,13 +1,15 @@
 import logging
 
 from lab import B
-from plum import Dispatcher, Self, Union
+from plum import Dispatcher, Union
 
 from . import PromisedFDD as FDD
 from .input import MultiInput, Input
 from .kernel import Kernel
 
 __all__ = ["MultiOutputKernel"]
+
+_dispatch = Dispatcher()
 
 log = logging.getLogger(__name__)
 
@@ -25,106 +27,104 @@ class MultiOutputKernel(Kernel):
             process.
     """
 
-    _dispatch = Dispatcher(in_class=Self)
-
     def __init__(self, measure, *ps):
         self.measure = measure
         self.ps = ps
 
     # No `FDD` nor `MultiInput`.
 
-    @_dispatch({B.Numeric, Input}, {B.Numeric, Input})
-    def __call__(self, x, y):
+    @_dispatch
+    def __call__(self, x: Union[B.Numeric, Input], y: Union[B.Numeric, Input]):
         return self(
             MultiInput(*(p(x) for p in self.ps)), MultiInput(*(p(y) for p in self.ps))
         )
 
     # One `FDD`.
 
-    @_dispatch(FDD, {B.Numeric, Input})
-    def __call__(self, x, y):
+    @_dispatch
+    def __call__(self, x: FDD, y: Union[B.Numeric, Input]):
         return self(MultiInput(x), MultiInput(*(p(y) for p in self.ps)))
 
-    @_dispatch({B.Numeric, Input}, FDD)
-    def __call__(self, x, y):
+    @_dispatch
+    def __call__(self, x: Union[B.Numeric, Input], y: FDD):
         return self(MultiInput(*(p(x) for p in self.ps)), MultiInput(y))
 
     # Two `FDD`s.
 
-    @_dispatch(FDD, FDD)
-    def __call__(self, x, y):
+    @_dispatch
+    def __call__(self, x: FDD, y: FDD):
         return self.measure.kernels[x.p, y.p](x.x, y.x)
 
     # One `MultiInput`.
 
-    @_dispatch(MultiInput, FDD)
-    def __call__(self, x, y):
+    @_dispatch
+    def __call__(self, x: MultiInput, y: FDD):
         return self(x, MultiInput(y))
 
-    @_dispatch(MultiInput, {B.Numeric, Input})
-    def __call__(self, x, y):
+    @_dispatch
+    def __call__(self, x: MultiInput, y: Union[B.Numeric, Input]):
         return self(x, MultiInput(*(p(y) for p in self.ps)))
 
-    @_dispatch(FDD, MultiInput)
-    def __call__(self, x, y):
+    @_dispatch
+    def __call__(self, x: FDD, y: MultiInput):
         return self(MultiInput(x), y)
 
-    @_dispatch({B.Numeric, Input}, MultiInput)
-    def __call__(self, x, y):
+    @_dispatch
+    def __call__(self, x: Union[B.Numeric, Input], y: MultiInput):
         return self(MultiInput(*(p(x) for p in self.ps)), y)
 
     # Two `MultiInput`s.
 
-    @_dispatch(MultiInput, MultiInput)
-    def __call__(self, x, y):
+    @_dispatch
+    def __call__(self, x: MultiInput, y: MultiInput):
         return B.block(*[[self(xi, yi) for yi in y.get()] for xi in x.get()])
 
     # No `FDD` nor `MultiInput`.
 
-    @_dispatch({B.Numeric, Input}, {B.Numeric, Input})
-    def elwise(self, x, y):
+    @_dispatch
+    def elwise(self, x: Union[B.Numeric, Input], y: Union[B.Numeric, Input]):
         return self.elwise(
             MultiInput(*(p(x) for p in self.ps)), MultiInput(*(p(y) for p in self.ps))
         )
 
     # One `FDD`.
 
-    @_dispatch(FDD, {B.Numeric, Input})
-    def elwise(self, x, y):
+    @_dispatch
+    def elwise(self, x: FDD, y: Union[B.Numeric, Input]):
         raise ValueError(
             "Unclear combination of arguments given to MultiOutputKernel.elwise."
         )
 
-    @_dispatch({B.Numeric, Input}, FDD)
-    def elwise(self, x, y):
+    @_dispatch
+    def elwise(self, x: Union[B.Numeric, Input], y: FDD):
         raise ValueError(
             "Unclear combination of arguments given to " "MultiOutputKernel.elwise."
         )
 
     # Two `FDD`s.
 
-    @_dispatch(FDD, FDD)
-    def elwise(self, x, y):
+    @_dispatch
+    def elwise(self, x: FDD, y: FDD):
         return self.measure.kernels[x.p, y.p].elwise(x.x, y.x)
 
     # One `MultiInput`.
 
-    @_dispatch(MultiInput, Union(B.Numeric, Input, FDD), precedence=1)
-    def elwise(self, x, y):
+    @_dispatch(precedence=1)
+    def elwise(self, x: MultiInput, y: Union[B.Numeric, Input, FDD]):
         raise ValueError(
             "Unclear combination of arguments given to MultiOutputKernel.elwise."
         )
 
-    @_dispatch(Union(B.Numeric, Input, FDD), MultiInput, precedence=1)
-    def elwise(self, x, y):
+    @_dispatch(precedence=1)
+    def elwise(self, x: Union[B.Numeric, Input, FDD], y: MultiInput):
         raise ValueError(
             "Unclear combination of arguments given to MultiOutputKernel.elwise."
         )
 
     # Two `MultiInput`s.
 
-    @_dispatch(MultiInput, MultiInput)
-    def elwise(self, x, y):
+    @_dispatch
+    def elwise(self, x: MultiInput, y: MultiInput):
         if len(x.get()) != len(y.get()):
             raise ValueError(
                 "MultiOutputKernel.elwise must be called with similarly sized "

@@ -3,7 +3,7 @@ import logging
 import algebra as algebra
 from lab import B
 from matrix import AbstractMatrix
-from plum import Dispatcher, Self, convert, Union
+from plum import Dispatcher, convert, Union
 
 from . import PromisedFDD as FDD
 from .input import Input, MultiInput
@@ -11,6 +11,8 @@ from .kernel import unwrap
 from .util import num_elements, uprank
 
 __all__ = ["TensorProductMean", "DerivativeMean"]
+
+_dispatch = Dispatcher()
 
 log = logging.getLogger(__name__)
 
@@ -21,9 +23,7 @@ class Mean(algebra.Function):
     Means can be added and multiplied.
     """
 
-    _dispatch = Dispatcher(in_class=Self)
-
-    @_dispatch(object)
+    @_dispatch
     def __call__(self, x):
         """Construct the mean for a design matrix.
 
@@ -35,27 +35,25 @@ class Mean(algebra.Function):
         """
         raise RuntimeError(f'For mean {self}, could not resolve argument "{x}".')
 
-    @_dispatch(Union(Input, FDD))
-    def __call__(self, x):
+    @_dispatch
+    def __call__(self, x: Union[Input, FDD]):
         return self(unwrap(x))
 
-    @_dispatch(MultiInput)
-    def __call__(self, x):
+    @_dispatch
+    def __call__(self, x: MultiInput):
         return B.concat(*[self(xi) for xi in x.get()], axis=0)
 
 
 # Register the algebra.
-@algebra.get_algebra.extend(Mean)
-def get_algebra(a):
+@algebra.get_algebra.dispatch
+def get_algebra(a: Mean):
     return Mean
 
 
 class SumMean(Mean, algebra.SumFunction):
     """Sum of two means."""
 
-    _dispatch = Dispatcher(in_class=Self)
-
-    @_dispatch(object)
+    @_dispatch
     def __call__(self, x):
         return B.add(self[0](x), self[1](x))
 
@@ -63,9 +61,7 @@ class SumMean(Mean, algebra.SumFunction):
 class ProductMean(Mean, algebra.ProductFunction):
     """Product of two means."""
 
-    _dispatch = Dispatcher(in_class=Self)
-
-    @_dispatch(object)
+    @_dispatch
     def __call__(self, x):
         return B.multiply(self[0](x), self[1](x))
 
@@ -73,9 +69,7 @@ class ProductMean(Mean, algebra.ProductFunction):
 class ScaledMean(Mean, algebra.ScaledFunction):
     """Scaled mean."""
 
-    _dispatch = Dispatcher(in_class=Self)
-
-    @_dispatch(object)
+    @_dispatch
     def __call__(self, x):
         return B.multiply(self.scale, self[0](x))
 
@@ -83,9 +77,7 @@ class ScaledMean(Mean, algebra.ScaledFunction):
 class StretchedMean(Mean, algebra.StretchedFunction):
     """Stretched mean."""
 
-    _dispatch = Dispatcher(in_class=Self)
-
-    @_dispatch(object)
+    @_dispatch
     def __call__(self, x):
         return self[0](B.divide(x, self.stretches[0]))
 
@@ -93,9 +85,7 @@ class StretchedMean(Mean, algebra.StretchedFunction):
 class ShiftedMean(Mean, algebra.ShiftedFunction):
     """Shifted mean."""
 
-    _dispatch = Dispatcher(in_class=Self)
-
-    @_dispatch(object)
+    @_dispatch
     def __call__(self, x):
         return self[0](B.subtract(x, self.shifts[0]))
 
@@ -103,9 +93,7 @@ class ShiftedMean(Mean, algebra.ShiftedFunction):
 class SelectedMean(Mean, algebra.SelectedFunction):
     """Mean with particular input dimensions selected."""
 
-    _dispatch = Dispatcher(in_class=Self)
-
-    @_dispatch(object)
+    @_dispatch
     @uprank
     def __call__(self, x):
         return self[0](B.take(x, self.dims[0], axis=1))
@@ -114,9 +102,7 @@ class SelectedMean(Mean, algebra.SelectedFunction):
 class InputTransformedMean(Mean, algebra.InputTransformedFunction):
     """Input-transformed mean."""
 
-    _dispatch = Dispatcher(in_class=Self)
-
-    @_dispatch(object)
+    @_dispatch
     def __call__(self, x):
         return self[0](uprank(self.fs[0](uprank(x))))
 
@@ -124,39 +110,31 @@ class InputTransformedMean(Mean, algebra.InputTransformedFunction):
 class OneMean(Mean, algebra.OneFunction):
     """Constant mean of `1`."""
 
-    _dispatch = Dispatcher(in_class=Self)
-
-    @_dispatch(B.Numeric)
-    def __call__(self, x):
+    @_dispatch
+    def __call__(self, x: B.Numeric):
         return B.ones(B.dtype(x), num_elements(x), 1)
 
 
 class ZeroMean(Mean, algebra.ZeroFunction):
     """Constant mean of `0`."""
 
-    _dispatch = Dispatcher(in_class=Self)
-
-    @_dispatch(B.Numeric)
-    def __call__(self, x):
+    @_dispatch
+    def __call__(self, x: B.Numeric):
         return B.zeros(B.dtype(x), num_elements(x), 1)
 
 
 class TensorProductMean(Mean, algebra.TensorProductFunction):
-    _dispatch = Dispatcher(in_class=Self)
-
-    @_dispatch(B.Numeric)
-    def __call__(self, x):
+    @_dispatch
+    def __call__(self, x: B.Numeric):
         return uprank(self.fs[0](uprank(x)))
 
 
 class DerivativeMean(Mean, algebra.DerivativeFunction):
     """Derivative of mean."""
 
-    _dispatch = Dispatcher(in_class=Self)
-
-    @_dispatch(B.Numeric)
+    @_dispatch
     @uprank
-    def __call__(self, x):
+    def __call__(self, x: B.Numeric):
         import tensorflow as tf
 
         i = self.derivs[0]
@@ -181,8 +159,6 @@ class PosteriorMean(Mean):
         y (tensor): Observations to condition on.
     """
 
-    _dispatch = Dispatcher(in_class=Self)
-
     def __init__(self, m_i, m_z, k_zi, z, K_z, y):
         self.m_i = m_i
         self.m_z = m_z
@@ -191,7 +167,7 @@ class PosteriorMean(Mean):
         self.K_z = convert(K_z, AbstractMatrix)
         self.y = uprank(y)
 
-    @_dispatch(object)
+    @_dispatch
     def __call__(self, x):
         diff = B.subtract(self.y, self.m_z(self.z))
         return B.add(self.m_i(x), B.iqf(self.K_z, self.k_zi(self.z, x), diff))

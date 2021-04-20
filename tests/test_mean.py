@@ -15,22 +15,22 @@ from .util import approx
 _dispatch = Dispatcher()
 
 
-@_dispatch(Number)
-def f1(x):
+@_dispatch
+def f1(x: Number):
     return np.array([[x ** 2]])
 
 
-@_dispatch(object)
+@_dispatch
 def f1(x):
     return B.sum(x ** 2, axis=1)[:, None]
 
 
-@_dispatch(Number)
-def f2(x):
+@_dispatch
+def f2(x: Number):
     return np.array([[x ** 3]])
 
 
-@_dispatch(object)
+@_dispatch
 def f2(x):
     return B.sum(x ** 3, axis=1)[:, None]
 

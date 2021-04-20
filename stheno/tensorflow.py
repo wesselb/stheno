@@ -1,3 +1,4 @@
+from typing import Union
 import logging
 
 # noinspection PyUnresolvedReferences
@@ -23,39 +24,43 @@ __add__tensor = Tensor.__add__
 __add__variable = Variable.__add__
 
 
-@_dispatch(Tensor, object)
-def __mul__(self, other):
+@_dispatch
+def __mul__(self: Tensor, other):
     return __mul__tensor(self, other)
 
 
-@_dispatch(Variable, object)
-def __mul__(self, other):
+@_dispatch
+def __mul__(self: Variable, other):
     return __add__variable(self, other)
 
 
 @_dispatch.multi(
-    (Tensor, {Element, Random, AbstractMatrix}),
-    (Variable, {Element, Random, AbstractMatrix}),
+    (Tensor, Union[Element, Random, AbstractMatrix]),
+    (Variable, Union[Element, Random, AbstractMatrix]),
 )
-def __mul__(self, other):
+def __mul__(
+    self: Union[Tensor, Variable], other: Union[Element, Random, AbstractMatrix]
+):
     return other.__rmul__(self)
 
 
-@_dispatch(Tensor, object)
-def __add__(self, other):
+@_dispatch
+def __add__(self: Tensor, other):
     return __add__tensor(self, other)
 
 
-@_dispatch(Variable, object)
-def __add__(self, other):
+@_dispatch
+def __add__(self: Variable, other):
     return __add__variable(self, other)
 
 
 @_dispatch.multi(
-    (Tensor, {Element, Random, AbstractMatrix}),
-    (Variable, {Element, Random, AbstractMatrix}),
+    (Tensor, Union[Element, Random, AbstractMatrix]),
+    (Variable, Union[Element, Random, AbstractMatrix]),
 )
-def __add__(self, other):
+def __add__(
+    self: Union[Tensor, Variable], other: Union[Element, Random, AbstractMatrix]
+):
     return other.__radd__(self)
 
 

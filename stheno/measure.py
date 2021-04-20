@@ -4,13 +4,7 @@ from types import FunctionType
 from fdm import central_fdm
 from lab import B
 from matrix import Diagonal, AbstractMatrix, Constant
-from plum import (
-    Dispatcher,
-    Self,
-    Referentiable,
-    Union,
-    convert,
-)
+from plum import Dispatcher, Union, convert
 
 from . import PromisedFDD, PromisedGP
 from .input import MultiInput
@@ -38,6 +32,8 @@ __all__ = [
     "SparseObservations",
     "SparseObs",
 ]
+
+_dispatch = Dispatcher()
 
 log = logging.getLogger(__name__)
 
@@ -69,7 +65,7 @@ def intersection_measure_group(*ps):
     return intersection
 
 
-class AbstractObservations(metaclass=Referentiable):
+class AbstractObservations:
     """Abstract base class for observations.
 
     Attributes:
@@ -77,15 +73,13 @@ class AbstractObservations(metaclass=Referentiable):
         y (column vector): Values of observations.
     """
 
-    _dispatch = Dispatcher(in_class=Self)
-
-    @_dispatch(PromisedFDD, {B.Numeric, AbstractMatrix})
-    def __init__(self, fdd, y):
+    @_dispatch
+    def __init__(self, fdd: Union[PromisedFDD], y: Union[B.Numeric, AbstractMatrix]):
         self.fdd = fdd
         self.y = y
 
-    @_dispatch(tuple, [tuple])
-    def __init__(self, *pairs):
+    @_dispatch
+    def __init__(self, *pairs: tuple):
         fdds, ys = zip(*pairs)
         self.fdd = cross(*[fdd.p for fdd in fdds])(MultiInput(*fdds))
         self.y = B.concat(*[uprank(y) for y in ys], axis=0)
@@ -127,8 +121,6 @@ class Observations(AbstractObservations):
         fdd (:class:`.measure.FDD`): FDDs to corresponding to the observations.
         y (tensor): Values of observations.
     """
-
-    _dispatch = Dispatcher(in_class=Self)
 
     def __init__(self, *args):
         AbstractObservations.__init__(self, *args)
@@ -189,10 +181,8 @@ class SparseObservations(AbstractObservations):
         e (:class:`.measure.GP`): Additive, independent noise process.
     """
 
-    _dispatch = Dispatcher(in_class=Self)
-
-    @_dispatch(Union(tuple, PromisedFDD), [tuple])
-    def __init__(self, u, *pairs):
+    @_dispatch
+    def __init__(self, u: Union[tuple, PromisedFDD], *pairs: tuple):
         es, fdds, ys = zip(*pairs)
 
         # Copy the noises to a measure under which they are independent.
@@ -203,13 +193,13 @@ class SparseObservations(AbstractObservations):
         y = B.concat(*[uprank(y) for y in ys], axis=0)
         SparseObservations.__init__(self, u, e, fdd, y)
 
-    @_dispatch(tuple, PromisedGP, PromisedFDD, B.Numeric)
-    def __init__(self, us, e, fdd, y):
+    @_dispatch
+    def __init__(self, us: tuple, e: PromisedGP, fdd: PromisedFDD, y: B.Numeric):
         u = cross(*[u.p for u in us])(MultiInput(*us))
         SparseObservations.__init__(self, u, e, fdd, y)
 
-    @_dispatch(PromisedFDD, PromisedGP, PromisedFDD, B.Numeric)
-    def __init__(self, u, e, fdd, y):
+    @_dispatch
+    def __init__(self, u: PromisedFDD, e: PromisedGP, fdd: PromisedFDD, y: B.Numeric):
         AbstractObservations.__init__(self, fdd, y)
         self.u = u
         self.e = e
@@ -360,7 +350,7 @@ Obs = Observations  #: Shorthand for `Observations`.
 SparseObs = SparseObservations  #: Shorthand for `SparseObservations`.
 
 
-class Measure(metaclass=Referentiable):
+class Measure:
     """A GP model.
 
     Attributes:
@@ -368,8 +358,6 @@ class Measure(metaclass=Referentiable):
         mean (:class:`.lazy.LazyVector`): Mean.
         kernels (:class:`.lazy.LazyMatrix`): Kernels.
     """
-
-    _dispatch = Dispatcher(in_class=Self)
 
     def __init__(self):
         self.ps = []
@@ -386,16 +374,16 @@ class Measure(metaclass=Referentiable):
         # many :class:`.measure.Measure`s in a `set`. Every measure is unique.
         return id(self)
 
-    @_dispatch(str)
-    def __getitem__(self, name):
+    @_dispatch
+    def __getitem__(self, name: str):
         return self._gps_by_name[name]
 
-    @_dispatch(PromisedGP)
-    def __getitem__(self, p):
+    @_dispatch
+    def __getitem__(self, p: PromisedGP):
         return self._names_by_gp[id(p)]
 
-    @_dispatch(PromisedGP, str)
-    def name(self, p, name):
+    @_dispatch
+    def name(self, p: PromisedGP, name: str):
         """Name a GP.
 
         Args:
@@ -443,8 +431,8 @@ class Measure(metaclass=Referentiable):
 
         return p
 
-    @_dispatch(PromisedGP)
-    def __call__(self, p):
+    @_dispatch
+    def __call__(self, p: PromisedGP):
         # Make a new GP with `self` as the prior.
         p_copy = GP()
         return self._update(
@@ -456,8 +444,8 @@ class Measure(metaclass=Referentiable):
             lambda i: self.kernels[i, p],  # Right rule
         )
 
-    @_dispatch(PromisedFDD)
-    def __call__(self, fdd):
+    @_dispatch
+    def __call__(self, fdd: PromisedFDD):
         return Normal(self.means[fdd.p](fdd.x), self.kernels[fdd.p](fdd.x))
 
     def add_independent_gp(self, p, mean, kernel):
@@ -484,8 +472,8 @@ class Measure(metaclass=Referentiable):
 
         return p
 
-    @_dispatch(PromisedGP, object, PromisedGP)
-    def sum(self, p_sum, other, p):
+    @_dispatch
+    def sum(self, p_sum: PromisedGP, other, p: PromisedGP):
         """Sum a GP from the graph with another object.
 
         Args:
@@ -498,8 +486,10 @@ class Measure(metaclass=Referentiable):
         """
         return self.sum(p_sum, p, other)
 
-    @_dispatch(PromisedGP, PromisedGP, {B.Numeric, FunctionType})
-    def sum(self, p_sum, p, other):
+    @_dispatch
+    def sum(
+        self, p_sum: PromisedGP, p: PromisedGP, other: Union[B.Numeric, FunctionType]
+    ):
         return self._update(
             p_sum,
             self.means[p] + other,
@@ -507,8 +497,8 @@ class Measure(metaclass=Referentiable):
             lambda j: self.kernels[p, j],
         )
 
-    @_dispatch(PromisedGP, PromisedGP, PromisedGP)
-    def sum(self, p_sum, p1, p2):
+    @_dispatch
+    def sum(self, p_sum: PromisedGP, p1: PromisedGP, p2: PromisedGP):
         assert_same_measure(p1, p2)
         return self._update(
             p_sum,
@@ -522,8 +512,8 @@ class Measure(metaclass=Referentiable):
             lambda j: self.kernels[p1, j] + self.kernels[p2, j],
         )
 
-    @_dispatch(PromisedGP, object, PromisedGP)
-    def mul(self, p_mul, other, p):
+    @_dispatch
+    def mul(self, p_mul: PromisedGP, other, p: PromisedGP):
         """Multiply a GP from the graph with another object.
 
         Args:
@@ -537,8 +527,8 @@ class Measure(metaclass=Referentiable):
         """
         return self.mul(p_mul, p, other)
 
-    @_dispatch(PromisedGP, PromisedGP, B.Numeric)
-    def mul(self, p_mul, p, other):
+    @_dispatch
+    def mul(self, p_mul: PromisedGP, p: PromisedGP, other: B.Numeric):
         return self._update(
             p_mul,
             self.means[p] * other,
@@ -546,8 +536,8 @@ class Measure(metaclass=Referentiable):
             lambda j: self.kernels[p, j] * other,
         )
 
-    @_dispatch(PromisedGP, PromisedGP, FunctionType)
-    def mul(self, p_mul, p, f):
+    @_dispatch
+    def mul(self, p_mul: PromisedGP, p: PromisedGP, f: FunctionType):
         def ones(x):
             return Constant(B.one(x), num_elements(x), 1)
 
@@ -558,8 +548,8 @@ class Measure(metaclass=Referentiable):
             lambda j: TensorProductKernel(f, ones) * self.kernels[p, j],
         )
 
-    @_dispatch(PromisedGP, PromisedGP, PromisedGP)
-    def mul(self, p_mul, p1, p2):
+    @_dispatch
+    def mul(self, p_mul: PromisedGP, p1: PromisedGP, p2: PromisedGP):
         assert_same_measure(p1, p2)
         term1 = self.sum(
             GP(),
@@ -667,8 +657,8 @@ class Measure(metaclass=Referentiable):
             lambda j: self.kernels[p, j].diff(dim, None),
         )
 
-    @_dispatch(AbstractObservations)
-    def condition(self, obs):
+    @_dispatch
+    def condition(self, obs: AbstractObservations):
         """Condition the measure on observations.
 
         Args:
@@ -692,24 +682,24 @@ class Measure(metaclass=Referentiable):
 
         return posterior
 
-    @_dispatch(PromisedFDD, B.Numeric)
-    def condition(self, fdd, y):
+    @_dispatch
+    def condition(self, fdd: PromisedFDD, y: B.Numeric):
         return self.condition(Obs(fdd, y))
 
-    @_dispatch(tuple)
-    def condition(self, pair):
+    @_dispatch
+    def condition(self, pair: tuple):
         return self.condition(Obs(*pair))
 
-    @_dispatch(tuple, tuple, [tuple])
-    def condition(self, *pairs):
+    @_dispatch
+    def condition(self, *pairs: tuple):
         return self.condition(Obs(*pairs))
 
-    @_dispatch(object)
+    @_dispatch
     def __or__(self, *args):
         return self.condition(*args)
 
-    @_dispatch(PromisedGP, PromisedGP, [PromisedGP])
-    def cross(self, p_cross, *ps):
+    @_dispatch
+    def cross(self, p_cross: PromisedGP, *ps: PromisedGP):
         """Construct the Cartesian product of a collection of processes.
 
         Args:
@@ -727,8 +717,8 @@ class Measure(metaclass=Referentiable):
             lambda j: mok.transform(None, lambda y: FDD(j, y)),
         )
 
-    @_dispatch(int, [PromisedFDD])
-    def sample(self, n, *fdds):
+    @_dispatch
+    def sample(self, n: int, *fdds: PromisedFDD):
         """Sample multiple processes simultaneously.
 
         Args:
@@ -748,12 +738,12 @@ class Measure(metaclass=Referentiable):
             i += length
         return samples[0] if len(samples) == 1 else samples
 
-    @_dispatch([PromisedFDD])
-    def sample(self, *fdds):
+    @_dispatch
+    def sample(self, *fdds: PromisedFDD):
         return self.sample(1, *fdds)
 
-    @_dispatch([{list, tuple}])
-    def logpdf(self, *pairs):
+    @_dispatch
+    def logpdf(self, *pairs: Union[list, tuple]):
         """Compute the logpdf of one multiple observations.
 
         Can also give an `AbstractObservations`.
@@ -771,16 +761,16 @@ class Measure(metaclass=Referentiable):
             self.cross(GP(), *[fdd.p for fdd in fdds])(MultiInput(*fdds))
         ).logpdf(y)
 
-    @_dispatch(PromisedFDD, B.Numeric)
-    def logpdf(self, fdd, y):
+    @_dispatch
+    def logpdf(self, fdd: PromisedFDD, y: B.Numeric):
         return self(fdd).logpdf(y)
 
-    @_dispatch(Observations)
-    def logpdf(self, obs):
+    @_dispatch
+    def logpdf(self, obs: Observations):
         return self.logpdf(obs.fdd, obs.y)
 
-    @_dispatch(SparseObservations)
-    def logpdf(self, obs):
+    @_dispatch
+    def logpdf(self, obs: SparseObservations):
         return obs.elbo(self)
 
 
@@ -796,9 +786,7 @@ class GP(RandomProcess):
         name (:obj:`str`, optional): Name. Must be given as a keyword argment.
     """
 
-    _dispatch = Dispatcher(in_class=Self)
-
-    @_dispatch(object, object)
+    @_dispatch
     def __init__(self, mean, kernel, measure=None, name=None):
         self._measures = []
 
@@ -822,11 +810,11 @@ class GP(RandomProcess):
         if name:
             measure.name(self, name)
 
-    @_dispatch(object)
+    @_dispatch
     def __init__(self, kernel, measure=None, name=None):
         self.__init__(ZeroMean(), kernel, measure=measure, name=name)
 
-    @_dispatch()
+    @_dispatch
     def __init__(self):
         self._measures = []
 
@@ -854,8 +842,8 @@ class GP(RandomProcess):
         return self.measure[self]
 
     @name.setter
-    @_dispatch(str)
-    def name(self, name):
+    @_dispatch
+    def name(self, name: str):
         for measure in self._measures:
             measure.name(self, name)
 
@@ -870,29 +858,29 @@ class GP(RandomProcess):
         """
         return FDD(self, x)
 
-    @_dispatch({B.Numeric, FunctionType})
-    def __add__(self, other):
+    @_dispatch
+    def __add__(self, other: Union[B.Numeric, FunctionType]):
         res = GP()
         for measure in self._measures:
             measure.sum(res, self, other)
         return res
 
-    @_dispatch(Self)
-    def __add__(self, other):
+    @_dispatch
+    def __add__(self, other: "GP"):
         res = GP()
         for measure in intersection_measure_group(self, other):
             measure.sum(res, self, other)
         return res
 
-    @_dispatch({B.Numeric, FunctionType})
-    def __mul__(self, other):
+    @_dispatch
+    def __mul__(self, other: Union[B.Numeric, FunctionType]):
         res = GP()
         for measure in self._measures:
             measure.mul(res, self, other)
         return res
 
-    @_dispatch(Self)
-    def __mul__(self, other):
+    @_dispatch
+    def __mul__(self, other: "GP"):
         res = GP()
         for measure in intersection_measure_group(self, other):
             measure.mul(res, self, other)
@@ -1035,6 +1023,6 @@ class FDD(Normal):
 PromisedFDD.deliver(FDD)
 
 
-@num_elements.extend(FDD)
-def num_elements(fdd):
+@num_elements.dispatch
+def num_elements(fdd: FDD):
     return num_elements(fdd.x)

@@ -3,10 +3,9 @@ from time import time
 import numpy as np
 from lab import B
 from matrix import AbstractMatrix
-from numpy.testing import assert_array_almost_equal
-from plum import dispatch
+from plum import dispatch, Union
 
-__all__ = ['benchmark', 'to_np', 'approx']
+__all__ = ["benchmark", "to_np", "approx"]
 
 
 def benchmark(f, args, n=1000, get_output=False):
@@ -26,41 +25,44 @@ def benchmark(f, args, n=1000, get_output=False):
     return (dur, out) if get_output else out
 
 
-@dispatch(B.Numeric)
-def to_np(a):
+@dispatch
+def to_np(a: B.Numeric):
     return a
 
 
-@dispatch(tuple)
-def to_np(a):
+@dispatch
+def to_np(a: tuple):
     return tuple(to_np(x) for x in a)
 
 
-@dispatch(AbstractMatrix)
-def to_np(a):
+@dispatch
+def to_np(a: AbstractMatrix):
     return B.dense(a)
 
 
-@dispatch(list)
-def to_np(a):
+@dispatch
+def to_np(a: list):
     return np.array(a)
 
 
-@dispatch({B.TFNumeric, B.TorchNumeric})
-def to_np(a):
+@dispatch
+def to_np(a: Union[B.TFNumeric, B.TorchNumeric]):
     return a.numpy()
 
 
-@dispatch({B.Numeric, AbstractMatrix, list},
-          {B.Numeric, AbstractMatrix, list}, [object])
-def approx(a, b, desc=None, atol=1e-8, rtol=1e-8):
-    np.testing.assert_allclose(to_np(a), to_np(b),
-                               atol=atol, rtol=rtol, err_msg=desc)
+@dispatch
+def approx(
+    a: Union[B.Numeric, AbstractMatrix, list],
+    b: Union[B.Numeric, AbstractMatrix, list],
+    desc=None,
+    atol=1e-8,
+    rtol=1e-8,
+):
+    np.testing.assert_allclose(to_np(a), to_np(b), atol=atol, rtol=rtol, err_msg=desc)
 
 
-@dispatch(tuple, tuple, [object])
-def approx(a, b, desc=None, atol=1e-8, rtol=1e-8):
+@dispatch
+def approx(a: tuple, b: tuple, desc=None, atol=1e-8, rtol=1e-8):
     assert len(a) == len(b)
     for x, y in zip(a, b):
-        approx(x, y, desc, atol=atol, rtol=rtol)
-
+        approx(x, y, desc=desc, atol=atol, rtol=rtol)

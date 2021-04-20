@@ -1,3 +1,4 @@
+from typing import Union
 import logging
 
 # noinspection PyUnresolvedReferences
@@ -22,43 +23,43 @@ __add__tensor = Tensor.__add__
 __iadd__tensor = Tensor.__iadd__
 
 
-@_dispatch(Tensor, object)
-def __mul__(self, other):
+@_dispatch
+def __mul__(self: Tensor, other):
     return __mul__tensor(self, other)
 
 
-@_dispatch(Tensor, {Element, Random, AbstractMatrix})
-def __mul__(self, other):
+@_dispatch
+def __mul__(self: Tensor, other: Union[Element, Random, AbstractMatrix]):
     return other.__rmul__(self)
 
 
-@_dispatch(Tensor, object)
-def __imul__(self, other):
+@_dispatch
+def __imul__(self: Tensor, other):
     return __imul__tensor(self, other)
 
 
-@_dispatch(Tensor, {Element, Random, AbstractMatrix})
-def __imul__(self, other):
+@_dispatch
+def __imul__(self: Tensor, other: Union[Element, Random, AbstractMatrix]):
     return other.__rmul__(self)
 
 
-@_dispatch(Tensor, object)
-def __add__(self, other):
+@_dispatch
+def __add__(self: Tensor, other):
     return __add__tensor(self, other)
 
 
-@_dispatch(Tensor, {Element, Random, AbstractMatrix})
-def __add__(self, other):
+@_dispatch
+def __add__(self: Tensor, other: Union[Element, Random, AbstractMatrix]):
     return other.__radd__(self)
 
 
-@_dispatch(Tensor, object)
-def __iadd__(self, other):
+@_dispatch
+def __iadd__(self: Tensor, other):
     return __iadd__tensor(self, other)
 
 
-@_dispatch(Tensor, {Element, Random, AbstractMatrix})
-def __iadd__(self, other):
+@_dispatch
+def __iadd__(self: Tensor, other: Union[Element, Random, AbstractMatrix]):
     return other.__radd__(self)
 
 

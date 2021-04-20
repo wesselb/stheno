@@ -5,7 +5,7 @@ import numpy as np
 from algebra.util import identical, to_tensor
 from lab import B
 from matrix import Dense, LowRank, Diagonal, Zero, Constant, AbstractMatrix
-from plum import Dispatcher, Self, convert, Union
+from plum import Dispatcher, convert, Union
 
 from . import PromisedFDD as FDD
 from .input import Input, Unique, WeightedUnique, MultiInput
@@ -35,8 +35,8 @@ log = logging.getLogger(__name__)
 _dispatch = Dispatcher()
 
 
-@_dispatch({tuple, list})
-def expand(xs):
+@_dispatch
+def expand(xs: Union[tuple, list]):
     """Expand a sequence to the same element repeated twice if there is only one
     element.
 
@@ -49,8 +49,8 @@ def expand(xs):
     return xs * 2 if len(xs) == 1 else xs
 
 
-@_dispatch(Input)
-def unwrap(x):
+@_dispatch
+def unwrap(x: Input):
     """Unwrap a wrapped input.
 
     Args:
@@ -62,8 +62,8 @@ def unwrap(x):
     return x.get()
 
 
-@_dispatch(FDD)
-def unwrap(fdd):
+@_dispatch
+def unwrap(fdd: FDD):
     return fdd.x
 
 
@@ -73,9 +73,7 @@ class Kernel(algebra.Function):
     Kernels can be added and multiplied.
     """
 
-    _dispatch = Dispatcher(in_class=Self)
-
-    @_dispatch(object, object)
+    @_dispatch
     def __call__(self, x, y):
         """Construct the kernel matrix between all `x` and `y`.
 
@@ -91,35 +89,35 @@ class Kernel(algebra.Function):
             f'For kernel "{self}", could not resolve arguments "{x}" and "{y}".'
         )
 
-    @_dispatch(object)
+    @_dispatch
     def __call__(self, x):
         return self(x, x)
 
-    @_dispatch(Union(Input, FDD), Union(Input, FDD))
-    def __call__(self, x, y):
+    @_dispatch
+    def __call__(self, x: Union[Input, FDD], y: Union[Input, FDD]):
         return self(unwrap(x), unwrap(y))
 
-    @_dispatch(Union(Input, FDD), object)
-    def __call__(self, x, y):
+    @_dispatch
+    def __call__(self, x: Union[Input, FDD], y):
         return self(unwrap(x), y)
 
-    @_dispatch(object, Union(Input, FDD))
-    def __call__(self, x, y):
+    @_dispatch
+    def __call__(self, x, y: Union[Input, FDD]):
         return self(x, unwrap(y))
 
-    @_dispatch(MultiInput, object, precedence=1)
-    def __call__(self, x, y):
+    @_dispatch(precedence=1)
+    def __call__(self, x: MultiInput, y):
         return self(x, MultiInput(y))
 
-    @_dispatch(object, MultiInput, precedence=1)
-    def __call__(self, x, y):
+    @_dispatch(precedence=1)
+    def __call__(self, x, y: MultiInput):
         return self(MultiInput(x), y)
 
-    @_dispatch(MultiInput, MultiInput)
-    def __call__(self, x, y):
+    @_dispatch
+    def __call__(self, x: MultiInput, y: MultiInput):
         return B.block(*[[self(xi, yi) for yi in y.get()] for xi in x.get()])
 
-    @_dispatch(object, object)
+    @_dispatch
     def elwise(self, x, y):
         """Construct the kernel vector `x` and `y` element-wise.
 
@@ -134,32 +132,32 @@ class Kernel(algebra.Function):
         # TODO: Throw warning.
         return B.expand_dims(B.diag(self(x, y)), axis=1)
 
-    @_dispatch(object)
+    @_dispatch
     def elwise(self, x):
         return self.elwise(x, x)
 
-    @_dispatch(Union(Input, FDD), Union(Input, FDD))
-    def elwise(self, x, y):
+    @_dispatch
+    def elwise(self, x: Union[Input, FDD], y: Union[Input, FDD]):
         return self.elwise(unwrap(x), unwrap(y))
 
-    @_dispatch(Union(Input, FDD), object)
-    def elwise(self, x, y):
+    @_dispatch
+    def elwise(self, x: Union[Input, FDD], y):
         return self.elwise(unwrap(x), y)
 
-    @_dispatch(object, Union(Input, FDD))
-    def elwise(self, x, y):
+    @_dispatch
+    def elwise(self, x, y: Union[Input, FDD]):
         return self.elwise(x, unwrap(y))
 
-    @_dispatch(MultiInput, object, precedence=1)
-    def elwise(self, x, y):
-        raise ValueError("Unclear combination of arguments given to Kernel.elwise.")
+    @_dispatch(precedence=1)
+    def elwise(self, x: MultiInput, y):
+        raise ValueError("Unclear combination of arguments given to `Kernel.elwise`.")
 
-    @_dispatch(object, MultiInput, precedence=1)
-    def elwise(self, x, y):
-        raise ValueError("Unclear combination of arguments given to Kernel.elwise.")
+    @_dispatch(precedence=1)
+    def elwise(self, x, y: MultiInput):
+        raise ValueError("Unclear combination of arguments given to `Kernel.elwise`.")
 
-    @_dispatch(MultiInput, MultiInput)
-    def elwise(self, x, y):
+    @_dispatch
+    def elwise(self, x: MultiInput, y: MultiInput):
         if len(x.get()) != len(y.get()):
             raise ValueError(
                 "Kernel.elwise must be called with similarly sized MultiInputs."
@@ -194,22 +192,20 @@ class Kernel(algebra.Function):
 
 
 # Register the algebra.
-@algebra.get_algebra.extend(Kernel)
-def get_algebra(a):
+@algebra.get_algebra.dispatch
+def get_algebra(a: Kernel):
     return Kernel
 
 
 class OneKernel(Kernel, algebra.OneFunction):
     """Constant kernel of `1`."""
 
-    _dispatch = Dispatcher(in_class=Self)
-
-    @_dispatch(B.Numeric, B.Numeric)
-    def __call__(self, x, y):
+    @_dispatch
+    def __call__(self, x: B.Numeric, y: B.Numeric):
         return Constant(B.one(x), num_elements(x), num_elements(y))
 
-    @_dispatch(B.Numeric, B.Numeric)
-    def elwise(self, x, y):
+    @_dispatch
+    def elwise(self, x: B.Numeric, y: B.Numeric):
         return B.ones(B.dtype(x), num_elements(x), 1)
 
     @property
@@ -220,14 +216,12 @@ class OneKernel(Kernel, algebra.OneFunction):
 class ZeroKernel(Kernel, algebra.ZeroFunction):
     """Constant kernel of `0`."""
 
-    _dispatch = Dispatcher(in_class=Self)
-
-    @_dispatch(B.Numeric, B.Numeric)
-    def __call__(self, x, y):
+    @_dispatch
+    def __call__(self, x: B.Numeric, y: B.Numeric):
         return Zero(B.dtype(x), num_elements(x), num_elements(y))
 
-    @_dispatch(B.Numeric, B.Numeric)
-    def elwise(self, x, y):
+    @_dispatch
+    def elwise(self, x: B.Numeric, y: B.Numeric):
         return B.zeros(B.dtype(x), num_elements(x), 1)
 
     @property
@@ -238,13 +232,11 @@ class ZeroKernel(Kernel, algebra.ZeroFunction):
 class ScaledKernel(Kernel, algebra.ScaledFunction):
     """Scaled kernel."""
 
-    _dispatch = Dispatcher(in_class=Self)
-
-    @_dispatch(object, object)
+    @_dispatch
     def __call__(self, x, y):
         return self._compute(self[0](x, y))
 
-    @_dispatch(object, object)
+    @_dispatch
     def elwise(self, x, y):
         return self._compute(self[0].elwise(x, y))
 
@@ -259,13 +251,11 @@ class ScaledKernel(Kernel, algebra.ScaledFunction):
 class SumKernel(Kernel, algebra.SumFunction):
     """Sum of kernels."""
 
-    _dispatch = Dispatcher(in_class=Self)
-
-    @_dispatch(object, object)
+    @_dispatch
     def __call__(self, x, y):
         return B.add(self[0](x, y), self[1](x, y))
 
-    @_dispatch(object, object)
+    @_dispatch
     def elwise(self, x, y):
         return B.add(self[0].elwise(x, y), self[1].elwise(x, y))
 
@@ -277,13 +267,11 @@ class SumKernel(Kernel, algebra.SumFunction):
 class ProductKernel(Kernel, algebra.ProductFunction):
     """Product of two kernels."""
 
-    _dispatch = Dispatcher(in_class=Self)
-
-    @_dispatch(object, object)
+    @_dispatch
     def __call__(self, x, y):
         return B.multiply(self[0](x, y), self[1](x, y))
 
-    @_dispatch(object, object)
+    @_dispatch
     def elwise(self, x, y):
         return B.multiply(self[0].elwise(x, y), self[1].elwise(x, y))
 
@@ -295,14 +283,12 @@ class ProductKernel(Kernel, algebra.ProductFunction):
 class StretchedKernel(Kernel, algebra.StretchedFunction):
     """Stretched kernel."""
 
-    _dispatch = Dispatcher(in_class=Self)
-
-    @_dispatch(B.Numeric, B.Numeric)
-    def __call__(self, x, y):
+    @_dispatch
+    def __call__(self, x: B.Numeric, y: B.Numeric):
         return self[0](*self._compute(x, y))
 
-    @_dispatch(B.Numeric, B.Numeric)
-    def elwise(self, x, y):
+    @_dispatch
+    def elwise(self, x: B.Numeric, y: B.Numeric):
         return self[0].elwise(*self._compute(x, y))
 
     def _compute(self, x, y):
@@ -317,8 +303,8 @@ class StretchedKernel(Kernel, algebra.StretchedFunction):
             # NOTE: Can do something more clever here.
             return False
 
-    @_dispatch(Self)
-    def __eq__(self, other):
+    @_dispatch
+    def __eq__(self, other: "StretchedKernel"):
         identical_stretches = identical(expand(self.stretches), expand(other.stretches))
         return self[0] == other[0] and identical_stretches
 
@@ -326,14 +312,12 @@ class StretchedKernel(Kernel, algebra.StretchedFunction):
 class ShiftedKernel(Kernel, algebra.ShiftedFunction):
     """Shifted kernel."""
 
-    _dispatch = Dispatcher(in_class=Self)
-
-    @_dispatch(B.Numeric, B.Numeric)
-    def __call__(self, x, y):
+    @_dispatch
+    def __call__(self, x: B.Numeric, y: B.Numeric):
         return self[0](*self._compute(x, y))
 
-    @_dispatch(B.Numeric, B.Numeric)
-    def elwise(self, x, y):
+    @_dispatch
+    def elwise(self, x: B.Numeric, y: B.Numeric):
         return self[0].elwise(*self._compute(x, y))
 
     def _compute(self, x, y):
@@ -348,8 +332,8 @@ class ShiftedKernel(Kernel, algebra.ShiftedFunction):
             # NOTE: Can do something more clever here.
             return False
 
-    @_dispatch(Self)
-    def __eq__(self, other):
+    @_dispatch
+    def __eq__(self, other: "ShiftedKernel"):
         identical_shifts = identical(expand(self.shifts), expand(other.shifts))
         return self[0] == other[0] and identical_shifts
 
@@ -357,14 +341,12 @@ class ShiftedKernel(Kernel, algebra.ShiftedFunction):
 class SelectedKernel(Kernel, algebra.SelectedFunction):
     """Kernel with particular input dimensions selected."""
 
-    _dispatch = Dispatcher(in_class=Self)
-
-    @_dispatch(B.Numeric, B.Numeric)
-    def __call__(self, x, y):
+    @_dispatch
+    def __call__(self, x: B.Numeric, y: B.Numeric):
         return self[0](*self._compute(x, y))
 
-    @_dispatch(B.Numeric, B.Numeric)
-    def elwise(self, x, y):
+    @_dispatch
+    def elwise(self, x: B.Numeric, y: B.Numeric):
         return self[0].elwise(*self._compute(x, y))
 
     @uprank
@@ -382,21 +364,19 @@ class SelectedKernel(Kernel, algebra.SelectedFunction):
             # NOTE: Can do something more clever here.
             return False
 
-    @_dispatch(Self)
-    def __eq__(self, other):
+    @_dispatch
+    def __eq__(self, other: "SelectedKernel"):
         return self[0] == other[0] and identical(expand(self.dims), expand(other.dims))
 
 
 class InputTransformedKernel(Kernel, algebra.InputTransformedFunction):
     """Input-transformed kernel."""
 
-    _dispatch = Dispatcher(in_class=Self)
-
-    @_dispatch(object, object)
+    @_dispatch
     def __call__(self, x, y):
         return self[0](*self._compute(x, y))
 
-    @_dispatch(object, object)
+    @_dispatch
     def elwise(self, x, y):
         return self[0].elwise(*self._compute(x, y))
 
@@ -406,8 +386,8 @@ class InputTransformedKernel(Kernel, algebra.InputTransformedFunction):
         y = y if f2 is None else f2(uprank(y))
         return x, y
 
-    @_dispatch(Self)
-    def __eq__(self, other):
+    @_dispatch
+    def __eq__(self, other: "InputTransformedKernel"):
         return self[0] == other[0] and identical(expand(self.fs), expand(other.fs))
 
 
@@ -419,18 +399,16 @@ class PeriodicKernel(Kernel, algebra.WrappedFunction):
         scale (tensor): Period.
     """
 
-    _dispatch = Dispatcher(in_class=Self)
-
     def __init__(self, k, period):
         algebra.WrappedFunction.__init__(self, k)
         self.period = to_tensor(period)
 
-    @_dispatch(B.Numeric, B.Numeric)
-    def __call__(self, x, y):
+    @_dispatch
+    def __call__(self, x: B.Numeric, y: B.Numeric):
         return self[0](*self._compute(x, y))
 
-    @_dispatch(B.Numeric, B.Numeric)
-    def elwise(self, x, y):
+    @_dispatch
+    def elwise(self, x: B.Numeric, y: B.Numeric):
         return self[0].elwise(*self._compute(x, y))
 
     def _compute(self, x, y):
@@ -448,22 +426,20 @@ class PeriodicKernel(Kernel, algebra.WrappedFunction):
     def render_wrap(self, e, formatter):
         return f"{e} per {formatter(self.period)}"
 
-    @_dispatch(Self)
-    def __eq__(self, other):
+    @_dispatch
+    def __eq__(self, other: "PeriodicKernel"):
         return self[0] == other[0] and identical(self.period, other.period)
 
 
 class EQ(Kernel):
     """Exponentiated quadratic kernel."""
 
-    _dispatch = Dispatcher(in_class=Self)
-
-    @_dispatch(B.Numeric, B.Numeric)
-    def __call__(self, x, y):
+    @_dispatch
+    def __call__(self, x: B.Numeric, y: B.Numeric):
         return Dense(self._compute(B.pw_dists2(x, y)))
 
-    @_dispatch(B.Numeric, B.Numeric)
-    def elwise(self, x, y):
+    @_dispatch
+    def elwise(self, x: B.Numeric, y: B.Numeric):
         return self._compute(B.ew_dists2(x, y))
 
     def _compute(self, dists2):
@@ -473,8 +449,8 @@ class EQ(Kernel):
     def _stationary(self):
         return True
 
-    @_dispatch(Self)
-    def __eq__(self, other):
+    @_dispatch
+    def __eq__(self, other: "EQ"):
         return True
 
 
@@ -486,17 +462,15 @@ class RQ(Kernel):
             weight of the tails of the kernel. Must be positive.
     """
 
-    _dispatch = Dispatcher(in_class=Self)
-
     def __init__(self, alpha):
         self.alpha = alpha
 
-    @_dispatch(B.Numeric, B.Numeric)
-    def __call__(self, x, y):
+    @_dispatch
+    def __call__(self, x: B.Numeric, y: B.Numeric):
         return Dense(self._compute(B.pw_dists2(x, y)))
 
-    @_dispatch(B.Numeric, B.Numeric)
-    def elwise(self, x, y):
+    @_dispatch
+    def elwise(self, x: B.Numeric, y: B.Numeric):
         return self._compute(B.ew_dists2(x, y))
 
     def _compute(self, dists2):
@@ -509,30 +483,28 @@ class RQ(Kernel):
     def _stationary(self):
         return True
 
-    @_dispatch(Self)
-    def __eq__(self, other):
+    @_dispatch
+    def __eq__(self, other: "RQ"):
         return B.all(self.alpha == other.alpha)
 
 
 class Exp(Kernel):
     """Exponential kernel."""
 
-    _dispatch = Dispatcher(in_class=Self)
-
-    @_dispatch(B.Numeric, B.Numeric)
-    def __call__(self, x, y):
+    @_dispatch
+    def __call__(self, x: B.Numeric, y: B.Numeric):
         return Dense(B.exp(-B.pw_dists(x, y)))
 
-    @_dispatch(B.Numeric, B.Numeric)
-    def elwise(self, x, y):
+    @_dispatch
+    def elwise(self, x: B.Numeric, y: B.Numeric):
         return B.exp(-B.ew_dists(x, y))
 
     @property
     def _stationary(self):
         return True
 
-    @_dispatch(Self)
-    def __eq__(self, other):
+    @_dispatch
+    def __eq__(self, other: "Exp"):
         return True
 
 
@@ -542,14 +514,12 @@ Matern12 = Exp  #: Alias for the exponential kernel.
 class Matern32(Kernel):
     """Matern--3/2 kernel."""
 
-    _dispatch = Dispatcher(in_class=Self)
-
-    @_dispatch(B.Numeric, B.Numeric)
-    def __call__(self, x, y):
+    @_dispatch
+    def __call__(self, x: B.Numeric, y: B.Numeric):
         return Dense(self._compute(B.pw_dists(x, y)))
 
-    @_dispatch(B.Numeric, B.Numeric)
-    def elwise(self, x, y):
+    @_dispatch
+    def elwise(self, x: B.Numeric, y: B.Numeric):
         return self._compute(B.ew_dists(x, y))
 
     def _compute(self, dists):
@@ -560,22 +530,20 @@ class Matern32(Kernel):
     def _stationary(self):
         return True
 
-    @_dispatch(Self)
-    def __eq__(self, other):
+    @_dispatch
+    def __eq__(self, other: "Matern32"):
         return True
 
 
 class Matern52(Kernel):
     """Matern--5/2 kernel."""
 
-    _dispatch = Dispatcher(in_class=Self)
-
-    @_dispatch(B.Numeric, B.Numeric)
-    def __call__(self, x, y):
+    @_dispatch
+    def __call__(self, x: B.Numeric, y: B.Numeric):
         return Dense(self._compute(B.pw_dists(x, y)))
 
-    @_dispatch(B.Numeric, B.Numeric)
-    def elwise(self, x, y):
+    @_dispatch
+    def elwise(self, x: B.Numeric, y: B.Numeric):
         return self._compute(B.ew_dists(x, y))
 
     def _compute(self, dists):
@@ -587,8 +555,8 @@ class Matern52(Kernel):
     def _stationary(self):
         return True
 
-    @_dispatch(Self)
-    def __eq__(self, other):
+    @_dispatch
+    def __eq__(self, other: "Matern52"):
         return True
 
 
@@ -600,28 +568,26 @@ class Delta(Kernel):
             Defaults to `1e-10`.
     """
 
-    _dispatch = Dispatcher(in_class=Self)
-
     def __init__(self, epsilon=1e-10):
         self.epsilon = epsilon
 
-    @_dispatch(B.Numeric, B.Numeric)
-    def __call__(self, x, y):
+    @_dispatch
+    def __call__(self, x: B.Numeric, y: B.Numeric):
         if x is y:
             return B.fill_diag(B.one(x), num_elements(x))
         else:
             return Dense(self._compute(B.pw_dists2(x, y)))
 
-    @_dispatch(Unique, Unique)
-    def __call__(self, x, y):
+    @_dispatch
+    def __call__(self, x: Unique, y: Unique):
         x, y = x.get(), y.get()
         if x is y:
             return B.fill_diag(B.one(x), num_elements(x))
         else:
             return Zero(B.dtype(x), num_elements(x), num_elements(y))
 
-    @_dispatch(WeightedUnique, WeightedUnique)
-    def __call__(self, x, y):
+    @_dispatch
+    def __call__(self, x: WeightedUnique, y: WeightedUnique):
         w_x, w_y = x.w, y.w
         x, y = x.get(), y.get()
         if x is y:
@@ -629,26 +595,26 @@ class Delta(Kernel):
         else:
             return Zero(B.dtype(x), num_elements(x), num_elements(y))
 
-    @_dispatch(Unique, object)
-    def __call__(self, x, y):
+    @_dispatch
+    def __call__(self, x: Unique, y):
         x = x.get()
         return Zero(B.dtype(x), num_elements(x), num_elements(y))
 
-    @_dispatch(object, Unique)
-    def __call__(self, x, y):
+    @_dispatch
+    def __call__(self, x, y: Unique):
         y = y.get()
         return Zero(B.dtype(x), num_elements(x), num_elements(y))
 
-    @_dispatch(Unique, Unique)
-    def elwise(self, x, y):
+    @_dispatch
+    def elwise(self, x: Unique, y: Unique):
         x, y = x.get(), y.get()
         if x is y:
             return B.ones(B.dtype(x), num_elements(x), 1)
         else:
             return B.zeros(B.dtype(x), num_elements(x), 1)
 
-    @_dispatch(WeightedUnique, WeightedUnique)
-    def elwise(self, x, y):
+    @_dispatch
+    def elwise(self, x: WeightedUnique, y: WeightedUnique):
         w_x, w_y = x.w, y.w
         x, y = x.get(), y.get()
         if x is y:
@@ -656,17 +622,17 @@ class Delta(Kernel):
         else:
             return B.zeros(B.dtype(x), num_elements(x), 1)
 
-    @_dispatch(Unique, object)
-    def elwise(self, x, y):
+    @_dispatch
+    def elwise(self, x: Unique, y):
         x = x.get()
         return B.zeros(B.dtype(x), num_elements(x), 1)
 
-    @_dispatch(object, Unique)
-    def elwise(self, x, y):
+    @_dispatch
+    def elwise(self, x, y: Unique):
         return B.zeros(B.dtype(x), num_elements(x), 1)
 
-    @_dispatch(B.Numeric, B.Numeric)
-    def elwise(self, x, y):
+    @_dispatch
+    def elwise(self, x: B.Numeric, y: B.Numeric):
         if x is y:
             return B.ones(B.dtype(x), num_elements(x), 1)
         else:
@@ -680,8 +646,8 @@ class Delta(Kernel):
     def _stationary(self):
         return True
 
-    @_dispatch(Self)
-    def __eq__(self, other):
+    @_dispatch
+    def __eq__(self, other: "Delta"):
         return self.epsilon == other.epsilon
 
 
@@ -693,20 +659,18 @@ class FixedDelta(Kernel):
         noises (vector): Noises.
     """
 
-    _dispatch = Dispatcher(in_class=Self)
-
     def __init__(self, noises):
         self.noises = noises
 
-    @_dispatch(B.Numeric, B.Numeric)
-    def __call__(self, x, y):
+    @_dispatch
+    def __call__(self, x: B.Numeric, y: B.Numeric):
         if x is y and num_elements(x) == B.shape(self.noises)[0]:
             return Diagonal(self.noises)
         else:
             return Zero(B.dtype(x), num_elements(x), num_elements(y))
 
-    @_dispatch(B.Numeric, B.Numeric)
-    def elwise(self, x, y):
+    @_dispatch
+    def elwise(self, x: B.Numeric, y: B.Numeric):
         if x is y and num_elements(x) == B.shape(self.noises)[0]:
             return uprank(self.noises)
         else:
@@ -716,34 +680,32 @@ class FixedDelta(Kernel):
     def _stationary(self):
         return True
 
-    @_dispatch(Self)
-    def __eq__(self, other):
+    @_dispatch
+    def __eq__(self, other: "FixedDelta"):
         return B.all(self.noises == other.noises)
 
 
 class Linear(Kernel):
     """Linear kernel."""
 
-    _dispatch = Dispatcher(in_class=Self)
-
-    @_dispatch(B.Numeric, B.Numeric)
-    def __call__(self, x, y):
+    @_dispatch
+    def __call__(self, x: B.Numeric, y: B.Numeric):
         if x is y:
             return LowRank(uprank(x))
         else:
             return LowRank(left=uprank(x), right=uprank(y))
 
-    @_dispatch(B.Numeric, B.Numeric)
+    @_dispatch
     @uprank
-    def elwise(self, x, y):
+    def elwise(self, x: B.Numeric, y: B.Numeric):
         return B.expand_dims(B.sum(B.multiply(x, y), axis=1), axis=1)
 
     @property
     def _stationary(self):
         return False
 
-    @_dispatch(Self)
-    def __eq__(self, other):
+    @_dispatch
+    def __eq__(self, other: "Linear"):
         return True
 
 
@@ -757,19 +719,17 @@ class DecayingKernel(Kernel):
             distribution of decaying exponentials.
     """
 
-    _dispatch = Dispatcher(in_class=Self)
-
     def __init__(self, alpha, beta):
         self.alpha = alpha
         self.beta = beta
 
-    @_dispatch(B.Numeric, B.Numeric)
-    def __call__(self, x, y):
+    @_dispatch
+    def __call__(self, x: B.Numeric, y: B.Numeric):
         pw_sums_raised = B.power(B.pw_sums(B.add(x, self.beta), y), self.alpha)
         return Dense(B.divide(self._compute_beta_raised(), pw_sums_raised))
 
-    @_dispatch(B.Numeric, B.Numeric)
-    def elwise(self, x, y):
+    @_dispatch
+    def elwise(self, x: B.Numeric, y: B.Numeric):
         return B.divide(
             self._compute_beta_raised(),
             B.power(B.ew_sums(B.add(x, self.beta), y), self.alpha),
@@ -784,23 +744,21 @@ class DecayingKernel(Kernel):
     def render(self, formatter):
         return f"DecayingKernel({formatter(self.alpha)}, {formatter(self.beta)})"
 
-    @_dispatch(Self)
-    def __eq__(self, other):
+    @_dispatch
+    def __eq__(self, other: "DecayingKernel"):
         return B.all(self.alpha == other.alpha) and B.all(self.beta == other.beta)
 
 
 class LogKernel(Kernel):
     """Logarithm kernel."""
 
-    _dispatch = Dispatcher(in_class=Self)
-
-    @_dispatch(B.Numeric, B.Numeric)
-    def __call__(self, x, y):
+    @_dispatch
+    def __call__(self, x: B.Numeric, y: B.Numeric):
         dists = B.maximum(B.pw_dists(x, y), 1e-10)
         return Dense(B.divide(B.log(dists + 1), dists))
 
-    @_dispatch(B.Numeric, B.Numeric)
-    def elwise(self, x, y):
+    @_dispatch
+    def elwise(self, x: B.Numeric, y: B.Numeric):
         dists = B.maximum(B.ew_dists(x, y), 1e-10)
         return B.divide(B.log(dists + 1), dists)
 
@@ -811,8 +769,8 @@ class LogKernel(Kernel):
     def _stationary(self):
         return True
 
-    @_dispatch(Self)
-    def __eq__(self, other):
+    @_dispatch
+    def __eq__(self, other: "LogKernel"):
         return True
 
 
@@ -830,8 +788,6 @@ class PosteriorKernel(Kernel):
         K_z (matrix): Kernel matrix of data.
     """
 
-    _dispatch = Dispatcher(in_class=Self)
-
     def __init__(self, k_ij, k_zi, k_zj, z, K_z):
         self.k_ij = k_ij
         self.k_zi = k_zi
@@ -839,13 +795,13 @@ class PosteriorKernel(Kernel):
         self.z = z
         self.K_z = convert(K_z, AbstractMatrix)
 
-    @_dispatch(object, object)
+    @_dispatch
     def __call__(self, x, y):
         return B.subtract(
             self.k_ij(x, y), B.iqf(self.K_z, self.k_zi(self.z, x), self.k_zj(self.z, y))
         )
 
-    @_dispatch(object, object)
+    @_dispatch
     def elwise(self, x, y):
         iqf_diag = B.iqf_diag(self.K_z, self.k_zi(self.z, x), self.k_zj(self.z, y))
         return B.subtract(self.k_ij.elwise(x, y), B.expand_dims(iqf_diag, axis=1))
@@ -864,8 +820,6 @@ class CorrectiveKernel(Kernel):
         L (tensor): Kernel matrix of the inducing points.
     """
 
-    _dispatch = Dispatcher(in_class=Self)
-
     def __init__(self, k_zi, k_zj, z, A, K_z):
         self.k_zi = k_zi
         self.k_zj = k_zj
@@ -873,7 +827,7 @@ class CorrectiveKernel(Kernel):
         self.A = A
         self.L = B.cholesky(convert(K_z, AbstractMatrix))
 
-    @_dispatch(object, object)
+    @_dispatch
     def __call__(self, x, y):
         return B.iqf(
             self.A,
@@ -881,7 +835,7 @@ class CorrectiveKernel(Kernel):
             B.solve(self.L, self.k_zj(self.z, y)),
         )
 
-    @_dispatch(object, object)
+    @_dispatch
     def elwise(self, x, y):
         return B.iqf_diag(
             self.A,
@@ -1051,10 +1005,8 @@ def perturb(x):
 class DerivativeKernel(Kernel, algebra.DerivativeFunction):
     """Derivative of kernel."""
 
-    _dispatch = Dispatcher(in_class=Self)
-
-    @_dispatch(B.Numeric, B.Numeric)
-    def __call__(self, x, y):
+    @_dispatch
+    def __call__(self, x: B.Numeric, y: B.Numeric):
         i, j = expand(self.derivs)
         k = self[0]
 
@@ -1076,8 +1028,8 @@ class DerivativeKernel(Kernel, algebra.DerivativeFunction):
         else:
             raise RuntimeError("No derivative specified.")
 
-    @_dispatch(B.Numeric, B.Numeric)
-    def elwise(self, x, y):
+    @_dispatch
+    def elwise(self, x: B.Numeric, y: B.Numeric):
         i, j = expand(self.derivs)
         k = self[0]
 
@@ -1105,8 +1057,8 @@ class DerivativeKernel(Kernel, algebra.DerivativeFunction):
         # arguments are taken, then the result is in fact stationary.
         return False
 
-    @_dispatch(Self)
-    def __eq__(self, other):
+    @_dispatch
+    def __eq__(self, other: "DerivativeKernel"):
         identical_derivs = identical(expand(self.derivs), expand(other.derivs))
         return self[0] == other[0] and identical_derivs
 
@@ -1114,26 +1066,24 @@ class DerivativeKernel(Kernel, algebra.DerivativeFunction):
 class TensorProductKernel(Kernel, algebra.TensorProductFunction):
     """Tensor product kernel."""
 
-    _dispatch = Dispatcher(in_class=Self)
-
-    @_dispatch(B.Numeric, B.Numeric)
-    def __call__(self, x, y):
+    @_dispatch
+    def __call__(self, x: B.Numeric, y: B.Numeric):
         f1, f2 = expand(self.fs)
         if x is y and f1 is f2:
             return LowRank(uprank(f1(uprank(x))))
         else:
             return LowRank(left=uprank(f1(uprank(x))), right=uprank(f2(uprank(y))))
 
-    @_dispatch(B.Numeric, B.Numeric)
-    def elwise(self, x, y):
+    @_dispatch
+    def elwise(self, x: B.Numeric, y: B.Numeric):
         f1, f2 = expand(self.fs)
         if x is y and f1 is f2:
             return B.power(uprank(f1(uprank(x))), 2)
         else:
             return B.multiply(uprank(f1(uprank(x))), uprank(f2(uprank(y))))
 
-    @_dispatch(Self)
-    def __eq__(self, other):
+    @_dispatch
+    def __eq__(self, other: "TensorProductKernel"):
         return identical(expand(self.fs), expand(other.fs))
 
 
@@ -1143,13 +1093,11 @@ class ReversedKernel(Kernel, algebra.ReversedFunction):
     Evaluates with its arguments reversed.
     """
 
-    _dispatch = Dispatcher(in_class=Self)
-
-    @_dispatch(object, object)
+    @_dispatch
     def __call__(self, x, y):
         return B.transpose(self[0](y, x))
 
-    @_dispatch(object, object)
+    @_dispatch
     def elwise(self, x, y):
         return self[0].elwise(y, x)
 
@@ -1161,21 +1109,21 @@ class ReversedKernel(Kernel, algebra.ReversedFunction):
 # Periodicise kernels.
 
 
-@_dispatch(Kernel, object)
-def periodicise(a, b):
+@_dispatch
+def periodicise(a: Kernel, b):
     return PeriodicKernel(a, b)
 
 
-@_dispatch(ZeroKernel, object)
-def periodicise(a, b):
+@_dispatch
+def periodicise(a: ZeroKernel, b):
     return a
 
 
 # Make shifting synergise with stationary kernels.
 
 
-@algebra.shift.extend(Kernel, [object])
-def shift(a, *shifts):
+@algebra.shift.dispatch
+def shift(a: Kernel, *shifts):
     if a.stationary and len(shifts) == 1:
         return a
     else:

@@ -1,7 +1,9 @@
+from typing import Union
+
 import logging
 import abc
 
-from plum import Dispatcher, Referentiable, Self
+from plum import Dispatcher
 
 __all__ = []
 
@@ -10,40 +12,38 @@ log = logging.getLogger(__name__)
 _dispatch = Dispatcher()
 
 
-@_dispatch(object)
+@_dispatch
 def _resolve_index(key):
     return id(key)
 
 
-@_dispatch(int)
-def _resolve_index(i):
+@_dispatch
+def _resolve_index(i: int):
     return i
 
 
-@_dispatch({tuple, reversed})
-def _resolve_index(x):
+@_dispatch
+def _resolve_index(x: Union[tuple, reversed]):
     return tuple(_resolve_index(key) for key in x)
 
 
-class LazyTensor(metaclass=Referentiable):
+class LazyTensor:
     """A lazy tensor that indexes by the identity of its indices.
 
     Args:
         rank (int): Rank of the tensor.
     """
 
-    _dispatch = Dispatcher(in_class=Self)
-
     def __init__(self, rank):
         self._rank = rank
         self._store = {}
 
-    @_dispatch(tuple)
-    def _expand_key(self, key):
+    @_dispatch
+    def _expand_key(self, key: tuple):
         # Nothing to do. The key needs to be a tuple.
         return key
 
-    @_dispatch(object)
+    @_dispatch
     def _expand_key(self, key):
         return (key,) * self._rank
 
@@ -102,8 +102,6 @@ class LazyVector(LazyTensor):
 
 class LazyMatrix(LazyTensor):
     """A lazy matrix."""
-
-    _dispatch = Dispatcher(in_class=Self)
 
     def __init__(self):
         LazyTensor.__init__(self, 2)

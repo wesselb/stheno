@@ -1,4 +1,3 @@
-import lab as B
 from .util import num_elements
 
 __all__ = ["Input", "MultiInput", "Unique", "WeightedUnique"]
@@ -19,8 +18,8 @@ class Input:
         return self._xs[0] if len(self._xs) == 1 else self._xs
 
 
-@num_elements.extend(Input)
-def num_elements(x):
+@num_elements.dispatch
+def num_elements(x: Input):
     return sum(map(num_elements, x.get()))
 
 

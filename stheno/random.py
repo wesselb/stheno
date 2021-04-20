@@ -2,14 +2,16 @@ from types import FunctionType
 
 from lab import B
 from matrix import AbstractMatrix, Zero
-from plum import Self, Referentiable, Dispatcher, convert
+from plum import Dispatcher, convert, Union
 
 from .util import uprank
 
 __all__ = ["Normal"]
 
+_dispatch = Dispatcher()
 
-class Random(metaclass=Referentiable):
+
+class Random:
     """A random object."""
 
     def __radd__(self, other):
@@ -50,28 +52,30 @@ class Normal(RandomVector):
         var (matrix): Variance of the distribution.
     """
 
-    _dispatch = Dispatcher(in_class=Self)
-
-    @_dispatch({B.Numeric, AbstractMatrix}, {B.Numeric, AbstractMatrix})
-    def __init__(self, mean, var):
+    @_dispatch
+    def __init__(
+        self,
+        mean: Union[B.Numeric, AbstractMatrix],
+        var: Union[B.Numeric, AbstractMatrix],
+    ):
         self._mean = mean
         self._mean_is_zero = None
         self._var = var
 
-    @_dispatch({B.Numeric, AbstractMatrix})
-    def __init__(self, var):
+    @_dispatch
+    def __init__(self, var: Union[B.Numeric, AbstractMatrix]):
         Normal.__init__(self, 0, var)
 
-    @_dispatch(FunctionType, FunctionType)
-    def __init__(self, construct_mean, construct_var):
+    @_dispatch
+    def __init__(self, construct_mean: FunctionType, construct_var: FunctionType):
         self._mean = None
         self._construct_mean = construct_mean
         self._mean_is_zero = None
         self._var = None
         self._construct_var = construct_var
 
-    @_dispatch(FunctionType)
-    def __init__(self, construct_var):
+    @_dispatch
+    def __init__(self, construct_var: FunctionType):
         Normal.__init__(self, lambda: 0, construct_var)
 
     def _resolve_mean(self, construct_zeros):
@@ -166,8 +170,8 @@ class Normal(RandomVector):
             + B.cast(self.dtype, self.dim) * B.cast(self.dtype, B.log_2_pi + 1)
         ) / 2
 
-    @_dispatch(Self)
-    def kl(self, other):
+    @_dispatch
+    def kl(self, other: "Normal"):
         """Compute the KL divergence with respect to another normal
         distribution.
 
@@ -185,8 +189,8 @@ class Normal(RandomVector):
             - B.logdet(self.var)
         ) / 2
 
-    @_dispatch(Self)
-    def w2(self, other):
+    @_dispatch
+    def w2(self, other: "Normal"):
         """Compute the 2-Wasserstein distance with respect to another normal
         distribution.
 
@@ -228,16 +232,16 @@ class Normal(RandomVector):
 
         return B.dense(sample)
 
-    @_dispatch(B.Numeric)
-    def __add__(self, other):
+    @_dispatch
+    def __add__(self, other: B.Numeric):
         return Normal(self.mean + other, self.var)
 
-    @_dispatch(Self)
-    def __add__(self, other):
+    @_dispatch
+    def __add__(self, other: "Normal"):
         return Normal(B.add(self.mean, other.mean), B.add(self.var, other.var))
 
-    @_dispatch(B.Numeric)
-    def __mul__(self, other):
+    @_dispatch
+    def __mul__(self, other: B.Numeric):
         return Normal(B.multiply(self.mean, other), B.multiply(self.var, other ** 2))
 
     def lmatmul(self, other):
