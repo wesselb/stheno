@@ -164,7 +164,7 @@ def test_reversal():
     standard_kernel_tests(k)
 
 
-def test_delta():
+def test_delta_properties():
     k = Delta()
 
     # Verify that the kernel has the right properties.
