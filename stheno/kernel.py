@@ -450,7 +450,7 @@ class PeriodicKernel(Kernel, algebra.WrappedFunction):
 
     @_dispatch(Self)
     def __eq__(self, other):
-        return self[0] == other[0] and B.all(self.period == other.period)
+        return self[0] == other[0] and identical(self.period, other.period)
 
 
 class EQ(Kernel):
