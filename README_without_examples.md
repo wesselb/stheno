@@ -230,11 +230,18 @@ AssertionError: Processes GP(<lambda>, EQ() + Linear()) and GP(0, EQ()) are asso
     GP(1, 2 * EQ())
     ```
     
-* Multiply GPs by other objects.
+* Add and subtract GPs and other objects.
+
+    *Warning:*
+    The product of two GPs it *not* a Gaussian process.
+    Stheno approximates the resulting process by moment matching.
 
     Example:
     
     ```python
+    >>> GP(1, EQ(), measure=prior) * GP(1, Exp(), measure=prior)
+    GP(<lambda> + <lambda> + -1 * 1, <lambda> * Exp() + <lambda> * EQ() + EQ() * Exp())
+  
     >>> 2 * GP(EQ())
     GP(2, 2 * EQ())
   
@@ -424,6 +431,17 @@ array([[-0.43771276, -2.36741858],
 ```
 
 *
+    Use `f(x).marginals()` to efficiently compute the means and 
+    the marginal lower and upper 95% central credible region bounds.
+    
+    Example:
+
+    ```python
+    >>> f(x).marginals()
+    (array([0., 0., 0.]), array([-1.96, -1.96, -1.96]), array([1.96, 1.96, 1.96]))
+    ```
+  
+*
     Use `Measure.logpdf` to compute the joint logpdf of multiple observations.
 
     Definition:
@@ -445,17 +463,6 @@ array([[-0.43771276, -2.36741858],
     sample1, sample2, ... = prior.sample(f1(x1), f2(x2), ...)
     ```
 
-*
-    Use `f(x).marginals()` to efficiently compute the means and 
-    the marginal lower and upper 95% central credible region bounds.
-    
-    Example:
-
-    ```python
-    >>> f(x).marginals()
-    (array([0., 0., 0.]), array([-1.96, -1.96, -1.96]), array([1.96, 1.96, 1.96]))
-    ```
-
 ### Prior and Posterior Measures
 
 Conditioning a _prior_ measure on observations gives a _posterior_ measure.
@@ -469,11 +476,11 @@ post = prior | (f(x), y)
 post = prior | ((f1(x1), y1), (f2(x2), y2), ...)
 ```
 
-You can then compute a posterior process with `post(f)` and a finite-dimensional
+You can then obtain a posterior process with `post(f)` and a finite-dimensional
 distribution under the posterior with `post(f(x))`.
 
 Let's consider an example.
-First, build a model, and sample some values.
+First, build a model and sample some values.
 
 ```python
 >>> prior = Measure()
@@ -521,7 +528,7 @@ GP(PosteriorMean(), PosteriorKernel())
       [0.e+00 0.e+00 1.e-12]]>
 ```
 
-We can now build on the posterior.
+We can further extend our model by building on the posterior.
 
 ```python
 >>> g = GP(Linear(), measure=post)
@@ -558,14 +565,13 @@ obs = SparseObs(u(z), (e1, f1(x1), y1), (e2, f2(x2), y2), ...)
 
 obs = SparseObs((u1(z1), u2(z2), ...), e, f(x), y)
 
-obs = SparseObs(u(z), (e1, f1(x1), y1), (e2, f2(x2), y2), ...)
-
 obs = SparseObs((u1(z1), u2(z2), ...), (e1, f1(x1), y1), (e2, f2(x2), y2), ...)
 ```
 
-Compute the value of the ELBO with `obs.elbo(prior)`, where `prior = Measure()` is
-the measure of your models.
-Moreover, the posterior measure can be constructed with `prior | obs`.
+The approximate posterior measure can be constructed with `prior | obs`
+where `prior = Measure()` is the measure of your model.
+To quantify the quality of the approximation, you can compute the ELBO with 
+`obs.elbo(prior)`.
 
 Let's consider an example.
 First, build a model that incorporates noise and sample some observations.
@@ -610,7 +616,7 @@ And the approximation is good:
 -3.537934389896691e-10
 ```
 
-We can then construct the posterior:
+We finally construct the approximate posterior measure:
 
 ```python
 >>> post_approx = prior | SparseObs(u, e, f(x_obs), y_obs)

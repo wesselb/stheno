@@ -72,18 +72,10 @@ def objective_gp_rnn(vs):
 
 # Pretrain the RNN.
 vs = Vars(tf.float32)
-minimise_adam(
-    tf.function(objective_rnn, autograph=False), vs, rate=1e-2, iters=1000, trace=True
-)
+minimise_adam(objective_rnn, vs, rate=1e-2, iters=1000, trace=True, jit=True)
 
 # Jointly train the RNN and GPs.
-minimise_adam(
-    tf.function(objective_gp_rnn, autograph=False),
-    vs,
-    rate=1e-3,
-    iters=1000,
-    trace=True,
-)
+minimise_adam(objective_gp_rnn, vs, rate=1e-3, iters=1000, trace=True, jit=True)
 
 _, f_gp_rnn, y_gp_rnn, a, b = model(vs)
 
