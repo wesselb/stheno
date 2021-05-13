@@ -1202,7 +1202,7 @@ def model(
     prior = Measure()
 
     # Random fluctuation:
-    u = GP(u_var * EQ() > u_scale, measure=prior)
+    u = GP(u_var * EQ().stretch(u_scale), measure=prior)
 
     # Noise:
     e = GP(e_var * Delta(), measure=prior)
@@ -1229,7 +1229,7 @@ def objective(vs):
 
 
 # Learn hyperparameters.
-minimise_l_bfgs_b(tf.function(objective, autograph=False), vs)
+minimise_l_bfgs_b(objective, vs, jit=True)
 f, y = model(vs)
 
 # Print the learned parameters.
