@@ -2,30 +2,28 @@ import matplotlib.pyplot as plt
 import wbml.out as out
 from wbml.plot import tweak
 
-from stheno import B, Measure, GP, Delta
+from stheno import B, Measure, GP
+
+B.epsilon = 1e-10  # Very slightly regularise.
 
 # Define points to predict at.
 x = B.linspace(0, 10, 200)
 x_obs = B.linspace(0, 10, 10)
 
-# Construct the model.
-prior = Measure()
-slope = GP(1, measure=prior)
-intercept = GP(5, measure=prior)
-f = slope * (lambda x: x) + intercept
-
-e = 0.2 * GP(Delta(), measure=prior)  # Noise model
-
-y = f + e  # Observation model
+with Measure() as prior:
+    # Construct a linear model.
+    slope = GP(1)
+    intercept = GP(5)
+    f = slope * (lambda x: x) + intercept
 
 # Sample a slope, intercept, underlying function, and observations.
 true_slope, true_intercept, f_true, y_obs = prior.sample(
-    slope(0), intercept(0), f(x), y(x_obs)
+    slope(0), intercept(0), f(x), f(x_obs, 0.2)
 )
 
 # Condition on the observations to make predictions.
-post = prior | (y(x_obs), y_obs)
-mean, lower, upper = post(f(x)).marginals()
+post = prior | (f(x_obs, 0.2), y_obs)
+mean, lower, upper = post(f(x)).marginal_credible_bounds()
 
 out.kv("True slope", true_slope[0, 0])
 out.kv("Predicted slope", post(slope(0)).mean[0, 0])

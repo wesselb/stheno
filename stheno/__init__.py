@@ -1,20 +1,24 @@
 # noinspection PyUnresolvedReferences
 import matrix
 # noinspection PyUnresolvedReferences
-from lab import B
+from mlkernels import *
+# noinspection PyUnresolvedReferences
+import lab as B
 
-from plum import PromisedType
+from plum import PromisedType, Dispatcher
 
 PromisedFDD = PromisedType()
 PromisedGP = PromisedType()
+PromisedMeasure = PromisedType()
 
-from .input import *
-from .kernel import *
+_dispatch = Dispatcher()
+
+
+class BreakingChangeWarning(UserWarning):
+    """A breaking change."""
+
+
 from .lazy import *
-from .mean import *
-from .measure import *
-from .mokernel import *
-from .momean import *
+from .model import *
+from .mo import *
 from .random import *
-from .util import *
-

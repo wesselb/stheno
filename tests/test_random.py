@@ -73,7 +73,13 @@ def test_normal_m2(normal1):
 
 
 def test_normal_marginals(normal1):
-    mean, lower, upper = normal1.marginals()
+    mean, var = normal1.marginals()
+    approx(mean, normal1.mean.squeeze())
+    approx(var, B.diag(normal1.var))
+
+
+def test_normal_marginal_credible_bounds(normal1):
+    mean, lower, upper = normal1.marginal_credible_bounds()
     approx(mean, normal1.mean.squeeze())
     approx(lower, normal1.mean.squeeze() - 1.96 * B.diag(normal1.var) ** 0.5)
     approx(upper, normal1.mean.squeeze() + 1.96 * B.diag(normal1.var) ** 0.5)

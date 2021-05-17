@@ -9,23 +9,22 @@ B.epsilon = 1e-10
 x = B.linspace(0, 10, 200)
 x_obs = B.linspace(0, 7, 50)
 
-# Construct a latent function consisting of four different components.
-prior = Measure()
-f_smooth = GP(EQ(), measure=prior)
-f_wiggly = GP(RQ(1e-1).stretch(0.5), measure=prior)
-f_periodic = GP(EQ().periodic(1.0), measure=prior)
-f_linear = GP(Linear(), measure=prior)
 
-f = f_smooth + f_wiggly + f_periodic + 0.2 * f_linear
+with Measure() as prior:
+    # Construct a latent function consisting of four different components.
+    f_smooth = GP(EQ())
+    f_wiggly = GP(RQ(1e-1).stretch(0.5))
+    f_periodic = GP(EQ().periodic(1.0))
+    f_linear = GP(Linear())
+    f = f_smooth + f_wiggly + f_periodic + 0.2 * f_linear
 
-# Let the observation noise consist of a bit of exponential noise.
-e_indep = GP(Delta(), measure=prior)
-e_exp = GP(Exp(), measure=prior)
+    # Let the observation noise consist of a bit of exponential noise.
+    e_indep = GP(Delta())
+    e_exp = GP(Exp())
+    e = e_indep + 0.3 * e_exp
 
-e = e_indep + 0.3 * e_exp
-
-# Sum the latent function and observation noise to get a model for the observations.
-y = f + 0.5 * e
+    # Sum the latent function and observation noise to get a model for the observations.
+    y = f + 0.5 * e
 
 # Sample a true, underlying function and observations.
 (
@@ -41,11 +40,11 @@ y = f + 0.5 * e
 # its various components.
 post = prior | (y(x_obs), y_obs)
 
-pred_smooth = post(f_smooth(x)).marginals()
-pred_wiggly = post(f_wiggly(x)).marginals()
-pred_periodic = post(f_periodic(x)).marginals()
-pred_linear = post(f_linear(x)).marginals()
-pred_f = post(f(x)).marginals()
+pred_smooth = post(f_smooth(x))
+pred_wiggly = post(f_wiggly(x))
+pred_periodic = post(f_periodic(x))
+pred_linear = post(f_linear(x))
+pred_f = post(f(x))
 
 
 # Plot results.
@@ -53,7 +52,7 @@ def plot_prediction(x, f, pred, x_obs=None, y_obs=None):
     plt.plot(x, f, label="True", style="test")
     if x_obs is not None:
         plt.scatter(x_obs, y_obs, label="Observations", style="train", s=20)
-    mean, lower, upper = pred
+    mean, lower, upper = pred.marginal_credible_bounds()
     plt.plot(x, mean, label="Prediction", style="pred")
     plt.fill_between(x, lower, upper, style="pred")
     tweak()

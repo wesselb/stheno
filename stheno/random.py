@@ -1,14 +1,14 @@
+import warnings
 from types import FunctionType
 
 from lab import B
 from matrix import AbstractMatrix, Zero
-from plum import Dispatcher, convert, Union
+from plum import convert, Union
 
-from .util import uprank
+from . import _dispatch, BreakingChangeWarning
 
-__all__ = ["Normal"]
+__all__ = ["Random", "RandomProcess", "RandomVector", "Normal"]
 
-_dispatch = Dispatcher()
 
 
 class Random:
@@ -129,13 +129,34 @@ class Normal(RandomVector):
         """Get the marginals.
 
         Returns:
-            tuple: A tuple containing the predictive means and lower and
-                upper 95% central credible interval bounds.
+            tuple: A tuple containing the marginal means and marginal variances.
         """
-        mean = B.squeeze(B.dense(self.mean))
+        warnings.warn(
+            '"Normal.marginals" previously returned a tuple containing the marginal '
+            "means and marginal lower and upper 95% central credible interval bounds, "
+            "but now it returns a tuple containing the marginal means and marginal "
+            "variances. This was a breaking change. If you wish to compute the "
+            'credible bounds, use "Normal.marginal_error_bounds".',
+            category=BreakingChangeWarning,
+        )
         # It can happen that the variances are slightly negative due to numerical noise.
         # Prevent NaNs from the following square root by taking the maximum with zero.
-        error = 1.96 * B.sqrt(B.maximum(B.diag(self.var), B.cast(self.dtype, 0)))
+        return (
+            B.squeeze(B.dense(self.mean)),
+            B.maximum(B.diag(self.var), B.cast(self.dtype, 0)),
+        )
+
+    def marginal_credible_bounds(self):
+        """Get the marginal credible region bounds.
+
+        Returns:
+            tuple: A tuple containing the marginal means and marginal lower and
+                upper 95% central credible interval bounds.
+        """
+        warnings.simplefilter(category=BreakingChangeWarning, action="ignore")
+        mean, variances = self.marginals()
+        warnings.simplefilter(category=BreakingChangeWarning, action="default")
+        error = 1.96 * B.sqrt(variances)
         return mean, mean - error, mean + error
 
     def logpdf(self, x):
@@ -153,7 +174,7 @@ class Normal(RandomVector):
             -(
                 B.logdet(self.var)
                 + B.cast(self.dtype, self.dim) * B.cast(self.dtype, B.log_2_pi)
-                + B.iqf_diag(self.var, B.subtract(uprank(x), self.mean))
+                + B.iqf_diag(self.var, B.subtract(B.uprank(x), self.mean))
             )
             / 2
         )

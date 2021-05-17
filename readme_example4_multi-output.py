@@ -31,24 +31,27 @@ m = 2
 p = 4
 H = B.randn(p, m)
 
-# Construct latent functions.
-prior = Measure()
-us = VGP([GP(EQ(), measure=prior) for _ in range(m)])
-fs = us.lmatmul(H)
 
-# Construct noise.
-e = VGP([GP(0.5 * Delta(), measure=prior) for _ in range(p)])
+with Measure() as prior:
+    # Construct latent functions.
+    us = VGP([GP(EQ()) for _ in range(m)])
 
-# Construct observation model.
-ys = e + fs
+    # Construct multi-output prior.
+    fs = us.lmatmul(H)
+
+    # Construct noise.
+    e = VGP([GP(0.5 * Delta()) for _ in range(p)])
+
+    # Construct observation model.
+    ys = e + fs
 
 # Sample a true, underlying function and observations.
 samples = prior.sample(*(p(x) for p in fs.ps), *(p(x_obs) for p in ys.ps))
 fs_true, ys_obs = samples[:p], samples[p:]
 
 # Compute the posterior and make predictions.
-post = prior | (*((p(x_obs), y_obs) for p, y_obs in zip(ys.ps, ys_obs)),)
-preds = [post(p(x)).marginals() for p in fs.ps]
+post = prior.condition(*((p(x_obs), y_obs) for p, y_obs in zip(ys.ps, ys_obs)))
+preds = [post(p(x)) for p in fs.ps]
 
 
 # Plot results.
@@ -56,7 +59,7 @@ def plot_prediction(x, f, pred, x_obs=None, y_obs=None):
     plt.plot(x, f, label="True", style="test")
     if x_obs is not None:
         plt.scatter(x_obs, y_obs, label="Observations", style="train", s=20)
-    mean, lower, upper = pred
+    mean, lower, upper = pred.marginal_credible_bounds()
     plt.plot(x, mean, label="Prediction", style="pred")
     plt.fill_between(x, lower, upper, style="pred")
     tweak()

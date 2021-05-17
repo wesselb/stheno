@@ -6,20 +6,19 @@ from stheno import B, Measure, GP, EQ
 # Define points to predict at.
 x = B.linspace(0, 10, 100)
 
-# Construct a prior.
-prior = Measure()
-f1 = GP(3, EQ(), measure=prior)
-f2 = GP(3, EQ(), measure=prior)
+with Measure() as prior:
+    f1 = GP(3, EQ())
+    f2 = GP(3, EQ())
 
-# Compute the approximate product.
-f_prod = f1 * f2
+    # Compute the approximate product.
+    f_prod = f1 * f2
 
 # Sample two functions.
 s1, s2 = prior.sample(f1(x), f2(x))
 
 # Predict.
-post = prior | ((f1(x), s1), (f2(x), s2))
-mean, lower, upper = post(f_prod(x)).marginals()
+f_prod_post = f_prod | ((f1(x), s1), (f2(x), s2))
+mean, lower, upper = f_prod_post(x).marginal_credible_bounds()
 
 # Plot result.
 plt.plot(x, s1, label="Sample 1", style="train")

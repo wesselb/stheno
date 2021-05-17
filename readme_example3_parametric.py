@@ -17,22 +17,15 @@ def model(
     vs,
     u_var: Positive = 0.5,
     u_scale: Positive = 0.5,
-    e_var: Positive = 0.5,
+    noise: Positive = 0.5,
     alpha: Positive = 1.2,
 ):
-    prior = Measure()
-
-    # Random fluctuation:
-    u = GP(u_var * EQ().stretch(u_scale), measure=prior)
-
-    # Noise:
-    e = GP(e_var * Delta(), measure=prior)
-
-    # Construct model:
-    f = u + (lambda x: x ** alpha)
-    y = f + e
-
-    return f, y
+    with Measure():
+        # Random fluctuation:
+        u = GP(u_var * EQ().stretch(u_scale))
+        # Construct model.
+        f = u + (lambda x: x ** alpha)
+    return f, noise
 
 
 # Sample a true, underlying function and observations.
@@ -44,22 +37,22 @@ y_obs = post(f(x_obs)).sample()
 
 
 def objective(vs):
-    f, y = model(vs)
-    evidence = y(x_obs).logpdf(y_obs)
+    f, noise = model(vs)
+    evidence = f(x_obs, noise).logpdf(y_obs)
     return -evidence
 
 
 # Learn hyperparameters.
 minimise_l_bfgs_b(objective, vs, jit=True)
-f, y = model(vs)
+f, noise = model(vs)
 
 # Print the learned parameters.
-out.kv("Prior", y.display(out.format))
+out.kv("Prior", f.display(out.format))
 vs.print()
 
 # Condition on the observations to make predictions.
-post = f.measure | (y(x_obs), y_obs)
-mean, lower, upper = post(f(x)).marginals()
+f_post = f | (f(x_obs, noise), y_obs)
+mean, lower, upper = f_post(x).marginal_credible_bounds()
 
 # Plot result.
 plt.plot(x, B.squeeze(f_true), label="True", style="test")

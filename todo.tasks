@@ -1,31 +1,18 @@
 TODO:
-    ☐ Test WeightedUnique @high
-
     Refactor:
         Stheno 1.0:
-            ☐ Anchestral sampling
-            ☐ Remove duplication in handling of boxing
-            ☐ Let SparseObs take in Obs for consistency
-                ☐ Sparse -> Pseudo
+            ☐ Let PseudoObs take in Obs for consistency
             ☐ Periodic GP
-            ☐ FixedDelta -> make use of traits
-            ☐ RowVecs
-            ☐ ColVecs
-
-            ☐ Add eval @low
 
         Misc:
-            ☐ Throw warning at fallback for elwise
 
     Optimise:
         ☐ SelectedKernel
 
     README:
         ☐ Additive pseudo-point example
-        ☐ B.epsilon
 
     Features:
-        ☐ DerivativeKernel for Torch, AutoGrad, and Jax
 
 ---- ✄ -----------------------
 
@@ -43,6 +30,17 @@ Profiling:
 ＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿
 Archive:
  ✓ Remove uprank: use B.uprank @done (21-11-30 19:26) @project(TODO / Refactor / Misc)
+ ✓ Sparse -> Pseudo @done (21-05-17 18:16) @project(TODO / Refactor / Stheno 1.0)
+ ✓ Remove duplication in handling of boxing @done (21-05-17 18:16) @project(TODO / Refactor / Stheno 1.0)
+ ✓ B.epsilon @done (21-05-17 18:16) @project(TODO / README)
+ x Throw warning at fallback for elwise @cancelled (21-05-17 18:16) @project(TODO / Refactor / Misc)
+ x Test WeightedUnique @high @cancelled (21-05-17 18:16) @project(TODO)
+ x RowVecs @cancelled (21-05-17 18:16) @project(TODO / Refactor / Stheno 1.0)
+ x FixedDelta -> make use of traits @cancelled (21-05-17 18:16) @project(TODO / Refactor / Stheno 1.0)
+ x DerivativeKernel for Torch, AutoGrad, and Jax @cancelled (21-05-17 18:16) @project(TODO / Features)
+ x ColVecs @cancelled (21-05-17 18:16) @project(TODO / Refactor / Stheno 1.0)
+ x Anchestral sampling @cancelled (21-05-17 18:16) @project(TODO / Refactor / Stheno 1.0)
+ x Add eval @low @cancelled (21-05-17 18:16) @project(TODO / Refactor / Stheno 1.0)
  ✓ Update manual, e.g. kernels @done (20-11-30 19:26) @project(TODO / README)
  ✓ Note: accumulation to default graph can cause memory problems @critical @done (20-11-30 19:26) @project(TODO / README)
  ✓ Note that kernel is given first everywhere @done (20-11-30 19:26) @project(TODO / README)

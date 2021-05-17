@@ -1,24 +1,21 @@
 import matplotlib.pyplot as plt
 from wbml.plot import tweak
 
-from stheno import B, Measure, GP, EQ, Delta
+from stheno import B, GP, EQ
 
 # Define points to predict at.
 x = B.linspace(0, 10, 100)
 x_obs = B.linspace(0, 7, 20)
 
 # Construct a prior.
-prior = Measure()
-f = GP(EQ().periodic(5.0), measure=prior)  # Latent function
-e = GP(Delta(), measure=prior)  # Noise
-y = f + 0.5 * e
+f = GP(EQ().periodic(5.0))
 
-# Sample a true, underlying function and observations.
-f_true, y_obs = prior.sample(f(x), y(x_obs))
+# Sample a true, underlying function and noisy observations.
+f_true, y_obs = f.measure.sample(f(x), f(x_obs, 0.5))
 
 # Now condition on the observations to make predictions.
-post = prior | (y(x_obs), y_obs)
-mean, lower, upper = post(f)(x).marginals()
+f_post = f | (f(x_obs, 0.5), y_obs)
+mean, lower, upper = f_post(x).marginal_credible_bounds()
 
 # Plot result.
 plt.plot(x, f_true, label="True", style="test")

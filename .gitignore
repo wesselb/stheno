@@ -19,6 +19,5 @@ cover
 # Other
 .DS_Store
 *.swp
-local_todo.todo
 scripts
 run_readme_examples.sh

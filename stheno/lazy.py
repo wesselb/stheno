@@ -1,15 +1,12 @@
+import abc
+import logging
 from typing import Union
 
-import logging
-import abc
+from . import _dispatch
 
-from plum import Dispatcher
-
-__all__ = []
+__all__ = ["LazyVector", "LazyMatrix"]
 
 log = logging.getLogger(__name__)
-
-_dispatch = Dispatcher()
 
 
 @_dispatch

@@ -6,7 +6,7 @@ from varz.tensorflow import Vars, minimise_adam
 from wbml.net import rnn as rnn_constructor
 from wbml.plot import tweak
 
-from stheno.tensorflow import B, Measure, GP, Delta, EQ
+from stheno.tensorflow import B, Measure, GP, EQ
 
 # Increase regularisation because we are dealing with `tf.float32`s.
 B.epsilon = 1e-6
@@ -32,11 +32,7 @@ y_obs = B.take(y_true, inds_obs)
 
 
 @parametrised
-def model(
-    vs, a_scale: Positive = 0.1, b_scale: Positive = 0.1, noise: Positive = 0.01
-):
-    prior = Measure()
-
+def model(vs, a_scale: Positive = 0.1, b_scale: Positive = 0.1, noise: Positive = 0.01):
     # Construct an RNN.
     f_rnn = rnn_constructor(
         output_size=1, widths=(10,), nonlinearity=B.tanh, final_dense=True
@@ -47,16 +43,15 @@ def model(
     weights = Vars(tf.float32, source=vs.get(shape=(num_weights,), name="rnn"))
     f_rnn.initialise(input_size=1, vs=weights)
 
-    # Construct GPs that modulate the RNN.
-    a = GP(1e-2 * EQ().stretch(a_scale), measure=prior)
-    b = GP(1e-2 * EQ().stretch(b_scale), measure=prior)
-    e = GP(noise * Delta(), measure=prior)
+    with Measure():
+        # Construct GPs that modulate the RNN.
+        a = GP(1e-2 * EQ().stretch(a_scale))
+        b = GP(1e-2 * EQ().stretch(b_scale))
 
-    # GP-RNN model:
-    f_gp_rnn = (1 + a) * (lambda x: f_rnn(x)) + b
-    y_gp_rnn = f_gp_rnn + e
+        # GP-RNN model:
+        f_gp_rnn = (1 + a) * (lambda x: f_rnn(x)) + b
 
-    return f_rnn, f_gp_rnn, y_gp_rnn, a, b
+    return f_rnn, f_gp_rnn, noise, a, b
 
 
 def objective_rnn(vs):
@@ -65,22 +60,22 @@ def objective_rnn(vs):
 
 
 def objective_gp_rnn(vs):
-    _, _, y_gp_rnn, _, _ = model(vs)
-    evidence = y_gp_rnn(x_obs).logpdf(y_obs)
+    _, f_gp_rnn, noise, _, _ = model(vs)
+    evidence = f_gp_rnn(x_obs, noise).logpdf(y_obs)
     return -evidence
 
 
 # Pretrain the RNN.
 vs = Vars(tf.float32)
-minimise_adam(objective_rnn, vs, rate=1e-2, iters=1000, trace=True, jit=True)
+minimise_adam(objective_rnn, vs, rate=5e-3, iters=1000, trace=True, jit=True)
 
 # Jointly train the RNN and GPs.
 minimise_adam(objective_gp_rnn, vs, rate=1e-3, iters=1000, trace=True, jit=True)
 
-_, f_gp_rnn, y_gp_rnn, a, b = model(vs)
+_, f_gp_rnn, noise, a, b = model(vs)
 
 # Condition.
-post = f_gp_rnn.measure | (y_gp_rnn(x_obs), y_obs)
+post = f_gp_rnn.measure | (f_gp_rnn(x_obs, noise), y_obs)
 
 # Predict and plot results.
 plt.figure(figsize=(10, 6))
@@ -89,21 +84,21 @@ plt.subplot(2, 1, 1)
 plt.title("$(1 + a)\\cdot {}$RNN${} + b$")
 plt.plot(x, f_true, label="True", style="test")
 plt.scatter(x_obs, y_obs, label="Observations", style="train", s=20)
-mean, lower, upper = post(f_gp_rnn(x)).marginals()
+mean, lower, upper = post(f_gp_rnn(x)).marginal_credible_bounds()
 plt.plot(x, mean, label="Prediction", style="pred")
 plt.fill_between(x, lower, upper, style="pred")
 tweak()
 
 plt.subplot(2, 2, 3)
 plt.title("$a$")
-mean, lower, upper = post(a(x)).marginals()
+mean, lower, upper = post(a(x)).marginal_credible_bounds()
 plt.plot(x, mean, label="Prediction", style="pred")
 plt.fill_between(x, lower, upper, style="pred")
 tweak()
 
 plt.subplot(2, 2, 4)
 plt.title("$b$")
-mean, lower, upper = post(b(x)).marginals()
+mean, lower, upper = post(b(x)).marginal_credible_bounds()
 plt.plot(x, mean, label="Prediction", style="pred")
 plt.fill_between(x, lower, upper, style="pred")
 tweak()

@@ -1,34 +1,31 @@
 import matplotlib.pyplot as plt
 from wbml.plot import tweak
 
-from stheno import B, Measure, GP, EQ, Delta
+from stheno import B, Measure, GP, EQ
 
 # Define points to predict at.
 x = B.linspace(0, 10, 100)
 x_obs = B.linspace(0, 10, 20)
 
-# Constuct a prior:
-prior = Measure()
-w = lambda x: B.exp(-(x ** 2) / 0.5)  # Window
-b = [(w * GP(EQ(), measure=prior)).shift(xi) for xi in x_obs]  # Weighted basis funs
-f = sum(b)  # Latent function
-e = GP(Delta(), measure=prior)  # Noise
-y = f + 0.2 * e  # Observation model
+with Measure() as prior:
+    w = lambda x: B.exp(-(x ** 2) / 0.5)  # Basis function
+    b = [(w * GP(EQ())).shift(xi) for xi in x_obs]  # Weighted basis functions
+    f = sum(b)
 
 # Sample a true, underlying function and observations.
-f_true, y_obs = prior.sample(f(x), y(x_obs))
+f_true, y_obs = prior.sample(f(x), f(x_obs, 0.2))
 
 # Condition on the observations to make predictions.
-post = prior | (y(x_obs), y_obs)
+post = prior | (f(x_obs, 0.2), y_obs)
 
 # Plot result.
 for i, bi in enumerate(b):
-    mean, lower, upper = post(bi(x)).marginals()
+    mean, lower, upper = post(bi(x)).marginal_credible_bounds()
     kw_args = {"label": "Basis functions"} if i == 0 else {}
     plt.plot(x, mean, style="pred2", **kw_args)
 plt.plot(x, f_true, label="True", style="test")
 plt.scatter(x_obs, y_obs, label="Observations", style="train", s=20)
-mean, lower, upper = post(f(x)).marginals()
+mean, lower, upper = post(f(x)).marginal_credible_bounds()
 plt.plot(x, mean, label="Prediction", style="pred")
 plt.fill_between(x, lower, upper, style="pred")
 tweak()
