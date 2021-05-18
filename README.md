@@ -359,7 +359,7 @@ Things you can do with a finite-dimensional distribution:
     Use `f(x).var` to compute the variance.
 
 *
-    Use `f(x).sample` to sample.
+    Use `Normal.sample` to sample.
 
     Definition:
   
