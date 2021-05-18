@@ -1,7 +1,7 @@
-stheno.measure module
+stheno.mo.mean module
 =====================
 
-.. automodule:: stheno.measure
+.. automodule:: stheno.mo.mean
    :members:
    :undoc-members:
    :show-inheritance:

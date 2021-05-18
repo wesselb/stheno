@@ -1,0 +1,7 @@
+stheno.model.measure module
+===========================
+
+.. automodule:: stheno.model.measure
+   :members:
+   :undoc-members:
+   :show-inheritance:

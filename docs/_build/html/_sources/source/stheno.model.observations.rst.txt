@@ -1,0 +1,7 @@
+stheno.model.observations module
+================================
+
+.. automodule:: stheno.model.observations
+   :members:
+   :undoc-members:
+   :show-inheritance:

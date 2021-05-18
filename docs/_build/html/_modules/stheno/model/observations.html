@@ -1,0 +1,524 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>stheno.model.observations &mdash; stheno 0.1.0 documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+
+  
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/underscore.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+        <script src="../../../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../../index.html" class="icon icon-home" alt="Documentation Home"> stheno
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.1
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../readme.html">Stheno</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api.html">Application Programming Interface</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">stheno</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+        
+          <li><a href="../../stheno.html">stheno</a> &raquo;</li>
+        
+      <li>stheno.model.observations</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for stheno.model.observations</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">lab</span> <span class="kn">import</span> <span class="n">B</span>
+<span class="kn">from</span> <span class="nn">matrix</span> <span class="kn">import</span> <span class="n">AbstractMatrix</span><span class="p">,</span> <span class="n">Diagonal</span>
+<span class="kn">from</span> <span class="nn">mlkernels</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">num_elements</span><span class="p">,</span>
+    <span class="n">PosteriorKernel</span><span class="p">,</span>
+    <span class="n">SubspaceKernel</span><span class="p">,</span>
+    <span class="n">PosteriorMean</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">plum</span> <span class="kn">import</span> <span class="n">Union</span>
+
+<span class="kn">from</span> <span class="nn">.fdd</span> <span class="kn">import</span> <span class="n">FDD</span>
+<span class="kn">from</span> <span class="nn">.gp</span> <span class="kn">import</span> <span class="n">cross</span>
+<span class="kn">from</span> <span class="nn">..</span> <span class="kn">import</span> <span class="n">_dispatch</span>
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s2">&quot;combine&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;AbstractObservations&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;Observations&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;Obs&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;PseudoObservations&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;PseudoObs&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;SparseObservations&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;SparseObs&quot;</span><span class="p">,</span>
+<span class="p">]</span>
+
+
+
+<span class="nd">@_dispatch</span>
+<span class="k">def</span> <span class="nf">combine</span><span class="p">(</span><span class="o">*</span><span class="n">fdds</span><span class="p">:</span> <span class="n">FDD</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Combine multiple FDDs or tuples of observations into one.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        *objs (:class:`.fdd.FDD` or tuple): FDDs or tuples of observations.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        :class:`.fdd.FDD` or tuple: `args` combined into one.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">combined_noise</span> <span class="o">=</span> <span class="n">B</span><span class="o">.</span><span class="n">block_diag</span><span class="p">(</span><span class="o">*</span><span class="p">[</span><span class="n">fdd</span><span class="o">.</span><span class="n">noise</span> <span class="k">for</span> <span class="n">fdd</span> <span class="ow">in</span> <span class="n">fdds</span><span class="p">])</span>
+    <span class="k">return</span> <span class="n">cross</span><span class="p">(</span><span class="o">*</span><span class="p">[</span><span class="n">fdd</span><span class="o">.</span><span class="n">p</span> <span class="k">for</span> <span class="n">fdd</span> <span class="ow">in</span> <span class="n">fdds</span><span class="p">])(</span><span class="n">fdds</span><span class="p">,</span> <span class="n">combined_noise</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="combine"><a class="viewcode-back" href="../../../source/stheno.model.observations.html#stheno.model.observations.combine">[docs]</a><span class="nd">@_dispatch</span>
+<span class="k">def</span> <span class="nf">combine</span><span class="p">(</span><span class="o">*</span><span class="n">pairs</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">):</span>
+    <span class="n">fdds</span><span class="p">,</span> <span class="n">ys</span> <span class="o">=</span> <span class="nb">zip</span><span class="p">(</span><span class="o">*</span><span class="n">pairs</span><span class="p">)</span>
+    <span class="n">combined_fdd</span> <span class="o">=</span> <span class="n">combine</span><span class="p">(</span><span class="o">*</span><span class="n">fdds</span><span class="p">)</span>
+    <span class="n">combined_y</span> <span class="o">=</span> <span class="n">B</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="o">*</span><span class="p">[</span><span class="n">B</span><span class="o">.</span><span class="n">uprank</span><span class="p">(</span><span class="n">y</span><span class="p">)</span> <span class="k">for</span> <span class="n">y</span> <span class="ow">in</span> <span class="n">ys</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">combined_fdd</span><span class="p">,</span> <span class="n">combined_y</span></div>
+
+
+<div class="viewcode-block" id="AbstractObservations"><a class="viewcode-back" href="../../../source/stheno.model.observations.html#stheno.model.observations.AbstractObservations">[docs]</a><span class="k">class</span> <span class="nc">AbstractObservations</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Abstract base class for observations.</span>
+
+<span class="sd">    Also takes in one or multiple tuples of the described arguments.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        fdd (:class:`.fdd.FDD`): FDD of observations.</span>
+<span class="sd">        y (column vector): Values of observations.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        fdd (:class:`.fdd.FDD`): FDD of observations.</span>
+<span class="sd">        y (column vector): Values of observations.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="nd">@_dispatch</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fdd</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">FDD</span><span class="p">],</span> <span class="n">y</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">B</span><span class="o">.</span><span class="n">Numeric</span><span class="p">,</span> <span class="n">AbstractMatrix</span><span class="p">]):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fdd</span> <span class="o">=</span> <span class="n">fdd</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">y</span> <span class="o">=</span> <span class="n">y</span>
+
+    <span class="nd">@_dispatch</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">pairs</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">):</span>
+        <span class="n">AbstractObservations</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">combine</span><span class="p">(</span><span class="o">*</span><span class="n">pairs</span><span class="p">))</span>
+
+<div class="viewcode-block" id="AbstractObservations.posterior_kernel"><a class="viewcode-back" href="../../../source/stheno.model.observations.html#stheno.model.observations.AbstractObservations.posterior_kernel">[docs]</a>    <span class="k">def</span> <span class="nf">posterior_kernel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">measure</span><span class="p">,</span> <span class="n">p_i</span><span class="p">,</span> <span class="n">p_j</span><span class="p">):</span>  <span class="c1"># pragma: no cover</span>
+        <span class="sd">&quot;&quot;&quot;Get the posterior kernel between two processes.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            measure (:class:`.measure.Measure`): Prior.</span>
+<span class="sd">            p_i (:class:`.gp.GP`): First process.</span>
+<span class="sd">            p_j (:class:`.gp.GP`): Second process.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            :class:`mlkernels.Kernel`: Posterior kernel between the first and</span>
+<span class="sd">                second process.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;Posterior kernel construction not implemented.&quot;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="AbstractObservations.posterior_mean"><a class="viewcode-back" href="../../../source/stheno.model.observations.html#stheno.model.observations.AbstractObservations.posterior_mean">[docs]</a>    <span class="k">def</span> <span class="nf">posterior_mean</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">measure</span><span class="p">,</span> <span class="n">p</span><span class="p">):</span>  <span class="c1"># pragma: no cover</span>
+        <span class="sd">&quot;&quot;&quot;Get the posterior kernel of a process.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            measure (:class:`.measure.Measure`): Prior.</span>
+<span class="sd">            p (:class:`.gp.GP`): Process.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            :class:`mlkernels.Mean`: Posterior mean of `p`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;Posterior mean construction not implemented.&quot;</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="Observations"><a class="viewcode-back" href="../../../source/stheno.model.observations.html#stheno.model.observations.Observations">[docs]</a><span class="k">class</span> <span class="nc">Observations</span><span class="p">(</span><span class="n">AbstractObservations</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Observations.</span>
+
+<span class="sd">    Takes arguments according to the constructor of</span>
+<span class="sd">    :class:`.measure.AbstractObservations`.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        fdd (:class:`.fdd.FDD`): FDDs to corresponding to the observations.</span>
+<span class="sd">        y (tensor): Values of observations.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">):</span>
+        <span class="n">AbstractObservations</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_K_x_store</span> <span class="o">=</span> <span class="p">{}</span>
+
+<div class="viewcode-block" id="Observations.K_x"><a class="viewcode-back" href="../../../source/stheno.model.observations.html#stheno.model.observations.Observations.K_x">[docs]</a>    <span class="k">def</span> <span class="nf">K_x</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">measure</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Kernel matrix of the data.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            measure (:class:`.measure.Measure`): Measure.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            matrix: Kernel matrix.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_K_x_store</span><span class="p">[</span><span class="nb">id</span><span class="p">(</span><span class="n">measure</span><span class="p">)]</span>
+        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+            <span class="n">K_x</span> <span class="o">=</span> <span class="n">measure</span><span class="o">.</span><span class="n">kernels</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">fdd</span><span class="o">.</span><span class="n">p</span><span class="p">](</span><span class="bp">self</span><span class="o">.</span><span class="n">fdd</span><span class="o">.</span><span class="n">x</span><span class="p">)</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">fdd</span><span class="o">.</span><span class="n">noise</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_K_x_store</span><span class="p">[</span><span class="nb">id</span><span class="p">(</span><span class="n">measure</span><span class="p">)]</span> <span class="o">=</span> <span class="n">K_x</span>
+            <span class="k">return</span> <span class="n">K_x</span></div>
+
+<div class="viewcode-block" id="Observations.posterior_kernel"><a class="viewcode-back" href="../../../source/stheno.model.observations.html#stheno.model.observations.Observations.posterior_kernel">[docs]</a>    <span class="k">def</span> <span class="nf">posterior_kernel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">measure</span><span class="p">,</span> <span class="n">p_i</span><span class="p">,</span> <span class="n">p_j</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">num_elements</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fdd</span><span class="o">.</span><span class="n">x</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="c1"># There are no observations! Just return prior.</span>
+            <span class="k">return</span> <span class="n">measure</span><span class="o">.</span><span class="n">kernels</span><span class="p">[</span><span class="n">p_i</span><span class="p">,</span> <span class="n">p_j</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="n">PosteriorKernel</span><span class="p">(</span>
+            <span class="n">measure</span><span class="o">.</span><span class="n">kernels</span><span class="p">[</span><span class="n">p_i</span><span class="p">,</span> <span class="n">p_j</span><span class="p">],</span>
+            <span class="n">measure</span><span class="o">.</span><span class="n">kernels</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">fdd</span><span class="o">.</span><span class="n">p</span><span class="p">,</span> <span class="n">p_i</span><span class="p">],</span>
+            <span class="n">measure</span><span class="o">.</span><span class="n">kernels</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">fdd</span><span class="o">.</span><span class="n">p</span><span class="p">,</span> <span class="n">p_j</span><span class="p">],</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">fdd</span><span class="o">.</span><span class="n">x</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">K_x</span><span class="p">(</span><span class="n">measure</span><span class="p">),</span>
+        <span class="p">)</span></div>
+
+<div class="viewcode-block" id="Observations.posterior_mean"><a class="viewcode-back" href="../../../source/stheno.model.observations.html#stheno.model.observations.Observations.posterior_mean">[docs]</a>    <span class="k">def</span> <span class="nf">posterior_mean</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">measure</span><span class="p">,</span> <span class="n">p</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">num_elements</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fdd</span><span class="o">.</span><span class="n">x</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="c1"># There are no observations! Just return prior.</span>
+            <span class="k">return</span> <span class="n">measure</span><span class="o">.</span><span class="n">means</span><span class="p">[</span><span class="n">p</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="n">PosteriorMean</span><span class="p">(</span>
+            <span class="n">measure</span><span class="o">.</span><span class="n">means</span><span class="p">[</span><span class="n">p</span><span class="p">],</span>
+            <span class="n">measure</span><span class="o">.</span><span class="n">means</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">fdd</span><span class="o">.</span><span class="n">p</span><span class="p">],</span>
+            <span class="n">measure</span><span class="o">.</span><span class="n">kernels</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">fdd</span><span class="o">.</span><span class="n">p</span><span class="p">,</span> <span class="n">p</span><span class="p">],</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">fdd</span><span class="o">.</span><span class="n">x</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">K_x</span><span class="p">(</span><span class="n">measure</span><span class="p">),</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">y</span><span class="p">,</span>
+        <span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="PseudoObservations"><a class="viewcode-back" href="../../../source/stheno.model.observations.html#stheno.model.observations.PseudoObservations">[docs]</a><span class="k">class</span> <span class="nc">PseudoObservations</span><span class="p">(</span><span class="n">AbstractObservations</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Observations through inducing points.</span>
+
+<span class="sd">    Further takes arguments according to the constructor of</span>
+<span class="sd">    :class:`.measure.AbstractObservations`. Can also take in tuples of inducing points.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        u (:class:`.fdd.FDD`): Inducing points</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="nd">@_dispatch</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">u</span><span class="p">:</span> <span class="n">FDD</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">):</span>
+        <span class="n">AbstractObservations</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">u</span> <span class="o">=</span> <span class="n">u</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_K_z_store</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_elbo_store</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_mu_store</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_A_store</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="nd">@_dispatch</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">us</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">):</span>
+        <span class="n">PseudoObservations</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">combine</span><span class="p">(</span><span class="o">*</span><span class="n">us</span><span class="p">),</span> <span class="o">*</span><span class="n">args</span><span class="p">)</span>
+
+<div class="viewcode-block" id="PseudoObservations.K_z"><a class="viewcode-back" href="../../../source/stheno.model.observations.html#stheno.model.observations.PseudoObservations.K_z">[docs]</a>    <span class="k">def</span> <span class="nf">K_z</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">measure</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Kernel matrix of the data.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            measure (:class:`.measure.Measure`): Measure.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            matrix: Kernel matrix.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_K_z_store</span><span class="p">[</span><span class="nb">id</span><span class="p">(</span><span class="n">measure</span><span class="p">)]</span>
+        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_compute</span><span class="p">(</span><span class="n">measure</span><span class="p">)</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_K_z_store</span><span class="p">[</span><span class="nb">id</span><span class="p">(</span><span class="n">measure</span><span class="p">)]</span></div>
+
+<div class="viewcode-block" id="PseudoObservations.elbo"><a class="viewcode-back" href="../../../source/stheno.model.observations.html#stheno.model.observations.PseudoObservations.elbo">[docs]</a>    <span class="k">def</span> <span class="nf">elbo</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">measure</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;ELBO.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            measure (:class:`.measure.Measure`): Measure.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            scalar: ELBO.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_elbo_store</span><span class="p">[</span><span class="nb">id</span><span class="p">(</span><span class="n">measure</span><span class="p">)]</span>
+        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_compute</span><span class="p">(</span><span class="n">measure</span><span class="p">)</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_elbo_store</span><span class="p">[</span><span class="nb">id</span><span class="p">(</span><span class="n">measure</span><span class="p">)]</span></div>
+
+<div class="viewcode-block" id="PseudoObservations.mu"><a class="viewcode-back" href="../../../source/stheno.model.observations.html#stheno.model.observations.PseudoObservations.mu">[docs]</a>    <span class="k">def</span> <span class="nf">mu</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">measure</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Mean of optimal approximating distribution.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            measure (:class:`.measure.Measure`): Measure.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            matrix: Mean.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mu_store</span><span class="p">[</span><span class="nb">id</span><span class="p">(</span><span class="n">measure</span><span class="p">)]</span>
+        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_compute</span><span class="p">(</span><span class="n">measure</span><span class="p">)</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mu_store</span><span class="p">[</span><span class="nb">id</span><span class="p">(</span><span class="n">measure</span><span class="p">)]</span></div>
+
+<div class="viewcode-block" id="PseudoObservations.A"><a class="viewcode-back" href="../../../source/stheno.model.observations.html#stheno.model.observations.PseudoObservations.A">[docs]</a>    <span class="k">def</span> <span class="nf">A</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">measure</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Parameter of the corrective variance of the kernel of the optimal</span>
+<span class="sd">        approximating distribution.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            measure (:class:`.measure.Measure`): Measure.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            matrix: Corrective variance.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_A_store</span><span class="p">[</span><span class="nb">id</span><span class="p">(</span><span class="n">measure</span><span class="p">)]</span>
+        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_compute</span><span class="p">(</span><span class="n">measure</span><span class="p">)</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_A_store</span><span class="p">[</span><span class="nb">id</span><span class="p">(</span><span class="n">measure</span><span class="p">)]</span></div>
+
+    <span class="k">def</span> <span class="nf">_compute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">measure</span><span class="p">):</span>
+        <span class="c1"># Extract processes and inputs.</span>
+        <span class="n">p_x</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">noise_x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fdd</span><span class="o">.</span><span class="n">p</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">fdd</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">fdd</span><span class="o">.</span><span class="n">noise</span>
+        <span class="n">p_z</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">noise_z</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">u</span><span class="o">.</span><span class="n">p</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">u</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">u</span><span class="o">.</span><span class="n">noise</span>
+
+        <span class="c1"># Construct the necessary kernel matrices.</span>
+        <span class="n">K_zx</span> <span class="o">=</span> <span class="n">measure</span><span class="o">.</span><span class="n">kernels</span><span class="p">[</span><span class="n">p_z</span><span class="p">,</span> <span class="n">p_x</span><span class="p">](</span><span class="n">z</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span>
+        <span class="n">K_z</span> <span class="o">=</span> <span class="n">B</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">measure</span><span class="o">.</span><span class="n">kernels</span><span class="p">[</span><span class="n">p_z</span><span class="p">](</span><span class="n">z</span><span class="p">),</span> <span class="n">noise_z</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_K_z_store</span><span class="p">[</span><span class="nb">id</span><span class="p">(</span><span class="n">measure</span><span class="p">)]</span> <span class="o">=</span> <span class="n">K_z</span>
+
+        <span class="c1"># Noise kernel matrix:</span>
+        <span class="n">K_n</span> <span class="o">=</span> <span class="n">noise_x</span>
+
+        <span class="c1"># The approximation can only handle diagonal noise matrices.</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">K_n</span><span class="p">,</span> <span class="n">Diagonal</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Kernel matrix of observation noise must be diagonal, &quot;</span>
+                <span class="sa">f</span><span class="s1">&#39;not &quot;</span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">K_n</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s1">&quot;.&#39;</span>
+            <span class="p">)</span>
+
+        <span class="c1"># And construct the components for the inducing point approximation.</span>
+        <span class="n">L_z</span> <span class="o">=</span> <span class="n">B</span><span class="o">.</span><span class="n">cholesky</span><span class="p">(</span><span class="n">K_z</span><span class="p">)</span>
+        <span class="n">A</span> <span class="o">=</span> <span class="n">B</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">B</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">K_z</span><span class="p">),</span> <span class="n">B</span><span class="o">.</span><span class="n">iqf</span><span class="p">(</span><span class="n">K_n</span><span class="p">,</span> <span class="n">B</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">B</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="n">L_z</span><span class="p">,</span> <span class="n">K_zx</span><span class="p">))))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_A_store</span><span class="p">[</span><span class="nb">id</span><span class="p">(</span><span class="n">measure</span><span class="p">)]</span> <span class="o">=</span> <span class="n">A</span>
+        <span class="n">y_bar</span> <span class="o">=</span> <span class="n">B</span><span class="o">.</span><span class="n">subtract</span><span class="p">(</span><span class="n">B</span><span class="o">.</span><span class="n">uprank</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">y</span><span class="p">),</span> <span class="n">measure</span><span class="o">.</span><span class="n">means</span><span class="p">[</span><span class="n">p_x</span><span class="p">](</span><span class="n">x</span><span class="p">))</span>
+        <span class="n">prod_y_bar</span> <span class="o">=</span> <span class="n">B</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="n">L_z</span><span class="p">,</span> <span class="n">B</span><span class="o">.</span><span class="n">iqf</span><span class="p">(</span><span class="n">K_n</span><span class="p">,</span> <span class="n">B</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">K_zx</span><span class="p">),</span> <span class="n">y_bar</span><span class="p">))</span>
+
+        <span class="c1"># Compute the optimal mean.</span>
+        <span class="n">mu</span> <span class="o">=</span> <span class="n">B</span><span class="o">.</span><span class="n">add</span><span class="p">(</span>
+            <span class="n">measure</span><span class="o">.</span><span class="n">means</span><span class="p">[</span><span class="n">p_z</span><span class="p">](</span><span class="n">z</span><span class="p">),</span>
+            <span class="n">B</span><span class="o">.</span><span class="n">iqf</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">B</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="n">L_z</span><span class="p">,</span> <span class="n">K_z</span><span class="p">),</span> <span class="n">prod_y_bar</span><span class="p">),</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_mu_store</span><span class="p">[</span><span class="nb">id</span><span class="p">(</span><span class="n">measure</span><span class="p">)]</span> <span class="o">=</span> <span class="n">mu</span>
+
+        <span class="c1"># Compute the ELBO.</span>
+        <span class="c1"># NOTE: The calculation of `trace_part` asserts that `K_n` is diagonal.</span>
+        <span class="c1"># The rest, however, is completely generic.</span>
+        <span class="n">trace_part</span> <span class="o">=</span> <span class="n">B</span><span class="o">.</span><span class="n">ratio</span><span class="p">(</span>
+            <span class="n">Diagonal</span><span class="p">(</span><span class="n">measure</span><span class="o">.</span><span class="n">kernels</span><span class="p">[</span><span class="n">p_x</span><span class="p">]</span><span class="o">.</span><span class="n">elwise</span><span class="p">(</span><span class="n">x</span><span class="p">)[:,</span> <span class="mi">0</span><span class="p">])</span>
+            <span class="o">-</span> <span class="n">Diagonal</span><span class="p">(</span><span class="n">B</span><span class="o">.</span><span class="n">iqf_diag</span><span class="p">(</span><span class="n">K_z</span><span class="p">,</span> <span class="n">K_zx</span><span class="p">)),</span>
+            <span class="n">K_n</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">det_part</span> <span class="o">=</span> <span class="n">B</span><span class="o">.</span><span class="n">logdet</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">B</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">K_n</span><span class="p">)</span> <span class="o">+</span> <span class="n">B</span><span class="o">.</span><span class="n">logdet</span><span class="p">(</span><span class="n">A</span><span class="p">)</span>
+        <span class="n">iqf_part</span> <span class="o">=</span> <span class="n">B</span><span class="o">.</span><span class="n">iqf</span><span class="p">(</span><span class="n">K_n</span><span class="p">,</span> <span class="n">y_bar</span><span class="p">)[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">B</span><span class="o">.</span><span class="n">iqf</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">prod_y_bar</span><span class="p">)[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_elbo_store</span><span class="p">[</span><span class="nb">id</span><span class="p">(</span><span class="n">measure</span><span class="p">)]</span> <span class="o">=</span> <span class="o">-</span><span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">trace_part</span> <span class="o">+</span> <span class="n">det_part</span> <span class="o">+</span> <span class="n">iqf_part</span><span class="p">)</span>
+
+<div class="viewcode-block" id="PseudoObservations.posterior_kernel"><a class="viewcode-back" href="../../../source/stheno.model.observations.html#stheno.model.observations.PseudoObservations.posterior_kernel">[docs]</a>    <span class="k">def</span> <span class="nf">posterior_kernel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">measure</span><span class="p">,</span> <span class="n">p_i</span><span class="p">,</span> <span class="n">p_j</span><span class="p">):</span>
+        <span class="n">L</span> <span class="o">=</span> <span class="n">B</span><span class="o">.</span><span class="n">chol</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">K_z</span><span class="p">(</span><span class="n">measure</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">PosteriorKernel</span><span class="p">(</span>
+            <span class="n">measure</span><span class="o">.</span><span class="n">kernels</span><span class="p">[</span><span class="n">p_i</span><span class="p">,</span> <span class="n">p_j</span><span class="p">],</span>
+            <span class="n">measure</span><span class="o">.</span><span class="n">kernels</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">u</span><span class="o">.</span><span class="n">p</span><span class="p">,</span> <span class="n">p_i</span><span class="p">],</span>
+            <span class="n">measure</span><span class="o">.</span><span class="n">kernels</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">u</span><span class="o">.</span><span class="n">p</span><span class="p">,</span> <span class="n">p_j</span><span class="p">],</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">u</span><span class="o">.</span><span class="n">x</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">K_z</span><span class="p">(</span><span class="n">measure</span><span class="p">),</span>
+        <span class="p">)</span> <span class="o">+</span> <span class="n">SubspaceKernel</span><span class="p">(</span>
+            <span class="n">measure</span><span class="o">.</span><span class="n">kernels</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">u</span><span class="o">.</span><span class="n">p</span><span class="p">,</span> <span class="n">p_i</span><span class="p">],</span>
+            <span class="n">measure</span><span class="o">.</span><span class="n">kernels</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">u</span><span class="o">.</span><span class="n">p</span><span class="p">,</span> <span class="n">p_j</span><span class="p">],</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">u</span><span class="o">.</span><span class="n">x</span><span class="p">,</span>
+            <span class="n">B</span><span class="o">.</span><span class="n">mm</span><span class="p">(</span><span class="n">L</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">A</span><span class="p">(</span><span class="n">measure</span><span class="p">),</span> <span class="n">L</span><span class="p">,</span> <span class="n">tr_c</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+        <span class="p">)</span></div>
+
+<div class="viewcode-block" id="PseudoObservations.posterior_mean"><a class="viewcode-back" href="../../../source/stheno.model.observations.html#stheno.model.observations.PseudoObservations.posterior_mean">[docs]</a>    <span class="k">def</span> <span class="nf">posterior_mean</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">measure</span><span class="p">,</span> <span class="n">p</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">PosteriorMean</span><span class="p">(</span>
+            <span class="n">measure</span><span class="o">.</span><span class="n">means</span><span class="p">[</span><span class="n">p</span><span class="p">],</span>
+            <span class="n">measure</span><span class="o">.</span><span class="n">means</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">u</span><span class="o">.</span><span class="n">p</span><span class="p">],</span>
+            <span class="n">measure</span><span class="o">.</span><span class="n">kernels</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">u</span><span class="o">.</span><span class="n">p</span><span class="p">,</span> <span class="n">p</span><span class="p">],</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">u</span><span class="o">.</span><span class="n">x</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">K_z</span><span class="p">(</span><span class="n">measure</span><span class="p">),</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">mu</span><span class="p">(</span><span class="n">measure</span><span class="p">),</span>
+        <span class="p">)</span></div></div>
+
+
+<span class="n">Obs</span> <span class="o">=</span> <span class="n">Observations</span>  <span class="c1">#: Shorthand for `Observations`.</span>
+<span class="n">PseudoObs</span> <span class="o">=</span> <span class="n">PseudoObservations</span>  <span class="c1">#: Shorthand for `PseudoObservations`.</span>
+
+<span class="c1"># Backward compatibility:</span>
+<span class="n">SparseObs</span> <span class="o">=</span> <span class="n">PseudoObservations</span>
+<span class="n">SparseObservations</span> <span class="o">=</span> <span class="n">PseudoObservations</span>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright 2017, Wessel Bruinsma
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

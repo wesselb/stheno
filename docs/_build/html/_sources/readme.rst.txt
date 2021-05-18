@@ -6,20 +6,25 @@
 Stheno is an implementation of Gaussian process modelling in Python. See
 also `Stheno.jl <https://github.com/willtebbutt/Stheno.jl>`__.
 
+`Check out our post about linear models with Stheno and
+JAX. <https://wesselb.github.io/2021/01/19/linear-models-with-stheno-and-jax.html>`__
+
+Contents:
+
 -  `Nonlinear Regression in 20
    Seconds <#nonlinear-regression-in-20-seconds>`__
 -  `Installation <#installation>`__
 -  `Manual <#manual>`__
 
-   -  `AutoGrad, TensorFlow, PyTorch, or Jax? Your
+   -  `AutoGrad, TensorFlow, PyTorch, or JAX? Your
       Choice! <#autograd-tensorflow-pytorch-or-jax-your-choice>`__
-   -  `Important Remarks <#important-remarks>`__
    -  `Model Design <#model-design>`__
    -  `Finite-Dimensional
       Distributions <#finite-dimensional-distributions>`__
    -  `Prior and Posterior Measures <#prior-and-posterior-measures>`__
    -  `Inducing Points <#inducing-points>`__
-   -  `Mean and Kernel Design <#mean-and-kernel-design>`__
+   -  `Kernels and Means <#kernels-and-means>`__
+   -  `Important Remarks <#important-remarks>`__
 
 -  `Examples <#examples>`__
 
@@ -38,6 +43,11 @@ also `Stheno.jl <https://github.com/willtebbutt/Stheno.jl>`__.
    -  `Smoothing with Nonparametric Basis
       Functions <#smoothing-with-nonparametric-basis-functions>`__
 
+**Breaking change:** ``f(x).marginals()`` now returns the marginals
+means and variances, rather than the marginal means and lower and upper
+95% central credible region bounds. For the credible bounds, use
+``f(x).marginal_credible_bounds()`` instead.
+
 Nonlinear Regression in 20 Seconds
 ----------------------------------
 
@@ -45,19 +55,17 @@ Nonlinear Regression in 20 Seconds
 
     >>> import numpy as np
 
-    >>> from stheno import Measure, GP, EQ
+    >>> from stheno import GP, EQ
 
-    >>> x = np.linspace(0, 2, 10)          # Some points to predict at
+    >>> x = np.linspace(0, 2, 10)         # Some points to predict at
 
-    >>> y = x ** 2                         # Some observations
+    >>> y = x ** 2                        # Some observations
 
-    >>> prior = Measure()                  # Construct a prior.
+    >>> f = GP(EQ())                      # Construct Gaussian process.
 
-    >>> f = GP(EQ(), measure=prior)        # Define our probabilistic model.
+    >>> f_post = f | (f(x), y)            # Compute the posterior.
 
-    >>> post = prior | (f(x), y)           # Compute the posterior distribution.
-
-    >>> post(f).mean(np.array([1, 2, 3]))  # Predict!
+    >>> f_post.mean(np.array([1, 2, 3])) # Predict!
     <dense matrix: shape=3x1, dtype=float64
      mat=[[1.   ]
           [4.   ]
@@ -82,7 +90,7 @@ Manual
 Note: `here <https://wesselb.github.io/stheno>`__ is a nicely rendered
 and more readable version of the docs.
 
-AutoGrad, TensorFlow, PyTorch, or Jax? Your Choice!
+AutoGrad, TensorFlow, PyTorch, or JAX? Your Choice!
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code:: python
@@ -101,77 +109,11 @@ AutoGrad, TensorFlow, PyTorch, or Jax? Your Choice!
 
     from stheno.jax import GP, EQ
 
-Important Remarks
-~~~~~~~~~~~~~~~~~
-
-Stheno uses `LAB <https://github.com/wesselb/lab>`__ to provide an
-implementation that is backend agnostic. Moreover, Stheno uses `an
-extension of LAB <https://github.com/wesselb/matrix>`__ to accelerate
-linear algebra with structured linear algebra primitives. You will
-encounter these primitives:
-
-.. code:: python
-
-    >>> k = 2 * Delta()
-
-    >>> x = np.linspace(0, 5, 10)
-
-    >>> k(x)
-    <diagonal matrix: shape=10x10, dtype=float64
-     diag=[2. 2. 2. 2. 2. 2. 2. 2. 2. 2.]>
-
-If you're using `LAB <https://github.com/wesselb/lab>`__ to further
-process these matrices, then there is absolutely no need to worry: these
-structured matrix types know how to add, multiply, and do other linear
-algebra operations.
-
-.. code:: python
-
-    >>> import lab as B
-
-    >>> B.matmul(k(x), k(x))
-    <diagonal matrix: shape=10x10, dtype=float64
-     diag=[4. 4. 4. 4. 4. 4. 4. 4. 4. 4.]>
-
-If you're not using `LAB <https://github.com/wesselb/lab>`__, you can
-convert these structured primitives to regular
-NumPy/TensorFlow/PyTorch/Jax arrays by calling ``B.dense`` (``B`` is
-from `LAB <https://github.com/wesselb/lab>`__):
-
-.. code:: python
-
-    >>> import lab as B
-
-    >>> B.dense(k(x))
-    array([[2., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
-           [0., 2., 0., 0., 0., 0., 0., 0., 0., 0.],
-           [0., 0., 2., 0., 0., 0., 0., 0., 0., 0.],
-           [0., 0., 0., 2., 0., 0., 0., 0., 0., 0.],
-           [0., 0., 0., 0., 2., 0., 0., 0., 0., 0.],
-           [0., 0., 0., 0., 0., 2., 0., 0., 0., 0.],
-           [0., 0., 0., 0., 0., 0., 2., 0., 0., 0.],
-           [0., 0., 0., 0., 0., 0., 0., 2., 0., 0.],
-           [0., 0., 0., 0., 0., 0., 0., 0., 2., 0.],
-           [0., 0., 0., 0., 0., 0., 0., 0., 0., 2.]])
-
-Furthermore, before computing a Cholesky decomposition, Stheno always
-adds a minuscule diagonal to prevent the Cholesky decomposition from
-failing due to positive indefiniteness caused by numerical noise. You
-can change the magnitude of this diagonal by changing ``B.epsilon``:
-
-.. code:: python
-
-    >>> import lab as B
-
-    >>> B.epsilon = 1e-12   # Default regularisation
-
-    >>> B.epsilon = 1e-8    # Strong regularisation
-
 Model Design
 ~~~~~~~~~~~~
 
 The basic building block is a ``f = GP(mean=0, kernel, measure=prior)``,
-which takes in `a *mean*, a *kernel* <#mean-and-kernel-design>`__, and a
+which takes in `a *mean*, a *kernel* <#kernels-and-means>`__, and a
 *measure*. The mean and kernel of a GP can be extracted with ``f.mean``
 and ``f.kernel``. The measure should be thought of as a big joint
 distribution that assigns a mean and a kernel to every variable ``f``. A
@@ -225,6 +167,19 @@ Here's an example model:
     >>> f_sum + GP(EQ())  # Not valid: `GP(EQ())` belongs to a new measure!
     AssertionError: Processes GP(<lambda>, EQ() + Linear()) and GP(0, EQ()) are associated to different measures.
 
+To avoid setting the keyword ``measure`` for every ``GP`` that you
+create, you can enter a measure as a context:
+
+.. code:: python
+
+    >>> with Measure() as prior:
+            f1 = GP(lambda x: x ** 2, EQ())
+            f2 = GP(Linear())
+            f_sum = f1 + f2
+
+    >>> prior == f1.measure == f2.measure == f_sum.measure
+    True
+
 Compositional Design
 ^^^^^^^^^^^^^^^^^^^^
 
@@ -252,11 +207,17 @@ Compositional Design
        >>> GP(2, EQ(), measure=prior) - GP(1, EQ(), measure=prior)
        GP(1, 2 * EQ())
 
--  Multiply GPs by other objects.
+-  Multiply GPs and other objects.
+
+   *Warning:* The product of two GPs it *not* a Gaussian process. Stheno
+   approximates the resulting process by moment matching.
 
    Example:
 
    .. code:: python
+
+       >>> GP(1, EQ(), measure=prior) * GP(1, Exp(), measure=prior)
+       GP(<lambda> + <lambda> + -1 * 1, <lambda> * Exp() + <lambda> * EQ() + EQ() * Exp())
 
        >>> 2 * GP(EQ())
        GP(2, 2 * EQ())
@@ -285,14 +246,6 @@ Compositional Design
        >>> GP(EQ()).stretch(2)
        GP(0, EQ() > 2)
 
-   The ``>`` operator is implemented to provide a shorthand for
-   stretching:
-
-   .. code:: python
-
-       >>> GP(EQ()) > 2
-       GP(0, EQ() > 2)
-
 -  Select particular input dimensions.
 
    Example:
@@ -301,14 +254,6 @@ Compositional Design
 
        >>> GP(EQ()).select(1, 3)
        GP(0, EQ() : [1, 3])
-
-   Indexing is implemented to provide a a shorthand for selecting input
-   dimensions:
-
-   .. code:: python
-
-       >>> GP(EQ())[1, 3]
-       GP(0, EQ() : [1, 3]) 
 
 -  Transform the input.
 
@@ -330,8 +275,7 @@ Compositional Design
        GP(0, d(1) EQ())
 
 -  Construct a finite difference estimate of the derivative of a GP. See
-   ``stheno.measure.Measure.diff_approx`` for a description of the
-   arguments.
+   ``Measure.diff_approx`` for a description of the arguments.
 
    Example:
 
@@ -369,8 +313,9 @@ Example:
 Properties of GPs
 ^^^^^^^^^^^^^^^^^
 
-`Properties of kernels <#properties-of-means-and-kernels>`__ can be
-queried on GPs directly.
+`Properties of
+kernels <https://github.com/wesselb/mlkernels#properties-of-kernels-and-means>`__
+can be queried on GPs directly.
 
 Example:
 
@@ -407,8 +352,83 @@ Example:
 Finite-Dimensional Distributions
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Simply call a GP to construct a finite-dimensional distribution. You can
-then compute the mean, the variance, sample, or compute a logpdf.
+Simply call a GP to construct a finite-dimensional distribution at some
+inputs. You can give a second argument, which specifies the variance of
+additional additive noise. After constructing a finite-dimensional
+distribution, you can compute the mean, the variance, sample, or compute
+a logpdf.
+
+Definition, where ``f`` is a ``GP``:
+
+.. code:: python
+
+    f(x)         # No additional noise
+
+    f(x, noise)  # Additional noise with variance `noise`
+
+Things you can do with a finite-dimensional distribution:
+
+-  Use ``f(x).mean`` to compute the mean.
+
+-  Use ``f(x).var`` to compute the variance.
+
+-  Use ``Normal.sample`` to sample.
+
+   Definition:
+
+   .. code:: python
+
+       f(x).sample()                # Produce one sample.
+
+       f(x).sample(n)               # Produce `n` samples.
+
+       f(x).sample(noise=noise)     # Produce one samples with additional noise variance `noise`.
+
+       f(x).sample(n, noise=noise)  # Produce `n` samples with additional noise variance `noise`.
+
+-  Use ``f(x).logpdf(y)`` to compute the logpdf of some data ``y``.
+
+-  Use ``means, variances = f(x).marginals()`` to efficiently compute
+   the marginal means and marginal variances.
+
+   Example:
+
+   .. code:: python
+
+       >>> f(x).marginals()
+       (array([0., 0., 0.]), np.array([1., 1., 1.]))
+
+-  Use ``means, lowers, uppers = f(x).marginal_credible_bounds()`` to
+   efficiently compute the means and the marginal lower and upper 95%
+   central credible region bounds.
+
+   Example:
+
+   .. code:: python
+
+       >>> f(x).marginal_credible_bounds()
+       (array([0., 0., 0.]), array([-1.96, -1.96, -1.96]), array([1.96, 1.96, 1.96]))
+
+-  Use ``Measure.logpdf`` to compute the joint logpdf of multiple
+   observations.
+
+   Definition:
+
+   .. code:: python
+
+       prior.logpdf(f(x), y)
+
+       prior.logpdf((f1(x1), y1), (f2(x2), y2), ...)
+
+-  Use ``Measure.sample`` to jointly sample multiple observations.
+
+   Definition, where ``prior = Measure()``:
+
+   .. code:: python
+
+       sample = prior.sample(f(x))
+
+       sample1, sample2, ... = prior.sample(f1(x1), f2(x2), ...)
 
 Example:
 
@@ -420,8 +440,18 @@ Example:
 
     >>> x = np.array([0., 1., 2.])
 
-    >>> f(x)
-    FDD(GP(0, EQ()), array([0., 1., 2.]))
+    >>> f(x)       # FDD without noise.
+    <FDD:
+     process=GP(0, EQ()),
+     input=array([0., 1., 2.]),
+     noise=<zero matrix: shape=3x3, dtype=float64>
+
+    >>> f(x, 0.1)  # FDD with noise.
+    <FDD:
+     process=GP(0, EQ()),
+     input=array([0., 1., 2.]),
+     noise=<diagonal matrix: shape=3x3, dtype=float64
+            diag=[0.1 0.1 0.1]>>
 
     >>> f(x).mean
     array([[0.],
@@ -452,56 +482,34 @@ Example:
     >>> f(x).logpdf(y2)
      array([-4.82949038, -5.40084225])
 
--  Use ``Measure.logpdf`` to compute the joint logpdf of multiple
-   observations.
-
-   Definition:
-
-   .. code:: python
-
-       prior.logpdf(f(x), y)
-
-       prior.logpdf((f1(x1), y1), (f2(x2), y2), ...)
-
--  Use ``Measure.sample`` to jointly sample multiple observations.
-
-   Definition, where ``prior = Measure()``:
-
-   .. code:: python
-
-       sample = prior.sample(f(x))
-
-       sample1, sample2, ... = prior.sample(f1(x1), f2(x2), ...)
-
--  Use ``f(x).marginals()`` to efficiently compute the means and the
-   marginal lower and upper 95% central credible region bounds.
-
-   Example:
-
-   .. code:: python
-
-       >>> f(x).marginals()
-       (array([0., 0., 0.]), array([-1.96, -1.96, -1.96]), array([1.96, 1.96, 1.96]))
-
 Prior and Posterior Measures
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Conditioning a *prior* measure on observations gives a *posterior*
 measure. To condition a measure on observations, use ``Measure.__or__``.
 
-Definition, where ``prior = Measure()`` and ``f*`` and ``g*`` are
-``GP``\ s:
+Definition, where ``prior = Measure()`` and ``f*`` are ``GP``\ s:
 
 .. code:: python
 
-    post = prior | (f(x), y)
+    post = prior | (f(x, [noise]), y)
 
-    post = prior | ((f1(x1), y1), (f2(x2), y2), ...)
+    post = prior | ((f1(x1, [noise1]), y1), (f2(x2, [noise2]), y2), ...)
 
-You can then compute a posterior process with ``post(f)`` and a
+You can then obtain a posterior process with ``post(f)`` and a
 finite-dimensional distribution under the posterior with ``post(f(x))``.
+Alternatively, the posterior of a process ``f`` can be obtained by
+conditioning ``f`` directly.
 
-Let's consider an example. First, build a model, and sample some values.
+Definition, where and ``f*`` are ``GP``\ s:
+
+.. code:: python
+
+    f_post = f | (f(x, [noise]), y)
+
+    f_post = f | ((f1(x1, [noise1]), y1), (f2(x2, [noise2]), y2), ...)
+
+Let's consider an example. First, build a model and sample some values.
 
 .. code:: python
 
@@ -535,7 +543,10 @@ Then compute the posterior measure.
           [0.e+00 0.e+00 1.e-12]]>
 
     >>> post(f(x))
-    <stheno.random.Normal at 0x7fa6d7f8c358>
+    <FDD:
+     process=GP(PosteriorMean(), PosteriorKernel()),
+     input=array([0., 1., 2.]),
+     noise=<zero matrix: shape=3x3, dtype=float64>>
 
     >>> post(f(x)).mean
     <dense matrix: shape=3x1, dtype=float64
@@ -549,7 +560,46 @@ Then compute the posterior measure.
           [0.e+00 1.e-12 0.e+00]
           [0.e+00 0.e+00 1.e-12]]>
 
-We can now build on the posterior.
+We can also obtain the posterior by conditioning ``f`` directly:
+
+.. code:: python
+
+    >>> f_post = f | (f(x), y)
+
+    >>> f_post
+    GP(PosteriorMean(), PosteriorKernel())
+
+    >>> f_post.mean(x)
+    <dense matrix: shape=3x1, dtype=float64
+     mat=[[ 0.412]
+          [-0.811]
+          [-0.933]]>
+
+    >>> f_post.kernel(x)
+    <dense matrix: shape=3x3, dtype=float64
+     mat=[[1.e-12 0.e+00 0.e+00]
+          [0.e+00 1.e-12 0.e+00]
+          [0.e+00 0.e+00 1.e-12]]>
+
+    >>> f_post(x)
+    <FDD:
+     process=GP(PosteriorMean(), PosteriorKernel()),
+     input=array([0., 1., 2.]),
+     noise=<zero matrix: shape=3x3, dtype=float64>>
+
+    >>> f_post(x).mean
+    <dense matrix: shape=3x1, dtype=float64
+     mat=[[ 0.412]
+          [-0.811]
+          [-0.933]]>
+
+    >>> f_post(x).var
+    <dense matrix: shape=3x3, dtype=float64
+     mat=[[1.e-12 0.e+00 0.e+00]
+          [0.e+00 1.e-12 0.e+00]
+          [0.e+00 0.e+00 1.e-12]]>
+
+We can further extend our model by building on the posterior.
 
 .. code:: python
 
@@ -570,34 +620,33 @@ However, what we cannot do is mixing the prior and posterior.
 Inducing Points
 ~~~~~~~~~~~~~~~
 
-Stheno supports sparse approximations of posterior distributions. To
-construct a sparse approximation, use ``Measure.SparseObs``.
+Stheno supports pseudo-point approximations of posterior distributions.
+To construct a pseudo-point approximation, use ``PseudoObs``.
 
 Definition:
 
 .. code:: python
 
-    obs = SparseObs(u(z),  # FDD of inducing points.
-                    e,     # Independent, additive noise process.
-                    f(x),  # FDD of observations _without_ the noise process added.
-                    y)     # Observations.
+    obs = PseudoObs(
+        u(z),               # FDD of inducing points
+        (f(x, [noise]), y)  # Observed data
+    )
                     
-    obs = SparseObs(u(z), e, f(x), y)
+    obs = PseudoObs(u(z), f(x, [noise]), y)
 
-    obs = SparseObs(u(z), (e1, f1(x1), y1), (e2, f2(x2), y2), ...)
+    obs = PseudoObs(u(z), (f1(x1, [noise1]), y1), (f2(x2, [noise2]), y2), ...)
 
-    obs = SparseObs((u1(z1), u2(z2), ...), e, f(x), y)
+    obs = PseudoObs((u1(z1), u2(z2), ...), f(x, [noise]), y)
 
-    obs = SparseObs(u(z), (e1, f1(x1), y1), (e2, f2(x2), y2), ...)
+    obs = PseudoObs((u1(z1), u2(z2), ...), (f1(x1, [noise1]), y1), (f2(x2, [noise2]), y2), ...)
 
-    obs = SparseObs((u1(z1), u2(z2), ...), (e1, f1(x1), y1), (e2, f2(x2), y2), ...)
+The approximate posterior measure can be constructed with
+``prior | obs`` where ``prior = Measure()`` is the measure of your
+model. To quantify the quality of the approximation, you can compute the
+ELBO with ``obs.elbo(prior)``.
 
-Compute the value of the ELBO with ``obs.elbo(prior)``, where
-``prior = Measure()`` is the measure of your models. Moreover, the
-posterior measure can be constructed with ``prior | obs``.
-
-Let's consider an example. First, build a model that incorporates noise
-and sample some observations.
+Let's consider an example. First, build a model and sample some noisy
+observations.
 
 .. code:: python
 
@@ -605,19 +654,15 @@ and sample some observations.
 
     >>> f = GP(EQ(), measure=prior)
 
-    >>> e = GP(Delta(), measure=prior)
-
-    >>> y = f + e
-
     >>> x_obs = np.linspace(0, 10, 2000)
 
-    >>> y_obs = y(x_obs).sample()
+    >>> y_obs = f(x_obs, 1).sample()
 
 Ouch, computing the logpdf is quite slow:
 
 .. code:: python
 
-    >>> %timeit y(x_obs).logpdf(y_obs)
+    >>> %timeit f(x_obs, 1).logpdf(y_obs)
     219 ms ± 35.7 ms per loop (mean ± std. dev. of 7 runs, 10 loops each)
 
 Let's try to use inducing points to speed this up.
@@ -628,21 +673,21 @@ Let's try to use inducing points to speed this up.
 
     >>> u = f(x_ind)   # FDD of inducing points.
 
-    >>> %timeit SparseObs(u, e, f(x_obs), y_obs).elbo(prior)
+    >>> %timeit PseudoObs(u, f(x_obs, 1), y_obs).elbo(prior)
     9.8 ms ± 181 µs per loop (mean ± std. dev. of 7 runs, 100 loops each)
 
 Much better. And the approximation is good:
 
 .. code:: python
 
-    >>> SparseObs(u, e, f(x_obs), y_obs).elbo(prior) - y(x_obs).logpdf(y_obs)
+    >>> PseudoObs(u, f(x_obs, 1), y_obs).elbo(prior) - f(x_obs, 1).logpdf(y_obs)
     -3.537934389896691e-10
 
-We can then construct the posterior:
+We finally construct the approximate posterior measure:
 
 .. code:: python
 
-    >>> post_approx = prior | SparseObs(u, e, f(x_obs), y_obs)
+    >>> post_approx = prior | PseudoObs(u, f(x_obs, 1), y_obs)
 
     >>> post_approx(f(x_obs)).mean
     <dense matrix: shape=2000x1, dtype=float64
@@ -654,405 +699,76 @@ We can then construct the posterior:
           [1.09 ]
           [1.091]]>
 
-Mean and Kernel Design
-~~~~~~~~~~~~~~~~~~~~~~
+Kernels and Means
+~~~~~~~~~~~~~~~~~
 
-Inputs to kernels, means, and GPs, henceforth referred to simply as
-*inputs*, must be of one of the following three forms:
+See `MLKernels <https://github.com/wesselb/mlkernels>`__.
 
--  If the input ``x`` is a *rank 0 tensor*, i.e. a scalar, then ``x``
-   refers to a single input location. For example, ``0`` simply refers
-   to the sole input location ``0``.
+Important Remarks
+~~~~~~~~~~~~~~~~~
 
--  If the input ``x`` is a *rank 1 tensor*, then every element of ``x``
-   is interpreted as a separate input location. For example,
-   ``np.linspace(0, 1, 10)`` generates 10 different input locations
-   ranging from ``0`` to ``1``.
-
--  If the input ``x`` is a *rank 2 tensor*, then every *row* of ``x`` is
-   interpreted as a separate input location. In this case inputs are
-   multi-dimensional, and the columns correspond to the various input
-   dimensions.
-
-If ``k`` is a kernel, say ``k = EQ()``, then ``k(x, y)`` constructs the
-*kernel matrix* for all pairs of points between ``x`` and ``y``.
-``k(x)`` is shorthand for ``k(x, x)``. Furthermore, ``k.elwise(x, y)``
-constructs the *kernel vector* pairing the points in ``x`` and ``y``
-element wise, which will be a *rank 2 column vector*.
-
-Example:
+Stheno uses `LAB <https://github.com/wesselb/lab>`__ to provide an
+implementation that is backend agnostic. Moreover, Stheno uses `an
+extension of LAB <https://github.com/wesselb/matrix>`__ to accelerate
+linear algebra with structured linear algebra primitives. You will
+encounter these primitives:
 
 .. code:: python
 
-    >>> EQ()(np.linspace(0, 1, 3))
-    array([[1.        , 0.8824969 , 0.60653066],
-           [0.8824969 , 1.        , 0.8824969 ],
-           [0.60653066, 0.8824969 , 1.        ]])
-     
-    >>> EQ().elwise(np.linspace(0, 1, 3), 0)
-    array([[1.        ],
-           [0.8824969 ],
-           [0.60653066]])
+    >>> k = 2 * Delta()
 
-Finally, mean functions always output a *rank 2 column vector*.
+    >>> x = np.linspace(0, 5, 10)
 
-Available Means
-^^^^^^^^^^^^^^^
+    >>> k(x)
+    <diagonal matrix: shape=10x10, dtype=float64
+     diag=[2. 2. 2. 2. 2. 2. 2. 2. 2. 2.]>
 
-Constants function as constant means. Besides that, the following means
-are available:
-
--  ``TensorProductMean(f)``:
-
-   .. math::  m(x) = f(x). 
-
-   Adding or multiplying a ``FunctionType`` ``f`` to or with a mean will
-   automatically translate ``f`` to ``TensorProductMean(f)``. For
-   example, ``f * m`` will translate to ``TensorProductMean(f) * m``,
-   and ``f + m`` will translate to ``TensorProductMean(f) + m``.
-
-Available Kernels
-^^^^^^^^^^^^^^^^^
-
-Constants function as constant kernels. Besides that, the following
-kernels are available:
-
--  ``EQ()``, the exponentiated quadratic:
-
-   .. math::  k(x, y) = \exp\left( -\frac{1}{2}\|x - y\|^2 \right); 
-
--  ``RQ(alpha)``, the rational quadratic:
-
-   .. math::  k(x, y) = \left( 1 + \frac{\|x - y\|^2}{2 \alpha} \right)^{-\alpha}; 
-
--  ``Exp()`` or ``Matern12()``, the exponential kernel:
-
-   .. math::  k(x, y) = \exp\left( -\|x - y\| \right); 
-
--  ``Matern32()``, the Matern–3/2 kernel:
-
-   .. math::
-
-       k(x, y) = \left(
-          1 + \sqrt{3}\|x - y\|
-          \right)\exp\left(-\sqrt{3}\|x - y\|\right); 
-
--  ``Matern52()``, the Matern–5/2 kernel:
-
-   .. math::
-
-       k(x, y) = \left(
-          1 + \sqrt{5}\|x - y\| + \frac{5}{3} \|x - y\|^2
-         \right)\exp\left(-\sqrt{3}\|x - y\|\right); 
-
--  ``Delta()``, the Kronecker delta kernel:
-
-   .. math::
-
-       k(x, y) = \begin{cases}
-          1 & \text{if } x = y, \\
-          0 & \text{otherwise};
-         \end{cases} 
-
--  ``DecayingKernel(alpha, beta)``:
-
-   .. math::  k(x, y) = \frac{\|\beta\|^\alpha}{\|x + y + \beta\|^\alpha}; 
-
--  ``LogKernel()``:
-
-   .. math::  k(x, y) = \frac{\log(1 + \|x - y\|)}{\|x - y\|}; 
-
--  ``TensorProductKernel(f)``:
-
-   .. math::  k(x, y) = f(x)f(y). 
-
-   Adding or multiplying a ``FunctionType`` ``f`` to or with a kernel
-   will automatically translate ``f`` to ``TensorProductKernel(f)``. For
-   example, ``f * k`` will translate to ``TensorProductKernel(f) * k``,
-   and ``f + k`` will translate to ``TensorProductKernel(f) + k``.
-
-Compositional Design
-^^^^^^^^^^^^^^^^^^^^
-
--  Add and subtract *means and kernels*.
-
-   Example:
-
-   .. code:: python
-
-       >>> EQ() + Exp()
-       EQ() + Exp()
-
-       >>> EQ() + EQ()
-       2 * EQ()
-
-       >>> EQ() + 1
-       EQ() + 1
-
-       >>> EQ() + 0
-       EQ()
-
-       >>> EQ() - Exp()
-       EQ() - Exp()
-
-       >>> EQ() - EQ()
-       0
-
--  Multiply *means and kernels*.
-
-   Example:
-
-   .. code:: python
-
-       >>> EQ() * Exp()
-       EQ() * Exp()
-
-       >>> 2 * EQ()
-       2 * EQ()
-
-       >>> 0 * EQ()
-       0
-
--  Shift *means and kernels*:
-
-   Definition:
-
-   .. code:: python
-
-       k.shift(c)(x, y) == k(x - c, y - c)
-
-       k.shift(c1, c2)(x, y) == k(x - c1, y - c2)
-
-   Example:
-
-   .. code:: python
-
-       >>> Linear().shift(1)
-       Linear() shift 1
-
-       >>> EQ().shift(1, 2)
-       EQ() shift (1, 2)
-
--  Stretch *means and kernels*.
-
-   Definition:
-
-   .. code:: python
-
-       k.stretch(c)(x, y) == k(x / c, y / c)
-
-       k.stretch(c1, c2)(x, y) == k(x / c1, y / c2)
-
-   Example:
-
-   .. code:: python
-
-       >>> EQ().stretch(2)
-       EQ() > 2
-
-       >>> EQ().stretch(2, 3)
-       EQ() > (2, 3)
-
-   The ``>`` operator is implemented to provide a shorthand for
-   stretching:
-
-   .. code:: python
-
-       >>> EQ() > 2
-       EQ() > 2
-
--  Select particular input dimensions of *means and kernels*.
-
-   Definition:
-
-   .. code:: python
-
-       k.select([0])(x, y) == k(x[:, 0], y[:, 0])
-
-       k.select([0, 1])(x, y) == k(x[:, [0, 1]], y[:, [0, 1]])
-
-       k.select([0], [1])(x, y) == k(x[:, 0], y[:, 1])
-
-       k.select(None, [1])(x, y) == k(x, y[:, 1])
-
-   Example:
-
-   .. code:: python
-
-       >>> EQ().select([0])
-       EQ() : [0]
-
-       >>> EQ().select([0, 1])
-       EQ() : [0, 1]
-
-       >>> EQ().select([0], [1])
-       EQ() : ([0], [1])
-
-       >>> EQ().select(None, [1])
-       EQ() : (None, [1])
-
--  Transform the inputs of *means and kernels*.
-
-   Definition:
-
-   .. code:: python
-
-       k.transform(f)(x, y) == k(f(x), f(y))
-
-       k.transform(f1, f2)(x, y) == k(f1(x), f2(y))
-
-       k.transform(None, f)(x, y) == k(x, f(y))
-
-   Example:
-
-   .. code:: python
-
-       >>> EQ().transform(f)
-       EQ() transform f
-
-       >>> EQ().transform(f1, f2)
-       EQ() transform (f1, f2)
-
-       >>> EQ().transform(None, f)
-       EQ() transform (None, f)
-
--  Numerically, but efficiently, take derivatives of *means and
-   kernels*. This currently only works in TensorFlow.
-
-   Definition:
-
-   .. code:: python
-
-       k.diff(0)(x, y) == d/d(x[:, 0]) d/d(y[:, 0]) k(x, y)
-
-       k.diff(0, 1)(x, y) == d/d(x[:, 0]) d/d(y[:, 1]) k(x, y)
-
-       k.diff(None, 1)(x, y) == d/d(y[:, 1]) k(x, y)
-
-   Example:
-
-   .. code:: python
-
-       >>> EQ().diff(0)
-       d(0) EQ()
-
-       >>> EQ().diff(0, 1)
-       d(0, 1) EQ()
-
-       >>> EQ().diff(None, 1)
-       d(None, 1) EQ()
-
--  Make *kernels* periodic. This is *not* implemented for means.
-
-   Definition:
-
-   .. code:: python
-
-       k.periodic(2 pi / w)(x, y) == k((sin(w * x), cos(w * x)), (sin(w * y), cos(w * y)))
-
-   Example:
-
-   .. code:: python
-
-       >>> EQ().periodic(1)
-       EQ() per 1
-
--  Reverse the arguments of *kernels*. This does *not* apply to means.
-
-   Definition:
-
-   .. code:: python
-
-       reversed(k)(x, y) == k(y, x)
-
-   Example:
-
-   .. code:: python
-
-       >>> reversed(Linear())
-       Reversed(Linear())
-
--  Extract terms and factors from sums and products respectively of
-   *means and kernels*.
-
-   Example:
-
-   .. code:: python
-
-       >>> (EQ() + RQ(0.1) + Linear()).term(1)
-       RQ(0.1)
-
-       >>> (2 * EQ() * Linear).factor(0)
-       2
-
-   Kernels and means "wrapping" others can be "unwrapped" by indexing
-   ``k[0]`` or ``m[0]``.
-
-   Example:
-
-   .. code:: python
-
-       >>> reversed(Linear())
-       Reversed(Linear())
-
-       >>> reversed(Linear())[0]
-       Linear()
-
-       >>> EQ().periodic(1)
-       EQ() per 1
-
-       >>> EQ().periodic(1)[0]
-       EQ()
-
-Displaying Means and Kernels
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Kernels and means have a ``display`` method. The ``display`` method
-accepts a callable formatter that will be applied before any value is
-printed. This comes in handy when pretty printing kernels.
-
-Example:
+If you're using `LAB <https://github.com/wesselb/lab>`__ to further
+process these matrices, then there is absolutely no need to worry: these
+structured matrix types know how to add, multiply, and do other linear
+algebra operations.
 
 .. code:: python
 
-    >>> print((2.12345 * EQ()).display(lambda x: f"{x:.2f}"))
-    2.12 * EQ(), 0
+    >>> import lab as B
 
-Properties of Means and Kernels
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    >>> B.matmul(k(x), k(x))
+    <diagonal matrix: shape=10x10, dtype=float64
+     diag=[4. 4. 4. 4. 4. 4. 4. 4. 4. 4.]>
 
--  Means and kernels can be equated to check for equality. This will
-   attempt basic algebraic manipulations. If the means and kernels are
-   not equal *or* equality cannot be proved, ``False`` is returned.
+If you're not using `LAB <https://github.com/wesselb/lab>`__, you can
+convert these structured primitives to regular
+NumPy/TensorFlow/PyTorch/JAX arrays by calling ``B.dense`` (``B`` is
+from `LAB <https://github.com/wesselb/lab>`__):
 
-   Example of equating kernels:
+.. code:: python
 
-   .. code:: python
+    >>> import lab as B
 
-       >>>  2 * EQ() == EQ() + EQ()
-       True
+    >>> B.dense(k(x))
+    array([[2., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+           [0., 2., 0., 0., 0., 0., 0., 0., 0., 0.],
+           [0., 0., 2., 0., 0., 0., 0., 0., 0., 0.],
+           [0., 0., 0., 2., 0., 0., 0., 0., 0., 0.],
+           [0., 0., 0., 0., 2., 0., 0., 0., 0., 0.],
+           [0., 0., 0., 0., 0., 2., 0., 0., 0., 0.],
+           [0., 0., 0., 0., 0., 0., 2., 0., 0., 0.],
+           [0., 0., 0., 0., 0., 0., 0., 2., 0., 0.],
+           [0., 0., 0., 0., 0., 0., 0., 0., 2., 0.],
+           [0., 0., 0., 0., 0., 0., 0., 0., 0., 2.]])
 
-       >>> EQ() + Exp() == Exp() + EQ()
-       True
+Furthermore, before computing a Cholesky decomposition, Stheno always
+adds a minuscule diagonal to prevent the Cholesky decomposition from
+failing due to positive indefiniteness caused by numerical noise. You
+can change the magnitude of this diagonal by changing ``B.epsilon``:
 
-       >>> 2 * Exp() == EQ() + Exp()
-       False
+.. code:: python
 
-       >>> EQ() + Exp() + Linear()  == Linear() + Exp() + EQ()  # Too hard: cannot prove equality!
-       False
+    >>> import lab as B
 
--  The stationarity of a kernel ``k`` can always be determined by
-   querying ``k.stationary``.
+    >>> B.epsilon = 1e-12   # Default regularisation
 
-   Example of querying the stationarity:
-
-   .. code:: python
-
-       >>> EQ().stationary
-       True
-
-       >>> (EQ() + Linear()).stationary
-       False
+    >>> B.epsilon = 1e-8    # Strong regularisation
 
 Examples
 --------
@@ -1073,24 +789,21 @@ Simple Regression
     import matplotlib.pyplot as plt
     from wbml.plot import tweak
 
-    from stheno import B, Measure, GP, EQ, Delta
+    from stheno import B, GP, EQ
 
     # Define points to predict at.
     x = B.linspace(0, 10, 100)
     x_obs = B.linspace(0, 7, 20)
 
     # Construct a prior.
-    prior = Measure()
-    f = GP(EQ().periodic(5.0), measure=prior)  # Latent function
-    e = GP(Delta(), measure=prior)  # Noise
-    y = f + 0.5 * e
+    f = GP(EQ().periodic(5.0))
 
-    # Sample a true, underlying function and observations.
-    f_true, y_obs = prior.sample(f(x), y(x_obs))
+    # Sample a true, underlying function and noisy observations.
+    f_true, y_obs = f.measure.sample(f(x), f(x_obs, 0.5))
 
     # Now condition on the observations to make predictions.
-    post = prior | (y(x_obs), y_obs)
-    mean, lower, upper = post(f)(x).marginals()
+    f_post = f | (f(x_obs, 0.5), y_obs)
+    mean, lower, upper = f_post(x).marginal_credible_bounds()
 
     # Plot result.
     plt.plot(x, f_true, label="True", style="test")
@@ -1122,23 +835,22 @@ Decomposition of Prediction
     x = B.linspace(0, 10, 200)
     x_obs = B.linspace(0, 7, 50)
 
-    # Construct a latent function consisting of four different components.
-    prior = Measure()
-    f_smooth = GP(EQ(), measure=prior)
-    f_wiggly = GP(RQ(1e-1).stretch(0.5), measure=prior)
-    f_periodic = GP(EQ().periodic(1.0), measure=prior)
-    f_linear = GP(Linear(), measure=prior)
 
-    f = f_smooth + f_wiggly + f_periodic + 0.2 * f_linear
+    with Measure() as prior:
+        # Construct a latent function consisting of four different components.
+        f_smooth = GP(EQ())
+        f_wiggly = GP(RQ(1e-1).stretch(0.5))
+        f_periodic = GP(EQ().periodic(1.0))
+        f_linear = GP(Linear())
+        f = f_smooth + f_wiggly + f_periodic + 0.2 * f_linear
 
-    # Let the observation noise consist of a bit of exponential noise.
-    e_indep = GP(Delta(), measure=prior)
-    e_exp = GP(Exp(), measure=prior)
+        # Let the observation noise consist of a bit of exponential noise.
+        e_indep = GP(Delta())
+        e_exp = GP(Exp())
+        e = e_indep + 0.3 * e_exp
 
-    e = e_indep + 0.3 * e_exp
-
-    # Sum the latent function and observation noise to get a model for the observations.
-    y = f + 0.5 * e
+        # Sum the latent function and observation noise to get a model for the observations.
+        y = f + 0.5 * e
 
     # Sample a true, underlying function and observations.
     (
@@ -1154,11 +866,11 @@ Decomposition of Prediction
     # its various components.
     post = prior | (y(x_obs), y_obs)
 
-    pred_smooth = post(f_smooth(x)).marginals()
-    pred_wiggly = post(f_wiggly(x)).marginals()
-    pred_periodic = post(f_periodic(x)).marginals()
-    pred_linear = post(f_linear(x)).marginals()
-    pred_f = post(f(x)).marginals()
+    pred_smooth = post(f_smooth(x))
+    pred_wiggly = post(f_wiggly(x))
+    pred_periodic = post(f_periodic(x))
+    pred_linear = post(f_linear(x))
+    pred_f = post(f(x))
 
 
     # Plot results.
@@ -1166,7 +878,7 @@ Decomposition of Prediction
         plt.plot(x, f, label="True", style="test")
         if x_obs is not None:
             plt.scatter(x_obs, y_obs, label="Observations", style="train", s=20)
-        mean, lower, upper = pred
+        mean, lower, upper = pred.marginal_credible_bounds()
         plt.plot(x, mean, label="Prediction", style="pred")
         plt.fill_between(x, lower, upper, style="pred")
         tweak()
@@ -1226,22 +938,15 @@ Learn a Function, Incorporating Prior Knowledge About Its Form
         vs,
         u_var: Positive = 0.5,
         u_scale: Positive = 0.5,
-        e_var: Positive = 0.5,
+        noise: Positive = 0.5,
         alpha: Positive = 1.2,
     ):
-        prior = Measure()
-
-        # Random fluctuation:
-        u = GP(u_var * EQ() > u_scale, measure=prior)
-
-        # Noise:
-        e = GP(e_var * Delta(), measure=prior)
-
-        # Construct model:
-        f = u + (lambda x: x ** alpha)
-        y = f + e
-
-        return f, y
+        with Measure():
+            # Random fluctuation:
+            u = GP(u_var * EQ().stretch(u_scale))
+            # Construct model.
+            f = u + (lambda x: x ** alpha)
+        return f, noise
 
 
     # Sample a true, underlying function and observations.
@@ -1253,22 +958,22 @@ Learn a Function, Incorporating Prior Knowledge About Its Form
 
 
     def objective(vs):
-        f, y = model(vs)
-        evidence = y(x_obs).logpdf(y_obs)
+        f, noise = model(vs)
+        evidence = f(x_obs, noise).logpdf(y_obs)
         return -evidence
 
 
     # Learn hyperparameters.
-    minimise_l_bfgs_b(tf.function(objective, autograph=False), vs)
-    f, y = model(vs)
+    minimise_l_bfgs_b(objective, vs, jit=True)
+    f, noise = model(vs)
 
     # Print the learned parameters.
-    out.kv("Prior", y.display(out.format))
+    out.kv("Prior", f.display(out.format))
     vs.print()
 
     # Condition on the observations to make predictions.
-    post = f.measure | (y(x_obs), y_obs)
-    mean, lower, upper = post(f(x)).marginals()
+    f_post = f | (f(x_obs, noise), y_obs)
+    mean, lower, upper = f_post(x).marginal_credible_bounds()
 
     # Plot result.
     plt.plot(x, B.squeeze(f_true), label="True", style="test")
@@ -1323,24 +1028,27 @@ Multi-Output Regression
     p = 4
     H = B.randn(p, m)
 
-    # Construct latent functions.
-    prior = Measure()
-    us = VGP([GP(EQ(), measure=prior) for _ in range(m)])
-    fs = us.lmatmul(H)
 
-    # Construct noise.
-    e = VGP([GP(0.5 * Delta(), measure=prior) for _ in range(p)])
+    with Measure() as prior:
+        # Construct latent functions.
+        us = VGP([GP(EQ()) for _ in range(m)])
 
-    # Construct observation model.
-    ys = e + fs
+        # Construct multi-output prior.
+        fs = us.lmatmul(H)
+
+        # Construct noise.
+        e = VGP([GP(0.5 * Delta()) for _ in range(p)])
+
+        # Construct observation model.
+        ys = e + fs
 
     # Sample a true, underlying function and observations.
     samples = prior.sample(*(p(x) for p in fs.ps), *(p(x_obs) for p in ys.ps))
     fs_true, ys_obs = samples[:p], samples[p:]
 
     # Compute the posterior and make predictions.
-    post = prior | (*((p(x_obs), y_obs) for p, y_obs in zip(ys.ps, ys_obs)),)
-    preds = [post(p(x)).marginals() for p in fs.ps]
+    post = prior.condition(*((p(x_obs), y_obs) for p, y_obs in zip(ys.ps, ys_obs)))
+    preds = [post(p(x)) for p in fs.ps]
 
 
     # Plot results.
@@ -1348,7 +1056,7 @@ Multi-Output Regression
         plt.plot(x, f, label="True", style="test")
         if x_obs is not None:
             plt.scatter(x_obs, y_obs, label="Observations", style="train", s=20)
-        mean, lower, upper = pred
+        mean, lower, upper = pred.marginal_credible_bounds()
         plt.plot(x, mean, label="Prediction", style="pred")
         plt.fill_between(x, lower, upper, style="pred")
         tweak()
@@ -1383,15 +1091,15 @@ Approximate Integration
     x = B.linspace(tf.float64, 0, 10, 200)
     x_obs = B.linspace(tf.float64, 0, 10, 10)
 
-    # Construct the model.
-    prior = Measure()
-    f = 0.7 * GP(EQ(), measure=prior).stretch(1.5)
-    e = 0.2 * GP(Delta(), measure=prior)
+    with Measure() as prior:
+        # Construct a model.
+        f = 0.7 * GP(EQ()).stretch(1.5)
+        e = 0.2 * GP(Delta())
 
-    # Construct derivatives.
-    df = f.diff()
-    ddf = df.diff()
-    dddf = ddf.diff() + e
+        # Construct derivatives.
+        df = f.diff()
+        ddf = df.diff()
+        dddf = ddf.diff() + e
 
     # Fix the integration constants.
     zero = B.cast(tf.float64, 0)
@@ -1405,10 +1113,10 @@ Approximate Integration
     post = prior | (dddf(x_obs), y_obs)
 
     # And make predictions.
-    pred_iiif = post(f)(x).marginals()
-    pred_iif = post(df)(x).marginals()
-    pred_if = post(ddf)(x).marginals()
-    pred_f = post(dddf)(x).marginals()
+    pred_iiif = post(f)(x)
+    pred_iif = post(df)(x)
+    pred_if = post(ddf)(x)
+    pred_f = post(dddf)(x)
 
 
     # Plot result.
@@ -1416,7 +1124,7 @@ Approximate Integration
         plt.plot(x, f, label="True", style="test")
         if x_obs is not None:
             plt.scatter(x_obs, y_obs, label="Observations", style="train", s=20)
-        mean, lower, upper = pred
+        mean, lower, upper = pred.marginal_credible_bounds()
         plt.plot(x, mean, label="Prediction", style="pred")
         plt.fill_between(x, lower, upper, style="pred")
         wbml.plot.tweak()
@@ -1457,30 +1165,28 @@ Bayesian Linear Regression
     import wbml.out as out
     from wbml.plot import tweak
 
-    from stheno import B, Measure, GP, Delta
+    from stheno import B, Measure, GP
+
+    B.epsilon = 1e-10  # Very slightly regularise.
 
     # Define points to predict at.
     x = B.linspace(0, 10, 200)
     x_obs = B.linspace(0, 10, 10)
 
-    # Construct the model.
-    prior = Measure()
-    slope = GP(1, measure=prior)
-    intercept = GP(5, measure=prior)
-    f = slope * (lambda x: x) + intercept
-
-    e = 0.2 * GP(Delta(), measure=prior)  # Noise model
-
-    y = f + e  # Observation model
+    with Measure() as prior:
+        # Construct a linear model.
+        slope = GP(1)
+        intercept = GP(5)
+        f = slope * (lambda x: x) + intercept
 
     # Sample a slope, intercept, underlying function, and observations.
     true_slope, true_intercept, f_true, y_obs = prior.sample(
-        slope(0), intercept(0), f(x), y(x_obs)
+        slope(0), intercept(0), f(x), f(x_obs, 0.2)
     )
 
     # Condition on the observations to make predictions.
-    post = prior | (y(x_obs), y_obs)
-    mean, lower, upper = post(f(x)).marginals()
+    post = prior | (f(x_obs, 0.2), y_obs)
+    mean, lower, upper = post(f(x)).marginal_credible_bounds()
 
     out.kv("True slope", true_slope[0, 0])
     out.kv("Predicted slope", post(slope(0)).mean[0, 0])
@@ -1514,7 +1220,7 @@ GPAR
     from varz.tensorflow import Vars, minimise_l_bfgs_b
     from wbml.plot import tweak
 
-    from stheno.tensorflow import B, Measure, GP, Delta, EQ
+    from stheno.tensorflow import B, GP, EQ
 
     # Define points to predict at.
     x = B.linspace(tf.float64, 0, 10, 200)
@@ -1540,28 +1246,17 @@ GPAR
         scale2: Positive = 1,
         noise2: Positive = 0.1,
     ):
-        # Construct model for first layer:
-        prior1 = Measure()
-        f1 = GP(var1 * EQ() > scale1, measure=prior1)
-        e1 = GP(noise1 * Delta(), measure=prior1)
-        y1 = f1 + e1
-
-        # Construct model for second layer:
-        prior2 = Measure()
-        f2 = GP(var2 * EQ() > scale2, measure=prior2)
-        e2 = GP(noise2 * Delta(), measure=prior2)
-        y2 = f2 + e2
-
-        return f1, y1, f2, y2
+        # Build layers:
+        f1 = GP(var1 * EQ().stretch(scale1))
+        f2 = GP(var2 * EQ().stretch(scale2))
+        return (f1, noise1), (f2, noise2)
 
 
     def objective(vs):
-        f1, y1, f2, y2 = model(vs)
-
+        (f1, noise1), (f2, noise2) = model(vs)
         x1 = x_obs1
         x2 = B.stack(x_obs2, B.take(y1_obs, inds2), axis=1)
-        evidence = y1(x1).logpdf(y1_obs) + y2(x2).logpdf(y2_obs)
-
+        evidence = f1(x1, noise1).logpdf(y1_obs) + f2(x2, noise2).logpdf(y2_obs)
         return -evidence
 
 
@@ -1570,16 +1265,14 @@ GPAR
     minimise_l_bfgs_b(objective, vs)
 
     # Compute posteriors.
-    f1, y1, f2, y2 = model(vs)
+    (f1, noise1), (f2, noise2) = model(vs)
     x1 = x_obs1
     x2 = B.stack(x_obs2, B.take(y1_obs, inds2), axis=1)
-    post1 = f1.measure | (y1(x1), y1_obs)
-    post2 = f2.measure | (y2(x2), y2_obs)
-    f1_post = post1(f1)
-    f2_post = post2(f2)
+    f1_post = f1 | (f1(x1, noise1), y1_obs)
+    f2_post = f2 | (f2(x2, noise2), y2_obs)
 
     # Predict first output.
-    mean1, lower1, upper1 = f1_post(x).marginals()
+    mean1, lower1, upper1 = f1_post(x).marginal_credible_bounds()
 
     # Predict second output with Monte Carlo.
     samples = [
@@ -1630,7 +1323,7 @@ A GP-RNN Model
     from wbml.net import rnn as rnn_constructor
     from wbml.plot import tweak
 
-    from stheno.tensorflow import B, Measure, GP, Delta, EQ
+    from stheno.tensorflow import B, Measure, GP, EQ
 
     # Increase regularisation because we are dealing with `tf.float32`s.
     B.epsilon = 1e-6
@@ -1656,11 +1349,7 @@ A GP-RNN Model
 
 
     @parametrised
-    def model(
-        vs, a_scale: Positive = 0.1, b_scale: Positive = 0.1, noise: Positive = 0.01
-    ):
-        prior = Measure()
-
+    def model(vs, a_scale: Positive = 0.1, b_scale: Positive = 0.1, noise: Positive = 0.01):
         # Construct an RNN.
         f_rnn = rnn_constructor(
             output_size=1, widths=(10,), nonlinearity=B.tanh, final_dense=True
@@ -1671,16 +1360,15 @@ A GP-RNN Model
         weights = Vars(tf.float32, source=vs.get(shape=(num_weights,), name="rnn"))
         f_rnn.initialise(input_size=1, vs=weights)
 
-        # Construct GPs that modulate the RNN.
-        a = GP(1e-2 * EQ().stretch(a_scale), measure=prior)
-        b = GP(1e-2 * EQ().stretch(b_scale), measure=prior)
-        e = GP(noise * Delta(), measure=prior)
+        with Measure():
+            # Construct GPs that modulate the RNN.
+            a = GP(1e-2 * EQ().stretch(a_scale))
+            b = GP(1e-2 * EQ().stretch(b_scale))
 
-        # GP-RNN model:
-        f_gp_rnn = (1 + a) * (lambda x: f_rnn(x)) + b
-        y_gp_rnn = f_gp_rnn + e
+            # GP-RNN model:
+            f_gp_rnn = (1 + a) * (lambda x: f_rnn(x)) + b
 
-        return f_rnn, f_gp_rnn, y_gp_rnn, a, b
+        return f_rnn, f_gp_rnn, noise, a, b
 
 
     def objective_rnn(vs):
@@ -1689,30 +1377,22 @@ A GP-RNN Model
 
 
     def objective_gp_rnn(vs):
-        _, _, y_gp_rnn, _, _ = model(vs)
-        evidence = y_gp_rnn(x_obs).logpdf(y_obs)
+        _, f_gp_rnn, noise, _, _ = model(vs)
+        evidence = f_gp_rnn(x_obs, noise).logpdf(y_obs)
         return -evidence
 
 
     # Pretrain the RNN.
     vs = Vars(tf.float32)
-    minimise_adam(
-        tf.function(objective_rnn, autograph=False), vs, rate=1e-2, iters=1000, trace=True
-    )
+    minimise_adam(objective_rnn, vs, rate=5e-3, iters=1000, trace=True, jit=True)
 
     # Jointly train the RNN and GPs.
-    minimise_adam(
-        tf.function(objective_gp_rnn, autograph=False),
-        vs,
-        rate=1e-3,
-        iters=1000,
-        trace=True,
-    )
+    minimise_adam(objective_gp_rnn, vs, rate=1e-3, iters=1000, trace=True, jit=True)
 
-    _, f_gp_rnn, y_gp_rnn, a, b = model(vs)
+    _, f_gp_rnn, noise, a, b = model(vs)
 
     # Condition.
-    post = f_gp_rnn.measure | (y_gp_rnn(x_obs), y_obs)
+    post = f_gp_rnn.measure | (f_gp_rnn(x_obs, noise), y_obs)
 
     # Predict and plot results.
     plt.figure(figsize=(10, 6))
@@ -1721,21 +1401,21 @@ A GP-RNN Model
     plt.title("$(1 + a)\\cdot {}$RNN${} + b$")
     plt.plot(x, f_true, label="True", style="test")
     plt.scatter(x_obs, y_obs, label="Observations", style="train", s=20)
-    mean, lower, upper = post(f_gp_rnn(x)).marginals()
+    mean, lower, upper = post(f_gp_rnn(x)).marginal_credible_bounds()
     plt.plot(x, mean, label="Prediction", style="pred")
     plt.fill_between(x, lower, upper, style="pred")
     tweak()
 
     plt.subplot(2, 2, 3)
     plt.title("$a$")
-    mean, lower, upper = post(a(x)).marginals()
+    mean, lower, upper = post(a(x)).marginal_credible_bounds()
     plt.plot(x, mean, label="Prediction", style="pred")
     plt.fill_between(x, lower, upper, style="pred")
     tweak()
 
     plt.subplot(2, 2, 4)
     plt.title("$b$")
-    mean, lower, upper = post(b(x)).marginals()
+    mean, lower, upper = post(b(x)).marginal_credible_bounds()
     plt.plot(x, mean, label="Prediction", style="pred")
     plt.fill_between(x, lower, upper, style="pred")
     tweak()
@@ -1761,20 +1441,19 @@ Approximate Multiplication Between GPs
     # Define points to predict at.
     x = B.linspace(0, 10, 100)
 
-    # Construct a prior.
-    prior = Measure()
-    f1 = GP(3, EQ(), measure=prior)
-    f2 = GP(3, EQ(), measure=prior)
+    with Measure() as prior:
+        f1 = GP(3, EQ())
+        f2 = GP(3, EQ())
 
-    # Compute the approximate product.
-    f_prod = f1 * f2
+        # Compute the approximate product.
+        f_prod = f1 * f2
 
     # Sample two functions.
     s1, s2 = prior.sample(f1(x), f2(x))
 
     # Predict.
-    post = prior | ((f1(x), s1), (f2(x), s2))
-    mean, lower, upper = post(f_prod(x)).marginals()
+    f_prod_post = f_prod | ((f1(x), s1), (f2(x), s2))
+    mean, lower, upper = f_prod_post(x).marginal_credible_bounds()
 
     # Plot result.
     plt.plot(x, s1, label="Sample 1", style="train")
@@ -1801,7 +1480,7 @@ Sparse Regression
     import wbml.out as out
     from wbml.plot import tweak
 
-    from stheno import B, Measure, GP, EQ, Delta, SparseObs
+    from stheno import B, GP, EQ, PseudoObs
 
     # Define points to predict at.
     x = B.linspace(0, 10, 100)
@@ -1809,35 +1488,37 @@ Sparse Regression
     x_ind = B.linspace(0, 10, 20)
 
     # Construct a prior.
-    prior = Measure()
-    f = GP(EQ().periodic(2 * B.pi), measure=prior)  # Latent function.
-    e = GP(Delta(), measure=prior)  # Noise.
-    y = f + 0.5 * e
+    f = GP(EQ().periodic(2 * B.pi))
 
     # Sample a true, underlying function and observations.
     f_true = B.sin(x)
-    y_obs = B.sin(x_obs) + 0.5 * B.randn(*x_obs.shape)
+    y_obs = B.sin(x_obs) + B.sqrt(0.5) * B.randn(*x_obs.shape)
 
-    # Now condition on the observations to make predictions.
-    obs = SparseObs(
-        f(x_ind),  # Inducing points.
-        0.5 * e,  # Noise process.
-        # Observations _without_ the noise process added on.
-        f(x_obs),
-        y_obs,
-    )
-    out.kv("ELBO", obs.elbo(prior))
-    post = prior | obs
-    mean, lower, upper = post(f(x)).marginals()
+    # Compute a pseudo-point approximation of the posterior.
+    obs = PseudoObs(f(x_ind), (f(x_obs, 0.5), y_obs))
+
+    # Compute the ELBO.
+    out.kv("ELBO", obs.elbo(f.measure))
+
+    # Compute the approximate posterior.
+    f_post = f | obs
+
+    # Make predictions with the approximate posterior.
+    mean, lower, upper = f_post(x).marginal_credible_bounds()
 
     # Plot result.
     plt.plot(x, f_true, label="True", style="test")
     plt.scatter(
-        x_obs, y_obs, label="Observations", style="train", c="tab:green", alpha=0.35
+        x_obs,
+        y_obs,
+        label="Observations",
+        style="train",
+        c="tab:green",
+        alpha=0.35,
     )
     plt.scatter(
         x_ind,
-        obs.mu(prior)[:, 0],
+        obs.mu(f.measure)[:, 0],
         label="Inducing Points",
         style="train",
         s=20,
@@ -1862,34 +1543,31 @@ Smoothing with Nonparametric Basis Functions
     import matplotlib.pyplot as plt
     from wbml.plot import tweak
 
-    from stheno import B, Measure, GP, EQ, Delta
+    from stheno import B, Measure, GP, EQ
 
     # Define points to predict at.
     x = B.linspace(0, 10, 100)
     x_obs = B.linspace(0, 10, 20)
 
-    # Constuct a prior:
-    prior = Measure()
-    w = lambda x: B.exp(-(x ** 2) / 0.5)  # Window
-    b = [(w * GP(EQ(), measure=prior)).shift(xi) for xi in x_obs]  # Weighted basis funs
-    f = sum(b)  # Latent function
-    e = GP(Delta(), measure=prior)  # Noise
-    y = f + 0.2 * e  # Observation model
+    with Measure() as prior:
+        w = lambda x: B.exp(-(x ** 2) / 0.5)  # Basis function
+        b = [(w * GP(EQ())).shift(xi) for xi in x_obs]  # Weighted basis functions
+        f = sum(b)
 
     # Sample a true, underlying function and observations.
-    f_true, y_obs = prior.sample(f(x), y(x_obs))
+    f_true, y_obs = prior.sample(f(x), f(x_obs, 0.2))
 
     # Condition on the observations to make predictions.
-    post = prior | (y(x_obs), y_obs)
+    post = prior | (f(x_obs, 0.2), y_obs)
 
     # Plot result.
     for i, bi in enumerate(b):
-        mean, lower, upper = post(bi(x)).marginals()
+        mean, lower, upper = post(bi(x)).marginal_credible_bounds()
         kw_args = {"label": "Basis functions"} if i == 0 else {}
         plt.plot(x, mean, style="pred2", **kw_args)
     plt.plot(x, f_true, label="True", style="test")
     plt.scatter(x_obs, y_obs, label="Observations", style="train", s=20)
-    mean, lower, upper = post(f(x)).marginals()
+    mean, lower, upper = post(f(x)).marginal_credible_bounds()
     plt.plot(x, mean, label="Prediction", style="pred")
     plt.fill_between(x, lower, upper, style="pred")
     tweak()

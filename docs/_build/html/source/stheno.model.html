@@ -7,7 +7,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>stheno.mean module &mdash; stheno 0.1.0 documentation</title>
+  <title>stheno.model package &mdash; stheno 0.1.0 documentation</title>
   
 
   
@@ -30,15 +30,14 @@
         <script src="../_static/underscore.js"></script>
         <script src="../_static/doctools.js"></script>
         <script src="../_static/language_data.js"></script>
-        <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
     
     <script type="text/javascript" src="../_static/js/theme.js"></script>
 
     
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="stheno.measure module" href="stheno.measure.html" />
-    <link rel="prev" title="stheno.lazy module" href="stheno.lazy.html" /> 
+    <link rel="next" title="stheno.model.fdd module" href="stheno.model.fdd.html" />
+    <link rel="prev" title="stheno.mo.mean module" href="stheno.mo.mean.html" /> 
 </head>
 
 <body class="wy-body-for-nav">
@@ -91,18 +90,29 @@
 <li class="toctree-l1"><a class="reference internal" href="../readme.html">Stheno</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../api.html">Application Programming Interface</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="stheno.autograd.html">stheno.autograd module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stheno.input.html">stheno.input module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stheno.jax.html">stheno.jax module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stheno.kernel.html">stheno.kernel module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stheno.lazy.html">stheno.lazy module</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">stheno.mean module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stheno.measure.html">stheno.measure module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stheno.mokernel.html">stheno.mokernel module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stheno.momean.html">stheno.momean module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stheno.mo.html">stheno.mo package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stheno.mo.input.html">stheno.mo.input module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stheno.mo.kernel.html">stheno.mo.kernel module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stheno.mo.mean.html">stheno.mo.mean module</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">stheno.model package</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#submodules">Submodules</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="stheno.model.fdd.html">stheno.model.fdd module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="stheno.model.gp.html">stheno.model.gp module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="stheno.model.measure.html">stheno.model.measure module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="stheno.model.observations.html">stheno.model.observations module</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="stheno.model.fdd.html">stheno.model.fdd module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stheno.model.gp.html">stheno.model.gp module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stheno.model.measure.html">stheno.model.measure module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stheno.model.observations.html">stheno.model.observations module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stheno.random.html">stheno.random module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stheno.tensorflow.html">stheno.tensorflow module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stheno.torch.html">stheno.torch module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stheno.util.html">stheno.util module</a></li>
 </ul>
 </li>
 </ul>
@@ -153,13 +163,13 @@
         
           <li><a href="../api.html">Application Programming Interface</a> &raquo;</li>
         
-      <li>stheno.mean module</li>
+      <li>stheno.model package</li>
     
     
       <li class="wy-breadcrumbs-aside">
         
             
-            <a href="../_sources/source/stheno.mean.rst.txt" rel="nofollow"> View page source</a>
+            <a href="../_sources/source/stheno.model.rst.txt" rel="nofollow"> View page source</a>
           
         
       </li>
@@ -172,21 +182,19 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="module-stheno.mean">
-<span id="stheno-mean-module"></span><h1>stheno.mean module<a class="headerlink" href="#module-stheno.mean" title="Permalink to this headline">¶</a></h1>
-<dl class="py class">
-<dt id="stheno.mean.DerivativeMean">
-<em class="property">class </em><code class="sig-prename descclassname">stheno.mean.</code><code class="sig-name descname">DerivativeMean</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">e</span></em>, <em class="sig-param"><span class="o">*</span><span class="n">derivs</span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/stheno/mean.html#DerivativeMean"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.mean.DerivativeMean" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.mean.Mean</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">algebra.ops.diff.DerivativeFunction</span></code></p>
-<p>Derivative of mean.</p>
-</dd></dl>
-
-<dl class="py class">
-<dt id="stheno.mean.TensorProductMean">
-<em class="property">class </em><code class="sig-prename descclassname">stheno.mean.</code><code class="sig-name descname">TensorProductMean</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">*</span><span class="n">fs</span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/stheno/mean.html#TensorProductMean"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.mean.TensorProductMean" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.mean.Mean</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">algebra.ops.tensor.TensorProductFunction</span></code></p>
-</dd></dl>
-
+  <div class="section" id="module-stheno.model">
+<span id="stheno-model-package"></span><h1>stheno.model package<a class="headerlink" href="#module-stheno.model" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="stheno.model.fdd.html">stheno.model.fdd module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="stheno.model.gp.html">stheno.model.gp module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="stheno.model.measure.html">stheno.model.measure module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="stheno.model.observations.html">stheno.model.observations module</a></li>
+</ul>
+</div>
+</div>
 </div>
 
 
@@ -197,10 +205,10 @@
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="stheno.measure.html" class="btn btn-neutral float-right" title="stheno.measure module" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="stheno.model.fdd.html" class="btn btn-neutral float-right" title="stheno.model.fdd module" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="stheno.lazy.html" class="btn btn-neutral float-left" title="stheno.lazy module" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="stheno.mo.mean.html" class="btn btn-neutral float-left" title="stheno.mo.mean module" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   

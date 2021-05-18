@@ -1,7 +1,7 @@
-stheno.mokernel module
+stheno.mo.input module
 ======================
 
-.. automodule:: stheno.mokernel
+.. automodule:: stheno.mo.input
    :members:
    :undoc-members:
    :show-inheritance:

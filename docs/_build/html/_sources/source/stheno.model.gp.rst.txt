@@ -1,0 +1,7 @@
+stheno.model.gp module
+======================
+
+.. automodule:: stheno.model.gp
+   :members:
+   :undoc-members:
+   :show-inheritance:

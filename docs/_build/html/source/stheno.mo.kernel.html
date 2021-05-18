@@ -7,7 +7,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>stheno.mokernel module &mdash; stheno 0.1.0 documentation</title>
+  <title>stheno.mo.kernel module &mdash; stheno 0.1.0 documentation</title>
   
 
   
@@ -30,15 +30,14 @@
         <script src="../_static/underscore.js"></script>
         <script src="../_static/doctools.js"></script>
         <script src="../_static/language_data.js"></script>
-        <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
     
     <script type="text/javascript" src="../_static/js/theme.js"></script>
 
     
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="stheno.momean module" href="stheno.momean.html" />
-    <link rel="prev" title="stheno.measure module" href="stheno.measure.html" /> 
+    <link rel="next" title="stheno.mo.mean module" href="stheno.mo.mean.html" />
+    <link rel="prev" title="stheno.mo.input module" href="stheno.mo.input.html" /> 
 </head>
 
 <body class="wy-body-for-nav">
@@ -91,18 +90,28 @@
 <li class="toctree-l1"><a class="reference internal" href="../readme.html">Stheno</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../api.html">Application Programming Interface</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="stheno.autograd.html">stheno.autograd module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stheno.input.html">stheno.input module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stheno.jax.html">stheno.jax module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stheno.kernel.html">stheno.kernel module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stheno.lazy.html">stheno.lazy module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stheno.mean.html">stheno.mean module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stheno.measure.html">stheno.measure module</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">stheno.mokernel module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stheno.momean.html">stheno.momean module</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="stheno.mo.html">stheno.mo package</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="stheno.mo.html#submodules">Submodules</a><ul class="current">
+<li class="toctree-l4"><a class="reference internal" href="stheno.mo.input.html">stheno.mo.input module</a></li>
+<li class="toctree-l4 current"><a class="current reference internal" href="#">stheno.mo.kernel module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="stheno.mo.mean.html">stheno.mo.mean module</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="stheno.mo.input.html">stheno.mo.input module</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">stheno.mo.kernel module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stheno.mo.mean.html">stheno.mo.mean module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stheno.model.html">stheno.model package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stheno.model.fdd.html">stheno.model.fdd module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stheno.model.gp.html">stheno.model.gp module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stheno.model.measure.html">stheno.model.measure module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stheno.model.observations.html">stheno.model.observations module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stheno.random.html">stheno.random module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stheno.tensorflow.html">stheno.tensorflow module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stheno.torch.html">stheno.torch module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stheno.util.html">stheno.util module</a></li>
 </ul>
 </li>
 </ul>
@@ -153,13 +162,15 @@
         
           <li><a href="../api.html">Application Programming Interface</a> &raquo;</li>
         
-      <li>stheno.mokernel module</li>
+          <li><a href="stheno.mo.html">stheno.mo package</a> &raquo;</li>
+        
+      <li>stheno.mo.kernel module</li>
     
     
       <li class="wy-breadcrumbs-aside">
         
             
-            <a href="../_sources/source/stheno.mokernel.rst.txt" rel="nofollow"> View page source</a>
+            <a href="../_sources/source/stheno.mo.kernel.rst.txt" rel="nofollow"> View page source</a>
           
         
       </li>
@@ -172,52 +183,50 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="module-stheno.mokernel">
-<span id="stheno-mokernel-module"></span><h1>stheno.mokernel module<a class="headerlink" href="#module-stheno.mokernel" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="module-stheno.mo.kernel">
+<span id="stheno-mo-kernel-module"></span><h1>stheno.mo.kernel module<a class="headerlink" href="#module-stheno.mo.kernel" title="Permalink to this headline">¶</a></h1>
 <dl class="py class">
-<dt id="stheno.mokernel.MultiOutputKernel">
-<em class="property">class </em><code class="sig-prename descclassname">stheno.mokernel.</code><code class="sig-name descname">MultiOutputKernel</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">measure</span></em>, <em class="sig-param"><span class="o">*</span><span class="n">ps</span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/stheno/mokernel.html#MultiOutputKernel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.mokernel.MultiOutputKernel" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference internal" href="stheno.kernel.html#stheno.kernel.Kernel" title="stheno.kernel.Kernel"><code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.kernel.Kernel</span></code></a></p>
+<dt id="stheno.mo.kernel.MultiOutputKernel">
+<em class="property">class </em><code class="sig-prename descclassname">stheno.mo.kernel.</code><code class="sig-name descname">MultiOutputKernel</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">measure</span></em>, <em class="sig-param"><span class="o">*</span><span class="n">ps</span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/stheno/mo/kernel.html#MultiOutputKernel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.mo.kernel.MultiOutputKernel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">mlkernels.kernel.Kernel</span></code></p>
 <p>A generic multi-output kernel.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>measure</strong> (<a class="reference internal" href="stheno.measure.html#stheno.measure.Measure" title="stheno.measure.Measure"><code class="xref py py-class docutils literal notranslate"><span class="pre">measure.Measure</span></code></a>) – Measure to take the kernels from.</p></li>
-<li><p><strong>*ps</strong> (<a class="reference internal" href="stheno.measure.html#stheno.measure.GP" title="stheno.measure.GP"><code class="xref py py-class docutils literal notranslate"><span class="pre">measure.GP</span></code></a>) – Processes that make up the multi-valued process.</p></li>
+<li><p><strong>measure</strong> (<a class="reference internal" href="stheno.model.measure.html#stheno.model.measure.Measure" title="stheno.model.measure.Measure"><code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.model.measure.Measure</span></code></a>) – Measure to take the kernels
+from.</p></li>
+<li><p><strong>*ps</strong> (<a class="reference internal" href="stheno.model.gp.html#stheno.model.gp.GP" title="stheno.model.gp.GP"><code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.model.gp.GP</span></code></a>) – Processes that make up the multi-valued
+process.</p></li>
 </ul>
 </dd>
 </dl>
 <dl class="py attribute">
-<dt id="stheno.mokernel.MultiOutputKernel.measure">
-<code class="sig-name descname">measure</code><a class="headerlink" href="#stheno.mokernel.MultiOutputKernel.measure" title="Permalink to this definition">¶</a></dt>
-<dd><p>Measure to take the kernels from.</p>
+<dt id="stheno.mo.kernel.MultiOutputKernel.measure">
+<code class="sig-name descname">measure</code><a class="headerlink" href="#stheno.mo.kernel.MultiOutputKernel.measure" title="Permalink to this definition">¶</a></dt>
+<dd><p>Measure to take the kernels
+from.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
-<dd class="field-odd"><p><a class="reference internal" href="stheno.measure.html#stheno.measure.Measure" title="stheno.measure.Measure"><code class="xref py py-class docutils literal notranslate"><span class="pre">measure.Measure</span></code></a></p>
+<dd class="field-odd"><p><a class="reference internal" href="stheno.model.measure.html#stheno.model.measure.Measure" title="stheno.model.measure.Measure"><code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.model.measure.Measure</span></code></a></p>
 </dd>
 </dl>
 </dd></dl>
 
 <dl class="py attribute">
-<dt id="stheno.mokernel.MultiOutputKernel.ps">
-<code class="sig-name descname">ps</code><a class="headerlink" href="#stheno.mokernel.MultiOutputKernel.ps" title="Permalink to this definition">¶</a></dt>
-<dd><p>Processes that make up the multi-valued
-process.</p>
+<dt id="stheno.mo.kernel.MultiOutputKernel.ps">
+<code class="sig-name descname">ps</code><a class="headerlink" href="#stheno.mo.kernel.MultiOutputKernel.ps" title="Permalink to this definition">¶</a></dt>
+<dd><p>Processes that make up the
+multi-valued process.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
-<dd class="field-odd"><p>tuple[<a class="reference internal" href="stheno.measure.html#stheno.measure.GP" title="stheno.measure.GP"><code class="xref py py-class docutils literal notranslate"><span class="pre">measure.GP</span></code></a>]</p>
+<dd class="field-odd"><p>tuple[<a class="reference internal" href="stheno.model.gp.html#stheno.model.gp.GP" title="stheno.model.gp.GP"><code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.model.gp.GP</span></code></a>]</p>
 </dd>
 </dl>
 </dd></dl>
-
-<dl class="py attribute">
-<dt id="stheno.mokernel.MultiOutputKernel.elwise">
-<code class="sig-name descname">elwise</code><em class="property"> = &lt;function &lt;function MultiOutputKernel.elwise&gt; with 7 method(s)&gt;</em><a class="reference internal" href="../_modules/stheno/mokernel.html#MultiOutputKernel.elwise"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.mokernel.MultiOutputKernel.elwise" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
 
 <dl class="py method">
-<dt id="stheno.mokernel.MultiOutputKernel.render">
-<code class="sig-name descname">render</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">formatter</span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/stheno/mokernel.html#MultiOutputKernel.render"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.mokernel.MultiOutputKernel.render" title="Permalink to this definition">¶</a></dt>
+<dt id="stheno.mo.kernel.MultiOutputKernel.render">
+<code class="sig-name descname">render</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">formatter</span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/stheno/mo/kernel.html#MultiOutputKernel.render"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.mo.kernel.MultiOutputKernel.render" title="Permalink to this definition">¶</a></dt>
 <dd><p>Render the element.</p>
 <p>This is the lowest-level operation in pretty printing an element, and should
 produce a string representation of the element. This method should be
@@ -247,10 +256,10 @@ implemented to determine how to render a custom element.</p>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="stheno.momean.html" class="btn btn-neutral float-right" title="stheno.momean module" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="stheno.mo.mean.html" class="btn btn-neutral float-right" title="stheno.mo.mean module" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="stheno.measure.html" class="btn btn-neutral float-left" title="stheno.measure module" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="stheno.mo.input.html" class="btn btn-neutral float-left" title="stheno.mo.input module" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   

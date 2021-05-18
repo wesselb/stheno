@@ -1,0 +1,302 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>stheno.mo.input &mdash; stheno 0.1.0 documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+
+  
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/underscore.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+        <script src="../../../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../../index.html" class="icon icon-home" alt="Documentation Home"> stheno
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.1
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../readme.html">Stheno</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api.html">Application Programming Interface</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">stheno</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+        
+          <li><a href="../../stheno.html">stheno</a> &raquo;</li>
+        
+      <li>stheno.mo.input</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for stheno.mo.input</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">lab</span> <span class="k">as</span> <span class="nn">B</span>
+<span class="kn">from</span> <span class="nn">algebra</span> <span class="kn">import</span> <span class="n">Element</span><span class="p">,</span> <span class="n">Join</span><span class="p">,</span> <span class="n">Wrapped</span>
+<span class="kn">from</span> <span class="nn">mlkernels</span> <span class="kn">import</span> <span class="n">pairwise</span><span class="p">,</span> <span class="n">elwise</span><span class="p">,</span> <span class="n">num_elements</span><span class="p">,</span> <span class="n">Kernel</span>
+
+<span class="kn">from</span> <span class="nn">..</span> <span class="kn">import</span> <span class="n">PromisedFDD</span> <span class="k">as</span> <span class="n">FDD</span><span class="p">,</span> <span class="n">_dispatch</span>
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;infer_size&quot;</span><span class="p">,</span> <span class="s2">&quot;dimensionality&quot;</span><span class="p">]</span>
+
+
+<span class="nd">@pairwise</span><span class="o">.</span><span class="n">dispatch</span><span class="p">(</span><span class="n">precedence</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">pairwise</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">,</span> <span class="n">y</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">B</span><span class="o">.</span><span class="n">block</span><span class="p">(</span><span class="o">*</span><span class="p">[[</span><span class="n">pairwise</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">xi</span><span class="p">,</span> <span class="n">yi</span><span class="p">)</span> <span class="k">for</span> <span class="n">yi</span> <span class="ow">in</span> <span class="n">y</span><span class="p">]</span> <span class="k">for</span> <span class="n">xi</span> <span class="ow">in</span> <span class="n">x</span><span class="p">])</span>
+
+
+<span class="nd">@pairwise</span><span class="o">.</span><span class="n">dispatch</span><span class="p">(</span><span class="n">precedence</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">pairwise</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">pairwise</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="p">(</span><span class="n">y</span><span class="p">,))</span>
+
+
+<span class="nd">@pairwise</span><span class="o">.</span><span class="n">dispatch</span><span class="p">(</span><span class="n">precedence</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">pairwise</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">pairwise</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="p">(</span><span class="n">x</span><span class="p">,),</span> <span class="n">y</span><span class="p">)</span>
+
+
+<span class="nd">@elwise</span><span class="o">.</span><span class="n">dispatch</span><span class="p">(</span><span class="n">precedence</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">elwise</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">,</span> <span class="n">y</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">):</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">y</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;&quot;elwise&quot; must be called with similarly sized tuples.&#39;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">B</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="o">*</span><span class="p">[</span><span class="n">elwise</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">xi</span><span class="p">,</span> <span class="n">yi</span><span class="p">)</span> <span class="k">for</span> <span class="n">xi</span><span class="p">,</span> <span class="n">yi</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+
+<span class="nd">@elwise</span><span class="o">.</span><span class="n">dispatch</span><span class="p">(</span><span class="n">precedence</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">elwise</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">elwise</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="p">(</span><span class="n">y</span><span class="p">,))</span>
+
+
+<span class="nd">@elwise</span><span class="o">.</span><span class="n">dispatch</span><span class="p">(</span><span class="n">precedence</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">elwise</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">elwise</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="p">(</span><span class="n">x</span><span class="p">,),</span> <span class="n">y</span><span class="p">)</span>
+
+
+<span class="nd">@num_elements</span><span class="o">.</span><span class="n">dispatch</span>
+<span class="k">def</span> <span class="nf">num_elements</span><span class="p">(</span><span class="n">x</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">):</span>
+    <span class="k">return</span> <span class="nb">sum</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="n">num_elements</span><span class="p">,</span> <span class="n">x</span><span class="p">))</span>
+
+
+<span class="nd">@_dispatch</span>
+<span class="k">def</span> <span class="nf">infer_size</span><span class="p">(</span><span class="n">k</span><span class="p">:</span> <span class="n">Kernel</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Infer the size of `k` evaluated at `x`.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        k (:class:`mlkernels.Kernel`): Kernel to evaluate.</span>
+<span class="sd">        x (input): Input to evaluate kernel at.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        int: Size of kernel matrix.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="nb">sum</span><span class="p">([</span><span class="n">infer_size</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">xi</span><span class="p">)</span> <span class="k">for</span> <span class="n">xi</span> <span class="ow">in</span> <span class="n">x</span><span class="p">])</span>
+
+
+<span class="nd">@_dispatch</span>
+<span class="k">def</span> <span class="nf">infer_size</span><span class="p">(</span><span class="n">k</span><span class="p">:</span> <span class="n">Kernel</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="n">B</span><span class="o">.</span><span class="n">Numeric</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">num_elements</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">*</span> <span class="n">dimensionality</span><span class="p">(</span><span class="n">k</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="infer_size"><a class="viewcode-back" href="../../../source/stheno.mo.input.html#stheno.mo.input.infer_size">[docs]</a><span class="nd">@_dispatch</span>
+<span class="k">def</span> <span class="nf">infer_size</span><span class="p">(</span><span class="n">k</span><span class="p">:</span> <span class="n">Kernel</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="n">FDD</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">num_elements</span><span class="p">(</span><span class="n">x</span><span class="p">)</span></div>
+
+
+<span class="nd">@_dispatch</span>
+<span class="k">def</span> <span class="nf">dimensionality</span><span class="p">(</span><span class="n">k</span><span class="p">:</span> <span class="n">Join</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Infer the output dimensionality of `k`.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        k (:class:`mlkernels.Kernel`): Kernel to get the output dimensionality of.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        int: Output dimensionality of `k`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">d1</span> <span class="o">=</span> <span class="n">dimensionality</span><span class="p">(</span><span class="n">k</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">d2</span> <span class="o">=</span> <span class="n">dimensionality</span><span class="p">(</span><span class="n">k</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+    <span class="k">if</span> <span class="n">d1</span> <span class="o">!=</span> <span class="n">d2</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;Inferred dimensionalities </span><span class="si">{</span><span class="n">d1</span><span class="si">}</span><span class="s2"> and </span><span class="si">{</span><span class="n">d2</span><span class="si">}</span><span class="s2"> do not match. &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;Did you join incompatible elements?&quot;</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="n">d1</span>
+
+
+<span class="nd">@_dispatch</span>
+<span class="k">def</span> <span class="nf">dimensionality</span><span class="p">(</span><span class="n">k</span><span class="p">:</span> <span class="n">Wrapped</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">dimensionality</span><span class="p">(</span><span class="n">k</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+
+
+<div class="viewcode-block" id="dimensionality"><a class="viewcode-back" href="../../../source/stheno.mo.input.html#stheno.mo.input.dimensionality">[docs]</a><span class="nd">@_dispatch</span>
+<span class="k">def</span> <span class="nf">dimensionality</span><span class="p">(</span><span class="n">k</span><span class="p">:</span> <span class="n">Element</span><span class="p">):</span>
+    <span class="k">return</span> <span class="mi">1</span></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright 2017, Wessel Bruinsma
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

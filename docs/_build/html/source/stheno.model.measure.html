@@ -1,0 +1,563 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>stheno.model.measure module &mdash; stheno 0.1.0 documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+
+  
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="stheno.model.observations module" href="stheno.model.observations.html" />
+    <link rel="prev" title="stheno.model.gp module" href="stheno.model.gp.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../index.html" class="icon icon-home" alt="Documentation Home"> stheno
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.1
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../readme.html">Stheno</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../api.html">Application Programming Interface</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="stheno.autograd.html">stheno.autograd module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stheno.jax.html">stheno.jax module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stheno.lazy.html">stheno.lazy module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stheno.mo.html">stheno.mo package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stheno.mo.input.html">stheno.mo.input module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stheno.mo.kernel.html">stheno.mo.kernel module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stheno.mo.mean.html">stheno.mo.mean module</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="stheno.model.html">stheno.model package</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="stheno.model.html#submodules">Submodules</a><ul class="current">
+<li class="toctree-l4"><a class="reference internal" href="stheno.model.fdd.html">stheno.model.fdd module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="stheno.model.gp.html">stheno.model.gp module</a></li>
+<li class="toctree-l4 current"><a class="current reference internal" href="#">stheno.model.measure module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="stheno.model.observations.html">stheno.model.observations module</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="stheno.model.fdd.html">stheno.model.fdd module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stheno.model.gp.html">stheno.model.gp module</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">stheno.model.measure module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stheno.model.observations.html">stheno.model.observations module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stheno.random.html">stheno.random module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stheno.tensorflow.html">stheno.tensorflow module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stheno.torch.html">stheno.torch module</a></li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">stheno</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="../api.html">Application Programming Interface</a> &raquo;</li>
+        
+          <li><a href="stheno.model.html">stheno.model package</a> &raquo;</li>
+        
+      <li>stheno.model.measure module</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../_sources/source/stheno.model.measure.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="module-stheno.model.measure">
+<span id="stheno-model-measure-module"></span><h1>stheno.model.measure module<a class="headerlink" href="#module-stheno.model.measure" title="Permalink to this headline">¶</a></h1>
+<dl class="py class">
+<dt id="stheno.model.measure.Measure">
+<em class="property">class </em><code class="sig-prename descclassname">stheno.model.measure.</code><code class="sig-name descname">Measure</code><a class="reference internal" href="../_modules/stheno/model/measure.html#Measure"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.model.measure.Measure" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>A GP model.</p>
+<dl class="py attribute">
+<dt id="stheno.model.measure.Measure.ps">
+<code class="sig-name descname">ps</code><a class="headerlink" href="#stheno.model.measure.Measure.ps" title="Permalink to this definition">¶</a></dt>
+<dd><p>Processes of the measure.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>list[<a class="reference internal" href="stheno.model.gp.html#stheno.model.gp.GP" title="stheno.model.gp.GP"><code class="xref py py-class docutils literal notranslate"><span class="pre">gp.GP</span></code></a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="stheno.model.measure.Measure.mean">
+<code class="sig-name descname">mean</code><a class="headerlink" href="#stheno.model.measure.Measure.mean" title="Permalink to this definition">¶</a></dt>
+<dd><p>Mean.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="stheno.lazy.html#stheno.lazy.LazyVector" title="stheno.lazy.LazyVector"><code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.lazy.LazyVector</span></code></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="stheno.model.measure.Measure.kernels">
+<code class="sig-name descname">kernels</code><a class="headerlink" href="#stheno.model.measure.Measure.kernels" title="Permalink to this definition">¶</a></dt>
+<dd><p>Kernels.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="stheno.lazy.html#stheno.lazy.LazyMatrix" title="stheno.lazy.LazyMatrix"><code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.lazy.LazyMatrix</span></code></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="stheno.model.measure.Measure.default">
+<code class="sig-name descname">default</code><a class="headerlink" href="#stheno.model.measure.Measure.default" title="Permalink to this definition">¶</a></dt>
+<dd><p>Global default measure.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#stheno.model.measure.Measure" title="stheno.model.measure.Measure"><code class="xref py py-class docutils literal notranslate"><span class="pre">measure.Measure</span></code></a> or None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="stheno.model.measure.Measure.add_independent_gp">
+<code class="sig-name descname">add_independent_gp</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">p</span></em>, <em class="sig-param"><span class="n">mean</span></em>, <em class="sig-param"><span class="n">kernel</span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/stheno/model/measure.html#Measure.add_independent_gp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.model.measure.Measure.add_independent_gp" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add an independent GP to the model.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>p</strong> (<a class="reference internal" href="stheno.model.gp.html#stheno.model.gp.GP" title="stheno.model.gp.GP"><code class="xref py py-class docutils literal notranslate"><span class="pre">gp.GP</span></code></a>) – GP to add.</p></li>
+<li><p><strong>mean</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">mlkernels.Mean</span></code>) – Mean function of GP.</p></li>
+<li><p><strong>kernel</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">mlkernels.Kernel</span></code>) – Kernel function of GP.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The newly added independent GP.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="stheno.model.gp.html#stheno.model.gp.GP" title="stheno.model.gp.GP"><code class="xref py py-class docutils literal notranslate"><span class="pre">gp.GP</span></code></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="stheno.model.measure.Measure.condition">
+<code class="sig-name descname">condition</code><a class="reference internal" href="../_modules/stheno/model/measure.html#Measure.condition"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.model.measure.Measure.condition" title="Permalink to this definition">¶</a></dt>
+<dd><p>Condition the measure on observations.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>obs</strong> (<a class="reference internal" href="stheno.model.observations.html#stheno.model.observations.AbstractObservations" title="stheno.model.observations.AbstractObservations"><code class="xref py py-class docutils literal notranslate"><span class="pre">observations.AbstractObservations</span></code></a>) – Observations to condition on.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Posterior processes.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>list[<a class="reference internal" href="stheno.model.gp.html#stheno.model.gp.GP" title="stheno.model.gp.GP"><code class="xref py py-class docutils literal notranslate"><span class="pre">gp.GP</span></code></a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="stheno.model.measure.Measure.cross">
+<code class="sig-name descname">cross</code><a class="reference internal" href="../_modules/stheno/model/measure.html#Measure.cross"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.model.measure.Measure.cross" title="Permalink to this definition">¶</a></dt>
+<dd><p>Construct the Cartesian product of a collection of processes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>p_cross</strong> (<a class="reference internal" href="stheno.model.gp.html#stheno.model.gp.GP" title="stheno.model.gp.GP"><code class="xref py py-class docutils literal notranslate"><span class="pre">gp.GP</span></code></a>) – GP that is the Cartesian product.</p></li>
+<li><p><strong>*ps</strong> (<a class="reference internal" href="stheno.model.gp.html#stheno.model.gp.GP" title="stheno.model.gp.GP"><code class="xref py py-class docutils literal notranslate"><span class="pre">gp.GP</span></code></a>) – Processes to construct the Cartesian product of.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The Cartesian product of <cite>ps</cite>.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="stheno.model.gp.html#stheno.model.gp.GP" title="stheno.model.gp.GP"><code class="xref py py-class docutils literal notranslate"><span class="pre">gp.GP</span></code></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="id0">
+<code class="sig-name descname">default</code><em class="property"> = None</em><a class="headerlink" href="#id0" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="stheno.model.measure.Measure.diff">
+<code class="sig-name descname">diff</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">p_diff</span></em>, <em class="sig-param"><span class="n">p</span></em>, <em class="sig-param"><span class="n">dim</span><span class="o">=</span><span class="default_value">0</span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/stheno/model/measure.html#Measure.diff"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.model.measure.Measure.diff" title="Permalink to this definition">¶</a></dt>
+<dd><p>Differentiate a GP.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>p_diff</strong> (<a class="reference internal" href="stheno.model.gp.html#stheno.model.gp.GP" title="stheno.model.gp.GP"><code class="xref py py-class docutils literal notranslate"><span class="pre">gp.GP</span></code></a>) – Derivative.</p></li>
+<li><p><strong>p</strong> (<a class="reference internal" href="stheno.model.gp.html#stheno.model.gp.GP" title="stheno.model.gp.GP"><code class="xref py py-class docutils literal notranslate"><span class="pre">gp.GP</span></code></a>) – GP to differentiate.</p></li>
+<li><p><strong>dim</strong> (<em>int</em><em>, </em><em>optional</em>) – Dimension of feature which to take the derivative
+with respect to. Defaults to <cite>0</cite>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Derivative of GP.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="stheno.model.gp.html#stheno.model.gp.GP" title="stheno.model.gp.GP"><code class="xref py py-class docutils literal notranslate"><span class="pre">gp.GP</span></code></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="stheno.model.measure.Measure.logpdf">
+<code class="sig-name descname">logpdf</code><a class="reference internal" href="../_modules/stheno/model/measure.html#Measure.logpdf"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.model.measure.Measure.logpdf" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the logpdf of one multiple observations.</p>
+<p>Can also give an <cite>AbstractObservations</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>*pairs</strong> (tuple[<a class="reference internal" href="stheno.model.fdd.html#stheno.model.fdd.FDD" title="stheno.model.fdd.FDD"><code class="xref py py-class docutils literal notranslate"><span class="pre">fdd.FDD</span></code></a>, tensor]) – Pairs of FDDs and values
+of the observations.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Logpdf.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>scalar</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="stheno.model.measure.Measure.mul">
+<code class="sig-name descname">mul</code><a class="reference internal" href="../_modules/stheno/model/measure.html#Measure.mul"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.model.measure.Measure.mul" title="Permalink to this definition">¶</a></dt>
+<dd><p>Multiply a GP from the graph with another object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>p_mul</strong> (<a class="reference internal" href="stheno.model.gp.html#stheno.model.gp.GP" title="stheno.model.gp.GP"><code class="xref py py-class docutils literal notranslate"><span class="pre">gp.GP</span></code></a>) – GP that is the product.</p></li>
+<li><p><strong>obj1</strong> (<em>object</em>) – First factor in the product.</p></li>
+<li><p><strong>obj2</strong> (<em>object</em>) – Second factor in the product.</p></li>
+<li><p><strong>other</strong> (<em>object</em>) – Other object in the product.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The GP corresponding to the product.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="stheno.model.gp.html#stheno.model.gp.GP" title="stheno.model.gp.GP"><code class="xref py py-class docutils literal notranslate"><span class="pre">gp.GP</span></code></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="stheno.model.measure.Measure.name">
+<code class="sig-name descname">name</code><a class="reference internal" href="../_modules/stheno/model/measure.html#Measure.name"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.model.measure.Measure.name" title="Permalink to this definition">¶</a></dt>
+<dd><p>Name a GP.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>p</strong> (<a class="reference internal" href="stheno.model.gp.html#stheno.model.gp.GP" title="stheno.model.gp.GP"><code class="xref py py-class docutils literal notranslate"><span class="pre">gp.GP</span></code></a>) – GP to name.</p></li>
+<li><p><strong>name</strong> (<em>str</em>) – Name. Must be unique.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="stheno.model.measure.Measure.sample">
+<code class="sig-name descname">sample</code><a class="reference internal" href="../_modules/stheno/model/measure.html#Measure.sample"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.model.measure.Measure.sample" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sample multiple processes simultaneously.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>n</strong> (<em>int</em><em>, </em><em>optional</em>) – Number of samples. Defaults to <cite>1</cite>.</p></li>
+<li><p><strong>*fdds</strong> (<a class="reference internal" href="stheno.model.fdd.html#stheno.model.fdd.FDD" title="stheno.model.fdd.FDD"><code class="xref py py-class docutils literal notranslate"><span class="pre">fdd.FDD</span></code></a>) – Locations to sample at.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Tuple of samples.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>tuple</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="stheno.model.measure.Measure.select">
+<code class="sig-name descname">select</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">p_selected</span></em>, <em class="sig-param"><span class="n">p</span></em>, <em class="sig-param"><span class="o">*</span><span class="n">dims</span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/stheno/model/measure.html#Measure.select"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.model.measure.Measure.select" title="Permalink to this definition">¶</a></dt>
+<dd><p>Select input dimensions.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>p_selected</strong> (<a class="reference internal" href="stheno.model.gp.html#stheno.model.gp.GP" title="stheno.model.gp.GP"><code class="xref py py-class docutils literal notranslate"><span class="pre">gp.GP</span></code></a>) – GP with selected inputs.</p></li>
+<li><p><strong>p</strong> (<a class="reference internal" href="stheno.model.gp.html#stheno.model.gp.GP" title="stheno.model.gp.GP"><code class="xref py py-class docutils literal notranslate"><span class="pre">gp.GP</span></code></a>) – GP to select input dimensions from.</p></li>
+<li><p><strong>*dims</strong> (<em>object</em>) – Dimensions to select.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>GP with the specific input dimensions.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="stheno.model.gp.html#stheno.model.gp.GP" title="stheno.model.gp.GP"><code class="xref py py-class docutils literal notranslate"><span class="pre">gp.GP</span></code></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="stheno.model.measure.Measure.shift">
+<code class="sig-name descname">shift</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">p_shifted</span></em>, <em class="sig-param"><span class="n">p</span></em>, <em class="sig-param"><span class="n">shift</span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/stheno/model/measure.html#Measure.shift"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.model.measure.Measure.shift" title="Permalink to this definition">¶</a></dt>
+<dd><p>Shift a GP.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>p_shifted</strong> (<a class="reference internal" href="stheno.model.gp.html#stheno.model.gp.GP" title="stheno.model.gp.GP"><code class="xref py py-class docutils literal notranslate"><span class="pre">gp.GP</span></code></a>) – Shifted GP.</p></li>
+<li><p><strong>p</strong> (<a class="reference internal" href="stheno.model.gp.html#stheno.model.gp.GP" title="stheno.model.gp.GP"><code class="xref py py-class docutils literal notranslate"><span class="pre">gp.GP</span></code></a>) – GP to shift.</p></li>
+<li><p><strong>shift</strong> (<em>object</em>) – Amount to shift by.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The shifted GP.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="stheno.model.gp.html#stheno.model.gp.GP" title="stheno.model.gp.GP"><code class="xref py py-class docutils literal notranslate"><span class="pre">gp.GP</span></code></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="stheno.model.measure.Measure.stretch">
+<code class="sig-name descname">stretch</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">p_stretched</span></em>, <em class="sig-param"><span class="n">p</span></em>, <em class="sig-param"><span class="n">stretch</span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/stheno/model/measure.html#Measure.stretch"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.model.measure.Measure.stretch" title="Permalink to this definition">¶</a></dt>
+<dd><p>Stretch a GP.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>p_stretched</strong> (<a class="reference internal" href="stheno.model.gp.html#stheno.model.gp.GP" title="stheno.model.gp.GP"><code class="xref py py-class docutils literal notranslate"><span class="pre">gp.GP</span></code></a>) – Stretched GP.</p></li>
+<li><p><strong>p</strong> (<a class="reference internal" href="stheno.model.gp.html#stheno.model.gp.GP" title="stheno.model.gp.GP"><code class="xref py py-class docutils literal notranslate"><span class="pre">gp.GP</span></code></a>) – GP to stretch.</p></li>
+<li><p><strong>stretch</strong> (<em>object</em>) – Extent of stretch.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The stretched GP.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="stheno.model.gp.html#stheno.model.gp.GP" title="stheno.model.gp.GP"><code class="xref py py-class docutils literal notranslate"><span class="pre">gp.GP</span></code></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="stheno.model.measure.Measure.sum">
+<code class="sig-name descname">sum</code><a class="reference internal" href="../_modules/stheno/model/measure.html#Measure.sum"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.model.measure.Measure.sum" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sum a GP from the graph with another object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>p_sum</strong> (<a class="reference internal" href="stheno.model.gp.html#stheno.model.gp.GP" title="stheno.model.gp.GP"><code class="xref py py-class docutils literal notranslate"><span class="pre">gp.GP</span></code></a>) – GP that is the sum.</p></li>
+<li><p><strong>obj1</strong> (other type or <a class="reference internal" href="stheno.model.gp.html#stheno.model.gp.GP" title="stheno.model.gp.GP"><code class="xref py py-class docutils literal notranslate"><span class="pre">gp.GP</span></code></a>) – First term in the sum.</p></li>
+<li><p><strong>obj2</strong> (other type or <a class="reference internal" href="stheno.model.gp.html#stheno.model.gp.GP" title="stheno.model.gp.GP"><code class="xref py py-class docutils literal notranslate"><span class="pre">gp.GP</span></code></a>) – Second term in the sum.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The GP corresponding to the sum.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="stheno.model.gp.html#stheno.model.gp.GP" title="stheno.model.gp.GP"><code class="xref py py-class docutils literal notranslate"><span class="pre">gp.GP</span></code></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="stheno.model.measure.Measure.transform">
+<code class="sig-name descname">transform</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">p_transformed</span></em>, <em class="sig-param"><span class="n">p</span></em>, <em class="sig-param"><span class="n">f</span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/stheno/model/measure.html#Measure.transform"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.model.measure.Measure.transform" title="Permalink to this definition">¶</a></dt>
+<dd><p>Transform the inputs of a GP.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>p_transformed</strong> (<a class="reference internal" href="stheno.model.gp.html#stheno.model.gp.GP" title="stheno.model.gp.GP"><code class="xref py py-class docutils literal notranslate"><span class="pre">gp.GP</span></code></a>) – GP with transformed inputs.</p></li>
+<li><p><strong>p</strong> (<a class="reference internal" href="stheno.model.gp.html#stheno.model.gp.GP" title="stheno.model.gp.GP"><code class="xref py py-class docutils literal notranslate"><span class="pre">gp.GP</span></code></a>) – GP to input transform.</p></li>
+<li><p><strong>f</strong> (<em>function</em>) – Input transform.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Input-transformed GP.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="stheno.model.gp.html#stheno.model.gp.GP" title="stheno.model.gp.GP"><code class="xref py py-class docutils literal notranslate"><span class="pre">gp.GP</span></code></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="stheno.model.observations.html" class="btn btn-neutral float-right" title="stheno.model.observations module" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="stheno.model.gp.html" class="btn btn-neutral float-left" title="stheno.model.gp module" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright 2017, Wessel Bruinsma
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

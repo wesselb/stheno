@@ -30,7 +30,6 @@
         <script src="../_static/underscore.js"></script>
         <script src="../_static/doctools.js"></script>
         <script src="../_static/language_data.js"></script>
-        <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
     
     <script type="text/javascript" src="../_static/js/theme.js"></script>
 
@@ -38,7 +37,7 @@
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="stheno.tensorflow module" href="stheno.tensorflow.html" />
-    <link rel="prev" title="stheno.momean module" href="stheno.momean.html" /> 
+    <link rel="prev" title="stheno.model.observations module" href="stheno.model.observations.html" /> 
 </head>
 
 <body class="wy-body-for-nav">
@@ -91,18 +90,20 @@
 <li class="toctree-l1"><a class="reference internal" href="../readme.html">Stheno</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../api.html">Application Programming Interface</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="stheno.autograd.html">stheno.autograd module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stheno.input.html">stheno.input module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stheno.jax.html">stheno.jax module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stheno.kernel.html">stheno.kernel module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stheno.lazy.html">stheno.lazy module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stheno.mean.html">stheno.mean module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stheno.measure.html">stheno.measure module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stheno.mokernel.html">stheno.mokernel module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stheno.momean.html">stheno.momean module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stheno.mo.html">stheno.mo package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stheno.mo.input.html">stheno.mo.input module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stheno.mo.kernel.html">stheno.mo.kernel module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stheno.mo.mean.html">stheno.mo.mean module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stheno.model.html">stheno.model package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stheno.model.fdd.html">stheno.model.fdd module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stheno.model.gp.html">stheno.model.gp module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stheno.model.measure.html">stheno.model.measure module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stheno.model.observations.html">stheno.model.observations module</a></li>
 <li class="toctree-l2 current"><a class="current reference internal" href="#">stheno.random module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stheno.tensorflow.html">stheno.tensorflow module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stheno.torch.html">stheno.torch module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stheno.util.html">stheno.util module</a></li>
 </ul>
 </li>
 </ul>
@@ -176,8 +177,8 @@
 <span id="stheno-random-module"></span><h1>stheno.random module<a class="headerlink" href="#module-stheno.random" title="Permalink to this headline">¶</a></h1>
 <dl class="py class">
 <dt id="stheno.random.Normal">
-<em class="property">class </em><code class="sig-prename descclassname">stheno.random.</code><code class="sig-name descname">Normal</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">*</span><span class="n">args</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kw_args</span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/stheno/random.html#Normal"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.random.Normal" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.random.RandomVector</span></code></p>
+<em class="property">class </em><code class="sig-prename descclassname">stheno.random.</code><code class="sig-name descname">Normal</code><a class="reference internal" href="../_modules/stheno/random.html#Normal"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.random.Normal" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#stheno.random.RandomVector" title="stheno.random.RandomVector"><code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.random.RandomVector</span></code></a></p>
 <p>Normal random variable.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -215,8 +216,21 @@
 
 <dl class="py attribute">
 <dt id="stheno.random.Normal.kl">
-<code class="sig-name descname">kl</code><em class="property"> = &lt;function &lt;function Normal.kl&gt; with 1 method(s)&gt;</em><a class="reference internal" href="../_modules/stheno/random.html#Normal.kl"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.random.Normal.kl" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<code class="sig-name descname">kl</code><a class="reference internal" href="../_modules/stheno/random.html#Normal.kl"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.random.Normal.kl" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the KL divergence with respect to another normal
+distribution.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>other</strong> (<a class="reference internal" href="#stheno.random.Normal" title="stheno.random.Normal"><code class="xref py py-class docutils literal notranslate"><span class="pre">random.Normal</span></code></a>) – Other normal.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>KL divergence.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>scalar</p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="py method">
 <dt id="stheno.random.Normal.lmatmul">
@@ -252,16 +266,30 @@ then the list is flattened to a scalar.</p>
 </dd></dl>
 
 <dl class="py method">
+<dt id="stheno.random.Normal.marginal_credible_bounds">
+<code class="sig-name descname">marginal_credible_bounds</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/stheno/random.html#Normal.marginal_credible_bounds"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.random.Normal.marginal_credible_bounds" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the marginal credible region bounds.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p><dl class="simple">
+<dt>A tuple containing the marginal means and marginal lower and</dt><dd><p>upper 95% central credible interval bounds.</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>tuple</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
 <dt id="stheno.random.Normal.marginals">
 <code class="sig-name descname">marginals</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/stheno/random.html#Normal.marginals"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.random.Normal.marginals" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get the marginals.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns</dt>
-<dd class="field-odd"><p><dl class="simple">
-<dt>A tuple containing the predictive means and lower and</dt><dd><p>upper 95% central credible interval bounds.</p>
-</dd>
-</dl>
-</p>
+<dd class="field-odd"><p>A tuple containing the marginal means and marginal variances.</p>
 </dd>
 <dt class="field-even">Return type</dt>
 <dd class="field-even"><p>tuple</p>
@@ -315,9 +343,43 @@ samples. Must be positive.</p></li>
 
 <dl class="py attribute">
 <dt id="stheno.random.Normal.w2">
-<code class="sig-name descname">w2</code><em class="property"> = &lt;function &lt;function Normal.w2&gt; with 1 method(s)&gt;</em><a class="reference internal" href="../_modules/stheno/random.html#Normal.w2"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.random.Normal.w2" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<code class="sig-name descname">w2</code><a class="reference internal" href="../_modules/stheno/random.html#Normal.w2"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.random.Normal.w2" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the 2-Wasserstein distance with respect to another normal
+distribution.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>other</strong> (<a class="reference internal" href="#stheno.random.Normal" title="stheno.random.Normal"><code class="xref py py-class docutils literal notranslate"><span class="pre">random.Normal</span></code></a>) – Other normal.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>2-Wasserstein distance.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>scalar</p>
+</dd>
+</dl>
+</dd></dl>
 
+</dd></dl>
+
+<dl class="py class">
+<dt id="stheno.random.Random">
+<em class="property">class </em><code class="sig-prename descclassname">stheno.random.</code><code class="sig-name descname">Random</code><a class="reference internal" href="../_modules/stheno/random.html#Random"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.random.Random" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>A random object.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt id="stheno.random.RandomProcess">
+<em class="property">class </em><code class="sig-prename descclassname">stheno.random.</code><code class="sig-name descname">RandomProcess</code><a class="reference internal" href="../_modules/stheno/random.html#RandomProcess"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.random.RandomProcess" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#stheno.random.Random" title="stheno.random.Random"><code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.random.Random</span></code></a></p>
+<p>A random process.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt id="stheno.random.RandomVector">
+<em class="property">class </em><code class="sig-prename descclassname">stheno.random.</code><code class="sig-name descname">RandomVector</code><a class="reference internal" href="../_modules/stheno/random.html#RandomVector"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.random.RandomVector" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#stheno.random.Random" title="stheno.random.Random"><code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.random.Random</span></code></a></p>
+<p>A random vector.</p>
 </dd></dl>
 
 </div>
@@ -333,7 +395,7 @@ samples. Must be positive.</p></li>
         <a href="stheno.tensorflow.html" class="btn btn-neutral float-right" title="stheno.tensorflow module" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="stheno.momean.html" class="btn btn-neutral float-left" title="stheno.momean module" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="stheno.model.observations.html" class="btn btn-neutral float-left" title="stheno.model.observations module" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   

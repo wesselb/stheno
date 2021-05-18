@@ -1,0 +1,18 @@
+stheno.model package
+====================
+
+.. automodule:: stheno.model
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 4
+
+   stheno.model.fdd
+   stheno.model.gp
+   stheno.model.measure
+   stheno.model.observations

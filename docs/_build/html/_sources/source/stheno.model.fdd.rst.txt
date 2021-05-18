@@ -1,0 +1,7 @@
+stheno.model.fdd module
+=======================
+
+.. automodule:: stheno.model.fdd
+   :members:
+   :undoc-members:
+   :show-inheritance:

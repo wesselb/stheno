@@ -30,7 +30,6 @@
         <script src="_static/underscore.js"></script>
         <script src="_static/doctools.js"></script>
         <script src="_static/language_data.js"></script>
-        <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
     
     <script type="text/javascript" src="_static/js/theme.js"></script>
 
@@ -162,13 +161,13 @@
 <li class="toctree-l2"><a class="reference internal" href="readme.html#nonlinear-regression-in-20-seconds">Nonlinear Regression in 20 Seconds</a></li>
 <li class="toctree-l2"><a class="reference internal" href="readme.html#installation">Installation</a></li>
 <li class="toctree-l2"><a class="reference internal" href="readme.html#manual">Manual</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="readme.html#autograd-tensorflow-pytorch-or-jax-your-choice">AutoGrad, TensorFlow, PyTorch, or Jax? Your Choice!</a></li>
-<li class="toctree-l3"><a class="reference internal" href="readme.html#important-remarks">Important Remarks</a></li>
+<li class="toctree-l3"><a class="reference internal" href="readme.html#autograd-tensorflow-pytorch-or-jax-your-choice">AutoGrad, TensorFlow, PyTorch, or JAX? Your Choice!</a></li>
 <li class="toctree-l3"><a class="reference internal" href="readme.html#model-design">Model Design</a></li>
 <li class="toctree-l3"><a class="reference internal" href="readme.html#finite-dimensional-distributions">Finite-Dimensional Distributions</a></li>
 <li class="toctree-l3"><a class="reference internal" href="readme.html#prior-and-posterior-measures">Prior and Posterior Measures</a></li>
 <li class="toctree-l3"><a class="reference internal" href="readme.html#inducing-points">Inducing Points</a></li>
-<li class="toctree-l3"><a class="reference internal" href="readme.html#mean-and-kernel-design">Mean and Kernel Design</a></li>
+<li class="toctree-l3"><a class="reference internal" href="readme.html#kernels-and-means">Kernels and Means</a></li>
+<li class="toctree-l3"><a class="reference internal" href="readme.html#important-remarks">Important Remarks</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="readme.html#examples">Examples</a><ul>
@@ -189,18 +188,26 @@
 </li>
 <li class="toctree-l1"><a class="reference internal" href="api.html">Application Programming Interface</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="source/stheno.autograd.html">stheno.autograd module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="source/stheno.input.html">stheno.input module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="source/stheno.jax.html">stheno.jax module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="source/stheno.kernel.html">stheno.kernel module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="source/stheno.lazy.html">stheno.lazy module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="source/stheno.mean.html">stheno.mean module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="source/stheno.measure.html">stheno.measure module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="source/stheno.mokernel.html">stheno.mokernel module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="source/stheno.momean.html">stheno.momean module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/stheno.mo.html">stheno.mo package</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="source/stheno.mo.html#submodules">Submodules</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="source/stheno.mo.input.html">stheno.mo.input module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/stheno.mo.kernel.html">stheno.mo.kernel module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/stheno.mo.mean.html">stheno.mo.mean module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/stheno.model.html">stheno.model package</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="source/stheno.model.html#submodules">Submodules</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="source/stheno.model.fdd.html">stheno.model.fdd module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/stheno.model.gp.html">stheno.model.gp module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/stheno.model.measure.html">stheno.model.measure module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/stheno.model.observations.html">stheno.model.observations module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="source/stheno.random.html">stheno.random module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="source/stheno.tensorflow.html">stheno.tensorflow module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="source/stheno.torch.html">stheno.torch module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="source/stheno.util.html">stheno.util module</a></li>
 </ul>
 </li>
 </ul>

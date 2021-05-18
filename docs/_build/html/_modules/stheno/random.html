@@ -30,7 +30,6 @@
         <script src="../../_static/underscore.js"></script>
         <script src="../../_static/doctools.js"></script>
         <script src="../../_static/language_data.js"></script>
-        <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
     
     <script type="text/javascript" src="../../_static/js/theme.js"></script>
 
@@ -136,6 +135,8 @@
         
           <li><a href="../index.html">Module code</a> &raquo;</li>
         
+          <li><a href="../stheno.html">stheno</a> &raquo;</li>
+        
       <li>stheno.random</li>
     
     
@@ -152,18 +153,20 @@
            <div itemprop="articleBody">
             
   <h1>Source code for stheno.random</h1><div class="highlight"><pre>
-<span></span><span class="kn">from</span> <span class="nn">types</span> <span class="kn">import</span> <span class="n">FunctionType</span>
+<span></span><span class="kn">import</span> <span class="nn">warnings</span>
+<span class="kn">from</span> <span class="nn">types</span> <span class="kn">import</span> <span class="n">FunctionType</span>
 
 <span class="kn">from</span> <span class="nn">lab</span> <span class="kn">import</span> <span class="n">B</span>
 <span class="kn">from</span> <span class="nn">matrix</span> <span class="kn">import</span> <span class="n">AbstractMatrix</span><span class="p">,</span> <span class="n">Zero</span>
-<span class="kn">from</span> <span class="nn">plum</span> <span class="kn">import</span> <span class="n">Self</span><span class="p">,</span> <span class="n">Referentiable</span><span class="p">,</span> <span class="n">Dispatcher</span><span class="p">,</span> <span class="n">convert</span>
+<span class="kn">from</span> <span class="nn">plum</span> <span class="kn">import</span> <span class="n">convert</span><span class="p">,</span> <span class="n">Union</span>
 
-<span class="kn">from</span> <span class="nn">.util</span> <span class="kn">import</span> <span class="n">uprank</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">_dispatch</span><span class="p">,</span> <span class="n">BreakingChangeWarning</span>
 
-<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;Normal&quot;</span><span class="p">]</span>
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;Random&quot;</span><span class="p">,</span> <span class="s2">&quot;RandomProcess&quot;</span><span class="p">,</span> <span class="s2">&quot;RandomVector&quot;</span><span class="p">,</span> <span class="s2">&quot;Normal&quot;</span><span class="p">]</span>
 
 
-<span class="k">class</span> <span class="nc">Random</span><span class="p">(</span><span class="n">metaclass</span><span class="o">=</span><span class="n">Referentiable</span><span class="p">):</span>
+
+<div class="viewcode-block" id="Random"><a class="viewcode-back" href="../../source/stheno.random.html#stheno.random.Random">[docs]</a><span class="k">class</span> <span class="nc">Random</span><span class="p">:</span>
     <span class="sd">&quot;&quot;&quot;A random object.&quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="fm">__radd__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
@@ -185,15 +188,15 @@
         <span class="k">return</span> <span class="bp">self</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="n">other</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="fm">__truediv__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
-        <span class="k">return</span> <span class="n">Random</span><span class="o">.</span><span class="n">__div__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">Random</span><span class="o">.</span><span class="n">__div__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">)</span></div>
 
 
-<span class="k">class</span> <span class="nc">RandomProcess</span><span class="p">(</span><span class="n">Random</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;A random process.&quot;&quot;&quot;</span>
+<div class="viewcode-block" id="RandomProcess"><a class="viewcode-back" href="../../source/stheno.random.html#stheno.random.RandomProcess">[docs]</a><span class="k">class</span> <span class="nc">RandomProcess</span><span class="p">(</span><span class="n">Random</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;A random process.&quot;&quot;&quot;</span></div>
 
 
-<span class="k">class</span> <span class="nc">RandomVector</span><span class="p">(</span><span class="n">Random</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;A random vector.&quot;&quot;&quot;</span>
+<div class="viewcode-block" id="RandomVector"><a class="viewcode-back" href="../../source/stheno.random.html#stheno.random.RandomVector">[docs]</a><span class="k">class</span> <span class="nc">RandomVector</span><span class="p">(</span><span class="n">Random</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;A random vector.&quot;&quot;&quot;</span></div>
 
 
 <div class="viewcode-block" id="Normal"><a class="viewcode-back" href="../../source/stheno.random.html#stheno.random.Normal">[docs]</a><span class="k">class</span> <span class="nc">Normal</span><span class="p">(</span><span class="n">RandomVector</span><span class="p">):</span>
@@ -204,28 +207,30 @@
 <span class="sd">        var (matrix): Variance of the distribution.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="n">_dispatch</span> <span class="o">=</span> <span class="n">Dispatcher</span><span class="p">(</span><span class="n">in_class</span><span class="o">=</span><span class="n">Self</span><span class="p">)</span>
-
-    <span class="nd">@_dispatch</span><span class="p">({</span><span class="n">B</span><span class="o">.</span><span class="n">Numeric</span><span class="p">,</span> <span class="n">AbstractMatrix</span><span class="p">},</span> <span class="p">{</span><span class="n">B</span><span class="o">.</span><span class="n">Numeric</span><span class="p">,</span> <span class="n">AbstractMatrix</span><span class="p">})</span>
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mean</span><span class="p">,</span> <span class="n">var</span><span class="p">):</span>
+    <span class="nd">@_dispatch</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">mean</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">B</span><span class="o">.</span><span class="n">Numeric</span><span class="p">,</span> <span class="n">AbstractMatrix</span><span class="p">],</span>
+        <span class="n">var</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">B</span><span class="o">.</span><span class="n">Numeric</span><span class="p">,</span> <span class="n">AbstractMatrix</span><span class="p">],</span>
+    <span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_mean</span> <span class="o">=</span> <span class="n">mean</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_mean_is_zero</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_var</span> <span class="o">=</span> <span class="n">var</span>
 
-    <span class="nd">@_dispatch</span><span class="p">({</span><span class="n">B</span><span class="o">.</span><span class="n">Numeric</span><span class="p">,</span> <span class="n">AbstractMatrix</span><span class="p">})</span>
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">var</span><span class="p">):</span>
+    <span class="nd">@_dispatch</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">var</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">B</span><span class="o">.</span><span class="n">Numeric</span><span class="p">,</span> <span class="n">AbstractMatrix</span><span class="p">]):</span>
         <span class="n">Normal</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">var</span><span class="p">)</span>
 
-    <span class="nd">@_dispatch</span><span class="p">(</span><span class="n">FunctionType</span><span class="p">,</span> <span class="n">FunctionType</span><span class="p">)</span>
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">construct_mean</span><span class="p">,</span> <span class="n">construct_var</span><span class="p">):</span>
+    <span class="nd">@_dispatch</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">construct_mean</span><span class="p">:</span> <span class="n">FunctionType</span><span class="p">,</span> <span class="n">construct_var</span><span class="p">:</span> <span class="n">FunctionType</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_mean</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_construct_mean</span> <span class="o">=</span> <span class="n">construct_mean</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_mean_is_zero</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_var</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_construct_var</span> <span class="o">=</span> <span class="n">construct_var</span>
 
-    <span class="nd">@_dispatch</span><span class="p">(</span><span class="n">FunctionType</span><span class="p">)</span>
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">construct_var</span><span class="p">):</span>
+    <span class="nd">@_dispatch</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">construct_var</span><span class="p">:</span> <span class="n">FunctionType</span><span class="p">):</span>
         <span class="n">Normal</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="k">lambda</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="n">construct_var</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">_resolve_mean</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">construct_zeros</span><span class="p">):</span>
@@ -279,11 +284,34 @@
         <span class="sd">&quot;&quot;&quot;Get the marginals.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            tuple: A tuple containing the predictive means and lower and</span>
+<span class="sd">            tuple: A tuple containing the marginal means and marginal variances.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+            <span class="s1">&#39;&quot;Normal.marginals&quot; previously returned a tuple containing the marginal &#39;</span>
+            <span class="s2">&quot;means and marginal lower and upper 95</span><span class="si">% c</span><span class="s2">entral credible interval bounds, &quot;</span>
+            <span class="s2">&quot;but now it returns a tuple containing the marginal means and marginal &quot;</span>
+            <span class="s2">&quot;variances. This was a breaking change. If you wish to compute the &quot;</span>
+            <span class="s1">&#39;credible bounds, use &quot;Normal.marginal_error_bounds&quot;.&#39;</span><span class="p">,</span>
+            <span class="n">category</span><span class="o">=</span><span class="n">BreakingChangeWarning</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="c1"># It can happen that the variances are slightly negative due to numerical noise.</span>
+        <span class="c1"># Prevent NaNs from the following square root by taking the maximum with zero.</span>
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="n">B</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="n">B</span><span class="o">.</span><span class="n">dense</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mean</span><span class="p">)),</span>
+            <span class="n">B</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">B</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">var</span><span class="p">),</span> <span class="n">B</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="mi">0</span><span class="p">)),</span>
+        <span class="p">)</span></div>
+
+<div class="viewcode-block" id="Normal.marginal_credible_bounds"><a class="viewcode-back" href="../../source/stheno.random.html#stheno.random.Normal.marginal_credible_bounds">[docs]</a>    <span class="k">def</span> <span class="nf">marginal_credible_bounds</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Get the marginal credible region bounds.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            tuple: A tuple containing the marginal means and marginal lower and</span>
 <span class="sd">                upper 95% central credible interval bounds.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">mean</span> <span class="o">=</span> <span class="n">B</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="n">B</span><span class="o">.</span><span class="n">dense</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mean</span><span class="p">))</span>
-        <span class="n">error</span> <span class="o">=</span> <span class="mf">1.96</span> <span class="o">*</span> <span class="n">B</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">B</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">var</span><span class="p">))</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">simplefilter</span><span class="p">(</span><span class="n">category</span><span class="o">=</span><span class="n">BreakingChangeWarning</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s2">&quot;ignore&quot;</span><span class="p">)</span>
+        <span class="n">mean</span><span class="p">,</span> <span class="n">variances</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">marginals</span><span class="p">()</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">simplefilter</span><span class="p">(</span><span class="n">category</span><span class="o">=</span><span class="n">BreakingChangeWarning</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s2">&quot;default&quot;</span><span class="p">)</span>
+        <span class="n">error</span> <span class="o">=</span> <span class="mf">1.96</span> <span class="o">*</span> <span class="n">B</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">variances</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">mean</span><span class="p">,</span> <span class="n">mean</span> <span class="o">-</span> <span class="n">error</span><span class="p">,</span> <span class="n">mean</span> <span class="o">+</span> <span class="n">error</span></div>
 
 <div class="viewcode-block" id="Normal.logpdf"><a class="viewcode-back" href="../../source/stheno.random.html#stheno.random.Normal.logpdf">[docs]</a>    <span class="k">def</span> <span class="nf">logpdf</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
@@ -301,7 +329,7 @@
             <span class="o">-</span><span class="p">(</span>
                 <span class="n">B</span><span class="o">.</span><span class="n">logdet</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">var</span><span class="p">)</span>
                 <span class="o">+</span> <span class="n">B</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="p">)</span> <span class="o">*</span> <span class="n">B</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">B</span><span class="o">.</span><span class="n">log_2_pi</span><span class="p">)</span>
-                <span class="o">+</span> <span class="n">B</span><span class="o">.</span><span class="n">iqf_diag</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">var</span><span class="p">,</span> <span class="n">B</span><span class="o">.</span><span class="n">subtract</span><span class="p">(</span><span class="n">uprank</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean</span><span class="p">))</span>
+                <span class="o">+</span> <span class="n">B</span><span class="o">.</span><span class="n">iqf_diag</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">var</span><span class="p">,</span> <span class="n">B</span><span class="o">.</span><span class="n">subtract</span><span class="p">(</span><span class="n">B</span><span class="o">.</span><span class="n">uprank</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean</span><span class="p">))</span>
             <span class="p">)</span>
             <span class="o">/</span> <span class="mi">2</span>
         <span class="p">)</span>
@@ -318,8 +346,8 @@
             <span class="o">+</span> <span class="n">B</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="p">)</span> <span class="o">*</span> <span class="n">B</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">B</span><span class="o">.</span><span class="n">log_2_pi</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
         <span class="p">)</span> <span class="o">/</span> <span class="mi">2</span></div>
 
-<div class="viewcode-block" id="Normal.kl"><a class="viewcode-back" href="../../source/stheno.random.html#stheno.random.Normal.kl">[docs]</a>    <span class="nd">@_dispatch</span><span class="p">(</span><span class="n">Self</span><span class="p">)</span>
-    <span class="k">def</span> <span class="nf">kl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+<div class="viewcode-block" id="Normal.kl"><a class="viewcode-back" href="../../source/stheno.random.html#stheno.random.Normal.kl">[docs]</a>    <span class="nd">@_dispatch</span>
+    <span class="k">def</span> <span class="nf">kl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="s2">&quot;Normal&quot;</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Compute the KL divergence with respect to another normal</span>
 <span class="sd">        distribution.</span>
 
@@ -337,8 +365,8 @@
             <span class="o">-</span> <span class="n">B</span><span class="o">.</span><span class="n">logdet</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">var</span><span class="p">)</span>
         <span class="p">)</span> <span class="o">/</span> <span class="mi">2</span></div>
 
-<div class="viewcode-block" id="Normal.w2"><a class="viewcode-back" href="../../source/stheno.random.html#stheno.random.Normal.w2">[docs]</a>    <span class="nd">@_dispatch</span><span class="p">(</span><span class="n">Self</span><span class="p">)</span>
-    <span class="k">def</span> <span class="nf">w2</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+<div class="viewcode-block" id="Normal.w2"><a class="viewcode-back" href="../../source/stheno.random.html#stheno.random.Normal.w2">[docs]</a>    <span class="nd">@_dispatch</span>
+    <span class="k">def</span> <span class="nf">w2</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="s2">&quot;Normal&quot;</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Compute the 2-Wasserstein distance with respect to another normal</span>
 <span class="sd">        distribution.</span>
 
@@ -354,7 +382,7 @@
         <span class="n">mean_part</span> <span class="o">=</span> <span class="n">B</span><span class="o">.</span><span class="n">sum</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">mean</span> <span class="o">-</span> <span class="n">other</span><span class="o">.</span><span class="n">mean</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
         <span class="c1"># The sum of `mean_part` and `var_par` should be positive, but this</span>
         <span class="c1"># may not be the case due to numerical errors.</span>
-        <span class="k">return</span> <span class="n">B</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">mean_part</span> <span class="o">+</span> <span class="n">var_part</span><span class="p">)</span> <span class="o">**</span> <span class="mf">0.5</span></div>
+        <span class="k">return</span> <span class="n">B</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">B</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">mean_part</span> <span class="o">+</span> <span class="n">var_part</span><span class="p">,</span> <span class="n">B</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="mi">0</span><span class="p">)))</span></div>
 
 <div class="viewcode-block" id="Normal.sample"><a class="viewcode-back" href="../../source/stheno.random.html#stheno.random.Normal.sample">[docs]</a>    <span class="k">def</span> <span class="nf">sample</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">num</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">noise</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Sample from the distribution.</span>
@@ -380,16 +408,16 @@
 
         <span class="k">return</span> <span class="n">B</span><span class="o">.</span><span class="n">dense</span><span class="p">(</span><span class="n">sample</span><span class="p">)</span></div>
 
-    <span class="nd">@_dispatch</span><span class="p">(</span><span class="n">B</span><span class="o">.</span><span class="n">Numeric</span><span class="p">)</span>
-    <span class="k">def</span> <span class="fm">__add__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+    <span class="nd">@_dispatch</span>
+    <span class="k">def</span> <span class="fm">__add__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="n">B</span><span class="o">.</span><span class="n">Numeric</span><span class="p">):</span>
         <span class="k">return</span> <span class="n">Normal</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mean</span> <span class="o">+</span> <span class="n">other</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">var</span><span class="p">)</span>
 
-    <span class="nd">@_dispatch</span><span class="p">(</span><span class="n">Self</span><span class="p">)</span>
-    <span class="k">def</span> <span class="fm">__add__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+    <span class="nd">@_dispatch</span>
+    <span class="k">def</span> <span class="fm">__add__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="s2">&quot;Normal&quot;</span><span class="p">):</span>
         <span class="k">return</span> <span class="n">Normal</span><span class="p">(</span><span class="n">B</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mean</span><span class="p">,</span> <span class="n">other</span><span class="o">.</span><span class="n">mean</span><span class="p">),</span> <span class="n">B</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">var</span><span class="p">,</span> <span class="n">other</span><span class="o">.</span><span class="n">var</span><span class="p">))</span>
 
-    <span class="nd">@_dispatch</span><span class="p">(</span><span class="n">B</span><span class="o">.</span><span class="n">Numeric</span><span class="p">)</span>
-    <span class="k">def</span> <span class="fm">__mul__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+    <span class="nd">@_dispatch</span>
+    <span class="k">def</span> <span class="fm">__mul__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="n">B</span><span class="o">.</span><span class="n">Numeric</span><span class="p">):</span>
         <span class="k">return</span> <span class="n">Normal</span><span class="p">(</span><span class="n">B</span><span class="o">.</span><span class="n">multiply</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mean</span><span class="p">,</span> <span class="n">other</span><span class="p">),</span> <span class="n">B</span><span class="o">.</span><span class="n">multiply</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">var</span><span class="p">,</span> <span class="n">other</span> <span class="o">**</span> <span class="mi">2</span><span class="p">))</span>
 
 <div class="viewcode-block" id="Normal.lmatmul"><a class="viewcode-back" href="../../source/stheno.random.html#stheno.random.Normal.lmatmul">[docs]</a>    <span class="k">def</span> <span class="nf">lmatmul</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>

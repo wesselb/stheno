@@ -7,7 +7,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>stheno.jax module &mdash; stheno 0.1.0 documentation</title>
+  <title>stheno.model.fdd module &mdash; stheno 0.1.0 documentation</title>
   
 
   
@@ -36,8 +36,8 @@
     
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="stheno.lazy module" href="stheno.lazy.html" />
-    <link rel="prev" title="stheno.autograd module" href="stheno.autograd.html" /> 
+    <link rel="next" title="stheno.model.gp module" href="stheno.model.gp.html" />
+    <link rel="prev" title="stheno.model package" href="stheno.model.html" /> 
 </head>
 
 <body class="wy-body-for-nav">
@@ -90,14 +90,23 @@
 <li class="toctree-l1"><a class="reference internal" href="../readme.html">Stheno</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../api.html">Application Programming Interface</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="stheno.autograd.html">stheno.autograd module</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">stheno.jax module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stheno.jax.html">stheno.jax module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stheno.lazy.html">stheno.lazy module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stheno.mo.html">stheno.mo package</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stheno.mo.input.html">stheno.mo.input module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stheno.mo.kernel.html">stheno.mo.kernel module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stheno.mo.mean.html">stheno.mo.mean module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stheno.model.html">stheno.model package</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stheno.model.fdd.html">stheno.model.fdd module</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="stheno.model.html">stheno.model package</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="stheno.model.html#submodules">Submodules</a><ul class="current">
+<li class="toctree-l4 current"><a class="current reference internal" href="#">stheno.model.fdd module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="stheno.model.gp.html">stheno.model.gp module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="stheno.model.measure.html">stheno.model.measure module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="stheno.model.observations.html">stheno.model.observations module</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">stheno.model.fdd module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stheno.model.gp.html">stheno.model.gp module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stheno.model.measure.html">stheno.model.measure module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stheno.model.observations.html">stheno.model.observations module</a></li>
@@ -154,13 +163,15 @@
         
           <li><a href="../api.html">Application Programming Interface</a> &raquo;</li>
         
-      <li>stheno.jax module</li>
+          <li><a href="stheno.model.html">stheno.model package</a> &raquo;</li>
+        
+      <li>stheno.model.fdd module</li>
     
     
       <li class="wy-breadcrumbs-aside">
         
             
-            <a href="../_sources/source/stheno.jax.rst.txt" rel="nofollow"> View page source</a>
+            <a href="../_sources/source/stheno.model.fdd.rst.txt" rel="nofollow"> View page source</a>
           
         
       </li>
@@ -173,8 +184,58 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="module-stheno.jax">
-<span id="stheno-jax-module"></span><h1>stheno.jax module<a class="headerlink" href="#module-stheno.jax" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="module-stheno.model.fdd">
+<span id="stheno-model-fdd-module"></span><h1>stheno.model.fdd module<a class="headerlink" href="#module-stheno.model.fdd" title="Permalink to this headline">¶</a></h1>
+<dl class="py class">
+<dt id="stheno.model.fdd.FDD">
+<em class="property">class </em><code class="sig-prename descclassname">stheno.model.fdd.</code><code class="sig-name descname">FDD</code><a class="reference internal" href="../_modules/stheno/model/fdd.html#FDD"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.model.fdd.FDD" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="stheno.random.html#stheno.random.Normal" title="stheno.random.Normal"><code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.random.Normal</span></code></a></p>
+<p>Finite-dimensional distribution.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>p</strong> (<a class="reference internal" href="stheno.random.html#stheno.random.RandomProcess" title="stheno.random.RandomProcess"><code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.random.RandomProcess</span></code></a> or int) – Process of FDD. Can also be the
+<cite>id</cite> of the process.</p></li>
+<li><p><strong>x</strong> (<em>input</em>) – Inputs that <cite>p</cite> is evaluated at.</p></li>
+<li><p><strong>noise</strong> (<em>scalar</em><em>, </em><em>vector</em><em>, or </em><em>matrix</em><em>, </em><em>optional</em>) – Additive noise.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt id="stheno.model.fdd.FDD.p">
+<code class="sig-name descname">p</code><a class="headerlink" href="#stheno.model.fdd.FDD.p" title="Permalink to this definition">¶</a></dt>
+<dd><p>Process of FDD.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="stheno.random.html#stheno.random.RandomProcess" title="stheno.random.RandomProcess"><code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.random.RandomProcess</span></code></a> or int</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="stheno.model.fdd.FDD.x">
+<code class="sig-name descname">x</code><a class="headerlink" href="#stheno.model.fdd.FDD.x" title="Permalink to this definition">¶</a></dt>
+<dd><p>Inputs that <cite>p</cite> is evaluated at.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>input</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="stheno.model.fdd.FDD.noise">
+<code class="sig-name descname">noise</code><a class="headerlink" href="#stheno.model.fdd.FDD.noise" title="Permalink to this definition">¶</a></dt>
+<dd><p>Additive noise. <cite>None</cite> if <cite>p</cite> is an <cite>int</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>matrix or None</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
 </div>
 
 
@@ -185,10 +246,10 @@
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="stheno.lazy.html" class="btn btn-neutral float-right" title="stheno.lazy module" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="stheno.model.gp.html" class="btn btn-neutral float-right" title="stheno.model.gp module" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="stheno.autograd.html" class="btn btn-neutral float-left" title="stheno.autograd module" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="stheno.model.html" class="btn btn-neutral float-left" title="stheno.model package" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   

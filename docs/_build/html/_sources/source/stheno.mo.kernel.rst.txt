@@ -1,0 +1,7 @@
+stheno.mo.kernel module
+=======================
+
+.. automodule:: stheno.mo.kernel
+   :members:
+   :undoc-members:
+   :show-inheritance:

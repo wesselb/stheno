@@ -7,7 +7,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>stheno.jax module &mdash; stheno 0.1.0 documentation</title>
+  <title>stheno &mdash; stheno 0.1.0 documentation</title>
   
 
   
@@ -35,9 +35,7 @@
 
     
     <link rel="index" title="Index" href="../genindex.html" />
-    <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="stheno.lazy module" href="stheno.lazy.html" />
-    <link rel="prev" title="stheno.autograd module" href="stheno.autograd.html" /> 
+    <link rel="search" title="Search" href="../search.html" /> 
 </head>
 
 <body class="wy-body-for-nav">
@@ -86,26 +84,9 @@
               
             
             
-              <ul class="current">
+              <ul>
 <li class="toctree-l1"><a class="reference internal" href="../readme.html">Stheno</a></li>
-<li class="toctree-l1 current"><a class="reference internal" href="../api.html">Application Programming Interface</a><ul class="current">
-<li class="toctree-l2"><a class="reference internal" href="stheno.autograd.html">stheno.autograd module</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">stheno.jax module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stheno.lazy.html">stheno.lazy module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stheno.mo.html">stheno.mo package</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stheno.mo.input.html">stheno.mo.input module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stheno.mo.kernel.html">stheno.mo.kernel module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stheno.mo.mean.html">stheno.mo.mean module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stheno.model.html">stheno.model package</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stheno.model.fdd.html">stheno.model.fdd module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stheno.model.gp.html">stheno.model.gp module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stheno.model.measure.html">stheno.model.measure module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stheno.model.observations.html">stheno.model.observations module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stheno.random.html">stheno.random module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stheno.tensorflow.html">stheno.tensorflow module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stheno.torch.html">stheno.torch module</a></li>
-</ul>
-</li>
+<li class="toctree-l1"><a class="reference internal" href="../api.html">Application Programming Interface</a></li>
 </ul>
 
             
@@ -152,16 +133,12 @@
     
       <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
         
-          <li><a href="../api.html">Application Programming Interface</a> &raquo;</li>
+          <li><a href="index.html">Module code</a> &raquo;</li>
         
-      <li>stheno.jax module</li>
+      <li>stheno</li>
     
     
       <li class="wy-breadcrumbs-aside">
-        
-            
-            <a href="../_sources/source/stheno.jax.rst.txt" rel="nofollow"> View page source</a>
-          
         
       </li>
     
@@ -173,24 +150,37 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="module-stheno.jax">
-<span id="stheno-jax-module"></span><h1>stheno.jax module<a class="headerlink" href="#module-stheno.jax" title="Permalink to this headline">¶</a></h1>
-</div>
+  <h1>Source code for stheno</h1><div class="highlight"><pre>
+<span></span><span class="c1"># noinspection PyUnresolvedReferences</span>
+<span class="kn">import</span> <span class="nn">matrix</span>
+<span class="c1"># noinspection PyUnresolvedReferences</span>
+<span class="kn">from</span> <span class="nn">mlkernels</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="c1"># noinspection PyUnresolvedReferences</span>
+<span class="kn">import</span> <span class="nn">lab</span> <span class="k">as</span> <span class="nn">B</span>
 
+<span class="kn">from</span> <span class="nn">plum</span> <span class="kn">import</span> <span class="n">PromisedType</span><span class="p">,</span> <span class="n">Dispatcher</span>
+
+<span class="n">PromisedFDD</span> <span class="o">=</span> <span class="n">PromisedType</span><span class="p">()</span>
+<span class="n">PromisedGP</span> <span class="o">=</span> <span class="n">PromisedType</span><span class="p">()</span>
+<span class="n">PromisedMeasure</span> <span class="o">=</span> <span class="n">PromisedType</span><span class="p">()</span>
+
+<span class="n">_dispatch</span> <span class="o">=</span> <span class="n">Dispatcher</span><span class="p">()</span>
+
+
+<div class="viewcode-block" id="BreakingChangeWarning"><a class="viewcode-back" href="../api.html#stheno.BreakingChangeWarning">[docs]</a><span class="k">class</span> <span class="nc">BreakingChangeWarning</span><span class="p">(</span><span class="ne">UserWarning</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;A breaking change.&quot;&quot;&quot;</span></div>
+
+
+<span class="kn">from</span> <span class="nn">.lazy</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">.model</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">.mo</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">.random</span> <span class="kn">import</span> <span class="o">*</span>
+</pre></div>
 
            </div>
            
           </div>
           <footer>
-  
-    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
-      
-        <a href="stheno.lazy.html" class="btn btn-neutral float-right" title="stheno.lazy module" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
-      
-      
-        <a href="stheno.autograd.html" class="btn btn-neutral float-left" title="stheno.autograd module" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
-      
-    </div>
   
 
   <hr/>

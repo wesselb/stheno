@@ -1,0 +1,17 @@
+stheno.mo package
+=================
+
+.. automodule:: stheno.mo
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 4
+
+   stheno.mo.input
+   stheno.mo.kernel
+   stheno.mo.mean

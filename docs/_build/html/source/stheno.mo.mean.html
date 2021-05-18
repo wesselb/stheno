@@ -7,7 +7,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>stheno.momean module &mdash; stheno 0.1.0 documentation</title>
+  <title>stheno.mo.mean module &mdash; stheno 0.1.0 documentation</title>
   
 
   
@@ -30,15 +30,14 @@
         <script src="../_static/underscore.js"></script>
         <script src="../_static/doctools.js"></script>
         <script src="../_static/language_data.js"></script>
-        <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
     
     <script type="text/javascript" src="../_static/js/theme.js"></script>
 
     
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="stheno.random module" href="stheno.random.html" />
-    <link rel="prev" title="stheno.mokernel module" href="stheno.mokernel.html" /> 
+    <link rel="next" title="stheno.model package" href="stheno.model.html" />
+    <link rel="prev" title="stheno.mo.kernel module" href="stheno.mo.kernel.html" /> 
 </head>
 
 <body class="wy-body-for-nav">
@@ -91,18 +90,28 @@
 <li class="toctree-l1"><a class="reference internal" href="../readme.html">Stheno</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../api.html">Application Programming Interface</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="stheno.autograd.html">stheno.autograd module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stheno.input.html">stheno.input module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stheno.jax.html">stheno.jax module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stheno.kernel.html">stheno.kernel module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stheno.lazy.html">stheno.lazy module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stheno.mean.html">stheno.mean module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stheno.measure.html">stheno.measure module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stheno.mokernel.html">stheno.mokernel module</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">stheno.momean module</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="stheno.mo.html">stheno.mo package</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="stheno.mo.html#submodules">Submodules</a><ul class="current">
+<li class="toctree-l4"><a class="reference internal" href="stheno.mo.input.html">stheno.mo.input module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="stheno.mo.kernel.html">stheno.mo.kernel module</a></li>
+<li class="toctree-l4 current"><a class="current reference internal" href="#">stheno.mo.mean module</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="stheno.mo.input.html">stheno.mo.input module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stheno.mo.kernel.html">stheno.mo.kernel module</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">stheno.mo.mean module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stheno.model.html">stheno.model package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stheno.model.fdd.html">stheno.model.fdd module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stheno.model.gp.html">stheno.model.gp module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stheno.model.measure.html">stheno.model.measure module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stheno.model.observations.html">stheno.model.observations module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stheno.random.html">stheno.random module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stheno.tensorflow.html">stheno.tensorflow module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stheno.torch.html">stheno.torch module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stheno.util.html">stheno.util module</a></li>
 </ul>
 </li>
 </ul>
@@ -153,13 +162,15 @@
         
           <li><a href="../api.html">Application Programming Interface</a> &raquo;</li>
         
-      <li>stheno.momean module</li>
+          <li><a href="stheno.mo.html">stheno.mo package</a> &raquo;</li>
+        
+      <li>stheno.mo.mean module</li>
     
     
       <li class="wy-breadcrumbs-aside">
         
             
-            <a href="../_sources/source/stheno.momean.rst.txt" rel="nofollow"> View page source</a>
+            <a href="../_sources/source/stheno.mo.mean.rst.txt" rel="nofollow"> View page source</a>
           
         
       </li>
@@ -172,46 +183,48 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="module-stheno.momean">
-<span id="stheno-momean-module"></span><h1>stheno.momean module<a class="headerlink" href="#module-stheno.momean" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="module-stheno.mo.mean">
+<span id="stheno-mo-mean-module"></span><h1>stheno.mo.mean module<a class="headerlink" href="#module-stheno.mo.mean" title="Permalink to this headline">¶</a></h1>
 <dl class="py class">
-<dt id="stheno.momean.MultiOutputMean">
-<em class="property">class </em><code class="sig-prename descclassname">stheno.momean.</code><code class="sig-name descname">MultiOutputMean</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">measure</span></em>, <em class="sig-param"><span class="o">*</span><span class="n">ps</span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/stheno/momean.html#MultiOutputMean"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.momean.MultiOutputMean" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.mean.Mean</span></code></p>
+<dt id="stheno.mo.mean.MultiOutputMean">
+<em class="property">class </em><code class="sig-prename descclassname">stheno.mo.mean.</code><code class="sig-name descname">MultiOutputMean</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">measure</span></em>, <em class="sig-param"><span class="o">*</span><span class="n">ps</span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/stheno/mo/mean.html#MultiOutputMean"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.mo.mean.MultiOutputMean" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">mlkernels.mean.Mean</span></code></p>
 <p>A generic multi-output mean.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>measure</strong> (<a class="reference internal" href="stheno.measure.html#stheno.measure.Measure" title="stheno.measure.Measure"><code class="xref py py-class docutils literal notranslate"><span class="pre">measure.Measure</span></code></a>) – Measure to take the means from.</p></li>
-<li><p><strong>*ps</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">graph.GP</span></code>) – Processes that make up the multi-valued process.</p></li>
+<li><p><strong>measure</strong> (<a class="reference internal" href="stheno.model.measure.html#stheno.model.measure.Measure" title="stheno.model.measure.Measure"><code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.model.measure.Measure</span></code></a>) – Measure to take the means from.</p></li>
+<li><p><strong>*ps</strong> (<a class="reference internal" href="stheno.model.gp.html#stheno.model.gp.GP" title="stheno.model.gp.GP"><code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.model.gp.GP</span></code></a>) – Processes that make up the multi-valued
+process.</p></li>
 </ul>
 </dd>
 </dl>
 <dl class="py attribute">
-<dt id="stheno.momean.MultiOutputMean.measure">
-<code class="sig-name descname">measure</code><a class="headerlink" href="#stheno.momean.MultiOutputMean.measure" title="Permalink to this definition">¶</a></dt>
+<dt id="stheno.mo.mean.MultiOutputMean.measure">
+<code class="sig-name descname">measure</code><a class="headerlink" href="#stheno.mo.mean.MultiOutputMean.measure" title="Permalink to this definition">¶</a></dt>
 <dd><p>Measure to take the means from.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
-<dd class="field-odd"><p><a class="reference internal" href="stheno.measure.html#stheno.measure.Measure" title="stheno.measure.Measure"><code class="xref py py-class docutils literal notranslate"><span class="pre">measure.Measure</span></code></a></p>
+<dd class="field-odd"><p><a class="reference internal" href="stheno.model.measure.html#stheno.model.measure.Measure" title="stheno.model.measure.Measure"><code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.model.measure.Measure</span></code></a></p>
 </dd>
 </dl>
 </dd></dl>
 
 <dl class="py attribute">
-<dt id="stheno.momean.MultiOutputMean.ps">
-<code class="sig-name descname">ps</code><a class="headerlink" href="#stheno.momean.MultiOutputMean.ps" title="Permalink to this definition">¶</a></dt>
-<dd><p>Processes that make up the multi-valued process.</p>
+<dt id="stheno.mo.mean.MultiOutputMean.ps">
+<code class="sig-name descname">ps</code><a class="headerlink" href="#stheno.mo.mean.MultiOutputMean.ps" title="Permalink to this definition">¶</a></dt>
+<dd><p>Processes that make up the
+multi-valued process.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
-<dd class="field-odd"><p>tuple[<code class="xref py py-class docutils literal notranslate"><span class="pre">graph.GP</span></code>]</p>
+<dd class="field-odd"><p>tuple[<a class="reference internal" href="stheno.model.gp.html#stheno.model.gp.GP" title="stheno.model.gp.GP"><code class="xref py py-class docutils literal notranslate"><span class="pre">stheno.model.gp.GP</span></code></a>]</p>
 </dd>
 </dl>
 </dd></dl>
 
 <dl class="py method">
-<dt id="stheno.momean.MultiOutputMean.render">
-<code class="sig-name descname">render</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">formatter</span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/stheno/momean.html#MultiOutputMean.render"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.momean.MultiOutputMean.render" title="Permalink to this definition">¶</a></dt>
+<dt id="stheno.mo.mean.MultiOutputMean.render">
+<code class="sig-name descname">render</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">formatter</span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/stheno/mo/mean.html#MultiOutputMean.render"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stheno.mo.mean.MultiOutputMean.render" title="Permalink to this definition">¶</a></dt>
 <dd><p>Render the element.</p>
 <p>This is the lowest-level operation in pretty printing an element, and should
 produce a string representation of the element. This method should be
@@ -241,10 +254,10 @@ implemented to determine how to render a custom element.</p>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="stheno.random.html" class="btn btn-neutral float-right" title="stheno.random module" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="stheno.model.html" class="btn btn-neutral float-right" title="stheno.model package" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="stheno.mokernel.html" class="btn btn-neutral float-left" title="stheno.mokernel module" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="stheno.mo.kernel.html" class="btn btn-neutral float-left" title="stheno.mo.kernel module" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
