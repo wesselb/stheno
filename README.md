@@ -264,7 +264,7 @@ True
     ```
     
 * Construct a finite difference estimate of the derivative of a GP.
-    See `stheno.measure.Measure.diff_approx` for a description of the arguments.
+    See `Measure.diff_approx` for a description of the arguments.
     
     Example:
     
@@ -610,7 +610,7 @@ AssertionError: Processes GP(0, EQ()) and GP(0, Linear()) are associated to diff
 ### Inducing Points
 
 Stheno supports pseudo-point approximations of posterior distributions.
-To construct a pseudo-point approximation, use `Measure.PseudoObs`.
+To construct a pseudo-point approximation, use `PseudoObs`.
 
 Definition:
 
