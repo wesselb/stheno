@@ -799,7 +799,7 @@ plt.show()
 ```
 
 ### Hyperparameter Optimization
-```
+```python
 from stheno import EQ, GP
 import tensorflow as tf
 from varz.tensorflow import Vars, minimise_l_bfgs_b
@@ -830,6 +830,7 @@ vs = Vars(tf.float64)
 minimise_l_bfgs_b(objective, vs, trace=True)
 vs.print()
 ```
+#### Output
 ```
 Minimisation of "objective":
     Iteration 1/1000:
