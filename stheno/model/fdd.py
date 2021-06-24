@@ -11,7 +11,7 @@ __all__ = ["FDD"]
 
 
 @_dispatch
-def _noise_as_matrix(noise: type(None), dtype: B.DType, n: int):
+def _noise_as_matrix(noise: type(None), dtype: B.DType, n: B.Int):
     """Efficiently represent noise as a matrix.
 
     Args:
@@ -26,8 +26,8 @@ def _noise_as_matrix(noise: type(None), dtype: B.DType, n: int):
 
 
 @_dispatch
-def _noise_as_matrix(noise: B.Numeric, dtype: B.DType, n: int):
-    if B.isscalar(noise):
+def _noise_as_matrix(noise: B.Numeric, dtype: B.DType, n: B.Int):
+    if B.is_scalar(noise):
         return B.fill_diag(noise, n)
     elif B.rank(noise) == 1:
         return Diagonal(noise)
@@ -36,7 +36,7 @@ def _noise_as_matrix(noise: B.Numeric, dtype: B.DType, n: int):
 
 
 @_dispatch
-def _noise_as_matrix(noise: AbstractMatrix, dtype: B.DType, n: int):
+def _noise_as_matrix(noise: AbstractMatrix, dtype: B.DType, n: B.Int):
     return noise
 
 
