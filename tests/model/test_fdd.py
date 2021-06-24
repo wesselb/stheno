@@ -1,8 +1,8 @@
 import lab as B
 import matrix
 import numpy as np
+from lab.shape import Dimension
 from mlkernels import EQ, num_elements
-
 from stheno.model import GP, FDD
 from stheno.model.fdd import _noise_as_matrix
 
@@ -14,14 +14,16 @@ def test_noise_as_matrix():
         assert B.dtype(noise) == dtype
         assert B.shape(noise) == (n, n)
 
-    check(None, int, 5, matrix.Zero)
-    check(None, float, 5, matrix.Zero)
-    check(1, np.int64, 5, matrix.Diagonal)
-    check(1.0, np.float64, 5, matrix.Diagonal)
-    check(B.ones(int, 5), np.int64, 5, matrix.Diagonal)
-    check(B.ones(float, 5), np.float64, 5, matrix.Diagonal)
-    check(matrix.Dense(B.ones(int, 5, 5)), np.int64, 5, matrix.Dense)
-    check(matrix.Dense(B.randn(float, 5, 5)), np.float64, 5, matrix.Dense)
+    # Check that the type for `n` is appropriate.
+    for d in [5, Dimension(5)]:
+        check(None, int, d, matrix.Zero)
+        check(None, float, d, matrix.Zero)
+        check(1, np.int64, d, matrix.Diagonal)
+        check(1.0, np.float64, d, matrix.Diagonal)
+        check(B.ones(int, 5), np.int64, d, matrix.Diagonal)
+        check(B.ones(float, 5), np.float64, d, matrix.Diagonal)
+        check(matrix.Dense(B.ones(int, 5, 5)), np.int64, d, matrix.Dense)
+        check(matrix.Dense(B.randn(float, 5, 5)), np.float64, d, matrix.Dense)
 
 
 def test_fdd():
