@@ -36,7 +36,7 @@ Contents:
     - [Smoothing with Nonparametric Basis Functions](#smoothing-with-nonparametric-basis-functions)
 
 **Breaking change:**
-`f(x).marginals()` now returns the marginals means and variances, rather than the
+`f(x).marginals()` now returns the marginal means and variances, rather than the
 marginal means and lower and upper 95% central credible region bounds.
 For the credible bounds, use `f(x).marginal_credible_bounds()` instead.
 
@@ -401,7 +401,7 @@ Things you can do with a finite-dimensional distribution:
 *
     Use `Measure.logpdf` to compute the joint logpdf of multiple observations.
 
-    Definition:
+    Definition, where `prior = Measure()`:
 
     ```python
     prior.logpdf(f(x), y)
