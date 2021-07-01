@@ -313,12 +313,12 @@ True
 
 #### Displaying GPs
 
-Like means and kernels, GPs have a `display` method that accepts a formatter.
+GPs have a `display` method that accepts a formatter.
 
 Example:
 
 ```python
->>> print(GP(2.12345 * EQ()).display(lambda x: '{:.2f}'.format(x)))
+>>> print(GP(2.12345 * EQ()).display(lambda x: f"{x:.2f}"))
 GP(2.12 * EQ(), 0)
 ```
 
@@ -345,14 +345,14 @@ Example:
 ```python
 >>> prior = Measure()
 
->>> p = GP(EQ(), name='name', measure=prior)
+>>> p = GP(EQ(), name="name", measure=prior)
 
 >>> p.name
 'name'
 
->>> p.name = 'alternative_name'
+>>> p.name = "alternative_name"
 
->>> prior['alternative_name']
+>>> prior["alternative_name"]
 GP(0, EQ())
 
 >>> prior[p]
