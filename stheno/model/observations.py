@@ -291,7 +291,8 @@ class PseudoObservations(AbstractObservations):
             - Diagonal(B.iqf_diag(K_z, K_zx)),
             K_n,
         )
-        det_part = B.logdet(2 * B.pi * K_n) + B.logdet(A)
+        dtype = B.dtype_float(K_n)
+        det_part = B.logdet(B.multiply(B.cast(dtype, 2 * B.pi), K_n)) + B.logdet(A)
         iqf_part = B.iqf(K_n, y_bar)[0, 0] - B.iqf(A, prod_y_bar)[0, 0]
         self._elbo_store[id(measure)] = -0.5 * (trace_part + det_part + iqf_part)
 
