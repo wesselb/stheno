@@ -10,7 +10,6 @@ from . import _dispatch, BreakingChangeWarning
 __all__ = ["Random", "RandomProcess", "RandomVector", "Normal"]
 
 
-
 class Random:
     """A random object."""
 
@@ -170,11 +169,24 @@ class Normal(RandomVector):
                 determined that the list contains only a single log-pdf,
                 then the list is flattened to a scalar.
         """
+        x = B.uprank(x)
+
+        # Handle missing data. We don't handle missing data for batched computation.
+        if B.shape(x, 1) == 1:
+            available = B.jit_to_numpy(~B.isnan(x[:, 0]))
+            if not B.all(available):
+                # Take the elements of the mean, variance, and inputs corresponding to
+                # the available data.
+                available_mean = B.take(self.mean, available)
+                available_var = B.submatrix(self.var, available)
+                available_x = B.take(x, available)
+                return Normal(available_mean, available_var).logpdf(available_x)
+
         logpdfs = (
             -(
                 B.logdet(self.var)
                 + B.cast(self.dtype, self.dim) * B.cast(self.dtype, B.log_2_pi)
-                + B.iqf_diag(self.var, B.subtract(B.uprank(x), self.mean))
+                + B.iqf_diag(self.var, B.subtract(x, self.mean))
             )
             / 2
         )

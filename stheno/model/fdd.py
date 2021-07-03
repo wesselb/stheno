@@ -1,6 +1,6 @@
 from lab import B
 from matrix import AbstractMatrix, Dense, Zero, Diagonal
-from mlkernels import num_elements
+from mlkernels import Kernel, num_elements
 from wbml.util import indented_kv
 
 from .. import PromisedFDD, PromisedGP, _dispatch
@@ -92,7 +92,7 @@ class FDD(Normal):
 PromisedFDD.deliver(FDD)
 
 
-@B.dtype.dispatch
+@B.dispatch
 def dtype(fdd: FDD):
     return B.dtype(fdd.x)
 
@@ -100,3 +100,29 @@ def dtype(fdd: FDD):
 @num_elements.dispatch
 def num_elements(fdd: FDD):
     return num_elements(fdd.x)
+
+
+@B.dispatch
+def take(fdd: FDD, indices_or_mask: B.Numeric):
+    if not B.issubdtype(B.dtype(indices_or_mask), bool):
+        raise AssertionError(
+            "Can only take from finite-dimensional distributions according to a mask."
+        )
+    mask = indices_or_mask
+    return FDD(fdd.p, _take_x(fdd.p.kernel, fdd.x, mask), B.submatrix(fdd.noise, mask))
+
+
+@_dispatch
+def _take_x(k: Kernel, x: B.Numeric, mask: B.Numeric):
+    return B.take(x, mask)
+
+
+@_dispatch
+def _take_x(k: Kernel, xs: tuple, mask: B.Numeric):
+    i = 0
+    xs_taken = ()
+    for x in xs:
+        n = infer_size(k, x)
+        xs_taken += (_take_x(k, x, mask[i : i + n]),)
+        i += n
+    return xs_taken

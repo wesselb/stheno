@@ -95,6 +95,18 @@ def test_normal_logpdf(normal1):
     assert B.shape(normal1.logpdf(B.ones(3, 2))) == (2,)
 
 
+def test_normal_logpdf_missing_data(normal1):
+    x = B.randn(3, 1)
+    x[1] = B.nan
+    approx(
+        normal1.logpdf(x),
+        Normal(
+            normal1.mean[[0, 2]],
+            normal1.var[[0, 2], :][:, [0, 2]],
+        ).logpdf(x[[0, 2]]),
+    )
+
+
 def test_normal_entropy(normal1):
     normal1_sp = multivariate_normal(normal1.mean[:, 0], B.dense(normal1.var))
     approx(normal1.entropy(), normal1_sp.entropy())

@@ -24,7 +24,6 @@ __all__ = [
 ]
 
 
-
 @_dispatch
 def combine(*fdds: FDD):
     """Combine multiple FDDs or tuples of observations into one.
@@ -62,7 +61,17 @@ class AbstractObservations:
     """
 
     @_dispatch
-    def __init__(self, fdd: Union[FDD], y: Union[B.Numeric, AbstractMatrix]):
+    def __init__(self, fdd: FDD, y: Union[B.Numeric, AbstractMatrix]):
+        y = B.uprank(y)
+        if not (B.rank(y) == 2 and B.shape(y, 1) == 1):
+            raise ValueError(f"Invalid shape of observed values {B.shape(y)}.")
+
+        # Handle missing data.
+        available = B.jit_to_numpy(~B.isnan(y[:, 0]))
+        if not B.all(available):
+            fdd = B.take(fdd, available)
+            y = B.take(y, available)
+
         self.fdd = fdd
         self.y = y
 

@@ -34,6 +34,7 @@ class Measure:
         kernels (:class:`stheno.lazy.LazyMatrix`): Kernels.
         default (:class:`.measure.Measure` or None): Global default measure.
     """
+
     default = None
 
     def __init__(self):

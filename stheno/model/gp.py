@@ -22,7 +22,7 @@ def assert_same_measure(*ps):
     Args:
         *ps (:class:`.gp.GP`): Processes.
     """
-    # First check that all processes are constructed from the same measure.
+    # Check that all processes are constructed from the same measure.
     for p in ps[1:]:
         if ps[0].measure != p.measure:
             raise AssertionError(

@@ -1,7 +1,8 @@
 from lab import B
-from mlkernels import Kernel, pairwise, elwise
+from mlkernels import Kernel, pairwise, elwise, num_elements
 
 from .. import PromisedFDD as FDD, _dispatch
+from .input import infer_size
 
 __all__ = ["MultiOutputKernel"]
 
@@ -74,3 +75,21 @@ def elwise(k: MultiOutputKernel, x: FDD, y: FDD):
 @_dispatch
 def dimensionality(k: MultiOutputKernel):
     return len(k.ps)
+
+
+@_dispatch
+def _take_x(k: MultiOutputKernel, x: B.Numeric, mask: B.Numeric):
+    i = 0
+    x_taken = ()
+    for p in k.ps:
+        n = infer_size(k, p(x))
+        x_taken += (_take_x(k, p(x), mask[i : i + n]),)
+        i += n
+    return x_taken
+
+
+@_dispatch
+def _take_x(k: MultiOutputKernel, x: FDD, mask: B.Numeric):
+    if x.p not in k.ps:
+        raise ValueError(f"Process {x.p} is not part of the multi-output kernel.")
+    return B.take(x, mask)

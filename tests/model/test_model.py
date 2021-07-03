@@ -219,6 +219,26 @@ def test_conditioning_shorthand():
     approx(p_post2.mean(x), y)
 
 
+def test_conditioning_missing_data():
+    p = GP(EQ())
+    x = B.linspace(0, 5, 10)
+    y = p(x).sample()
+    y[:3] = B.nan
+    post1 = p | (p(x), y)
+    post2 = p | (p(x[3:]), y[3:])
+    assert_equal_normals(post1(x), post2(x))
+
+
+def test_conditioning_shape_check():
+    f = GP(EQ())
+    x = B.randn(2)
+    f | (f(x), B.randn(2, 1))
+    with pytest.raises(ValueError):
+        f | (f(x), B.randn(2, 2))
+    with pytest.raises(ValueError):
+        f | (f(x), B.randn(2, 1, 1))
+
+
 @pytest.mark.parametrize(
     "generate_noise_tuple",
     [
