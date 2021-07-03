@@ -5,8 +5,8 @@ requirements = [
     "fdm",
     "algebra>=1",
     "plum-dispatch>=1",
-    "backends>=1.3",
-    "backends-matrix>=1.0.4",
+    "backends>=1.3.3",
+    "backends-matrix>=1.1",
     "mlkernels>=0.3",
     "wbml>=0.3.3",
 ]
