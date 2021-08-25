@@ -4,9 +4,9 @@ requirements = [
     "numpy>=1.16",
     "fdm",
     "algebra>=1",
-    "plum-dispatch>=1",
-    "backends>=1.3.3",
-    "backends-matrix>=1.1",
+    "plum-dispatch>=1.3.5",
+    "backends>=1.3.7",
+    "backends-matrix>=1.1.3",
     "mlkernels>=0.3",
     "wbml>=0.3.3",
 ]
