@@ -1,4 +1,5 @@
 import lab as B
+from lab.shape import Dimension
 from algebra import Element, Join, Wrapped
 from mlkernels import pairwise, elwise, num_elements, Kernel
 
@@ -55,17 +56,17 @@ def infer_size(k: Kernel, x: tuple):
     Returns:
         int: Size of kernel matrix.
     """
-    return sum([infer_size(k, xi) for xi in x])
+    return Dimension(sum([infer_size(k, xi) for xi in x]))
 
 
 @_dispatch
 def infer_size(k: Kernel, x: B.Numeric):
-    return num_elements(x) * dimensionality(k)
+    return Dimension(num_elements(x) * dimensionality(k))
 
 
 @_dispatch
 def infer_size(k: Kernel, x: FDD):
-    return num_elements(x)
+    return Dimension(num_elements(x))
 
 
 @_dispatch
