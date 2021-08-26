@@ -4,7 +4,7 @@ requirements = [
     "numpy>=1.16",
     "fdm",
     "algebra>=1",
-    "plum-dispatch>=1.3.5",
+    "plum-dispatch>=1.5.3",
     "backends>=1.3.7",
     "backends-matrix>=1.1.3",
     "mlkernels>=0.3",
