@@ -435,7 +435,7 @@ class Measure:
 
     @_dispatch
     def sample(self, *fdds: FDD):
-        return B.squeeze(self.sample(B.global_random_state(fdds), 1, *fdds)[1:])
+        return B.squeeze(1, *fdds)
 
     @_dispatch
     def logpdf(self, *pairs: Union[list, tuple]):
