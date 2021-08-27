@@ -241,10 +241,12 @@ class Normal(RandomVector):
         # may not be the case due to numerical errors.
         return B.sqrt(B.maximum(mean_part + var_part, B.cast(self.dtype, 0)))
 
-    def sample(self, num=1, noise=None):
+    @_dispatch
+    def sample(self, state: B.RandomState, num: B.Int = 1, noise=None):
         """Sample from the distribution.
 
         Args:
+            state (random state, optional): Random state.
             num (int): Number of samples.
             noise (scalar, optional): Variance of noise to add to the
                 samples. Must be positive.
@@ -259,11 +261,15 @@ class Normal(RandomVector):
             var = B.add(var, B.fill_diag(noise, self.dim))
 
         # Perform sampling operation.
-        sample = B.sample(var, num=num)
+        state, sample = B.sample(state, var, num=num)
         if not self.mean_is_zero:
             sample = B.add(sample, self.mean)
 
-        return B.dense(sample)
+        return state, B.dense(sample)
+
+    @_dispatch
+    def sample(self, num: B.Int = 1, noise=None):
+        return self.sample(B.global_random_state(self.dtype), num=num, noise=noise)[1]
 
     @_dispatch
     def __add__(self, other: B.Numeric):

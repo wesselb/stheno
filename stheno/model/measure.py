@@ -404,17 +404,18 @@ class Measure:
         )
 
     @_dispatch
-    def sample(self, n: int, *fdds: FDD):
+    def sample(self, state: B.RandomState, n: B.Int, *fdds: FDD):
         """Sample multiple processes simultaneously.
 
         Args:
+            state (random state, optional): Random state.
             n (int, optional): Number of samples. Defaults to `1`.
             *fdds (:class:`.fdd.FDD`): Locations to sample at.
 
         Returns:
             tuple: Tuple of samples.
         """
-        sample = combine(*fdds).sample(n)
+        state, sample = combine(*fdds).sample(state, n)
 
         # Unpack sample.
         lengths = [num_elements(fdd) for fdd in fdds]
@@ -422,11 +423,19 @@ class Measure:
         for length in lengths:
             samples.append(sample[i : i + length, :])
             i += length
-        return samples[0] if len(samples) == 1 else samples
+        return (state,) + tuple(samples)
+
+    @_dispatch
+    def sample(self, n: B.Int, *fdds):
+        return B.squeeze(self.sample(B.global_random_state(fdds), n, *fdds)[1:])
+
+    @_dispatch
+    def sample(self, state: B.RandomState, *fdds: FDD):
+        return self.sample(state, 1, *fdds)
 
     @_dispatch
     def sample(self, *fdds: FDD):
-        return self.sample(1, *fdds)
+        return B.squeeze(self.sample(B.global_random_state(fdds), 1, *fdds)[1:])
 
     @_dispatch
     def logpdf(self, *pairs: Union[list, tuple]):

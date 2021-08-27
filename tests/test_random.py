@@ -142,6 +142,11 @@ def test_normal_sampling():
         approx(B.mean(samples), mean, atol=5e-2)
         approx(B.std(samples) ** 2, 5, atol=5e-2)
 
+        state, sample1 = dist.sample(B.create_random_state(B.dtype(dist), seed=0))
+        state, sample2 = dist.sample(B.create_random_state(B.dtype(dist), seed=0))
+        assert isinstance(state, B.RandomState)
+        approx(sample1, sample2)
+
 
 def test_normal_display(normal1):
     assert str(normal1) == RandomVector.__str__(normal1)
