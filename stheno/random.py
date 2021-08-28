@@ -269,7 +269,11 @@ class Normal(RandomVector):
 
     @_dispatch
     def sample(self, num: B.Int = 1, noise=None):
-        return self.sample(B.global_random_state(self.dtype), num=num, noise=noise)[1]
+        state, sample = self.sample(
+            B.global_random_state(self.dtype), num=num, noise=noise
+        )
+        B.set_global_random_state(state)
+        return sample
 
     @_dispatch
     def __add__(self, other: B.Numeric):

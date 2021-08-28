@@ -427,7 +427,10 @@ class Measure:
 
     @_dispatch
     def sample(self, n: B.Int, *fdds):
-        return B.squeeze(self.sample(B.global_random_state(fdds), n, *fdds)[1:])
+        res = self.sample(B.global_random_state(fdds), n, *fdds)
+        state, samples = res[0], res[1:]
+        B.set_global_random_state(state)
+        return B.squeeze(samples)
 
     @_dispatch
     def sample(self, state: B.RandomState, *fdds: FDD):
