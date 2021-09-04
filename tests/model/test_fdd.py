@@ -43,7 +43,7 @@ def test_fdd():
             "<FDD:\n"
             " process=GP(0, EQ()),\n"
             " input=1,\n"
-            " noise=<zero matrix: shape=1x1, dtype=int>>"
+            " noise=<zero matrix: batch=(), shape=(1, 1), dtype=int>>"
         )
         assert str(fdd) == rep
         assert repr(fdd) == rep
@@ -62,13 +62,13 @@ def test_fdd():
         "<FDD:\n"
         " process=GP(0, EQ()),\n"
         " input=1.0,\n"
-        " noise=<diagonal matrix: shape=2x2, dtype=int64>>"
+        " noise=<diagonal matrix: batch=(), shape=(2, 2), dtype=int64>>"
     )
     assert repr(fdd) == (
         "<FDD:\n"
         " process=GP(0, EQ()),\n"
         " input=1.0,\n"
-        " noise=<diagonal matrix: shape=2x2, dtype=int64\n"
+        " noise=<diagonal matrix: batch=(), shape=(2, 2), dtype=int64\n"
         "        diag=[1 2]>>"
     )
     assert B.dtype(fdd) == float
