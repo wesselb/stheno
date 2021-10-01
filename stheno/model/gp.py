@@ -22,7 +22,7 @@ def assert_same_measure(*ps):
     Args:
         *ps (:class:`.gp.GP`): Processes.
     """
-    # First check that all processes are constructed from the same measure.
+    # Check that all processes are constructed from the same measure.
     for p in ps[1:]:
         if ps[0].measure != p.measure:
             raise AssertionError(
@@ -71,7 +71,7 @@ class GP(RandomProcess):
     """
 
     @_dispatch
-    def __init__(self, mean, kernel, measure=None, name=None):
+    def __init__(self, mean, kernel, *, measure=None, name=None):
         self._measures = []
 
         if measure is None:
@@ -98,7 +98,7 @@ class GP(RandomProcess):
             measure.name(self, name)
 
     @_dispatch
-    def __init__(self, kernel, measure=None, name=None):
+    def __init__(self, kernel, *, measure=None, name=None):
         self.__init__(ZeroMean(), kernel, measure=measure, name=name)
 
     @_dispatch

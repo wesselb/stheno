@@ -95,6 +95,18 @@ def test_normal_logpdf(normal1):
     assert B.shape(normal1.logpdf(B.ones(3, 2))) == (2,)
 
 
+def test_normal_logpdf_missing_data(normal1):
+    x = B.randn(3, 1)
+    x[1] = B.nan
+    approx(
+        normal1.logpdf(x),
+        Normal(
+            normal1.mean[[0, 2]],
+            normal1.var[[0, 2], :][:, [0, 2]],
+        ).logpdf(x[[0, 2]]),
+    )
+
+
 def test_normal_entropy(normal1):
     normal1_sp = multivariate_normal(normal1.mean[:, 0], B.dense(normal1.var))
     approx(normal1.entropy(), normal1_sp.entropy())
@@ -129,6 +141,11 @@ def test_normal_sampling():
         samples = dist.sample(2000, noise=2)
         approx(B.mean(samples), mean, atol=5e-2)
         approx(B.std(samples) ** 2, 5, atol=5e-2)
+
+        state, sample1 = dist.sample(B.create_random_state(B.dtype(dist), seed=0))
+        state, sample2 = dist.sample(B.create_random_state(B.dtype(dist), seed=0))
+        assert isinstance(state, B.RandomState)
+        approx(sample1, sample2)
 
 
 def test_normal_display(normal1):

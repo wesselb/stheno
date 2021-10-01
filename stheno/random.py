@@ -10,7 +10,6 @@ from . import _dispatch, BreakingChangeWarning
 __all__ = ["Random", "RandomProcess", "RandomVector", "Normal"]
 
 
-
 class Random:
     """A random object."""
 
@@ -170,11 +169,24 @@ class Normal(RandomVector):
                 determined that the list contains only a single log-pdf,
                 then the list is flattened to a scalar.
         """
+        x = B.uprank(x)
+
+        # Handle missing data. We don't handle missing data for batched computation.
+        if B.shape(x, 1) == 1:
+            available = B.jit_to_numpy(~B.isnan(x[:, 0]))
+            if not B.all(available):
+                # Take the elements of the mean, variance, and inputs corresponding to
+                # the available data.
+                available_mean = B.take(self.mean, available)
+                available_var = B.submatrix(self.var, available)
+                available_x = B.take(x, available)
+                return Normal(available_mean, available_var).logpdf(available_x)
+
         logpdfs = (
             -(
                 B.logdet(self.var)
                 + B.cast(self.dtype, self.dim) * B.cast(self.dtype, B.log_2_pi)
-                + B.iqf_diag(self.var, B.subtract(B.uprank(x), self.mean))
+                + B.iqf_diag(self.var, B.subtract(x, self.mean))
             )
             / 2
         )
@@ -229,10 +241,12 @@ class Normal(RandomVector):
         # may not be the case due to numerical errors.
         return B.sqrt(B.maximum(mean_part + var_part, B.cast(self.dtype, 0)))
 
-    def sample(self, num=1, noise=None):
+    @_dispatch
+    def sample(self, state: B.RandomState, num: B.Int = 1, noise=None):
         """Sample from the distribution.
 
         Args:
+            state (random state, optional): Random state.
             num (int): Number of samples.
             noise (scalar, optional): Variance of noise to add to the
                 samples. Must be positive.
@@ -247,11 +261,19 @@ class Normal(RandomVector):
             var = B.add(var, B.fill_diag(noise, self.dim))
 
         # Perform sampling operation.
-        sample = B.sample(var, num=num)
+        state, sample = B.sample(state, var, num=num)
         if not self.mean_is_zero:
             sample = B.add(sample, self.mean)
 
-        return B.dense(sample)
+        return state, B.dense(sample)
+
+    @_dispatch
+    def sample(self, num: B.Int = 1, noise=None):
+        state, sample = self.sample(
+            B.global_random_state(self.dtype), num=num, noise=noise
+        )
+        B.set_global_random_state(state)
+        return sample
 
     @_dispatch
     def __add__(self, other: B.Numeric):

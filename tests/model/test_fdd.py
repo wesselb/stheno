@@ -1,10 +1,14 @@
 import lab as B
 import matrix
 import numpy as np
+import pytest
 from lab.shape import Dimension
-from mlkernels import EQ, num_elements
-from stheno.model import GP, FDD
+from mlkernels import EQ, Exp, num_elements
+
+from stheno import Measure, GP, FDD, cross
+from stheno import infer_size
 from stheno.model.fdd import _noise_as_matrix
+from ..util import approx
 
 
 def test_noise_as_matrix():
@@ -75,3 +79,29 @@ def test_fdd():
     assert fdd.p is 5
     assert fdd.x is 1
     assert fdd.noise is None
+
+
+def test_fdd_take():
+    with Measure():
+        f1 = GP(EQ())
+        f2 = GP(Exp())
+        f = cross(f1, f2)
+
+    x = B.linspace(0, 3, 5)
+    # Build an FDD with a very complicated input specification.
+    fdd = f((x, (f2(x), x), f1(x), (f2(x), (f1(x), x))))
+    n = infer_size(fdd.p.kernel, fdd.x)
+    fdd = f(fdd.x, matrix.Diagonal(B.rand(n)))
+
+    # Flip a coin for every element.
+    mask = B.randn(n) > 0
+    taken_fdd = B.take(fdd, mask)
+
+    approx(taken_fdd.mean, B.take(fdd.mean, mask))
+    approx(taken_fdd.var, B.submatrix(fdd.var, mask))
+    approx(taken_fdd.noise, B.submatrix(fdd.noise, mask))
+    assert isinstance(taken_fdd.noise, matrix.Diagonal)
+
+    # Test that only masks are supported, for now.
+    with pytest.raises(AssertionError):
+        B.take(fdd, np.array([1, 2]))

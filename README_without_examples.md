@@ -26,7 +26,7 @@ Contents:
 {examples_toc}
 
 **Breaking change:**
-`f(x).marginals()` now returns the marginals means and variances, rather than the
+`f(x).marginals()` now returns the marginal means and variances, rather than the
 marginal means and lower and upper 95% central credible region bounds.
 For the credible bounds, use `f(x).marginal_credible_bounds()` instead.
 
@@ -37,19 +37,44 @@ For the credible bounds, use `f(x).marginal_credible_bounds()` instead.
 
 >>> from stheno import GP, EQ
 
->>> x = np.linspace(0, 2, 10)         # Some points to predict at
+>>> x = np.linspace(0, 2, 10)           # Some points to predict at
 
->>> y = x ** 2                        # Some observations
+>>> y = x ** 2                          # Some observations
 
->>> f = GP(EQ())                      # Construct Gaussian process.
+>>> f = GP(EQ())                        # Construct Gaussian process.
 
->>> f_post = f | (f(x), y)            # Compute the posterior.
+>>> f_post = f | (f(x), y)              # Compute the posterior.
 
->>> f_post.mean(np.array([1, 2, 3])) # Predict!
+>>> pred = f_post(np.array([1, 2, 3]))  # Predict!
+
+>>> pred.mean
 <dense matrix: shape=3x1, dtype=float64
  mat=[[1.   ]
       [4.   ]
       [8.483]]>
+
+>>> pred.var
+<dense matrix: shape=3x3, dtype=float64
+ mat=[[ 8.032e-13  7.772e-16 -4.577e-09]
+      [ 7.772e-16  9.999e-13  2.773e-10]
+      [-4.577e-09  2.773e-10  3.313e-03]]>
+```
+
+[These custom matrix types are there to accelerate the underlying linear algebra.](#important-remarks)
+To get vanilla NumPy/AutoGrad/TensorFlow/PyTorch/JAX arrays, use `B.dense`:
+
+```python
+>>> from lab import B
+
+>>> B.dense(pred.mean)
+array([[1.00000068],
+       [3.99999999],
+       [8.4825932 ]])
+
+>>> B.dense(pred.var)
+array([[ 8.03246358e-13,  7.77156117e-16, -4.57690943e-09],
+       [ 7.77156117e-16,  9.99866856e-13,  2.77333267e-10],
+       [-4.57690943e-09,  2.77333267e-10,  3.31283378e-03]])
 ```
 
 Moar?! Then read on!
@@ -254,7 +279,7 @@ True
     ```
     
 * Construct a finite difference estimate of the derivative of a GP.
-    See `stheno.measure.Measure.diff_approx` for a description of the arguments.
+    See `Measure.diff_approx` for a description of the arguments.
     
     Example:
     
@@ -278,12 +303,12 @@ True
 
 #### Displaying GPs
 
-Like means and kernels, GPs have a `display` method that accepts a formatter.
+GPs have a `display` method that accepts a formatter.
 
 Example:
 
 ```python
->>> print(GP(2.12345 * EQ()).display(lambda x: '{:.2f}'.format(x)))
+>>> print(GP(2.12345 * EQ()).display(lambda x: f"{x:.2f}"))
 GP(2.12 * EQ(), 0)
 ```
 
@@ -310,14 +335,14 @@ Example:
 ```python
 >>> prior = Measure()
 
->>> p = GP(EQ(), name='name', measure=prior)
+>>> p = GP(EQ(), name="name", measure=prior)
 
 >>> p.name
 'name'
 
->>> p.name = 'alternative_name'
+>>> p.name = "alternative_name"
 
->>> prior['alternative_name']
+>>> prior["alternative_name"]
 GP(0, EQ())
 
 >>> prior[p]
@@ -391,7 +416,7 @@ Things you can do with a finite-dimensional distribution:
 *
     Use `Measure.logpdf` to compute the joint logpdf of multiple observations.
 
-    Definition:
+    Definition, where `prior = Measure()`:
 
     ```python
     prior.logpdf(f(x), y)
@@ -600,7 +625,7 @@ AssertionError: Processes GP(0, EQ()) and GP(0, Linear()) are associated to diff
 ### Inducing Points
 
 Stheno supports pseudo-point approximations of posterior distributions.
-To construct a pseudo-point approximation, use `Measure.PseudoObs`.
+To construct a pseudo-point approximation, use `PseudoObs`.
 
 Definition:
 

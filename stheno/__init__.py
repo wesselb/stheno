@@ -1,7 +1,11 @@
+from ._version import version as __version__  # noqa
+
 # noinspection PyUnresolvedReferences
 import matrix
+
 # noinspection PyUnresolvedReferences
 from mlkernels import *
+
 # noinspection PyUnresolvedReferences
 import lab as B
 

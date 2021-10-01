@@ -3,6 +3,7 @@ import pytest
 from mlkernels import EQ
 
 from stheno.mo import MultiOutputKernel, dimensionality
+from stheno.mo.kernel import _take_x
 from stheno.model import Measure, GP
 from tests.util import approx
 
@@ -99,3 +100,12 @@ def test_mok():
         k.elwise((p2(x1), p1(x3)), (p2(x1), p1(x3))),
         B.concat(ks[p2, p2].elwise(x1, x1), ks[p1, p1].elwise(x3, x3), axis=0),
     )
+
+
+def test_take_x():
+    m = Measure()
+    f1 = GP(EQ())
+    f2 = GP(EQ())
+    k = MultiOutputKernel(m, f1)
+    with pytest.raises(ValueError):
+        _take_x(k, f2(B.linspace(0, 1, 10)), B.randn(10) > 0)

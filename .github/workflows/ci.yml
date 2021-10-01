@@ -19,7 +19,8 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get install gfortran
-          pip install --upgrade pip setuptools numpy Cython
+          # We need to pin `pip`. See https://github.com/pypa/pip/issues/10373.
+          pip install --upgrade pip==20.2.2 setuptools numpy Cython
           pip install --no-cache-dir -U -r requirements.txt | cat
           pip install --upgrade numpy
       - name: Test

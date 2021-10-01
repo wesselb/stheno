@@ -1,4 +1,3 @@
-
 from tests.util import approx
 
 
@@ -16,4 +15,3 @@ def assert_equal_measures(fdds, post_ref, *posts):
     for post in posts:
         for fdd in fdds:
             assert_equal_normals(post_ref(fdd), post(fdd))
-

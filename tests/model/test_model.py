@@ -1,3 +1,4 @@
+import numpy as np
 import pytest
 import tensorflow as tf
 from lab import B
@@ -217,6 +218,26 @@ def test_conditioning_shorthand():
     p_post2 = p_post2 | (p(x), y)
     approx(p_post1.mean(x), y)
     approx(p_post2.mean(x), y)
+
+
+def test_conditioning_missing_data():
+    p = GP(EQ())
+    x = B.linspace(0, 5, 10)
+    y = p(x).sample()
+    y[:3] = B.nan
+    post1 = p | (p(x), y)
+    post2 = p | (p(x[3:]), y[3:])
+    assert_equal_normals(post1(x), post2(x))
+
+
+def test_conditioning_shape_check():
+    f = GP(EQ())
+    x = B.randn(2)
+    f | (f(x), B.randn(2, 1))
+    with pytest.raises(ValueError):
+        f | (f(x), B.randn(2, 2))
+    with pytest.raises(ValueError):
+        f | (f(x), B.randn(2, 1, 1))
 
 
 @pytest.mark.parametrize(
@@ -460,7 +481,8 @@ def test_multi_sample():
     x2 = B.linspace(0, 1, 10)
     x3 = B.linspace(0, 1, 15)
 
-    s1, s2, s3 = m.sample(p1(x1), p2(x2), p3(x3))
+    fdds = (p1(x1), p2(x2), p3(x3))
+    s1, s2, s3 = m.sample(*fdds)
 
     assert B.shape(p1(x1).sample()) == s1.shape == (5, 1)
     assert B.shape(p2(x2).sample()) == s2.shape == (10, 1)
@@ -469,6 +491,14 @@ def test_multi_sample():
     approx(s1, 1 * B.ones(5, 1))
     approx(s2, 2 * B.ones(10, 1))
     approx(s3, 3 * B.ones(15, 1))
+
+    # Test random state.
+    state, s11, s21, s31 = m.sample(B.create_random_state(np.float64, seed=0), *fdds)
+    state, s12, s22, s32 = m.sample(B.create_random_state(np.float64, seed=0), *fdds)
+    assert isinstance(state, B.RandomState)
+    approx(s11, s12)
+    approx(s21, s22)
+    approx(s31, s32)
 
 
 def test_approximate_multiplication():
