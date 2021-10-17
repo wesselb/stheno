@@ -21,6 +21,10 @@ __all__ = [
     "PseudoObs",
     "SparseObservations",
     "SparseObs",
+    "PseudoObservationsFITC",
+    "PseudoObsFITC",
+    "SparseObservationsFITC",
+    "SparseObsFITC",
 ]
 
 
@@ -322,9 +326,164 @@ class PseudoObservations(AbstractObservations):
         )
 
 
+class PseudoObservationsFITC(AbstractObservations):
+    """Observations through inducing points (FITC).
+
+    Further takes arguments according to the constructor of
+    :class:`.measure.AbstractObservations`. Can also take in tuples of inducing points.
+
+    Args:
+        u (:class:`.fdd.FDD`): Inducing points
+    """
+
+    @_dispatch
+    def __init__(self, u: FDD, *args):
+        AbstractObservations.__init__(self, *args)
+        self.u = u
+        self._K_z_store = {}
+        self._elbo_store = {}
+        self._mu_store = {}
+        self._Q_store = {}
+
+    @_dispatch
+    def __init__(self, us: tuple, *args):
+        PseudoObservationsFITC.__init__(self, combine(*us), *args)
+
+    def K_z(self, measure):
+        """Kernel matrix of the data.
+
+        Args:
+            measure (:class:`.measure.Measure`): Measure.
+
+        Returns:
+            matrix: Kernel matrix.
+        """
+        try:
+            return self._K_z_store[id(measure)]
+        except KeyError:
+            self._compute(measure)
+            return self._K_z_store[id(measure)]
+
+    def elbo(self, measure):
+        """ELBO.
+
+        Args:
+            measure (:class:`.measure.Measure`): Measure.
+
+        Returns:
+            scalar: ELBO.
+        """
+        try:
+            return self._elbo_store[id(measure)]
+        except KeyError:
+            self._compute(measure)
+            return self._elbo_store[id(measure)]
+
+    def mu(self, measure):
+        """Mean of optimal approximating distribution.
+
+        Args:
+            measure (:class:`.measure.Measure`): Measure.
+
+        Returns:
+            matrix: Mean.
+        """
+        try:
+            return self._mu_store[id(measure)]
+        except KeyError:
+            self._compute(measure)
+            return self._mu_store[id(measure)]
+
+    def Q(self, measure):
+        """Parameter of the corrective variance of the kernel of the optimal
+        approximating distribution.
+
+        Args:
+            measure (:class:`.measure.Measure`): Measure.
+
+        Returns:
+            matrix: Corrective variance.
+        """
+        try:
+            return self._Q_store[id(measure)]
+        except KeyError:
+            self._compute(measure)
+            return self._Q_store[id(measure)]
+
+    def _compute(self, measure):
+        # Extract processes and inputs.
+        p_x, x, noise_x = self.fdd.p, self.fdd.x, self.fdd.noise
+        p_z, z, noise_z = self.u.p, self.u.x, self.u.noise
+
+        # Construct the necessary kernel matrices.
+        K_zx = measure.kernels[p_z, p_x](z, x)
+        K_z = B.add(measure.kernels[p_z](z), noise_z)
+        self._K_z_store[id(measure)] = K_z
+
+        # Noise kernel matrix:
+        K_n = noise_x 
+
+        # The approximation can only handle diagonal noise matrices.
+        if not isinstance(K_n, Diagonal):
+            raise RuntimeError(
+                f"Kernel matrix of observation noise must be diagonal, "
+                f'not "{type(K_n).__name__}".'
+            )
+
+        # And construct the components for the inducing point approximation.
+        diag_part = K_n + Diagonal(measure.kernels[p_x].elwise(x)[:, 0]) - Diagonal(B.iqf_diag(K_z, K_zx))
+        L_z = B.cholesky(K_z)        
+        A = B.add(B.eye(K_z), B.iqf(diag_part, B.transpose(B.solve(L_z, K_zx))))
+        Q = K_z + B.iqf(diag_part, B.transpose(K_zx))
+        self._Q_store[id(measure)] = Q
+        
+        y_bar = B.subtract(B.uprank(self.y), measure.means[p_x](x))
+        prod_y_bar = B.solve(L_z, B.iqf(diag_part, B.transpose(K_zx), y_bar))
+
+        # Compute the optimal mean.
+        mu = B.add(
+            measure.means[p_z](z),
+            B.iqf(diag_part, B.transpose(K_zx), y_bar),
+        )
+        self._mu_store[id(measure)] = mu
+
+        # Compute the ELBO.
+
+        dtype = B.dtype_float(K_n)
+        det_part = B.logdet(B.multiply(B.cast(dtype, 2 * B.pi), K_n)) + B.logdet(A)
+        iqf_part = B.iqf(K_n, y_bar)[0, 0] - B.iqf(A, prod_y_bar)[0, 0]
+        self._elbo_store[id(measure)] = -0.5 * (det_part + iqf_part)
+
+    def posterior_kernel(self, measure, p_i, p_j):
+        return PosteriorKernel(
+            measure.kernels[p_i, p_j],
+            measure.kernels[self.u.p, p_i],
+            measure.kernels[self.u.p, p_j],
+            self.u.x,
+            self.K_z(measure),
+        ) + SubspaceKernel(
+            measure.kernels[self.u.p, p_i],
+            measure.kernels[self.u.p, p_j],
+            self.u.x,
+            self.Q(measure),
+        )
+
+    def posterior_mean(self, measure, p):
+        return PosteriorMean(
+            measure.means[p],
+            measure.means[self.u.p],
+            measure.kernels[self.u.p, p],
+            self.u.x,
+            self.Q(measure),
+            self.mu(measure),
+        )
+
 Obs = Observations  #: Shorthand for `Observations`.
 PseudoObs = PseudoObservations  #: Shorthand for `PseudoObservations`.
+PseudoObsFITC = PseudoObservationsFITC # : Shorthand for `PseudoObservationsFITC`.
 
 # Backward compatibility:
 SparseObs = PseudoObservations
 SparseObservations = PseudoObservations
+SparseObsFITC = PseudoObservationsFITC
+SparseObservationsFITC = PseudoObservationsFITC
