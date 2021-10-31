@@ -214,13 +214,13 @@ class Normal(RandomVector):
         Returns:
             scalar: KL divergence.
         """
-        ratio = B.solve(B.chol(other.var), B.chol(self.var))
         return (
-            B.sum(B.sum(ratio * ratio, axis=-1), axis=-1)
-            - B.logdet(B.mm(ratio, ratio, tr_a=True))
-            + B.iqf_diag(other.var, other.mean - self.mean)[0]
+            B.iqf_diag(other.var, other.mean - self.mean)[0]
+            + B.ratio(self.var, other.var)
+            + B.logdet(other.var)
+            - B.logdet(self.var)
             - B.cast(self.dtype, self.dim)
-        ) / 2
+       ) / 2
 
     @_dispatch
     def w2(self, other: "Normal"):
