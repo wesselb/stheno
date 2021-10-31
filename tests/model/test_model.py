@@ -236,8 +236,6 @@ def test_conditioning_shape_check():
     f | (f(x), B.randn(2, 1))
     with pytest.raises(ValueError):
         f | (f(x), B.randn(2, 2))
-    with pytest.raises(ValueError):
-        f | (f(x), B.randn(2, 1, 1))
 
 
 @pytest.mark.parametrize(

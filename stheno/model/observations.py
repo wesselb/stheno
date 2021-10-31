@@ -1,16 +1,11 @@
 from lab import B
 from matrix import AbstractMatrix, Diagonal
-from mlkernels import (
-    num_elements,
-    PosteriorKernel,
-    SubspaceKernel,
-    PosteriorMean,
-)
+from mlkernels import PosteriorKernel, PosteriorMean, SubspaceKernel, num_elements
 from plum import Union
 
+from .. import _dispatch
 from .fdd import FDD
 from .gp import cross
-from .. import _dispatch
 
 __all__ = [
     "combine",
@@ -62,9 +57,11 @@ class AbstractObservations:
 
     @_dispatch
     def __init__(self, fdd: FDD, y: Union[B.Numeric, AbstractMatrix]):
-        y = B.uprank(y)
-        if not (B.rank(y) == 2 and B.shape(y, 1) == 1):
-            raise ValueError(f"Invalid shape of observed values {B.shape(y)}.")
+        y_shape = B.shape(y)  # Save shape for error message.
+        y = B.uprank(y, rank=2)
+
+        if not B.shape(y, -1) == 1:
+            raise ValueError(f"Invalid shape of observed values {y_shape}.")
 
         # Handle missing data.
         available = B.jit_to_numpy(~B.isnan(y[:, 0]))

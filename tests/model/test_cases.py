@@ -129,3 +129,23 @@ def test_blr():
     post = m | (y(x), y_obs)
     approx(post(slope)(0).mean, true_slope, atol=5e-2)
     approx(post(intercept)(0).mean, true_intercept, atol=5e-2)
+
+
+def test_batched():
+    x = B.randn(16, 10, 1)
+
+    p = GP(2 * EQ().stretch(0.5))
+    y = p(x).sample()
+    logpdf = p(x, 0.1).logpdf(y)
+
+    assert B.shape(logpdf) == (16,)
+    assert B.shape(y) == (16, 10, 1)
+
+    p = p | (p(x), y)
+    y2 = p(x).sample()
+
+    assert B.shape(y2) == (16, 10, 1)
+    approx(y, y2, atol=1e-5)
+
+
+
