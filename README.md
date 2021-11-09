@@ -21,6 +21,7 @@ Contents:
     - [Prior and Posterior Measures](#prior-and-posterior-measures)
     - [Inducing Points](#inducing-points)
     - [Kernels and Means](#kernels-and-means)
+    - [Batched Computation](#batched-computation)
     - [Important Remarks](#important-remarks)
 * [Examples](#examples)
     - [Simple Regression](#simple-regression)
@@ -34,11 +35,6 @@ Contents:
     - [Approximate Multiplication Between GPs](#approximate-multiplication-between-gps)
     - [Sparse Regression](#sparse-regression)
     - [Smoothing with Nonparametric Basis Functions](#smoothing-with-nonparametric-basis-functions)
-
-**Breaking change:**
-`f(x).marginals()` now returns the marginal means and variances, rather than the
-marginal means and lower and upper 95% central credible region bounds.
-For the credible bounds, use `f(x).marginal_credible_bounds()` instead.
 
 ## Nonlinear Regression in 20 Seconds
 
@@ -717,6 +713,32 @@ We finally construct the approximate posterior measure:
 ### Kernels and Means
 
 See [MLKernels](https://github.com/wesselb/mlkernels).
+
+
+### Batched Computation
+
+Stheno supports batched computation.
+See [MLKernels](https://github.com/wesselb/mlkernels/#usage) for a description of how
+means and kernels work with batched computation.
+
+Example:
+
+```python
+>>> f = GP(EQ())
+
+>>> x = np.random.randn(16, 100, 1)
+
+>>> y = f(x, 1).sample()
+
+>>> logpdf = f(x, 1).logpdf(y)
+
+>>> y.shape
+(16, 100, 1)
+
+>>> f(x, 1).logpdf(y).shape
+(16,)
+```
+
 
 ### Important Remarks
 

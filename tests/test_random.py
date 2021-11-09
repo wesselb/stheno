@@ -117,7 +117,7 @@ def test_normal_kl(normal1, normal2):
     assert normal1.kl(normal2) > 0.1
 
     # Test against Monte Carlo estimate.
-    samples = normal1.sample(50_000)
+    samples = normal1.sample(500_000)
     kl_est = B.mean(normal1.logpdf(samples)) - B.mean(normal2.logpdf(samples))
     kl = normal1.kl(normal2)
     approx(kl_est, kl, rtol=0.05)

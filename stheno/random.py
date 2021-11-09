@@ -117,7 +117,7 @@ class Normal(RandomVector):
     @property
     def dim(self):
         """Dimensionality."""
-        return B.shape(self.var)[0]
+        return B.shape_matrix(self.var)[0]
 
     @property
     def m2(self):
@@ -172,7 +172,7 @@ class Normal(RandomVector):
         x = B.uprank(x)
 
         # Handle missing data. We don't handle missing data for batched computation.
-        if B.shape(x, 1) == 1:
+        if B.rank(x) == 2 and B.shape(x, 1) == 1:
             available = B.jit_to_numpy(~B.isnan(x[:, 0]))
             if not B.all(available):
                 # Take the elements of the mean, variance, and inputs corresponding to
@@ -184,13 +184,13 @@ class Normal(RandomVector):
 
         logpdfs = (
             -(
-                B.logdet(self.var)
+                B.logdet(self.var)[..., None]  # Correctly line up with `iqf_diag`.
                 + B.cast(self.dtype, self.dim) * B.cast(self.dtype, B.log_2_pi)
                 + B.iqf_diag(self.var, B.subtract(x, self.mean))
             )
             / 2
         )
-        return logpdfs[0] if B.shape(logpdfs) == (1,) else logpdfs
+        return logpdfs[..., 0] if B.shape(logpdfs, -1) == 1 else logpdfs
 
     def entropy(self):
         """Compute the entropy.
@@ -215,12 +215,12 @@ class Normal(RandomVector):
             scalar: KL divergence.
         """
         return (
-            B.ratio(self.var, other.var)
-            + B.iqf_diag(other.var, other.mean - self.mean)[0]
-            - B.cast(self.dtype, self.dim)
+            B.iqf_diag(other.var, other.mean - self.mean)[0]
+            + B.ratio(self.var, other.var)
             + B.logdet(other.var)
             - B.logdet(self.var)
-        ) / 2
+            - B.cast(self.dtype, self.dim)
+       ) / 2
 
     @_dispatch
     def w2(self, other: "Normal"):
