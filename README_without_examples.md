@@ -625,23 +625,23 @@ AssertionError: Processes GP(0, EQ()) and GP(0, Linear()) are associated to diff
 ### Inducing Points
 
 Stheno supports pseudo-point approximations of posterior distributions.
-To construct a pseudo-point approximation, use `PseudoObs`.
+To construct a pseudo-point approximation, use `PseudoObsVFE`.
 
 Definition:
 
 ```python
-obs = PseudoObs(
+obs = PseudoObsVFE(
     u(z),               # FDD of inducing points
     (f(x, [noise]), y)  # Observed data
 )
                 
-obs = PseudoObs(u(z), f(x, [noise]), y)
+obs = PseudoObsVFE(u(z), f(x, [noise]), y)
 
-obs = PseudoObs(u(z), (f1(x1, [noise1]), y1), (f2(x2, [noise2]), y2), ...)
+obs = PseudoObsVFE(u(z), (f1(x1, [noise1]), y1), (f2(x2, [noise2]), y2), ...)
 
-obs = PseudoObs((u1(z1), u2(z2), ...), f(x, [noise]), y)
+obs = PseudoObsVFE((u1(z1), u2(z2), ...), f(x, [noise]), y)
 
-obs = PseudoObs((u1(z1), u2(z2), ...), (f1(x1, [noise1]), y1), (f2(x2, [noise2]), y2), ...)
+obs = PseudoObsVFE((u1(z1), u2(z2), ...), (f1(x1, [noise1]), y1), (f2(x2, [noise2]), y2), ...)
 ```
 
 The approximate posterior measure can be constructed with `prior | obs`
@@ -676,7 +676,7 @@ Let's try to use inducing points to speed this up.
 
 >>> u = f(x_ind)   # FDD of inducing points.
 
->>> %timeit PseudoObs(u, f(x_obs, 1), y_obs).elbo(prior)
+>>> %timeit PseudoObsVFE(u, f(x_obs, 1), y_obs).elbo(prior)
 9.8 ms ± 181 µs per loop (mean ± std. dev. of 7 runs, 100 loops each)
 ```
 
@@ -684,14 +684,14 @@ Much better.
 And the approximation is good:
 
 ```python
->>> PseudoObs(u, f(x_obs, 1), y_obs).elbo(prior) - f(x_obs, 1).logpdf(y_obs)
+>>> PseudoObsVFE(u, f(x_obs, 1), y_obs).elbo(prior) - f(x_obs, 1).logpdf(y_obs)
 -3.537934389896691e-10
 ```
 
 We finally construct the approximate posterior measure:
 
 ```python
->>> post_approx = prior | PseudoObs(u, f(x_obs, 1), y_obs)
+>>> post_approx = prior | PseudoObsVFE(u, f(x_obs, 1), y_obs)
 
 >>> post_approx(f(x_obs)).mean
 <dense matrix: shape=2000x1, dtype=float64

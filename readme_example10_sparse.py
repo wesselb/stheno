@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import wbml.out as out
 from wbml.plot import tweak
 
-from stheno import B, GP, EQ, PseudoObs
+from stheno import B, GP, EQ, PseudoObsVFE
 
 # Define points to predict at.
 x = B.linspace(0, 10, 100)
@@ -17,7 +17,7 @@ f_true = B.sin(x)
 y_obs = B.sin(x_obs) + B.sqrt(0.5) * B.randn(*x_obs.shape)
 
 # Compute a pseudo-point approximation of the posterior.
-obs = PseudoObs(f(x_ind), (f(x_obs, 0.5), y_obs))
+obs = PseudoObsVFE(f(x_ind), (f(x_obs, 0.5), y_obs))
 
 # Compute the ELBO.
 out.kv("ELBO", obs.elbo(f.measure))

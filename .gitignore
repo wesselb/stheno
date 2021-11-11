@@ -24,3 +24,6 @@ cover
 *.swp
 scripts
 run_readme_examples.sh
+
+# Visual Studio Code
+.vscode

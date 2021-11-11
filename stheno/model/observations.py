@@ -12,14 +12,10 @@ __all__ = [
     "AbstractObservations",
     "Observations",
     "Obs",
-    "PseudoObservations",
-    "PseudoObs",
-    "SparseObservations",
-    "SparseObs",
+    "PseudoObservationsVFE",
+    "PseudoObsVFE",
     "PseudoObservationsFITC",
     "PseudoObsFITC",
-    "SparseObservationsFITC",
-    "SparseObsFITC",
 ]
 
 
@@ -250,6 +246,20 @@ class PseudoObservations(AbstractObservations):
             self._compute(measure)
             return self._A_store[id(measure)]
 
+
+class PseudoObservationsVFE(PseudoObservations):
+    """Observations through inducing points (VFE).
+
+    Paper: Variational Learning of Inducing Variables in Sparse Gaussian Processes
+    Author: Michalis K. Titsias
+
+    Further takes arguments according to the constructor of
+    :class:`.measure.AbstractObservations`. Can also take in tuples of inducing points.
+
+    Args:
+        u (:class:`.fdd.FDD`): Inducing points
+    """
+
     def _compute(self, measure):
         # Extract processes and inputs.
         p_x, x, noise_x = self.fdd.p, self.fdd.x, self.fdd.noise
@@ -323,8 +333,11 @@ class PseudoObservations(AbstractObservations):
         )
 
 
-class PseudoObservationsFITC(AbstractObservations):
+class PseudoObservationsFITC(PseudoObservations):
     """Observations through inducing points (FITC).
+
+    Paper: Sparse Gaussian Processes using Pseudo-inputs
+    Authors: Edward Snelson and Zoubin Ghahramani
 
     Further takes arguments according to the constructor of
     :class:`.measure.AbstractObservations`. Can also take in tuples of inducing points.
@@ -332,80 +345,6 @@ class PseudoObservationsFITC(AbstractObservations):
     Args:
         u (:class:`.fdd.FDD`): Inducing points
     """
-
-    @_dispatch
-    def __init__(self, u: FDD, *args):
-        AbstractObservations.__init__(self, *args)
-        self.u = u
-        self._K_z_store = {}
-        self._elbo_store = {}
-        self._mu_store = {}
-        self._Q_store = {}
-
-    @_dispatch
-    def __init__(self, us: tuple, *args):
-        PseudoObservationsFITC.__init__(self, combine(*us), *args)
-
-    def K_z(self, measure):
-        """Kernel matrix of the data.
-
-        Args:
-            measure (:class:`.measure.Measure`): Measure.
-
-        Returns:
-            matrix: Kernel matrix.
-        """
-        try:
-            return self._K_z_store[id(measure)]
-        except KeyError:
-            self._compute(measure)
-            return self._K_z_store[id(measure)]
-
-    def elbo(self, measure):
-        """ELBO.
-
-        Args:
-            measure (:class:`.measure.Measure`): Measure.
-
-        Returns:
-            scalar: ELBO.
-        """
-        try:
-            return self._elbo_store[id(measure)]
-        except KeyError:
-            self._compute(measure)
-            return self._elbo_store[id(measure)]
-
-    def mu(self, measure):
-        """Mean of optimal approximating distribution.
-
-        Args:
-            measure (:class:`.measure.Measure`): Measure.
-
-        Returns:
-            matrix: Mean.
-        """
-        try:
-            return self._mu_store[id(measure)]
-        except KeyError:
-            self._compute(measure)
-            return self._mu_store[id(measure)]
-
-    def Q(self, measure):
-        """Parameter of the corrective variance of the kernel of the optimal
-        approximating distribution.
-
-        Args:
-            measure (:class:`.measure.Measure`): Measure.
-
-        Returns:
-            matrix: Corrective variance.
-        """
-        try:
-            return self._Q_store[id(measure)]
-        except KeyError:
-            self._compute(measure)
-            return self._Q_store[id(measure)]
 
     def _compute(self, measure):
         # Extract processes and inputs.
@@ -418,7 +357,7 @@ class PseudoObservationsFITC(AbstractObservations):
         self._K_z_store[id(measure)] = K_z
 
         # Noise kernel matrix:
-        K_n = noise_x 
+        K_n = noise_x
 
         # The approximation can only handle diagonal noise matrices.
         if not isinstance(K_n, Diagonal):
@@ -428,12 +367,16 @@ class PseudoObservationsFITC(AbstractObservations):
             )
 
         # And construct the components for the inducing point approximation.
-        diag_part = K_n + Diagonal(measure.kernels[p_x].elwise(x)[:, 0]) - Diagonal(B.iqf_diag(K_z, K_zx))
-        L_z = B.cholesky(K_z)        
-        A = B.add(B.eye(K_z), B.iqf(diag_part, B.transpose(B.solve(L_z, K_zx))))
-        Q = K_z + B.iqf(diag_part, B.transpose(K_zx))
-        self._Q_store[id(measure)] = Q
-        
+        diag_part = (
+            K_n
+            + Diagonal(measure.kernels[p_x].elwise(x)[:, 0])
+            - Diagonal(B.iqf_diag(K_z, K_zx))
+        )
+        L_z = B.cholesky(K_z)
+        A_ = B.add(B.eye(K_z), B.iqf(diag_part, B.transpose(B.solve(L_z, K_zx))))
+        A = K_z + B.iqf(diag_part, B.transpose(K_zx))
+        self._A_store[id(measure)] = A
+
         y_bar = B.subtract(B.uprank(self.y), measure.means[p_x](x))
         prod_y_bar = B.solve(L_z, B.iqf(diag_part, B.transpose(K_zx), y_bar))
 
@@ -447,8 +390,10 @@ class PseudoObservationsFITC(AbstractObservations):
         # Compute the ELBO.
 
         dtype = B.dtype_float(K_n)
-        det_part = B.logdet(B.multiply(B.cast(dtype, 2 * B.pi), K_n)) + B.logdet(A)
-        iqf_part = B.iqf(K_n, y_bar)[0, 0] - B.iqf(A, prod_y_bar)[0, 0]
+        det_part = B.logdet(B.multiply(B.cast(dtype, 2 * B.pi), diag_part)) + B.logdet(
+            A_
+        )
+        iqf_part = B.iqf(K_n, y_bar)[0, 0] - B.iqf(A_, prod_y_bar)[0, 0]
         self._elbo_store[id(measure)] = -0.5 * (det_part + iqf_part)
 
     def posterior_kernel(self, measure, p_i, p_j):
@@ -462,7 +407,7 @@ class PseudoObservationsFITC(AbstractObservations):
             measure.kernels[self.u.p, p_i],
             measure.kernels[self.u.p, p_j],
             self.u.x,
-            self.Q(measure),
+            self.A(measure),
         )
 
     def posterior_mean(self, measure, p):
@@ -471,16 +416,11 @@ class PseudoObservationsFITC(AbstractObservations):
             measure.means[self.u.p],
             measure.kernels[self.u.p, p],
             self.u.x,
-            self.Q(measure),
+            self.A(measure),
             self.mu(measure),
         )
 
-Obs = Observations  #: Shorthand for `Observations`.
-PseudoObs = PseudoObservations  #: Shorthand for `PseudoObservations`.
-PseudoObsFITC = PseudoObservationsFITC # : Shorthand for `PseudoObservationsFITC`.
 
-# Backward compatibility:
-SparseObs = PseudoObservations
-SparseObservations = PseudoObservations
-SparseObsFITC = PseudoObservationsFITC
-SparseObservationsFITC = PseudoObservationsFITC
+Obs = Observations  #: Shorthand for `Observations`.
+PseudoObsVFE = PseudoObservationsVFE  #: Shorthand for `PseudoObservations`.
+PseudoObsFITC = PseudoObservationsFITC  # : Shorthand for `PseudoObservationsFITC`.
