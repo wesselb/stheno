@@ -388,7 +388,6 @@ class PseudoObservationsFITC(PseudoObservations):
         self._mu_store[id(measure)] = mu
 
         # Compute the ELBO.
-
         dtype = B.dtype_float(K_n)
         det_part = B.logdet(B.multiply(B.cast(dtype, 2 * B.pi), diag_part)) + B.logdet(
             A_
