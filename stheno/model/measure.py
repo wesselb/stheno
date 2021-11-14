@@ -14,7 +14,7 @@ from .gp import GP, assert_same_measure
 from .observations import (
     AbstractObservations,
     Observations,
-    PseudoObservationsVFE,
+    PseudoObservations,
     PseudoObservationsFITC,
     combine,
 )
@@ -466,7 +466,7 @@ class Measure:
         return self.logpdf(obs.fdd, obs.y)
 
     @_dispatch
-    def logpdf(self, obs: PseudoObservationsVFE):
+    def logpdf(self, obs: PseudoObservations):
         return obs.elbo(self)
 
     @_dispatch

@@ -12,7 +12,7 @@ from mlkernels import (
     TensorProductMean,
 )
 
-from stheno.model import Measure, GP, Obs, PseudoObsVFE, PseudoObsFITC, cross, FDD
+from stheno.model import Measure, GP, Obs, PseudoObs, PseudoObsFITC, cross, FDD
 from .util import assert_equal_normals, assert_equal_measures
 from ..util import approx
 
@@ -244,7 +244,7 @@ noise_tuples = [
     lambda x: (B.rand(x),),
     lambda x: (Diagonal(B.rand(x)),),
 ]
-pseudo_obs = [PseudoObsFITC, PseudoObsVFE]
+pseudo_obs = [PseudoObsFITC, PseudoObs]
 
 
 @pytest.mark.parametrize(
@@ -352,10 +352,10 @@ def test_logpdf():
         m.logpdf((p1(x1), y1), (p2(x2), y2), (p3(x3), y3)),
     )
 
-    # Check that `Measure.logpdf` allows `Obs` and `PseudoObsVFE` and `PseudoObsFITC`.
+    # Check that `Measure.logpdf` allows `Obs` and `PseudoObs` and `PseudoObsFITC`.
     obs = Obs(p3(x3), y3)
     approx(m.logpdf(obs), p3(x3).logpdf(y3))
-    obs = PseudoObsVFE(p3(x3), p3(x3, 1), y3)
+    obs = PseudoObs(p3(x3), p3(x3, 1), y3)
     approx(m.logpdf(obs), p3(x3, 1).logpdf(y3))
     obs = PseudoObsFITC(p3(x3), p3(x3, 1), y3)
     approx(m.logpdf(obs), p3(x3, 1).logpdf(y3))

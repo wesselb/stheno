@@ -10,10 +10,11 @@ from .gp import cross
 __all__ = [
     "combine",
     "AbstractObservations",
+    "AbstractPseudoObservations",
     "Observations",
     "Obs",
-    "PseudoObservationsVFE",
-    "PseudoObsVFE",
+    "PseudoObservations",
+    "PseudoObs",
     "PseudoObservationsFITC",
     "PseudoObsFITC",
 ]
@@ -162,7 +163,7 @@ class Observations(AbstractObservations):
         )
 
 
-class PseudoObservations(AbstractObservations):
+class AbstractPseudoObservations(AbstractObservations):
     """Observations through inducing points.
 
     Further takes arguments according to the constructor of
@@ -183,7 +184,7 @@ class PseudoObservations(AbstractObservations):
 
     @_dispatch
     def __init__(self, us: tuple, *args):
-        PseudoObservations.__init__(self, combine(*us), *args)
+        AbstractPseudoObservations.__init__(self, combine(*us), *args)
 
     def K_z(self, measure):
         """Kernel matrix of the data.
@@ -247,7 +248,7 @@ class PseudoObservations(AbstractObservations):
             return self._A_store[id(measure)]
 
 
-class PseudoObservationsVFE(PseudoObservations):
+class PseudoObservations(AbstractPseudoObservations):
     """Observations through inducing points (VFE).
 
     Paper: Variational Learning of Inducing Variables in Sparse Gaussian Processes
@@ -421,5 +422,5 @@ class PseudoObservationsFITC(PseudoObservations):
 
 
 Obs = Observations  #: Shorthand for `Observations`.
-PseudoObsVFE = PseudoObservationsVFE  #: Shorthand for `PseudoObservations`.
+PseudoObs = PseudoObservations  #: Shorthand for `PseudoObservations`.
 PseudoObsFITC = PseudoObservationsFITC  # : Shorthand for `PseudoObservationsFITC`.
