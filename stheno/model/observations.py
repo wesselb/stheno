@@ -334,7 +334,7 @@ class PseudoObservations(AbstractPseudoObservations):
         )
 
 
-class PseudoObservationsFITC(PseudoObservations):
+class PseudoObservationsFITC(AbstractPseudoObservations):
     """Observations through inducing points (FITC).
 
     Paper: Sparse Gaussian Processes using Pseudo-inputs
