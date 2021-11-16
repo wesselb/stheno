@@ -15,6 +15,7 @@ from .observations import (
     AbstractObservations,
     Observations,
     PseudoObservations,
+    PseudoObservationsFITC,
     combine,
 )
 from .. import _dispatch, PromisedMeasure
@@ -466,6 +467,10 @@ class Measure:
 
     @_dispatch
     def logpdf(self, obs: PseudoObservations):
+        return obs.elbo(self)
+
+    @_dispatch
+    def logpdf(self, obs: PseudoObservationsFITC):
         return obs.elbo(self)
 
 

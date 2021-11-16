@@ -1,3 +1,4 @@
+from itertools import product
 import numpy as np
 import pytest
 import tensorflow as tf
@@ -11,7 +12,7 @@ from mlkernels import (
     TensorProductMean,
 )
 
-from stheno.model import Measure, GP, Obs, PseudoObs, cross, FDD
+from stheno.model import Measure, GP, Obs, PseudoObs, PseudoObsFITC, cross, FDD
 from .util import assert_equal_normals, assert_equal_measures
 from ..util import approx
 
@@ -238,15 +239,19 @@ def test_conditioning_shape_check():
         f | (f(x), B.randn(2, 2))
 
 
+noise_tuples = [
+    lambda x: (B.rand(),),
+    lambda x: (B.rand(x),),
+    lambda x: (Diagonal(B.rand(x)),),
+]
+pseudo_obs = [PseudoObsFITC, PseudoObs]
+
+
 @pytest.mark.parametrize(
-    "generate_noise_tuple",
-    [
-        lambda x: (B.rand(),),
-        lambda x: (B.rand(x),),
-        lambda x: (Diagonal(B.rand(x)),),
-    ],
+    "generate_noise_tuple, TestObs",
+    product(noise_tuples, pseudo_obs),
 )
-def test_pseudo_conditioning_and_elbo(generate_noise_tuple):
+def test_pseudo_conditioning_and_elbo(generate_noise_tuple, TestObs):
     m = Measure()
     p1 = GP(EQ(), measure=m)
     p2 = GP(Exp(), measure=m)
@@ -275,59 +280,52 @@ def test_pseudo_conditioning_and_elbo(generate_noise_tuple):
     assert_equal_measures(
         fdds_check,
         m | tup_sum,
-        m | PseudoObs(p_sum(x_sum), *tup_sum),
-        m | PseudoObs((p_sum(x_sum),), *tup_sum),
-        m | PseudoObs((p_sum(x_sum), p1(x1)), *tup_sum),
-        m | PseudoObs(p_sum(x_sum), tup_sum),
-        m | PseudoObs((p_sum(x_sum),), tup_sum),
-        m.condition(PseudoObs((p_sum(x_sum), p1(x1)), tup_sum)),
+        m | TestObs(p_sum(x_sum), *tup_sum),
+        m | TestObs((p_sum(x_sum),), *tup_sum),
+        m | TestObs((p_sum(x_sum), p1(x1)), *tup_sum),
+        m | TestObs(p_sum(x_sum), tup_sum),
+        m | TestObs((p_sum(x_sum),), tup_sum),
+        # m.condition(TestObs((p_sum(x_sum), p1(x1)), tup_sum)),
     )
     approx(
         m.logpdf(Obs(*tup_sum)),
-        PseudoObs(p_sum(x_sum), tup_sum).elbo(m),
+        TestObs(p_sum(x_sum), tup_sum).elbo(m),
     )
 
     # Check conditioning and ELBO on two data sets.
     assert_equal_measures(
         fdds_check,
         m | (tup_sum, tup1),
-        m.condition(PseudoObs((p_sum(x_sum), p1(x1)), tup_sum, tup1)),
+        # m.condition(TestObs((p_sum(x_sum), p1(x1)), tup_sum, tup1)),
     )
     approx(
         m.logpdf(Obs(tup_sum, tup1)),
-        PseudoObs((p_sum(x_sum), p1(x1)), tup_sum, tup1).elbo(m),
+        TestObs((p_sum(x_sum), p1(x1)), tup_sum, tup1).elbo(m),
     )
 
     # The following lose information, so check them separately.
     assert_equal_measures(
         fdds_check,
-        m | PseudoObs(p_sum(x_sum), tup_sum, tup1),
-        m | PseudoObs((p_sum(x_sum),), tup_sum, tup1),
+        m | TestObs(p_sum(x_sum), tup_sum, tup1),
+        m | TestObs((p_sum(x_sum),), tup_sum, tup1),
     )
 
     # Test caching.
     for name in ["K_z", "elbo", "mu", "A"]:
-        obs = PseudoObs(p_sum(x_sum), *tup_sum)
+        obs = TestObs(p_sum(x_sum), *tup_sum)
         assert getattr(obs, name)(m) is getattr(obs, name)(m)
 
     # Test requirement that noise must be diagonal.
     with pytest.raises(RuntimeError):
-        PseudoObs(p_sum(x_sum), (p_sum(x_sum, p_sum(x_sum).var), y_sum)).elbo(m)
+        TestObs(p_sum(x_sum), (p_sum(x_sum, p_sum(x_sum).var), y_sum)).elbo(m)
 
     # Test that noise on inducing points loses information.
     with pytest.raises(AssertionError):
         assert_equal_measures(
             fdds_check,
             m | tup_sum,
-            m | PseudoObs(p_sum(x_sum, 0.1), *tup_sum),
+            m | TestObs(p_sum(x_sum, 0.1), *tup_sum),
         )
-
-
-def test_backward_compatibility():
-    from stheno import SparseObs, SparseObservations
-
-    assert SparseObs is PseudoObs
-    assert SparseObservations is PseudoObs
 
 
 def test_logpdf():
@@ -354,10 +352,12 @@ def test_logpdf():
         m.logpdf((p1(x1), y1), (p2(x2), y2), (p3(x3), y3)),
     )
 
-    # Check that `Measure.logpdf` allows `Obs` and `PseudoObs`.
+    # Check that `Measure.logpdf` allows `Obs` and `PseudoObs` and `PseudoObsFITC`.
     obs = Obs(p3(x3), y3)
     approx(m.logpdf(obs), p3(x3).logpdf(y3))
     obs = PseudoObs(p3(x3), p3(x3, 1), y3)
+    approx(m.logpdf(obs), p3(x3, 1).logpdf(y3))
+    obs = PseudoObsFITC(p3(x3), p3(x3, 1), y3)
     approx(m.logpdf(obs), p3(x3, 1).logpdf(y3))
 
 
