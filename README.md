@@ -651,7 +651,8 @@ approximation methods:
 
 The VFE approximation (`PseudoObs`) is the approximation recommended to use.
 The following definitions and examples will use the VFE approximation with `PseudoObs`,
-but every instance of `PseudoObs` can be swapped out for `PseudoObsFITC`.
+but every instance of `PseudoObs` can be swapped out for `PseudoObsFITC` or 
+`PseudoObsDTC`.
 
 Definition:
 
