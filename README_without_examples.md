@@ -629,7 +629,7 @@ various approximation methods:
     To use the VFE approximation, use `PseudoObs`.
 
 2. The Fully Independent Training Conditional (FITC;
-    [Snelson & Ghahramani, 2009](http://www.gatsby.ucl.ac.uk/~snelson/SPGP_up.pdf))
+    [Snelson & Ghahramani, 2006](http://www.gatsby.ucl.ac.uk/~snelson/SPGP_up.pdf))
     approximation. 
     To use the FITC approximation, use `PseudoObsFITC`.
  
