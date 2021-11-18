@@ -620,8 +620,8 @@ AssertionError: Processes GP(0, EQ()) and GP(0, Linear()) are associated to diff
 
 ### Inducing Points
 
-Stheno supports pseudo-point approximations of posterior distributions with two
-approximation methods:
+Stheno supports pseudo-point approximations of posterior distributions with
+various approximation methods:
 
 1. The Variational Free Energy (VFE;
     [Titsias, 2009](http://proceedings.mlr.press/v5/titsias09a/titsias09a.pdf))
