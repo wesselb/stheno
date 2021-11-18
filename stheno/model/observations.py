@@ -14,9 +14,13 @@ __all__ = [
     "Observations",
     "Obs",
     "PseudoObservations",
+    "SparseObservations",
     "PseudoObs",
+    "SparseObs",
     "PseudoObservationsFITC",
     "PseudoObsFITC",
+    "PseudoObservationsDTC",
+    "PseudoObsDTC",
 ]
 
 
@@ -247,19 +251,29 @@ class AbstractPseudoObservations(AbstractObservations):
             self._compute(measure)
             return self._A_store[id(measure)]
 
+    def posterior_kernel(self, measure, p_i, p_j):
+        return PosteriorKernel(
+            measure.kernels[p_i, p_j],
+            measure.kernels[self.u.p, p_i],
+            measure.kernels[self.u.p, p_j],
+            self.u.x,
+            self.K_z(measure),
+        ) + SubspaceKernel(
+            measure.kernels[self.u.p, p_i],
+            measure.kernels[self.u.p, p_j],
+            self.u.x,
+            self.A(measure),
+        )
 
-class PseudoObservations(AbstractPseudoObservations):
-    """Observations through inducing points (VFE).
-
-    Paper: Variational Learning of Inducing Variables in Sparse Gaussian Processes
-    Author: Michalis K. Titsias
-
-    Further takes arguments according to the constructor of
-    :class:`.measure.AbstractObservations`. Can also take in tuples of inducing points.
-
-    Args:
-        u (:class:`.fdd.FDD`): Inducing points
-    """
+    def posterior_mean(self, measure, p):
+        return PosteriorMean(
+            measure.means[p],
+            measure.means[self.u.p],
+            measure.kernels[self.u.p, p],
+            self.u.x,
+            self.K_z(measure),
+            self.mu(measure),
+        )
 
     def _compute(self, measure):
         # Extract processes and inputs.
@@ -281,146 +295,118 @@ class PseudoObservations(AbstractPseudoObservations):
                 f'not "{type(K_n).__name__}".'
             )
 
-        # And construct the components for the inducing point approximation.
         L_z = B.cholesky(K_z)
-        A = B.add(B.eye(K_z), B.iqf(K_n, B.transpose(B.solve(L_z, K_zx))))
-        self._A_store[id(measure)] = A
-        y_bar = B.subtract(B.uprank(self.y), measure.means[p_x](x))
-        prod_y_bar = B.solve(L_z, B.iqf(K_n, B.transpose(K_zx), y_bar))
+        iLz_Kzx = B.solve(L_z, K_zx)
+        A = B.add(B.eye(K_z), B.iqf(K_n, B.transpose(iLz_Kzx)))
 
-        # Compute the optimal mean.
-        mu = B.add(
-            measure.means[p_z](z),
-            B.iqf(A, B.solve(L_z, K_z), prod_y_bar),
-        )
+        if self.method in {"vfe", "fitc"}:
+            K_x_diag = measure.kernels[p_x].elwise(x)[..., 0]
+            Q_x_diag = B.matmul_diag(iLz_Kzx, iLz_Kzx, tr_a=True)
+            diag_correction = Diagonal(K_x_diag) - Diagonal(Q_x_diag)
+
+        if self.method == "vfe":
+            K_n += 0
+            trace_part = B.ratio(diag_correction, K_n)
+        elif self.method == "fitc":
+            K_n += diag_correction
+            trace_part = 0
+        elif self.method == "dtc":
+            K_n += 0
+            trace_part = 0
+        else:  # pragma: no cover
+            # This cannot be reached.
+            raise ValueError(f'Invalid approximation method "{method}".')
+
+        # Subspace variance:
+        self._A_store[id(measure)] = B.mm(L_z, A, L_z, tr_c=True)
+
+        # Optimal mean:
+        y_bar = B.subtract(B.uprank(self.y), measure.means[p_x](x))
+        prod_y_bar = B.iqf(K_n, B.transpose(iLz_Kzx), y_bar)
+        # TODO: Absorb `L_z` in the posterior mean for better stability.
+        mu = B.add(measure.means[p_z](z), B.iqf(A, B.transpose(L_z), prod_y_bar))
         self._mu_store[id(measure)] = mu
 
         # Compute the ELBO.
-        # NOTE: The calculation of `trace_part` asserts that `K_n` is diagonal.
-        # The rest, however, is completely generic.
-        trace_part = B.ratio(
-            Diagonal(measure.kernels[p_x].elwise(x)[:, 0])
-            - Diagonal(B.iqf_diag(K_z, K_zx)),
-            K_n,
-        )
         dtype = B.dtype_float(K_n)
         det_part = B.logdet(B.multiply(B.cast(dtype, 2 * B.pi), K_n)) + B.logdet(A)
-        iqf_part = B.iqf(K_n, y_bar)[0, 0] - B.iqf(A, prod_y_bar)[0, 0]
-        self._elbo_store[id(measure)] = -0.5 * (trace_part + det_part + iqf_part)
+        iqf_part = B.iqf_diag(K_n, y_bar)[..., 0] - B.iqf_diag(A, prod_y_bar)[..., 0]
+        self._elbo_store[id(measure)] = -0.5 * (det_part + iqf_part + trace_part)
 
-    def posterior_kernel(self, measure, p_i, p_j):
-        L = B.chol(self.K_z(measure))
-        return PosteriorKernel(
-            measure.kernels[p_i, p_j],
-            measure.kernels[self.u.p, p_i],
-            measure.kernels[self.u.p, p_j],
-            self.u.x,
-            self.K_z(measure),
-        ) + SubspaceKernel(
-            measure.kernels[self.u.p, p_i],
-            measure.kernels[self.u.p, p_j],
-            self.u.x,
-            B.mm(L, self.A(measure), L, tr_c=True),
-        )
 
-    def posterior_mean(self, measure, p):
-        return PosteriorMean(
-            measure.means[p],
-            measure.means[self.u.p],
-            measure.kernels[self.u.p, p],
-            self.u.x,
-            self.K_z(measure),
-            self.mu(measure),
-        )
+class PseudoObservations(AbstractPseudoObservations):
+    """Observations through inducing points with the VFE approximation.
+
+    Titsias M. (2009). "Variational Learning of Inducing Variables in Sparse Gaussian
+        Processes," in Artificial Intelligence and Statistics, 12th International
+        Conference on.
+
+    Further takes arguments according to the constructor of
+    :class:`.measure.AbstractObservations`. Can also take in tuples of inducing points.
+
+    Args:
+        u (:class:`.fdd.FDD`): Inducing points
+
+    Attributes:
+        method (str): Description of the method.
+    """
+
+    @property
+    def method(self):
+        return "vfe"
 
 
 class PseudoObservationsFITC(AbstractPseudoObservations):
-    """Observations through inducing points (FITC).
+    """Observations through inducing points with the FITC approximation.
 
-    Paper: Sparse Gaussian Processes using Pseudo-inputs
-    Authors: Edward Snelson and Zoubin Ghahramani
+    Snelson G. and Ghahramani Z. (2006). "Sparse Gaussian Processes Using
+        Pseudo-Inputs," in Neural Information Processing Systems, 18th.
 
     Further takes arguments according to the constructor of
     :class:`.measure.AbstractObservations`. Can also take in tuples of inducing points.
 
     Args:
         u (:class:`.fdd.FDD`): Inducing points
+
+    Attributes:
+        method (str): Description of the method.
     """
 
-    def _compute(self, measure):
-        # Extract processes and inputs.
-        p_x, x, noise_x = self.fdd.p, self.fdd.x, self.fdd.noise
-        p_z, z, noise_z = self.u.p, self.u.x, self.u.noise
+    @property
+    def method(self):
+        return "fitc"
 
-        # Construct the necessary kernel matrices.
-        K_zx = measure.kernels[p_z, p_x](z, x)
-        K_z = B.add(measure.kernels[p_z](z), noise_z)
-        self._K_z_store[id(measure)] = K_z
 
-        # Noise kernel matrix:
-        K_n = noise_x
+class PseudoObservationsDTC(AbstractPseudoObservations):
+    """Observations through inducing points with the DTC approximation.
 
-        # The approximation can only handle diagonal noise matrices.
-        if not isinstance(K_n, Diagonal):
-            raise RuntimeError(
-                f"Kernel matrix of observation noise must be diagonal, "
-                f'not "{type(K_n).__name__}".'
-            )
+    Csato L. and Opper M. (2002). "Sparse On-Line Gaussian Processes," in Neural
+        Computation 14 (3), 641-668.
 
-        # And construct the components for the inducing point approximation.
-        diag_part = (
-            K_n
-            + Diagonal(measure.kernels[p_x].elwise(x)[:, 0])
-            - Diagonal(B.iqf_diag(K_z, K_zx))
-        )
-        L_z = B.cholesky(K_z)
-        A_ = B.add(B.eye(K_z), B.iqf(diag_part, B.transpose(B.solve(L_z, K_zx))))
-        A = K_z + B.iqf(diag_part, B.transpose(K_zx))
-        self._A_store[id(measure)] = A
+    Seeger, M., Williams, C. K. I., Lawrence, N. D. (2003). "Fast Forward Selection to
+        Speed Up Sparse Gaussian Process Regression," in Artificial Intelligence and
+        Statistics, 9th International Workshop on.
 
-        y_bar = B.subtract(B.uprank(self.y), measure.means[p_x](x))
-        prod_y_bar = B.solve(L_z, B.iqf(diag_part, B.transpose(K_zx), y_bar))
+    Further takes arguments according to the constructor of
+    :class:`.measure.AbstractObservations`. Can also take in tuples of inducing points.
 
-        # Compute the optimal mean.
-        mu = B.add(
-            measure.means[p_z](z),
-            B.iqf(diag_part, B.transpose(K_zx), y_bar),
-        )
-        self._mu_store[id(measure)] = mu
+    Args:
+        u (:class:`.fdd.FDD`): Inducing points
 
-        # Compute the ELBO.
-        dtype = B.dtype_float(K_n)
-        det_part = B.logdet(B.multiply(B.cast(dtype, 2 * B.pi), diag_part)) + B.logdet(
-            A_
-        )
-        iqf_part = B.iqf(K_n, y_bar)[0, 0] - B.iqf(A_, prod_y_bar)[0, 0]
-        self._elbo_store[id(measure)] = -0.5 * (det_part + iqf_part)
+    Attributes:
+        method (str): Description of the method.
+    """
 
-    def posterior_kernel(self, measure, p_i, p_j):
-        return PosteriorKernel(
-            measure.kernels[p_i, p_j],
-            measure.kernels[self.u.p, p_i],
-            measure.kernels[self.u.p, p_j],
-            self.u.x,
-            self.K_z(measure),
-        ) + SubspaceKernel(
-            measure.kernels[self.u.p, p_i],
-            measure.kernels[self.u.p, p_j],
-            self.u.x,
-            self.A(measure),
-        )
-
-    def posterior_mean(self, measure, p):
-        return PosteriorMean(
-            measure.means[p],
-            measure.means[self.u.p],
-            measure.kernels[self.u.p, p],
-            self.u.x,
-            self.A(measure),
-            self.mu(measure),
-        )
+    @property
+    def method(self):
+        return "dtc"
 
 
 Obs = Observations  #: Shorthand for `Observations`.
 PseudoObs = PseudoObservations  #: Shorthand for `PseudoObservations`.
-PseudoObsFITC = PseudoObservationsFITC  # : Shorthand for `PseudoObservationsFITC`.
+PseudoObsFITC = PseudoObservationsFITC  #: Shorthand for `PseudoObservationsFITC`.
+PseudoObsDTC = PseudoObservationsDTC  #: Shorthand for `PseudoObservationsDTC`.
+
+# Backward compatibility:
+SparseObs = PseudoObservations
+SparseObservations = PseudoObservations

@@ -630,8 +630,28 @@ AssertionError: Processes GP(0, EQ()) and GP(0, Linear()) are associated to diff
 
 ### Inducing Points
 
-Stheno supports pseudo-point approximations of posterior distributions with [Variational Free Energy (VFE)](http://proceedings.mlr.press/v5/titsias09a/titsias09a.pdf) and [(Fully Independent Training Conditional (FITC)](http://www.gatsby.ucl.ac.uk/~snelson/SPGP_up.pdf) methods.
-To construct a pseudo-point approximation, use `PseudoObs` or `PseudoObsFITC`.
+Stheno supports pseudo-point approximations of posterior distributions with two
+approximation methods:
+
+1. The Variational Free Energy (VFE;
+    [Titsias, 2009](http://proceedings.mlr.press/v5/titsias09a/titsias09a.pdf))
+    approximation.
+    To use the VFE approximation, use `PseudoObs`.
+
+2. The Fully Independent Training Conditional (FITC;
+    [Snelson & Ghahramani, 2009](http://www.gatsby.ucl.ac.uk/~snelson/SPGP_up.pdf))
+    approximation. 
+    To use the FITC approximation, use `PseudoObsFITC`.
+ 
+3. The Deterministic Training Conditional (DTC;
+   [Csato & Opper, 2002](https://direct.mit.edu/neco/article/14/3/641/6594/Sparse-On-Line-Gaussian-Processes);
+   [Seeger et al., 2003](http://proceedings.mlr.press/r4/seeger03a/seeger03a.pdf))
+   approximation.
+   To use the DTC approximation, use `PseudoObsDTC`.
+
+The VFE approximation (`PseudoObs`) is the approximation recommended to use.
+The following definitions and examples will use the VFE approximation with `PseudoObs`,
+but every instance of `PseudoObs` can be swapped out for `PseudoObsFITC`.
 
 Definition:
 
@@ -709,6 +729,7 @@ We finally construct the approximate posterior measure:
       [1.09 ]
       [1.091]]>
 ```
+
 
 ### Kernels and Means
 

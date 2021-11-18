@@ -14,14 +14,12 @@ from .gp import GP, assert_same_measure
 from .observations import (
     AbstractObservations,
     Observations,
-    PseudoObservations,
-    PseudoObservationsFITC,
+    AbstractPseudoObservations,
     combine,
 )
 from .. import _dispatch, PromisedMeasure
 from ..lazy import LazyVector, LazyMatrix
 from ..mo import MultiOutputKernel as MOK, MultiOutputMean as MOM
-from ..random import Normal
 
 __all__ = ["Measure"]
 
@@ -466,11 +464,7 @@ class Measure:
         return self.logpdf(obs.fdd, obs.y)
 
     @_dispatch
-    def logpdf(self, obs: PseudoObservations):
-        return obs.elbo(self)
-
-    @_dispatch
-    def logpdf(self, obs: PseudoObservationsFITC):
+    def logpdf(self, obs: AbstractPseudoObservations):
         return obs.elbo(self)
 
 
