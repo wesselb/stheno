@@ -5,6 +5,11 @@ examples = [
         "file": "readme_example1_simple_regression",
     },
     {
+        "title": "Hyperparameter Optimization",
+        "toc": "hyperparameter-optimization",
+        "file": "readme_example12_optimization",
+    },
+    {
         "title": "Decomposition of Prediction",
         "toc": "decomposition-of-prediction",
         "file": "readme_example2_decomposition",
