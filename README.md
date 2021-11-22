@@ -881,7 +881,7 @@ from varz.torch import Vars, minimise_l_bfgs_b
 from varz.spec import parametrised, Positive
 import lab.torch as B
 
-B.set_random_seed(0)
+B.set_random_seed(42)
 
 
 # Sample a true, underlying function and observations with known noise.
@@ -889,37 +889,37 @@ x_obs = B.linspace(0, 2, 50)
 x = B.linspace(0, 2, 101)
 true_func = lambda x: B.sin(5 * x)
 f_true = true_func(x_obs)
-noise_true = 0.1
-y_obs = f_true + noise_true * B.randn(x_obs.shape[0])
+true_noise_var = 0.01
+y_obs = f_true + (true_noise_var ** 0.5) * B.randn(x_obs.shape[0])
 
 
 # Construct a model with learnable parameters.
 def model(vs):
     # Varz handles positivity (and other) constraints.
     kernel = vs.positive(name="variance") * EQ().stretch(vs.positive(name="ls"))
-    noise = noise_true
-    return GP(kernel), noise
+    noise_var = vs.positive(name="noise_var")
+    return GP(kernel), noise_var
 
 
 # A more convenient way of defining above model
 # @parametrised
-# def model(vs, noise: Positive, ls: Positive, variance: Positive):
+# def model(vs, ls: Positive, variance: Positive, noise_var: Positive):
 #     """Constuct a model with learnable parameters."""
 #     kernel = variance * EQ().stretch(ls)
-#     return GP(kernel), noise
+#     return GP(kernel), noise_var
 
 
 # Define an objective function.
 def objective(vs):
-    f, noise = model(vs)
-    return -f(x_obs, noise).logpdf(y_obs)
+    f, noise_var = model(vs)
+    return -f(x_obs, noise_var).logpdf(y_obs)
 
 
 # Plotting function
 def plot_model(vs, title_prefix):
-    f, noise = model(vs)
-    f_post = f | (f(x_obs, noise), y_obs)
-    mean, lower, upper = f_post(x).marginal_credible_bounds()
+    f, noise_var = model(vs)
+    f_post = f | (f(x_obs, noise_var), y_obs)
+    mean, lower, upper = f_post(x, noise_var).marginal_credible_bounds()
 
     plt.scatter(x_obs, y_obs, label="Observations", style="train", s=20)
     plt.plot(x, true_func(x), label="True", style="test")
@@ -928,7 +928,9 @@ def plot_model(vs, title_prefix):
     plt.ylim(-1.5, 1.5)
     plt.title(
         title_prefix
-        + " length scale = {:.2f}, variance = {:.2f}".format(vs["ls"], vs["variance"])
+        + "\nlength scale = {:.2f}\nvariance = {:.2f}\nnoise variance = {:.2f}".format(
+            vs["ls"], vs["variance"], noise_var
+        )
     )
     tweak()
 
