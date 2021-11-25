@@ -25,7 +25,8 @@ Contents:
     - [Important Remarks](#important-remarks)
 * [Examples](#examples)
     - [Simple Regression](#simple-regression)
-    - [Hyperparameter Optimization](#hyperparameter-optimization)
+    - [Hyperparameter Optimization with Varz](#hyperparameter-optimization-with-varz)
+    - [Hyperparameter Optimization with PyTorch](#hyperparameter-optimization-with-pytorch)
     - [Decomposition of Prediction](#decomposition-of-prediction)
     - [Learn a Function, Incorporating Prior Knowledge About Its Form](#learn-a-function-incorporating-prior-knowledge-about-its-form)
     - [Multi-Output Regression](#multi-output-regression)
@@ -868,9 +869,9 @@ plt.savefig("readme_example1_simple_regression.png")
 plt.show()
 ```
 
-### Hyperparameter Optimization
+### Hyperparameter Optimization with Varz
 
-![Prediction](https://raw.githubusercontent.com/wesselb/stheno/master/readme_example12_optimization.png)
+![Prediction](https://raw.githubusercontent.com/wesselb/stheno/master/readme_example12_optimization_varz.png)
 
 ```python
 import matplotlib.pyplot as plt
@@ -881,7 +882,8 @@ from varz.torch import Vars, minimise_l_bfgs_b
 from varz.spec import parametrised, Positive
 import lab.torch as B
 
-B.set_random_seed(42)
+# Enable to reproduce the same results repeatedly.
+# B.set_random_seed(42)
 
 
 # Sample a true, underlying function and observations with known noise.
@@ -895,17 +897,17 @@ y_obs = f_true + (true_noise_var ** 0.5) * B.randn(x_obs.shape[0])
 
 # Construct a model with learnable parameters.
 def model(vs):
+    p = vs.struct
     # Varz handles positivity (and other) constraints.
-    kernel = vs.positive(name="variance") * EQ().stretch(vs.positive(name="ls"))
-    noise_var = vs.positive(name="noise_var")
-    return GP(kernel), noise_var
+    kernel = p.variance.positive() * EQ().stretch(p.scale.positive())
+    return GP(kernel), p.noise.positive()
 
 
-# A more convenient way of defining above model
+# A more Pythonic way of defining above model
 # @parametrised
-# def model(vs, ls: Positive, variance: Positive, noise_var: Positive):
+# def model(vs, scale: Positive, variance: Positive, noise_var: Positive):
 #     """Constuct a model with learnable parameters."""
-#     kernel = variance * EQ().stretch(ls)
+#     kernel = variance * EQ().stretch(scale)
 #     return GP(kernel), noise_var
 
 
@@ -929,7 +931,7 @@ def plot_model(vs, title_prefix):
     plt.title(
         title_prefix
         + "\nlength scale = {:.2f}\nvariance = {:.2f}\nnoise variance = {:.2f}".format(
-            vs["ls"], vs["variance"], noise_var
+            vs["scale"], vs["variance"], noise_var
         )
     )
     tweak()
@@ -943,13 +945,115 @@ plt.subplot(1, 2, 1)
 plot_model(vs, "Initial fit:")
 
 # Perform optimization.
-minimise_l_bfgs_b(objective, vs)
 
+vs.requires_grad(True)
+minimise_l_bfgs_b(objective, vs)
 
 # Visualize final fit
 plt.subplot(1, 2, 2)
 plot_model(vs, "Final fit:")
-plt.savefig("readme_example12_optimization.png")
+plt.savefig("readme_example12_optimization_varz.png")
+plt.show()
+```
+
+### Hyperparameter Optimization with PyTorch
+
+![Prediction](https://raw.githubusercontent.com/wesselb/stheno/master/readme_example13_optimization_torch.png)
+
+```python
+import matplotlib.pyplot as plt
+from wbml.plot import tweak
+import torch
+from stheno import EQ, GP
+import lab.torch  # torch context necessary for stheno
+
+# Enable to reproduce the same results repeatedly.
+# torch.manual_seed(0)
+
+
+# Sample a true, underlying function and observations with known noise.
+x_obs = torch.linspace(0, 2, 50).double()
+x = torch.linspace(0, 2, 101).double()
+true_func = lambda x: torch.sin(5 * x)
+f_true = true_func(x_obs)
+true_noise_var = 0.01
+y_obs = f_true + (true_noise_var ** 0.5) * torch.randn(x_obs.shape[0]).double()
+
+
+# Define a positivity constraint.
+def positive(variable):
+    return torch.exp(variable)
+
+
+# Construct a model with learnable parameters (positive).
+def model(scale, variance, noise_var):
+    kernel = positive(variance) * EQ().stretch(positive(scale))
+    return GP(kernel), positive(noise_var)
+
+
+# Define an objective function.
+def objective(scale, variance, noise_var):
+    f, pos_noise_var = model(scale, variance, noise_var)
+    return -f(x_obs, pos_noise_var).logpdf(y_obs)
+
+
+# Plotting function
+def plot_model(scale, variance, noise_var, title_prefix):
+    f, pos_noise_var = model(scale, variance, noise_var)
+    f_post = f | (f(x_obs, pos_noise_var), y_obs)
+    mean, lower, upper = f_post(x, pos_noise_var).marginal_credible_bounds()
+
+    plt.scatter(x_obs, y_obs, label="Observations", style="train", s=20)
+    plt.plot(x, true_func(x), label="True", style="test")
+    plt.plot(x, mean, label="Prediction", style="pred")
+    plt.fill_between(x, lower, upper, style="pred")
+    plt.ylim(-1.5, 1.5)
+    plt.title(
+        title_prefix
+        + "\nlength scale = {:.2f}\nvariance = {:.2f}\nnoise variance = {:.2f}".format(
+            f.kernel.factor(1).stretches[0].item(),
+            f.kernel.factor(0).item(),
+            pos_noise_var.item(),
+        )
+    )
+    tweak()
+
+
+# Create trainable torch variables
+scale = torch.empty((), dtype=torch.float64, requires_grad=True)
+variance = torch.empty((), dtype=torch.float64, requires_grad=True)
+noise_var = torch.empty((), dtype=torch.float64, requires_grad=True)
+
+
+# Initialise the variables
+for param in [scale, variance, noise_var]:
+    # Log transform as an inverse transformation to positive (exp) transform
+    param.data.fill_(torch.log(torch.rand(())))
+
+
+# Visualize initial fit
+plt.figure(figsize=(10, 4))
+plt.subplot(1, 2, 1)
+plot_model(scale, variance, noise_var, "Initial fit:")
+
+
+# Define an optimizer
+optimizer = torch.optim.Adam([scale, variance, noise_var], lr=0.1)
+
+
+# Perform optimization.
+n_iters = 50
+for _ in range(n_iters):
+    optimizer.zero_grad()
+    loss = objective(scale, variance, noise_var)
+    loss.backward()
+    optimizer.step()
+
+
+# Visualize final fit
+plt.subplot(1, 2, 2)
+plot_model(scale, variance, noise_var, "Final fit:")
+plt.savefig("readme_example13_optimization_torch.png")
 plt.show()
 ```
 

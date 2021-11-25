@@ -5,9 +5,14 @@ examples = [
         "file": "readme_example1_simple_regression",
     },
     {
-        "title": "Hyperparameter Optimization",
-        "toc": "hyperparameter-optimization",
-        "file": "readme_example12_optimization",
+        "title": "Hyperparameter Optimization with Varz",
+        "toc": "hyperparameter-optimization-with-varz",
+        "file": "readme_example12_optimization_varz",
+    },
+    {
+        "title": "Hyperparameter Optimization with PyTorch",
+        "toc": "hyperparameter-optimization-with-pytorch",
+        "file": "readme_example13_optimization_torch",
     },
     {
         "title": "Decomposition of Prediction",

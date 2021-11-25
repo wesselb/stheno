@@ -6,7 +6,8 @@ from varz.torch import Vars, minimise_l_bfgs_b
 from varz.spec import parametrised, Positive
 import lab.torch as B
 
-B.set_random_seed(42)
+# Enable to reproduce the same results repeatedly.
+# B.set_random_seed(42)
 
 
 # Sample a true, underlying function and observations with known noise.
@@ -20,17 +21,17 @@ y_obs = f_true + (true_noise_var ** 0.5) * B.randn(x_obs.shape[0])
 
 # Construct a model with learnable parameters.
 def model(vs):
+    p = vs.struct
     # Varz handles positivity (and other) constraints.
-    kernel = vs.positive(name="variance") * EQ().stretch(vs.positive(name="ls"))
-    noise_var = vs.positive(name="noise_var")
-    return GP(kernel), noise_var
+    kernel = p.variance.positive() * EQ().stretch(p.scale.positive())
+    return GP(kernel), p.noise.positive()
 
 
-# A more convenient way of defining above model
+# A more Pythonic way of defining above model
 # @parametrised
-# def model(vs, ls: Positive, variance: Positive, noise_var: Positive):
+# def model(vs, scale: Positive, variance: Positive, noise_var: Positive):
 #     """Constuct a model with learnable parameters."""
-#     kernel = variance * EQ().stretch(ls)
+#     kernel = variance * EQ().stretch(scale)
 #     return GP(kernel), noise_var
 
 
@@ -54,7 +55,7 @@ def plot_model(vs, title_prefix):
     plt.title(
         title_prefix
         + "\nlength scale = {:.2f}\nvariance = {:.2f}\nnoise variance = {:.2f}".format(
-            vs["ls"], vs["variance"], noise_var
+            vs["scale"], vs["variance"], noise_var
         )
     )
     tweak()
@@ -68,11 +69,12 @@ plt.subplot(1, 2, 1)
 plot_model(vs, "Initial fit:")
 
 # Perform optimization.
-minimise_l_bfgs_b(objective, vs)
 
+vs.requires_grad(True)
+minimise_l_bfgs_b(objective, vs)
 
 # Visualize final fit
 plt.subplot(1, 2, 2)
 plot_model(vs, "Final fit:")
-plt.savefig("readme_example12_optimization.png")
+plt.savefig("readme_example12_optimization_varz.png")
 plt.show()
