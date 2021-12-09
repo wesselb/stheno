@@ -25,8 +25,8 @@ Contents:
     - [Important Remarks](#important-remarks)
 * [Examples](#examples)
     - [Simple Regression](#simple-regression)
-    - [Hyperparameter Optimization with Varz](#hyperparameter-optimization-with-varz)
-    - [Hyperparameter Optimization with PyTorch](#hyperparameter-optimization-with-pytorch)
+    - [Hyperparameter Optimisation with Varz](#hyperparameter-optimisation-with-varz)
+    - [Hyperparameter Optimisation with PyTorch](#hyperparameter-optimisation-with-pytorch)
     - [Decomposition of Prediction](#decomposition-of-prediction)
     - [Learn a Function, Incorporating Prior Knowledge About Its Form](#learn-a-function-incorporating-prior-knowledge-about-its-form)
     - [Multi-Output Regression](#multi-output-regression)
@@ -869,191 +869,197 @@ plt.savefig("readme_example1_simple_regression.png")
 plt.show()
 ```
 
-### Hyperparameter Optimization with Varz
+### Hyperparameter Optimisation with Varz
 
-![Prediction](https://raw.githubusercontent.com/wesselb/stheno/master/readme_example12_optimization_varz.png)
+![Prediction](https://raw.githubusercontent.com/wesselb/stheno/master/readme_example12_optimisation_varz.png)
 
 ```python
+import lab as B
 import matplotlib.pyplot as plt
-from wbml.plot import tweak
 import torch
-from stheno import EQ, GP
-from varz.torch import Vars, minimise_l_bfgs_b
-from varz.spec import parametrised, Positive
-import lab.torch as B
+from varz import Vars, minimise_l_bfgs_b, parametrised, Positive
+from wbml.plot import tweak
 
-# Enable to reproduce the same results repeatedly.
-# B.set_random_seed(42)
+from stheno.torch import EQ, GP
+
+# Increase regularisation because PyTorch defaults to 32-bit floats.
+B.epsilon = 1e-6
+
+# Define points to predict at.
+x = torch.linspace(0, 2, 100)
+x_obs = torch.linspace(0, 2, 50)
+
+# Sample a true, underlying function and observations with observation noise `0.05`.
+f_true = torch.sin(5 * x)
+y_obs = torch.sin(5 * x_obs) + 0.05 ** 0.5 * torch.randn(50)
 
 
-# Sample a true, underlying function and observations with known noise.
-x_obs = B.linspace(0, 2, 50)
-x = B.linspace(0, 2, 101)
-true_func = lambda x: B.sin(5 * x)
-f_true = true_func(x_obs)
-true_noise_var = 0.01
-y_obs = f_true + (true_noise_var ** 0.5) * B.randn(x_obs.shape[0])
-
-
-# Construct a model with learnable parameters.
 def model(vs):
-    p = vs.struct
-    # Varz handles positivity (and other) constraints.
+    """Construct a model with learnable parameters."""
+    p = vs.struct  # Varz handles positivity (and other) constraints.
     kernel = p.variance.positive() * EQ().stretch(p.scale.positive())
     return GP(kernel), p.noise.positive()
 
 
-# A more Pythonic way of defining above model
-# @parametrised
-# def model(vs, scale: Positive, variance: Positive, noise_var: Positive):
-#     """Constuct a model with learnable parameters."""
-#     kernel = variance * EQ().stretch(scale)
-#     return GP(kernel), noise_var
+@parametrised
+def model_alternative(vs, scale: Positive, variance: Positive, noise: Positive):
+    """Equivalent to :func:`model`, but with `@parametrised`."""
+    kernel = variance * EQ().stretch(scale)
+    return GP(kernel), noise
 
 
-# Define an objective function.
+vs = Vars(torch.float32)
+f, noise = model(vs)
+
+# Condition on observations and make predictions before optimisation.
+f_post = f | (f(x_obs, noise), y_obs)
+prior_before = f, noise
+pred_before = f_post(x, noise).marginal_credible_bounds()
+
+
 def objective(vs):
-    f, noise_var = model(vs)
-    return -f(x_obs, noise_var).logpdf(y_obs)
+    f, noise = model(vs)
+    evidence = f(x_obs, noise).logpdf(y_obs)
+    return -evidence
 
 
-# Plotting function
-def plot_model(vs, title_prefix):
-    f, noise_var = model(vs)
-    f_post = f | (f(x_obs, noise_var), y_obs)
-    mean, lower, upper = f_post(x, noise_var).marginal_credible_bounds()
+# Learn hyperparameters.
+minimise_l_bfgs_b(objective, vs)
 
+f, noise = model(vs)
+
+# Condition on observations and make predictions after optimisation.
+f_post = f | (f(x_obs, noise), y_obs)
+prior_after = f, noise
+pred_after = f_post(x, noise).marginal_credible_bounds()
+
+
+def plot_prediction(prior, pred):
+    f, noise = prior
+    mean, lower, upper = pred
     plt.scatter(x_obs, y_obs, label="Observations", style="train", s=20)
-    plt.plot(x, true_func(x), label="True", style="test")
+    plt.plot(x, f_true, label="True", style="test")
     plt.plot(x, mean, label="Prediction", style="pred")
     plt.fill_between(x, lower, upper, style="pred")
-    plt.ylim(-1.5, 1.5)
-    plt.title(
-        title_prefix
-        + "\nlength scale = {:.2f}\nvariance = {:.2f}\nnoise variance = {:.2f}".format(
-            vs["scale"], vs["variance"], noise_var
-        )
+    plt.ylim(-2, 2)
+    plt.text(
+        0.02,
+        0.02,
+        f"var = {f.kernel.factor(0):.2f}, "
+        f"scale = {f.kernel.factor(1).stretches[0]:.2f}, "
+        f"noise = {noise:.2f}",
+        transform=plt.gca().transAxes,
     )
     tweak()
 
 
-# Visualize initial fit
-vs = Vars(torch.float64)
-
+# Plot result.
 plt.figure(figsize=(10, 4))
 plt.subplot(1, 2, 1)
-plot_model(vs, "Initial fit:")
-
-# Perform optimization.
-
-vs.requires_grad(True)
-minimise_l_bfgs_b(objective, vs)
-
-# Visualize final fit
+plt.title("Before optimisation")
+plot_prediction(prior_before, pred_before)
 plt.subplot(1, 2, 2)
-plot_model(vs, "Final fit:")
-plt.savefig("readme_example12_optimization_varz.png")
+plt.title("After optimisation")
+plot_prediction(prior_after, pred_after)
+plt.savefig("readme_example12_optimisation_varz.png")
 plt.show()
 ```
 
-### Hyperparameter Optimization with PyTorch
+### Hyperparameter Optimisation with PyTorch
 
-![Prediction](https://raw.githubusercontent.com/wesselb/stheno/master/readme_example13_optimization_torch.png)
+![Prediction](https://raw.githubusercontent.com/wesselb/stheno/master/readme_example13_optimisation_torch.png)
 
 ```python
+import lab as B
 import matplotlib.pyplot as plt
-from wbml.plot import tweak
 import torch
-from stheno import EQ, GP
-import lab.torch  # torch context necessary for stheno
+from wbml.plot import tweak
 
-# Enable to reproduce the same results repeatedly.
-# torch.manual_seed(0)
+from stheno.torch import EQ, GP
 
+# Increase regularisation because PyTorch defaults to 32-bit floats.
+B.epsilon = 1e-6
 
-# Sample a true, underlying function and observations with known noise.
-x_obs = torch.linspace(0, 2, 50).double()
-x = torch.linspace(0, 2, 101).double()
-true_func = lambda x: torch.sin(5 * x)
-f_true = true_func(x_obs)
-true_noise_var = 0.01
-y_obs = f_true + (true_noise_var ** 0.5) * torch.randn(x_obs.shape[0]).double()
+# Define points to predict at.
+x = torch.linspace(0, 2, 100)
+x_obs = torch.linspace(0, 2, 50)
 
-
-# Define a positivity constraint.
-def positive(variable):
-    return torch.exp(variable)
+# Sample a true, underlying function and observations with observation noise `0.05`.
+f_true = torch.sin(5 * x)
+y_obs = torch.sin(5 * x_obs) + 0.05 ** 0.5 * torch.randn(50)
 
 
-# Construct a model with learnable parameters (positive).
-def model(scale, variance, noise_var):
-    kernel = positive(variance) * EQ().stretch(positive(scale))
-    return GP(kernel), positive(noise_var)
+class Model(torch.nn.Module):
+    """A GP model with learnable parameters."""
+
+    def __init__(self, init_var=0.3, init_scale=1, init_noise=0.2):
+        super().__init__()
+        # Ensure that the parameters are positive and make them learnable.
+        self.log_var = torch.nn.Parameter(torch.log(torch.tensor(init_var)))
+        self.log_scale = torch.nn.Parameter(torch.log(torch.tensor(init_scale)))
+        self.log_noise = torch.nn.Parameter(torch.log(torch.tensor(init_noise)))
+
+    def construct(self):
+        self.var = torch.exp(self.log_var)
+        self.scale = torch.exp(self.log_scale)
+        self.noise = torch.exp(self.log_noise)
+        kernel = self.var * EQ().stretch(self.scale)
+        return GP(kernel), self.noise
 
 
-# Define an objective function.
-def objective(scale, variance, noise_var):
-    f, pos_noise_var = model(scale, variance, noise_var)
-    return -f(x_obs, pos_noise_var).logpdf(y_obs)
+model = Model()
+f, noise = model.construct()
+
+# Condition on observations and make predictions before optimisation.
+f_post = f | (f(x_obs, noise), y_obs)
+prior_before = f, noise
+pred_before = f_post(x, noise).marginal_credible_bounds()
+
+# Perform optimisation.
+opt = torch.optim.Adam(model.parameters(), lr=5e-2)
+for _ in range(1000):
+    opt.zero_grad()
+    f, noise = model.construct()
+    loss = -f(x_obs, noise).logpdf(y_obs)
+    loss.backward()
+    opt.step()
+
+f, noise = model.construct()
+
+# Condition on observations and make predictions after optimisation.
+f_post = f | (f(x_obs, noise), y_obs)
+prior_after = f, noise
+pred_after = f_post(x, noise).marginal_credible_bounds()
 
 
-# Plotting function
-def plot_model(scale, variance, noise_var, title_prefix):
-    f, pos_noise_var = model(scale, variance, noise_var)
-    f_post = f | (f(x_obs, pos_noise_var), y_obs)
-    mean, lower, upper = f_post(x, pos_noise_var).marginal_credible_bounds()
-
+def plot_prediction(prior, pred):
+    f, noise = prior
+    mean, lower, upper = pred
     plt.scatter(x_obs, y_obs, label="Observations", style="train", s=20)
-    plt.plot(x, true_func(x), label="True", style="test")
+    plt.plot(x, f_true, label="True", style="test")
     plt.plot(x, mean, label="Prediction", style="pred")
     plt.fill_between(x, lower, upper, style="pred")
-    plt.ylim(-1.5, 1.5)
-    plt.title(
-        title_prefix
-        + "\nlength scale = {:.2f}\nvariance = {:.2f}\nnoise variance = {:.2f}".format(
-            f.kernel.factor(1).stretches[0].item(),
-            f.kernel.factor(0).item(),
-            pos_noise_var.item(),
-        )
+    plt.ylim(-2, 2)
+    plt.text(
+        0.02,
+        0.02,
+        f"var = {f.kernel.factor(0):.2f}, "
+        f"scale = {f.kernel.factor(1).stretches[0]:.2f}, "
+        f"noise = {noise:.2f}",
+        transform=plt.gca().transAxes,
     )
     tweak()
 
 
-# Create trainable torch variables
-scale = torch.empty((), dtype=torch.float64, requires_grad=True)
-variance = torch.empty((), dtype=torch.float64, requires_grad=True)
-noise_var = torch.empty((), dtype=torch.float64, requires_grad=True)
-
-
-# Initialise the variables
-for param in [scale, variance, noise_var]:
-    # Log transform as an inverse transformation to positive (exp) transform
-    param.data.fill_(torch.log(torch.rand(())))
-
-
-# Visualize initial fit
+# Plot result.
 plt.figure(figsize=(10, 4))
 plt.subplot(1, 2, 1)
-plot_model(scale, variance, noise_var, "Initial fit:")
-
-
-# Define an optimizer
-optimizer = torch.optim.Adam([scale, variance, noise_var], lr=0.1)
-
-
-# Perform optimization.
-n_iters = 50
-for _ in range(n_iters):
-    optimizer.zero_grad()
-    loss = objective(scale, variance, noise_var)
-    loss.backward()
-    optimizer.step()
-
-
-# Visualize final fit
+plt.title("Before optimisation")
+plot_prediction(prior_before, pred_before)
 plt.subplot(1, 2, 2)
-plot_model(scale, variance, noise_var, "Final fit:")
-plt.savefig("readme_example13_optimization_torch.png")
+plt.title("After optimisation")
+plot_prediction(prior_after, pred_after)
+plt.savefig("readme_example13_optimisation_torch.png")
 plt.show()
 ```
 
