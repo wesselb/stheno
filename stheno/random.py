@@ -93,9 +93,6 @@ class Normal(RandomVector):
         self._var = convert(self._var, AbstractMatrix)
 
     def __str__(self):
-        return repr(self)
-
-    def __str__(self):
         return (
             f"<Normal:\n"
             + indented_kv(
