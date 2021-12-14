@@ -25,6 +25,30 @@ def normal2():
     return Normal(mean, var)
 
 
+def test_normal_printing():
+    dist = Normal(lambda: np.array([1, 2]), lambda: np.array([[3, 1], [1, 3]]))
+    res = "<Normal:\n mean=unresolved,\n var=unresolved>"
+    assert str(dist) == repr(dist) == res
+    # Resolve mean.
+    dist.mean
+    assert str(dist) == "<Normal:\n mean=[1 2],\n var=unresolved>"
+    assert repr(dist) == "<Normal:\n mean=array([1, 2]),\n var=unresolved>"
+    # Resolve variance.
+    dist.var
+    assert str(dist) == (
+        "<Normal:\n"
+        " mean=[1 2],\n"
+        " var=<dense matrix: batch=(), shape=(2, 2), dtype=int64>>"
+    )
+    assert repr(dist) == (
+        "<Normal:\n"
+        " mean=array([1, 2]),\n"
+        " var=<dense matrix: batch=(), shape=(2, 2), dtype=int64\n"
+        "      mat=[[3 1]\n"
+        "           [1 3]]>>"
+    )
+
+
 def test_normal_mean_is_zero():
     # Check zero case.
     dist = Normal(B.eye(3))
@@ -146,11 +170,6 @@ def test_normal_sampling():
         state, sample2 = dist.sample(B.create_random_state(B.dtype(dist), seed=0))
         assert isinstance(state, B.RandomState)
         approx(sample1, sample2)
-
-
-def test_normal_display(normal1):
-    assert str(normal1) == RandomVector.__str__(normal1)
-    assert repr(normal1) == RandomVector.__repr__(normal1)
 
 
 def test_normal_arithmetic(normal1, normal2):

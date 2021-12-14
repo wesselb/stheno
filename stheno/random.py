@@ -4,6 +4,7 @@ from types import FunctionType
 from lab import B
 from matrix import AbstractMatrix, Zero
 from plum import convert, Union
+from wbml.util import indented_kv
 
 from . import _dispatch, BreakingChangeWarning
 
@@ -91,6 +92,39 @@ class Normal(RandomVector):
         # Ensure that the variance is a structured matrix for efficient operations.
         self._var = convert(self._var, AbstractMatrix)
 
+    def __str__(self):
+        return repr(self)
+
+    def __str__(self):
+        return (
+            f"<Normal:\n"
+            + indented_kv(
+                "mean",
+                "unresolved" if self._mean is None else str(self._mean),
+                suffix=",\n",
+            )
+            + indented_kv(
+                "var",
+                "unresolved" if self._var is None else str(self._var),
+                suffix=">",
+            )
+        )
+
+    def __repr__(self):
+        return (
+            f"<Normal:\n"
+            + indented_kv(
+                "mean",
+                "unresolved" if self._mean is None else repr(self._mean),
+                suffix=",\n",
+            )
+            + indented_kv(
+                "var",
+                "unresolved" if self._var is None else repr(self._var),
+                suffix=">",
+            )
+        )
+
     @property
     def mean(self):
         """Mean."""
@@ -130,14 +164,6 @@ class Normal(RandomVector):
         Returns:
             tuple: A tuple containing the marginal means and marginal variances.
         """
-        warnings.warn(
-            '"Normal.marginals" previously returned a tuple containing the marginal '
-            "means and marginal lower and upper 95% central credible interval bounds, "
-            "but now it returns a tuple containing the marginal means and marginal "
-            "variances. This was a breaking change. If you wish to compute the "
-            'credible bounds, use "Normal.marginal_error_bounds".',
-            category=BreakingChangeWarning,
-        )
         # It can happen that the variances are slightly negative due to numerical noise.
         # Prevent NaNs from the following square root by taking the maximum with zero.
         return (
@@ -220,7 +246,7 @@ class Normal(RandomVector):
             + B.logdet(other.var)
             - B.logdet(self.var)
             - B.cast(self.dtype, self.dim)
-       ) / 2
+        ) / 2
 
     @_dispatch
     def w2(self, other: "Normal"):
