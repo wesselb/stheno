@@ -34,7 +34,7 @@ class MultiOutputMean(Mean):
 
     @_dispatch
     def __call__(self, x: tuple):
-        return B.concat(*[self(xi) for xi in x], axis=0)
+        return B.concat(*[self(xi) for xi in x], axis=-2)
 
     def render(self, formatter):
         ms = [str(self.measure.means[p]) for p in self.ps]

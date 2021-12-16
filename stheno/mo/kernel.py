@@ -1,8 +1,12 @@
 from lab import B
-from mlkernels import Kernel, pairwise, elwise, num_elements
+from mlkernels import (
+    Kernel,
+    pairwise,
+    elwise,
+)
 
+from .infer import infer_size
 from .. import PromisedFDD as FDD, _dispatch
-from .input import infer_size
 
 __all__ = ["MultiOutputKernel"]
 

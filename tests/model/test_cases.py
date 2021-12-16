@@ -2,7 +2,7 @@ import numpy as np
 from lab import B
 from mlkernels import EQ, Delta, ZeroKernel
 
-from stheno.model import Measure, GP
+from stheno.model import Measure, GP, cross
 from ..util import approx
 
 
@@ -143,9 +143,30 @@ def test_batched():
 
     p = p | (p(x), y)
     y2 = p(x).sample()
+    logpdf2 = p(x, 0.1).logpdf(y)
 
+    assert B.shape(logpdf2) == (16,)
+    assert B.all(logpdf2 > logpdf)
     assert B.shape(y2) == (16, 10, 1)
     approx(y, y2, atol=1e-5)
 
 
+def test_mo_batched():
+    x = B.randn(16, 10, 1)
 
+    with Measure():
+        p = cross(GP(2 * EQ().stretch(0.5)), GP(2 * EQ().stretch(0.5)))
+    y = p(x).sample()
+    logpdf = p(x, 0.1).logpdf(y)
+
+    assert B.shape(logpdf) == (16,)
+    assert B.shape(y) == (16, 20, 1)
+
+    p = p | (p(x), y)
+    y2 = p(x).sample()
+    logpdf2 = p(x, 0.1).logpdf(y)
+
+    assert B.shape(y2) == (16, 20, 1)
+    assert B.shape(logpdf2) == (16,)
+    assert B.all(logpdf2 > logpdf)
+    approx(y, y2, atol=1e-5)

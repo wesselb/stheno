@@ -19,7 +19,11 @@ from .observations import (
 )
 from .. import _dispatch, PromisedMeasure
 from ..lazy import LazyVector, LazyMatrix
-from ..mo import MultiOutputKernel as MOK, MultiOutputMean as MOM
+from ..mo import (
+    MultiOutputKernel as MOK,
+    MultiOutputMean as MOM,
+    AmbiguousDimensionalityKernel as ADK,
+)
 
 __all__ = ["Measure"]
 
@@ -399,7 +403,10 @@ class Measure:
             p_cross,
             MOM(self, *ps),
             mok,
-            lambda j: mok.transform(None, lambda y: FDD(j, y)),
+            # We transform the inputs with an FDD, which can completely change the
+            # shape. Therefore, we wrap the resulting kernel in `ADK` to indicate that
+            # its dimensionality cannot be inferred.
+            lambda j: ADK(mok.transform(None, lambda y: FDD(j, y))),
         )
 
     @_dispatch
