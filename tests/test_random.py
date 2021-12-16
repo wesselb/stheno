@@ -217,3 +217,14 @@ def test_normal_arithmetic(normal1, normal2):
     approx(normal1.__div__(b).var, normal1.var / b ** 2)
     approx(normal1.__truediv__(b).mean, normal1.mean / b)
     approx(normal1.__truediv__(b).var, normal1.var / b ** 2)
+
+
+def test_normal_dtype(normal1):
+    assert B.dtype(Normal(0, B.eye(3))) == np.float64
+    assert B.dtype(Normal(B.ones(3), B.zeros(int, 3))) == np.float64
+    assert B.dtype(Normal(B.ones(int, 3), B.zeros(int, 3))) == np.int64
+
+
+def test_normal_cast(normal1):
+    assert B.dtype(normal1) == np.float64
+    assert B.dtype(B.cast(np.float32, normal1)) == np.float32

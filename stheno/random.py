@@ -321,3 +321,13 @@ class Normal(RandomVector):
             B.matmul(other, self.mean, tr_a=True),
             B.matmul(B.matmul(other, self.var, tr_a=True), other),
         )
+
+
+@B.dispatch
+def dtype(dist: Normal):
+    return B.dtype(dist.mean, dist.var)
+
+
+@B.dispatch
+def cast(dtype: B.DType, dist: Normal):
+    return Normal(B.cast(dtype, dist.mean), B.cast(dtype, dist.var))
