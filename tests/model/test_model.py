@@ -533,11 +533,11 @@ def test_approximate_multiplication():
 
     # Perform product.
     post = m | ((p1(x), s1), (p2(x), s2))
-    approx(post(p_prod)(x).mean, s1 * s2, rtol=1e-2)
+    approx(post(p_prod)(x).mean, s1 * s2, rtol=5e-2)
 
     # Perform division.
     cur_epsilon = B.epsilon
     B.epsilon = 1e-8
     post = m | ((p1(x), s1), (p_prod(x), s1 * s2))
-    approx(post(p2)(x).mean, s2, rtol=1e-2)
+    approx(post(p2)(x).mean, s2, rtol=5e-2)
     B.epsilon = cur_epsilon

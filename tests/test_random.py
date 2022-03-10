@@ -112,7 +112,7 @@ def test_normal_marginal_credible_bounds(normal1):
 def test_normal_logpdf(normal1):
     normal1_sp = multivariate_normal(normal1.mean[:, 0], B.dense(normal1.var))
     x = B.randn(3, 10)
-    approx(normal1.logpdf(x), normal1_sp.logpdf(x.T))
+    approx(normal1.logpdf(x), normal1_sp.logpdf(x.T), rtol=1e-6)
 
     # Test the the output of `logpdf` is flattened appropriately.
     assert B.shape(normal1.logpdf(B.ones(3, 1))) == ()
@@ -137,7 +137,7 @@ def test_normal_entropy(normal1):
 
 
 def test_normal_kl(normal1, normal2):
-    assert normal1.kl(normal1) < 1e-6
+    assert normal1.kl(normal1) < 1e-5
     assert normal1.kl(normal2) > 0.1
 
     # Test against Monte Carlo estimate.
@@ -148,7 +148,7 @@ def test_normal_kl(normal1, normal2):
 
 
 def test_normal_w2(normal1, normal2):
-    assert normal1.w2(normal1) < 1e-6
+    assert normal1.w2(normal1) < 1e-5
     assert normal1.w2(normal2) > 0.1
 
 
