@@ -148,7 +148,7 @@ def test_normal_kl(normal1, normal2):
 
 
 def test_normal_w2(normal1, normal2):
-    assert normal1.w2(normal1) < 1e-5
+    assert normal1.w2(normal1) < 5e-5
     assert normal1.w2(normal2) > 0.1
 
 
