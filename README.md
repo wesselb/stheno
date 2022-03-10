@@ -891,7 +891,7 @@ x_obs = torch.linspace(0, 2, 50)
 
 # Sample a true, underlying function and observations with observation noise `0.05`.
 f_true = torch.sin(5 * x)
-y_obs = torch.sin(5 * x_obs) + 0.05 ** 0.5 * torch.randn(50)
+y_obs = torch.sin(5 * x_obs) + 0.05**0.5 * torch.randn(50)
 
 
 def model(vs):
@@ -986,7 +986,7 @@ x_obs = torch.linspace(0, 2, 50)
 
 # Sample a true, underlying function and observations with observation noise `0.05`.
 f_true = torch.sin(5 * x)
-y_obs = torch.sin(5 * x_obs) + 0.05 ** 0.5 * torch.randn(50)
+y_obs = torch.sin(5 * x_obs) + 0.05**0.5 * torch.randn(50)
 
 
 class Model(torch.nn.Module):
@@ -1185,13 +1185,13 @@ def model(
         # Random fluctuation:
         u = GP(u_var * EQ().stretch(u_scale))
         # Construct model.
-        f = u + (lambda x: x ** alpha)
+        f = u + (lambda x: x**alpha)
     return f, noise
 
 
 # Sample a true, underlying function and observations.
 vs = Vars(tf.float64)
-f_true = x ** 1.8 + B.sin(2 * B.pi * x)
+f_true = x**1.8 + B.sin(2 * B.pi * x)
 f, y = model(vs)
 post = f.measure | (f(x), f_true)
 y_obs = post(f(x_obs)).sample()
@@ -1758,7 +1758,7 @@ x = B.linspace(0, 10, 100)
 x_obs = B.linspace(0, 10, 20)
 
 with Measure() as prior:
-    w = lambda x: B.exp(-(x ** 2) / 0.5)  # Basis function
+    w = lambda x: B.exp(-(x**2) / 0.5)  # Basis function
     b = [(w * GP(EQ())).shift(xi) for xi in x_obs]  # Weighted basis functions
     f = sum(b)
 

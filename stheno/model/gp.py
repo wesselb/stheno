@@ -244,7 +244,7 @@ class GP(RandomProcess):
         df = 0
         for g, c in zip(fdm.grid, fdm.coefs):
             df += c * self.shift(-g * fdm.step)
-        return df / fdm.step ** deriv
+        return df / fdm.step**deriv
 
     @property
     def stationary(self):

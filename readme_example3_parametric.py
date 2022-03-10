@@ -24,13 +24,13 @@ def model(
         # Random fluctuation:
         u = GP(u_var * EQ().stretch(u_scale))
         # Construct model.
-        f = u + (lambda x: x ** alpha)
+        f = u + (lambda x: x**alpha)
     return f, noise
 
 
 # Sample a true, underlying function and observations.
 vs = Vars(tf.float64)
-f_true = x ** 1.8 + B.sin(2 * B.pi * x)
+f_true = x**1.8 + B.sin(2 * B.pi * x)
 f, y = model(vs)
 post = f.measure | (f(x), f_true)
 y_obs = post(f(x_obs)).sample()

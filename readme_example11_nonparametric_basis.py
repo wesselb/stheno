@@ -8,7 +8,7 @@ x = B.linspace(0, 10, 100)
 x_obs = B.linspace(0, 10, 20)
 
 with Measure() as prior:
-    w = lambda x: B.exp(-(x ** 2) / 0.5)  # Basis function
+    w = lambda x: B.exp(-(x**2) / 0.5)  # Basis function
     b = [(w * GP(EQ())).shift(xi) for xi in x_obs]  # Weighted basis functions
     f = sum(b)
 

@@ -15,7 +15,7 @@ x_obs = torch.linspace(0, 2, 50)
 
 # Sample a true, underlying function and observations with observation noise `0.05`.
 f_true = torch.sin(5 * x)
-y_obs = torch.sin(5 * x_obs) + 0.05 ** 0.5 * torch.randn(50)
+y_obs = torch.sin(5 * x_obs) + 0.05**0.5 * torch.randn(50)
 
 
 def model(vs):

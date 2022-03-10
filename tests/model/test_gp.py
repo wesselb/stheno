@@ -50,7 +50,7 @@ def test_display():
 
 def test_formatting():
     p = 2 * GP(1, EQ(), measure=Measure())
-    assert str(p.display(lambda x: x ** 2)) == "GP(4 * 1, 16 * EQ())"
+    assert str(p.display(lambda x: x**2)) == "GP(4 * 1, 16 * EQ())"
 
 
 def test_construction():
@@ -68,7 +68,7 @@ def test_construction():
 
     # Test resolution of kernel and mean.
     k = EQ()
-    m = TensorProductMean(lambda x: x ** 2)
+    m = TensorProductMean(lambda x: x**2)
 
     assert isinstance(GP(k).mean, ZeroMean)
     assert isinstance(GP(5, k).mean, ScaledMean)
@@ -92,7 +92,7 @@ def test_construction():
 
 
 def test_sum_other():
-    p = GP(TensorProductMean(lambda x: x ** 2), EQ())
+    p = GP(TensorProductMean(lambda x: x**2), EQ())
 
     def five(y):
         return 5 * B.ones(B.shape(y)[0], 1)
@@ -123,7 +123,7 @@ def test_sum_other():
 
 
 def test_mul_other():
-    p = GP(TensorProductMean(lambda x: x ** 2), EQ())
+    p = GP(TensorProductMean(lambda x: x**2), EQ())
 
     def five(y):
         return 5 * B.ones(B.shape(y)[0], 1)
@@ -174,7 +174,7 @@ def test_stationarity():
 
 
 def test_marginals():
-    p = GP(TensorProductMean(lambda x: x ** 2), EQ())
+    p = GP(TensorProductMean(lambda x: x**2), EQ())
     x = B.linspace(0, 5, 10)
 
     # Check that `marginals` outputs the right thing.

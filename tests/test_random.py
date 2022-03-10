@@ -184,9 +184,9 @@ def test_normal_arithmetic(normal1, normal2):
 
     # Test multiplication.
     approx((normal1 * b).mean, normal1.mean * b)
-    approx((normal1 * b).var, normal1.var * b ** 2)
+    approx((normal1 * b).var, normal1.var * b**2)
     approx((b * normal1).mean, normal1.mean * b)
-    approx((b * normal1).var, normal1.var * b ** 2)
+    approx((b * normal1).var, normal1.var * b**2)
     with pytest.raises(NotFoundLookupError):
         normal1.__mul__(normal1)
     with pytest.raises(NotFoundLookupError):
@@ -214,9 +214,9 @@ def test_normal_arithmetic(normal1, normal2):
 
     # Test division.
     approx(normal1.__div__(b).mean, normal1.mean / b)
-    approx(normal1.__div__(b).var, normal1.var / b ** 2)
+    approx(normal1.__div__(b).var, normal1.var / b**2)
     approx(normal1.__truediv__(b).mean, normal1.mean / b)
-    approx(normal1.__truediv__(b).var, normal1.var / b ** 2)
+    approx(normal1.__truediv__(b).var, normal1.var / b**2)
 
 
 def test_normal_dtype(normal1):

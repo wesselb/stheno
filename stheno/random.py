@@ -308,7 +308,7 @@ class Normal(RandomVector):
 
     @_dispatch
     def __mul__(self, other: B.Numeric):
-        return Normal(B.multiply(self.mean, other), B.multiply(self.var, other ** 2))
+        return Normal(B.multiply(self.mean, other), B.multiply(self.var, other**2))
 
     def lmatmul(self, other):
         return Normal(

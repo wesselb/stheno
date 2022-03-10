@@ -221,7 +221,7 @@ class Measure:
         return self._update(
             p_mul,
             self.means[p] * other,
-            self.kernels[p] * other ** 2,
+            self.kernels[p] * other**2,
             lambda j: self.kernels[p, j] * other,
         )
 
@@ -421,7 +421,8 @@ class Measure:
         Returns:
             tuple: Tuple of samples.
         """
-        state, sample = combine(*fdds).sample(state, n)
+        # Apply `self` to make sure that we sample under this measure.
+        state, sample = self(combine(*fdds)).sample(state, n)
 
         # Unpack sample.
         lengths = [num_elements(fdd) for fdd in fdds]

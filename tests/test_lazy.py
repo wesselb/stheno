@@ -127,8 +127,8 @@ def test_lazy_matrix_building():
     check_bounds([(-1, 0), (0, -1), (-1, -1), (5, 4), (4, 5), (5, 5)])
 
     # Stack more left and right building rules.
-    m.add_right_rule(4, set(range(5)), lambda x: Number(x ** 2 + 4 ** 2))
-    m.add_left_rule(4, set(range(5)), lambda x: Number(x ** 2 + 4 ** 2))
+    m.add_right_rule(4, set(range(5)), lambda x: Number(x**2 + 4**2))
+    m.add_left_rule(4, set(range(5)), lambda x: Number(x**2 + 4**2))
 
     # Check content.
     for i in range(3):
@@ -139,9 +139,9 @@ def test_lazy_matrix_building():
         assert m[3, i].x == 3 + i
     assert m[3, 3].x == 3 + 3
     for i in range(5):
-        assert m[i, 4].x == i ** 2 + 4 ** 2
-        assert m[4, i].x == 4 ** 2 + i ** 2
-    assert m[4, 4].x == 4 ** 2 + 4 ** 2
+        assert m[i, 4].x == i**2 + 4**2
+        assert m[4, i].x == 4**2 + i**2
+    assert m[4, 4].x == 4**2 + 4**2
 
     # Check bounds.
     check_bounds([(-1, 0), (0, -1), (-1, -1), (6, 5), (5, 6), (6, 6)])
@@ -151,14 +151,14 @@ def test_lazy_matrix_building():
     m2.add_rule(set(range(3)), lambda x, y: Number(x * y))
     m2.add_left_rule(3, set(range(4)), lambda y: Number(3 + y))
     m2.add_right_rule(3, set(range(4)), lambda y: Number(3 + y))
-    m2.add_right_rule(4, set(range(5)), lambda x: Number(x ** 2 + 4 ** 2))
-    m2.add_left_rule(4, set(range(5)), lambda x: Number(x ** 2 + 4 ** 2))
+    m2.add_right_rule(4, set(range(5)), lambda x: Number(x**2 + 4**2))
+    m2.add_left_rule(4, set(range(5)), lambda x: Number(x**2 + 4**2))
 
     # Check content.
     for i in range(5):
-        assert m2[i, 4].x == i ** 2 + 4 ** 2
-        assert m2[4, i].x == 4 ** 2 + i ** 2
-    assert m2[4, 4].x == 4 ** 2 + 4 ** 2
+        assert m2[i, 4].x == i**2 + 4**2
+        assert m2[4, i].x == 4**2 + i**2
+    assert m2[4, 4].x == 4**2 + 4**2
     for i in range(4):
         assert m2[i, 3].x == i + 3
         assert m2[3, i].x == 3 + i

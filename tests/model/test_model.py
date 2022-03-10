@@ -375,7 +375,7 @@ def test_logpdf(PseudoObs):
 
 def test_stretching():
     # Test construction:
-    p = GP(TensorProductMean(lambda x: x ** 2), EQ())
+    p = GP(TensorProductMean(lambda x: x**2), EQ())
     assert str(p.stretch(1)) == "GP(<lambda> > 1, EQ() > 1)"
 
     # Test case:
@@ -392,7 +392,7 @@ def test_stretching():
 
 def test_shifting():
     # Test construction:
-    p = GP(TensorProductMean(lambda x: x ** 2), Linear())
+    p = GP(TensorProductMean(lambda x: x**2), Linear())
     assert str(p.shift(1)) == "GP(<lambda> shift 1, Linear() shift 1)"
 
     # Test case:
@@ -409,7 +409,7 @@ def test_shifting():
 
 def test_input_transform():
     # Test construction:
-    p = GP(TensorProductMean(lambda x: x ** 2), EQ())
+    p = GP(TensorProductMean(lambda x: x**2), EQ())
     assert (
         str(p.transform(lambda x: x))
         == "GP(<lambda> transform <lambda>, EQ() transform <lambda>)"
@@ -429,7 +429,7 @@ def test_input_transform():
 
 def test_selection():
     # Test construction:
-    p = GP(TensorProductMean(lambda x: x ** 2), EQ())
+    p = GP(TensorProductMean(lambda x: x**2), EQ())
     assert str(p.select(1)) == "GP(<lambda> : [1], EQ() : [1])"
     assert str(p.select(1, 2)) == "GP(<lambda> : [1, 2], EQ() : [1, 2])"
 
@@ -459,7 +459,7 @@ def test_selection():
 
 def test_derivative():
     # Test construction:
-    p = GP(TensorProductMean(lambda x: x ** 2), EQ())
+    p = GP(TensorProductMean(lambda x: x**2), EQ())
     assert str(p.diff(1)) == "GP(d(1) <lambda>, d(1) EQ())"
 
     # Test case:
@@ -509,6 +509,16 @@ def test_multi_sample():
     approx(s11, s12)
     approx(s21, s22)
     approx(s31, s32)
+
+
+def test_sample_correct_measure():
+    m = Measure()
+    p1 = GP(EQ(), measure=m)
+
+    post = m | (p1(0), 1)
+
+    # Test that `post.sample` indeed samples under `post`.
+    approx(post.sample(10, p1(0)), B.ones(1, 10), atol=1e-4)
 
 
 def test_approximate_multiplication():
