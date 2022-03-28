@@ -428,7 +428,7 @@ class Measure:
         lengths = [num_elements(fdd) for fdd in fdds]
         i, samples = 0, []
         for length in lengths:
-            samples.append(sample[i : i + length, :])
+            samples.append(sample[..., i : i + length, :])
             i += length
         return (state,) + tuple(samples)
 

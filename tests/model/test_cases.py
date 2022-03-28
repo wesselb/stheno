@@ -132,23 +132,27 @@ def test_blr():
 
 
 def test_batched():
-    x = B.randn(16, 10, 1)
+    x1 = B.randn(16, 10, 1)
+    x2 = B.randn(16, 5, 1)
 
     p = GP(2 * EQ().stretch(0.5))
-    y = p(x).sample()
-    logpdf = p(x, 0.1).logpdf(y)
+    y1, y2 = p.measure.sample(p(x1), p(x2))
+    logpdf = p.measure.logpdf((p(x1, 0.1), y1), (p(x2, 0.1), y2))
 
+    assert B.shape(y1) == (16, 10, 1)
+    assert B.shape(y2) == (16, 5, 1)
     assert B.shape(logpdf) == (16,)
-    assert B.shape(y) == (16, 10, 1)
 
-    p = p | (p(x), y)
-    y2 = p(x).sample()
-    logpdf2 = p(x, 0.1).logpdf(y)
+    p = p | ((p(x1), y1), (p(x2), y2))
+    y1_2, y2_2 = p.measure.sample(p(x1), p(x2))
+    logpdf2 = p.measure.logpdf((p(x1, 0.1), y1), (p(x2, 0.1), y2))
 
+    assert B.shape(y1_2) == (16, 10, 1)
+    assert B.shape(y2_2) == (16, 5, 1)
+    approx(y1, y1_2, atol=1e-5)
+    approx(y2, y2_2, atol=1e-5)
     assert B.shape(logpdf2) == (16,)
     assert B.all(logpdf2 > logpdf)
-    assert B.shape(y2) == (16, 10, 1)
-    approx(y, y2, atol=1e-5)
 
 
 def test_mo_batched():

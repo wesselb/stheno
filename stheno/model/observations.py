@@ -42,7 +42,7 @@ def combine(*fdds: FDD):
 def combine(*pairs: tuple):
     fdds, ys = zip(*pairs)
     combined_fdd = combine(*fdds)
-    combined_y = B.concat(*[B.uprank(y) for y in ys], axis=0)
+    combined_y = B.concat(*[B.uprank(y) for y in ys], axis=-2)
     return combined_fdd, combined_y
 
 
