@@ -1,10 +1,13 @@
 TODO:
     Refactor:
-        Stheno 1.0:
-            ☐ Let PseudoObs take in Obs for consistency
-            ☐ Periodic GP
+        ☐ Let PseudoObs take in Obs for consistency
+        ☐ Periodic GP
 
-        Misc:
+    Bugs:
+        ☐ MOK: check that it contains the fdd
+        ☐ Noisy mixture posterior is bugged?
+
+    Misc:
 
     Optimise:
         ☐ SelectedKernel
@@ -13,22 +16,34 @@ TODO:
         ☐ Additive pseudo-point example
 
     Features:
+        ☐ Conditioning for normals
+        ☐ Approximately sample function
+        ☐ `Normal.from_tensor`
+        ☐ `sample_independent`
+        ☐ `logpdf_indepndent`
 
----- ✄ -----------------------
+    MO:
+        ☐ `@`
+        ☐ `__len__` to get length: in `algebra`.
+        ☐ AbstractFDD and IndexedFDD (if 0, then unwraps) (?)
+
+--- ✄ -----------------------
 
 Features:
-    ☐ FITC approximation
-    ☐ DTC approximation
+    ☐ Precomputed `pw_dists2`: `x, y = pre_pw_dists2(x, y)`.
+    ☐ Model checking: ratio test, Q-Q plots, residuals test.
 
-    Multi Output Support:
-        ☐ ICM
-        ☐ (O)LMM
+Multi Output Support:
+    ☐ ICM, LMM, OILMM via kernel matrix optimisation
 
 Profiling:
     ☐ Single sample 100-d normal maximum 20% slower.
 
 ＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿
 Archive:
+ ✓ FITC approximation @done (22-03-30 18:11) @project(Features)
+ ✓ DTC approximation @done (22-03-30 18:11) @project(Features)
+ x (O)LMM @cancelled (22-03-30 18:11) @project(Features / Multi Output Support)
  ✓ Remove uprank: use B.uprank @done (21-11-30 19:26) @project(TODO / Refactor / Misc)
  ✓ Sparse -> Pseudo @done (21-05-17 18:16) @project(TODO / Refactor / Stheno 1.0)
  ✓ Remove duplication in handling of boxing @done (21-05-17 18:16) @project(TODO / Refactor / Stheno 1.0)
