@@ -6,6 +6,8 @@ TODO:
     Bugs:
         ☐ MOK: check that it contains the fdd
         ☐ Noisy mixture posterior is bugged?
+        ☐ Do not freely construct variance in `Normal.dtype` @high
+            Throw exception instead?
 
     Misc:
 

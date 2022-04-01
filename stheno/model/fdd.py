@@ -60,7 +60,12 @@ class FDD(Normal):
         self.p = p
         self.x = x
         self.noise = _noise_as_matrix(noise, B.dtype(x), infer_size(p.kernel, x))
-        Normal.__init__(self, lambda: p.mean(x), lambda: p.kernel(x) + self.noise)
+        Normal.__init__(
+            self,
+            lambda: p.mean(x),
+            lambda: B.add(p.kernel(x), self.noise),
+            lambda: B.add(B.squeeze(p.kernel.elwise(x), axis=-1), B.diag(self.noise)),
+        )
 
     @_dispatch
     def __init__(self, p: PromisedGP, x):

@@ -1,4 +1,3 @@
-import warnings
 from types import FunctionType
 
 from lab import B
@@ -6,7 +5,7 @@ from matrix import AbstractMatrix, Zero
 from plum import convert, Union
 from wbml.util import indented_kv
 
-from . import _dispatch, BreakingChangeWarning
+from . import _dispatch
 
 __all__ = ["Random", "RandomProcess", "RandomVector", "Normal"]
 
@@ -61,22 +60,38 @@ class Normal(RandomVector):
         self._mean = mean
         self._mean_is_zero = None
         self._var = var
+        self._var_diag = None
+        self._construct_var_diag = None
 
     @_dispatch
     def __init__(self, var: Union[B.Numeric, AbstractMatrix]):
         Normal.__init__(self, 0, var)
 
     @_dispatch
-    def __init__(self, construct_mean: FunctionType, construct_var: FunctionType):
+    def __init__(
+        self,
+        mean: FunctionType,
+        var: FunctionType,
+        var_diag: Union[FunctionType, None] = None,
+    ):
         self._mean = None
-        self._construct_mean = construct_mean
+        self._construct_mean = mean
         self._mean_is_zero = None
         self._var = None
-        self._construct_var = construct_var
+        self._construct_var = var
+        self._var_diag = None
+        self._construct_var_diag = var_diag
 
     @_dispatch
-    def __init__(self, construct_var: FunctionType):
-        Normal.__init__(self, lambda: 0, construct_var)
+    def __init__(
+        self,
+        var: FunctionType,
+        # Require this one as a keyword argument to prevent ambiguity with the usual
+        # two-argument method.
+        *,
+        var_diag: Union[FunctionType, None] = None,
+    ):
+        Normal.__init__(self, lambda: 0, var, var_diag)
 
     def _resolve_mean(self, construct_zeros):
         if self._mean is None:
@@ -91,6 +106,13 @@ class Normal(RandomVector):
             self._var = self._construct_var()
         # Ensure that the variance is a structured matrix for efficient operations.
         self._var = convert(self._var, AbstractMatrix)
+
+    def _resolve_var_diag(self):
+        if self._var_diag is None:
+            if self._construct_var_diag is not None:
+                self._var_diag = self._construct_var_diag()
+            else:
+                self._var_diag = B.diag(self.var)
 
     def __str__(self):
         return (
@@ -141,8 +163,14 @@ class Normal(RandomVector):
         return self._var
 
     @property
+    def var_diag(self):
+        """Diagonal of the variance."""
+        self._resolve_var_diag()
+        return self._var_diag
+
+    @property
     def dtype(self):
-        """Data type."""
+        """Data type of the variance."""
         return B.dtype(self.var)
 
     @property
@@ -161,11 +189,13 @@ class Normal(RandomVector):
         Returns:
             tuple: A tuple containing the marginal means and marginal variances.
         """
+        mean, var_diag = self.mean, self.var_diag
         # It can happen that the variances are slightly negative due to numerical noise.
         # Prevent NaNs from the following square root by taking the maximum with zero.
+        # Also strip away any matrix structure.
         return (
-            B.squeeze(B.dense(self.mean)),
-            B.maximum(B.diag(self.var), B.cast(self.dtype, 0)),
+            B.squeeze(B.dense(mean), axis=-1),
+            B.maximum(B.dense(var_diag), B.zero(var_diag)),
         )
 
     def marginal_credible_bounds(self):
@@ -175,10 +205,8 @@ class Normal(RandomVector):
             tuple: A tuple containing the marginal means and marginal lower and
                 upper 95% central credible interval bounds.
         """
-        warnings.simplefilter(category=BreakingChangeWarning, action="ignore")
-        mean, variances = self.marginals()
-        warnings.simplefilter(category=BreakingChangeWarning, action="default")
-        error = 1.96 * B.sqrt(variances)
+        mean, var = self.marginals()
+        error = 1.96 * B.sqrt(var)
         return mean, mean - error, mean + error
 
     def logpdf(self, x):

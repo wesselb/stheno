@@ -66,6 +66,8 @@ def test_normal_mean_is_zero():
 
 def test_normal_lazy_zero_mean():
     dist = Normal(lambda: B.eye(3))
+    assert dist._mean is None
+    assert dist._var is None
 
     assert dist.mean_is_zero
     assert dist._mean is 0
@@ -81,6 +83,8 @@ def test_normal_lazy_zero_mean():
 
 def test_normal_lazy_nonzero_mean():
     dist = Normal(lambda: B.ones(3, 1), lambda: B.eye(3))
+    assert dist._mean is None
+    assert dist._var is None
 
     assert not dist.mean_is_zero
     approx(dist._mean, B.ones(3, 1))
@@ -90,6 +94,22 @@ def test_normal_lazy_nonzero_mean():
     assert dist._var is None
 
     approx(dist.var, B.eye(3))
+
+
+def test_normal_lazy_var_diag():
+    dist = Normal(lambda: B.eye(3))
+    assert dist._var is None
+    assert dist._var_diag is None
+
+    approx(dist.var_diag, B.ones(3))
+    approx(dist._var, B.eye(3))
+
+    dist = Normal(lambda: B.eye(3), var_diag=lambda: 9)
+    assert dist._var is None
+    assert dist._var_diag is None
+
+    assert dist.var_diag == 9
+    assert dist._var is None
 
 
 def test_normal_m2(normal1):

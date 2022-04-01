@@ -1,5 +1,6 @@
 import numpy as np
 import pytest
+from time import time
 from lab import B
 from mlkernels import (
     Linear,
@@ -179,7 +180,6 @@ def test_marginals():
 
     # Check that `marginals` outputs the right thing.
     mean, var = p(x).marginals()
-    var = B.diag(p.kernel(x))
     approx(mean, p.mean(x)[:, 0])
     approx(var, B.diag(p.kernel(x)))
 
@@ -196,3 +196,16 @@ def test_marginals():
     mean, var = post(p)(x + 100).marginals()
     approx(mean, p.mean(x + 100)[:, 0])
     approx(var, B.diag(p.kernel(x + 100)))
+
+
+def test_marginal_credible_bounds_efficiency():
+    p = GP(EQ())
+    x = B.linspace(0, 5, 5)
+    y = p(x, 0.1).sample()
+    p = p | (p(x, 0.1), y)
+
+    # Check that the computation at 10_000 points takes at most one second.
+    x = B.linspace(0, 5, 10_000)
+    start = time()
+    p(x, 0.2).marginal_credible_bounds()
+    assert time() - start < 1

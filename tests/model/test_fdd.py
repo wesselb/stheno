@@ -105,3 +105,18 @@ def test_fdd_take():
     # Test that only masks are supported, for now.
     with pytest.raises(AssertionError):
         B.take(fdd, np.array([1, 2]))
+
+
+def test_fdd_diag():
+    p = GP(EQ())
+
+    # Sample observations.
+    x = B.linspace(0, 5, 5)
+    y = p(x, 0.1).sample()
+
+    # Compute posterior.
+    p = p | (p(x, 0.1), y)
+
+    # Check that the diagonal is computed correctly.
+    fdd = p(B.linspace(0, 5, 10), 0.2)
+    approx(fdd.var_diag, B.diag(fdd.var))
