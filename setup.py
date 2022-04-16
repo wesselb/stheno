@@ -7,7 +7,7 @@ requirements = [
     "plum-dispatch>=1.5.3",
     "backends>=1.4.11",
     "backends-matrix>=1.2.11",
-    "mlkernels>=0.3.4",
+    "mlkernels>=0.3.6",
     "wbml>=0.3.3",
 ]
 

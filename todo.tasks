@@ -1,18 +1,12 @@
 TODO:
     Refactor:
+        ☐ Means and diagonal variances 1D representation @critical
         ☐ Let PseudoObs take in Obs for consistency
         ☐ Periodic GP
 
     Bugs:
         ☐ MOK: check that it contains the fdd
         ☐ Noisy mixture posterior is bugged?
-        ☐ Do not freely construct variance in `Normal.dtype` @high
-            Throw exception instead?
-
-    Misc:
-
-    Optimise:
-        ☐ SelectedKernel
 
     README:
         ☐ Additive pseudo-point example
@@ -21,8 +15,6 @@ TODO:
         ☐ Conditioning for normals
         ☐ Approximately sample function
         ☐ `Normal.from_tensor`
-        ☐ `sample_independent`
-        ☐ `logpdf_indepndent`
 
     MO:
         ☐ `@`
@@ -32,7 +24,6 @@ TODO:
 --- ✄ -----------------------
 
 Features:
-    ☐ Precomputed `pw_dists2`: `x, y = pre_pw_dists2(x, y)`.
     ☐ Model checking: ratio test, Q-Q plots, residuals test.
 
 Multi Output Support:
@@ -43,6 +34,10 @@ Profiling:
 
 ＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿
 Archive:
+ ✓ Do not freely construct variance in `Normal.dtype` @high @done (22-04-16 11:44) @project(TODO / Bugs)
+  Throw exception instead?
+ ✓ `Normal.diagonalise = Normal(dist.mean, Diagonal(dist.var_diag))` @done (22-04-15 18:37) @project(TODO / Features)
+  Implements `sample_independent` and `logpdf_independent`
  ✓ FITC approximation @done (22-03-30 18:11) @project(Features)
  ✓ DTC approximation @done (22-03-30 18:11) @project(Features)
  x (O)LMM @cancelled (22-03-30 18:11) @project(Features / Multi Output Support)

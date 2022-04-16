@@ -323,7 +323,7 @@ class AbstractPseudoObservations(AbstractObservations):
         # Optimal mean:
         y_bar = B.subtract(B.uprank(self.y), measure.means[p_x](x))
         prod_y_bar = B.iqf(K_n, B.transpose(iLz_Kzx), y_bar)
-        # TODO: Absorb `L_z` in the posterior mean for better stability.
+        # TODO: Absorb `L_z` in the posterior mean for better stability?
         mu = B.add(measure.means[p_z](z), B.iqf(A, B.transpose(L_z), prod_y_bar))
         self._mu_store[id(measure)] = mu
 

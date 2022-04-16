@@ -1,7 +1,7 @@
 from types import FunctionType
 
 from lab import B
-from matrix import AbstractMatrix, Zero
+from matrix import AbstractMatrix, Zero, Diagonal
 from plum import convert, Union
 from wbml.util import indented_kv
 
@@ -72,7 +72,10 @@ class Normal(RandomVector):
         self,
         mean: FunctionType,
         var: FunctionType,
+        *,
         var_diag: Union[FunctionType, None] = None,
+        mean_var: Union[FunctionType, None] = None,
+        mean_var_diag: Union[FunctionType, None] = None,
     ):
         self._mean = None
         self._construct_mean = mean
@@ -81,17 +84,12 @@ class Normal(RandomVector):
         self._construct_var = var
         self._var_diag = None
         self._construct_var_diag = var_diag
+        self._construct_mean_var = mean_var
+        self._construct_mean_var_diag = mean_var_diag
 
     @_dispatch
-    def __init__(
-        self,
-        var: FunctionType,
-        # Require this one as a keyword argument to prevent ambiguity with the usual
-        # two-argument method.
-        *,
-        var_diag: Union[FunctionType, None] = None,
-    ):
-        Normal.__init__(self, lambda: 0, var, var_diag)
+    def __init__(self, var: FunctionType, **kw_args):
+        Normal.__init__(self, lambda: 0, var, **kw_args)
 
     def _resolve_mean(self, construct_zeros):
         if self._mean is None:
@@ -146,41 +144,57 @@ class Normal(RandomVector):
 
     @property
     def mean(self):
-        """Mean."""
+        """column vector: Mean."""
         self._resolve_mean(construct_zeros=True)
         return self._mean
 
     @property
     def mean_is_zero(self):
-        """The mean is zero."""
+        """bool: The mean is zero."""
         self._resolve_mean(construct_zeros=False)
         return self._mean_is_zero
 
     @property
     def var(self):
-        """Variance."""
+        """matrix: Variance."""
         self._resolve_var()
         return self._var
 
     @property
     def var_diag(self):
-        """Diagonal of the variance."""
+        """vector: Diagonal of the variance."""
         self._resolve_var_diag()
         return self._var_diag
 
     @property
+    def mean_var(self):
+        """tuple[column vector, matrix]: Mean and variance."""
+        if self._mean is not None and self._var is not None:
+            return self._mean, self._var
+        elif self._mean is not None:
+            return self._mean, self.var
+        elif self._var is not None:
+            return self.mean, self._var
+        else:
+            if self._construct_mean_var is not None:
+                self._mean, self._var = self._construct_mean_var()
+                self._resolve_mean(construct_zeros=True)
+                self._resolve_var()
+            return self.mean, self.var
+
+    @property
     def dtype(self):
-        """Data type of the variance."""
+        """dtype: Data type of the variance."""
         return B.dtype(self.var)
 
     @property
     def dim(self):
-        """Dimensionality."""
+        """int: Dimensionality."""
         return B.shape_matrix(self.var)[0]
 
     @property
     def m2(self):
-        """Second moment."""
+        """matrix: Second moment."""
         return self.var + B.outer(B.squeeze(self.mean))
 
     def marginals(self):
@@ -189,7 +203,17 @@ class Normal(RandomVector):
         Returns:
             tuple: A tuple containing the marginal means and marginal variances.
         """
-        mean, var_diag = self.mean, self.var_diag
+        if self._mean is not None and self._var_diag is not None:
+            mean, var_diag = self._mean, self._var_diag
+        elif self._mean is not None:
+            mean, var_diag = self._mean, self.var_diag
+        elif self._var_diag is not None:
+            mean, var_diag = self.mean, self._var_diag
+        else:
+            if self._construct_mean_var_diag is not None:
+                self._mean, self._var_diag = self._construct_mean_var_diag()
+                self._resolve_mean(construct_zeros=True)
+            mean, var_diag = self.mean, self.var_diag
         # It can happen that the variances are slightly negative due to numerical noise.
         # Prevent NaNs from the following square root by taking the maximum with zero.
         # Also strip away any matrix structure.
@@ -208,6 +232,14 @@ class Normal(RandomVector):
         mean, var = self.marginals()
         error = 1.96 * B.sqrt(var)
         return mean, mean - error, mean + error
+
+    def diagonalise(self):
+        """Diagonalise the normal distribution by setting the correlations to zero.
+
+        Returns:
+            :class:`.Normal`: Diagonal version of the distribution.
+        """
+        return Normal(self.mean, Diagonal(self.var_diag))
 
     def logpdf(self, x):
         """Compute the log-pdf.
@@ -328,26 +360,32 @@ class Normal(RandomVector):
 
     @_dispatch
     def __add__(self, other: B.Numeric):
-        return Normal(self.mean + other, self.var)
+        return Normal(B.add(self.mean, other), self.var)
 
     @_dispatch
     def __add__(self, other: "Normal"):
-        return Normal(B.add(self.mean, other.mean), B.add(self.var, other.var))
+        return Normal(
+            B.add(self.mean, other.mean),
+            B.add(self.var, other.var),
+        )
 
     @_dispatch
     def __mul__(self, other: B.Numeric):
-        return Normal(B.multiply(self.mean, other), B.multiply(self.var, other**2))
+        return Normal(
+            B.multiply(self.mean, other),
+            B.multiply(self.var, B.multiply(other, other)),
+        )
 
     def lmatmul(self, other):
         return Normal(
             B.matmul(other, self.mean),
-            B.matmul(B.matmul(other, self.var), other, tr_b=True),
+            B.matmul(other, self.var, other, tr_c=True),
         )
 
     def rmatmul(self, other):
         return Normal(
             B.matmul(other, self.mean, tr_a=True),
-            B.matmul(B.matmul(other, self.var, tr_a=True), other),
+            B.matmul(other, self.var, other, tr_a=True),
         )
 
 

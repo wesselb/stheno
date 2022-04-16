@@ -375,13 +375,18 @@ f(x, noise)  # Additional noise with variance `noise`
 
 Things you can do with a finite-dimensional distribution:
 
-*
+* 
     Use `f(x).mean` to compute the mean.
     
-*
+* 
     Use `f(x).var` to compute the variance.
+ 
+* 
+    Use `f(x).mean_var` to compute simultaneously compute the mean and variance.
+    This can be substantially more efficient than calling first `f(x).mean` and then
+    `f(x).var`.
 
-*
+* 
     Use `Normal.sample` to sample.
 
     Definition:
@@ -396,10 +401,10 @@ Things you can do with a finite-dimensional distribution:
     f(x).sample(n, noise=noise)  # Produce `n` samples with additional noise variance `noise`.
     ```
   
-*
+* 
     Use `f(x).logpdf(y)` to compute the logpdf of some data `y`.
     
-*
+* 
     Use `means, variances = f(x).marginals()` to efficiently compute the marginal means
     and marginal variances.
     
@@ -410,7 +415,7 @@ Things you can do with a finite-dimensional distribution:
     (array([0., 0., 0.]), np.array([1., 1., 1.]))
     ```
   
-*
+* 
     Use `means, lowers, uppers = f(x).marginal_credible_bounds()` to efficiently compute
     the means and the marginal lower and upper 95% central credible region bounds.
 
@@ -421,7 +426,7 @@ Things you can do with a finite-dimensional distribution:
     (array([0., 0., 0.]), array([-1.96, -1.96, -1.96]), array([1.96, 1.96, 1.96]))
     ```
   
-*
+* 
     Use `Measure.logpdf` to compute the joint logpdf of multiple observations.
 
     Definition, where `prior = Measure()`:
@@ -432,7 +437,7 @@ Things you can do with a finite-dimensional distribution:
     prior.logpdf((f1(x1), y1), (f2(x2), y2), ...)
     ```
   
-*
+* 
     Use `Measure.sample` to jointly sample multiple observations.
 
     Definition, where `prior = Measure()`:

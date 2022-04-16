@@ -1,17 +1,18 @@
-from itertools import product
 import numpy as np
 import pytest
 import tensorflow as tf
 from lab import B
 from matrix import Diagonal
 from mlkernels import (
+    Kernel,
+    pairwise,
+    elwise,
     Linear,
     EQ,
     Delta,
     Exp,
     TensorProductMean,
 )
-
 from stheno.model import (
     Measure,
     GP,
@@ -22,6 +23,7 @@ from stheno.model import (
     cross,
     FDD,
 )
+
 from .util import assert_equal_normals, assert_equal_measures
 from ..util import approx
 
@@ -257,7 +259,7 @@ def test_conditioning_shape_check():
     ],
 )
 @pytest.mark.parametrize("PseudoObs", [PseudoObs, PseudoObsFITC, PseudoObsDTC])
-def test_pseudo_conditioning_and_elbo(generate_noise_tuple, PseudoObs):
+def test_pseudoobs_and_elbo(generate_noise_tuple, PseudoObs):
     m = Measure()
     p1 = GP(EQ(), measure=m)
     p2 = GP(Exp(), measure=m)
@@ -332,6 +334,39 @@ def test_pseudo_conditioning_and_elbo(generate_noise_tuple, PseudoObs):
             m | tup_sum,
             m | PseudoObs(p_sum(x_sum, 0.1), *tup_sum),
         )
+
+
+def test_pseudoobs_kernel_call_count():
+    class TrackingEQ(Kernel):
+        """Track the evaluations of this EQ kernel."""
+
+    pairwise_calls = []
+    elwise_calls = []
+
+    @pairwise.dispatch
+    def pairwise_(k: TrackingEQ, x: B.Numeric, y: B.Numeric):
+        pairwise_calls.append((B.flatten(x), B.flatten(y)))
+        return B.exp(-0.5 * B.pw_dists2(x, y))
+
+    @elwise.dispatch
+    def elwise_(k: TrackingEQ, x: B.Numeric, y: B.Numeric):
+        elwise_calls.append((B.flatten(x), B.flatten(y)))
+        return B.exp(-0.5 * B.ew_dists2(x, y))
+
+    # Construct some inputs.
+    x_obs = B.linspace(0, 5, 10)
+    y_obs = B.randn(10)
+    x_ind = B.linspace(0, 5, 5)
+    x_new = B.randn(1)
+
+    # Perform a pseudo-point approximation
+    p = GP(TrackingEQ())
+    p_post = p | PseudoObs(p(x_ind), (p(x_obs, 0.1), y_obs))
+    mean, var = p_post(x_new).marginals()
+
+    # Check the calls.
+    approx(tuple(pairwise_calls), ((x_obs, x_ind), (x_ind, x_ind), (x_ind, x_new)))
+    approx(tuple(elwise_calls), ((x_obs, x_obs), (x_new, x_new)))
 
 
 def test_backward_compatibility():

@@ -2,8 +2,8 @@ import lab as B
 import numpy as np
 import pytest
 from matrix import Dense, Zero
-from scipy.stats import multivariate_normal
 from plum import NotFoundLookupError
+from scipy.stats import multivariate_normal
 
 from stheno.random import Normal, RandomVector
 from .util import approx
@@ -66,13 +66,13 @@ def test_normal_mean_is_zero():
 
 def test_normal_lazy_zero_mean():
     dist = Normal(lambda: B.eye(3))
-    assert dist._mean is None
-    assert dist._var is None
 
+    # Querying `mean_is_zero` should not construct zeros.
     assert dist.mean_is_zero
     assert dist._mean is 0
     assert dist._var is None
 
+    # Querying `mean` should now construct zeros.
     approx(dist.mean, B.zeros(3, 1))
     # At this point, the variance should be constructed, because it is used to get the
     # dimensionality and data type for the mean.
@@ -83,33 +83,78 @@ def test_normal_lazy_zero_mean():
 
 def test_normal_lazy_nonzero_mean():
     dist = Normal(lambda: B.ones(3, 1), lambda: B.eye(3))
+    # Nothing should be populated yet.
     assert dist._mean is None
     assert dist._var is None
 
-    assert not dist.mean_is_zero
-    approx(dist._mean, B.ones(3, 1))
-    assert dist._var is None
-
+    # But they should be populated upon request.
     approx(dist.mean, B.ones(3, 1))
     assert dist._var is None
-
     approx(dist.var, B.eye(3))
 
 
 def test_normal_lazy_var_diag():
+    # If `var_diag` isn't set, the variance will be constructed to get the diagonal.
     dist = Normal(lambda: B.eye(3))
-    assert dist._var is None
-    assert dist._var_diag is None
-
     approx(dist.var_diag, B.ones(3))
     approx(dist._var, B.eye(3))
 
+    # If `var_diag` is set, the variance will _not_ be constructed to get the diagonal.
     dist = Normal(lambda: B.eye(3), var_diag=lambda: 9)
+    approx(dist.var_diag, 9)
     assert dist._var is None
-    assert dist._var_diag is None
 
-    assert dist.var_diag == 9
-    assert dist._var is None
+
+def test_normal_lazy_mean_var():
+    # The lazy `mean_var` should only be called when neither the mean nor the variance
+    # exists. Otherwise, it's more efficient to just construct the other one. We
+    # go over all branches in the `if`-statement.
+
+    dist = Normal(lambda: B.ones(3, 1), lambda: B.eye(3), mean_var=lambda: (8, 9))
+    approx(dist.mean_var, (8, 9))
+    approx(dist.mean, 8)
+    approx(dist.var, 9)
+
+    dist = Normal(lambda: B.ones(3, 1), lambda: B.eye(3), mean_var=lambda: (8, 9))
+    approx(dist.mean, B.ones(3, 1))
+    approx(dist.mean_var, (B.ones(3, 1), B.eye(3)))
+    approx(dist.var, B.eye(3))
+
+    dist = Normal(lambda: B.ones(3, 1), lambda: B.eye(3), mean_var=lambda: (8, 9))
+    approx(dist.var, B.eye(3))
+    approx(dist.mean_var, (B.ones(3, 1), B.eye(3)))
+    approx(dist.mean, B.ones(3, 1))
+
+    dist = Normal(lambda: B.ones(3, 1), lambda: B.eye(3), mean_var=lambda: (8, 9))
+    approx(dist.var, B.eye(3))
+    approx(dist.mean, B.ones(3, 1))
+    approx(dist.mean_var, (B.ones(3, 1), B.eye(3)))
+
+
+def test_normal_lazy_mean_var_diag():
+    # The lazy `mean_var_diag` should only be called when neither the mean nor the
+    # diagonal of the variance exists. Otherwise, it's more efficient to just construct
+    # the other one. We go over all branches in the `if`-statement.
+
+    dist = Normal(lambda: B.ones(3, 1), lambda: B.eye(3), mean_var_diag=lambda: (8, 9))
+    approx(dist.marginals(), (8, 9))
+    approx(dist.mean, 8)
+    approx(dist.var_diag, 9)
+
+    dist = Normal(lambda: B.ones(3, 1), lambda: B.eye(3), mean_var_diag=lambda: (8, 9))
+    approx(dist.mean, B.ones(3, 1))
+    approx(dist.marginals(), (B.ones(3), B.ones(3)))
+    approx(dist.var_diag, B.ones(3))
+
+    dist = Normal(lambda: B.ones(3, 1), lambda: B.eye(3), mean_var_diag=lambda: (8, 9))
+    approx(dist.var_diag, B.ones(3))
+    approx(dist.marginals(), (B.ones(3), B.ones(3)))
+    approx(dist.mean, B.ones(3, 1))
+
+    dist = Normal(lambda: B.ones(3, 1), lambda: B.eye(3), mean_var_diag=lambda: (8, 9))
+    approx(dist.var_diag, B.ones(3))
+    approx(dist.mean, B.ones(3, 1))
+    approx(dist.marginals(), (B.ones(3), B.ones(3)))
 
 
 def test_normal_m2(normal1):

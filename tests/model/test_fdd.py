@@ -107,7 +107,7 @@ def test_fdd_take():
         B.take(fdd, np.array([1, 2]))
 
 
-def test_fdd_diag():
+def test_fdd_properties():
     p = GP(EQ())
 
     # Sample observations.
@@ -117,6 +117,17 @@ def test_fdd_diag():
     # Compute posterior.
     p = p | (p(x, 0.1), y)
 
-    # Check that the diagonal is computed correctly.
     fdd = p(B.linspace(0, 5, 10), 0.2)
-    approx(fdd.var_diag, B.diag(fdd.var))
+    mean, var = fdd.mean, fdd.var
+
+    # Check `var_diag`.
+    fdd = p(B.linspace(0, 5, 10), 0.2)
+    approx(fdd.var_diag, B.diag(var))
+
+    # Check `mean_var`.
+    fdd = p(B.linspace(0, 5, 10), 0.2)
+    approx(fdd.mean_var, (mean, var))
+
+    # Check `marginals()`.
+    fdd = p(B.linspace(0, 5, 10), 0.2)
+    approx(fdd.marginals(), (B.flatten(mean), B.diag(var)))

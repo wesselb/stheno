@@ -1,3 +1,4 @@
+import mlkernels
 from lab import B
 from matrix import AbstractMatrix, Dense, Zero, Diagonal
 from mlkernels import Kernel, num_elements
@@ -60,11 +61,25 @@ class FDD(Normal):
         self.p = p
         self.x = x
         self.noise = _noise_as_matrix(noise, B.dtype(x), infer_size(p.kernel, x))
+
+        def var_diag():
+            return B.add(B.squeeze(p.kernel.elwise(x), axis=-1), B.diag(self.noise))
+
+        def mean_var():
+            mean, var = mlkernels.mean_var(p.mean, p.kernel, x)
+            return mean, B.add(var, self.noise)
+
+        def mean_var_diag():
+            mean, var_diag = mlkernels.mean_var_diag(p.mean, p.kernel, x)
+            return mean, B.add(B.squeeze(var_diag, axis=-1), B.diag(self.noise))
+
         Normal.__init__(
             self,
             lambda: p.mean(x),
             lambda: B.add(p.kernel(x), self.noise),
-            lambda: B.add(B.squeeze(p.kernel.elwise(x), axis=-1), B.diag(self.noise)),
+            var_diag=var_diag,
+            mean_var=mean_var,
+            mean_var_diag=mean_var_diag,
         )
 
     @_dispatch

@@ -209,7 +209,6 @@ class Measure:
             p_mul (:class:`.gp.GP`): GP that is the product.
             obj1 (object): First factor in the product.
             obj2 (object): Second factor in the product.
-            other (object): Other object in the product.
 
         Returns:
             :class:`.gp.GP`: The GP corresponding to the product.
