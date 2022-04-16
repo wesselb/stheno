@@ -129,6 +129,13 @@ def test_normal_marginal_credible_bounds(normal1):
     approx(upper, normal1.mean.squeeze() + 1.96 * B.diag(normal1.var) ** 0.5)
 
 
+def test_normal_diagonalise(normal1):
+    approx(
+        normal1.diagonalise(),
+        Normal(normal1.mean, B.diag(B.diag(B.dense(normal1.var)))),
+    )
+
+
 def test_normal_logpdf(normal1):
     normal1_sp = multivariate_normal(normal1.mean[:, 0], B.dense(normal1.var))
     x = B.randn(3, 10)
