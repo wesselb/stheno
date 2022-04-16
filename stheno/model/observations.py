@@ -121,7 +121,7 @@ class Observations(AbstractObservations):
 
     def __init__(self, *args):
         AbstractObservations.__init__(self, *args)
-        self._K_x_store = {}
+        self._K_x = {}
 
     def K_x(self, measure):
         """Kernel matrix of the data.
@@ -133,10 +133,10 @@ class Observations(AbstractObservations):
             matrix: Kernel matrix.
         """
         try:
-            return self._K_x_store[id(measure)]
+            return self._K_x[id(measure)]
         except KeyError:
             K_x = measure.kernels[self.fdd.p](self.fdd.x) + self.fdd.noise
-            self._K_x_store[id(measure)] = K_x
+            self._K_x[id(measure)] = K_x
             return K_x
 
     def posterior_kernel(self, measure, p_i, p_j):
@@ -181,10 +181,10 @@ class AbstractPseudoObservations(AbstractObservations):
     def __init__(self, u: FDD, *args):
         AbstractObservations.__init__(self, *args)
         self.u = u
-        self._K_z_store = {}
-        self._elbo_store = {}
-        self._mu_store = {}
-        self._A_store = {}
+        self._K_z = {}
+        self._elbo = {}
+        self._mu = {}
+        self._A = {}
 
     @_dispatch
     def __init__(self, us: tuple, *args):
@@ -200,10 +200,10 @@ class AbstractPseudoObservations(AbstractObservations):
             matrix: Kernel matrix.
         """
         try:
-            return self._K_z_store[id(measure)]
+            return self._K_z[id(measure)]
         except KeyError:
             self._compute(measure)
-            return self._K_z_store[id(measure)]
+            return self._K_z[id(measure)]
 
     def elbo(self, measure):
         """ELBO.
@@ -215,10 +215,10 @@ class AbstractPseudoObservations(AbstractObservations):
             scalar: ELBO.
         """
         try:
-            return self._elbo_store[id(measure)]
+            return self._elbo[id(measure)]
         except KeyError:
             self._compute(measure)
-            return self._elbo_store[id(measure)]
+            return self._elbo[id(measure)]
 
     def mu(self, measure):
         """Mean of optimal approximating distribution.
@@ -230,10 +230,10 @@ class AbstractPseudoObservations(AbstractObservations):
             matrix: Mean.
         """
         try:
-            return self._mu_store[id(measure)]
+            return self._mu[id(measure)]
         except KeyError:
             self._compute(measure)
-            return self._mu_store[id(measure)]
+            return self._mu[id(measure)]
 
     def A(self, measure):
         """Parameter of the corrective variance of the kernel of the optimal
@@ -246,10 +246,10 @@ class AbstractPseudoObservations(AbstractObservations):
             matrix: Corrective variance.
         """
         try:
-            return self._A_store[id(measure)]
+            return self._A[id(measure)]
         except KeyError:
             self._compute(measure)
-            return self._A_store[id(measure)]
+            return self._A[id(measure)]
 
     def posterior_kernel(self, measure, p_i, p_j):
         return PosteriorKernel(
@@ -283,7 +283,7 @@ class AbstractPseudoObservations(AbstractObservations):
         # Construct the necessary kernel matrices.
         K_zx = measure.kernels[p_z, p_x](z, x)
         K_z = B.add(measure.kernels[p_z](z), noise_z)
-        self._K_z_store[id(measure)] = K_z
+        self._K_z[id(measure)] = K_z
 
         # Noise kernel matrix:
         K_n = noise_x
@@ -318,20 +318,20 @@ class AbstractPseudoObservations(AbstractObservations):
             raise ValueError(f'Invalid approximation method "{method}".')
 
         # Subspace variance:
-        self._A_store[id(measure)] = B.mm(L_z, A, L_z, tr_c=True)
+        self._A[id(measure)] = B.mm(L_z, A, L_z, tr_c=True)
 
         # Optimal mean:
         y_bar = B.subtract(B.uprank(self.y), measure.means[p_x](x))
         prod_y_bar = B.iqf(K_n, B.transpose(iLz_Kzx), y_bar)
         # TODO: Absorb `L_z` in the posterior mean for better stability?
         mu = B.add(measure.means[p_z](z), B.iqf(A, B.transpose(L_z), prod_y_bar))
-        self._mu_store[id(measure)] = mu
+        self._mu[id(measure)] = mu
 
         # Compute the ELBO.
         dtype = B.dtype_float(K_n)
         det_part = B.logdet(B.multiply(B.cast(dtype, 2 * B.pi), K_n)) + B.logdet(A)
         iqf_part = B.iqf_diag(K_n, y_bar)[..., 0] - B.iqf_diag(A, prod_y_bar)[..., 0]
-        self._elbo_store[id(measure)] = -0.5 * (det_part + iqf_part + trace_part)
+        self._elbo[id(measure)] = -0.5 * (det_part + iqf_part + trace_part)
 
 
 class PseudoObservations(AbstractPseudoObservations):
