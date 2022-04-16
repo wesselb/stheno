@@ -408,6 +408,28 @@ def test_logpdf(PseudoObs):
     approx(m.logpdf(obs), p3(x3, 1).logpdf(y3))
 
 
+def test_manual_new_gp():
+    m = Measure()
+    p1 = GP(EQ(), measure=m)
+    p2 = GP(EQ(), measure=m)
+    p_sum = p1 + p2
+
+    p1_equivalent = m.add_gp(
+        m.means[p_sum] - m.means[p2],
+        (
+            m.kernels[p_sum]
+            + m.kernels[p2]
+            - m.kernels[p_sum, p2]
+            - m.kernels[p2, p_sum]
+        ),
+        lambda j: m.kernels[p_sum, j] - m.kernels[p2, j],
+    )
+
+    x = B.linspace(0, 10, 5)
+    s1, s2 = m.sample(p1(x), p1_equivalent(x))
+    approx(s1, s2, rtol=1e-5)
+
+
 def test_stretching():
     # Test construction:
     p = GP(TensorProductMean(lambda x: x**2), EQ())

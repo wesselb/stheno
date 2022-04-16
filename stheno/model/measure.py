@@ -122,6 +122,26 @@ class Measure:
 
         return p
 
+    def add_gp(self, mean, kernel, left_rule, right_rule=None):
+        """Add a new GP to the graph with a given mean function and kernel.
+
+        Args:
+            mean (:class:`mlkernels.Mean`): Mean function.
+            kernel (:class:`mlkernels.Kernel`): Kernel.
+            left_rule (function): Function that takes in another process `i`
+                and which return the covariance between the new process (left argument)
+                and process `i` (right argument). This function can make use of
+                means and kernels available in the property :attr:`.Measure.means`
+                and :attr:`.Measure.kernels`.
+            right_rule (function, optional): Like `left_rule`, but the other way around.
+
+        Returns:
+            :class:`.gp.GP`: New GP.
+        """
+        p = GP()
+        self._update(p, mean, kernel, left_rule, right_rule=None)
+        return p
+
     @_dispatch
     def __call__(self, p: GP):
         # Make a new GP with `self` as the prior.
