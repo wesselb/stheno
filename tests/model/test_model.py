@@ -431,7 +431,7 @@ def test_manual_new_gp():
 
     x = B.linspace(0, 10, 5)
     s1, s2 = m.sample(p1(x), p1_equivalent(x))
-    approx(s1, s2, rtol=1e-4)
+    approx(s1, s2, atol=1e-4)
 
 
 def test_stretching():
