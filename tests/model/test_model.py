@@ -13,6 +13,7 @@ from mlkernels import (
     Exp,
     TensorProductMean,
 )
+
 from stheno.model import (
     Measure,
     GP,
@@ -23,7 +24,6 @@ from stheno.model import (
     cross,
     FDD,
 )
-
 from .util import assert_equal_normals, assert_equal_measures
 from ..util import approx
 
@@ -203,13 +203,17 @@ def test_conditioning_consistency():
         assert_equal_normals(post1((p + e)(x)), post2((p + e)(x)))
 
 
-def test_conditioning_prior():
+@pytest.mark.parametrize("shape", [(0,), (0, 1), (4, 0, 1)])
+def test_conditioning_empty_observations(shape):
     p = GP(EQ())
-    x = B.zeros(0, 1)
-    y = B.zeros(0, 1)
-    post = p.measure | (p(x), y)
-    assert post(p).mean is p.mean
-    assert post(p).kernel is p.kernel
+
+    x = B.randn(*shape)
+    y = p(x).sample()
+
+    # Conditioning should just return the prior exactly.
+    p_post = p | (p(x), y)
+    assert p_post.mean is p.mean
+    assert p_post.kernel is p.kernel
 
 
 def test_conditioning_shorthand():

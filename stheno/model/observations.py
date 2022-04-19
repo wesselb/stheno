@@ -69,7 +69,7 @@ class AbstractObservations:
             raise ValueError(f"Invalid shape of observed values {y_shape}.")
 
         # Handle missing data.
-        available = B.jit_to_numpy(~B.isnan(y[:, 0]))
+        available = B.jit_to_numpy(~B.isnan(y[..., :, 0]))
         if not B.all(available):
             fdd = B.take(fdd, available)
             y = B.take(y, available)
