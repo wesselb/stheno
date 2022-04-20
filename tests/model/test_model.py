@@ -11,9 +11,7 @@ from mlkernels import (
     EQ,
     Delta,
     Exp,
-    TensorProductMean,
 )
-
 from stheno.model import (
     Measure,
     GP,
@@ -24,6 +22,7 @@ from stheno.model import (
     cross,
     FDD,
 )
+
 from .util import assert_equal_normals, assert_equal_measures
 from ..util import approx
 
@@ -140,8 +139,8 @@ def test_naming():
 )
 def test_conditioning(generate_noise_tuple):
     m = Measure()
-    p1 = GP(EQ(), measure=m)
-    p2 = GP(Exp(), measure=m)
+    p1 = GP(1, EQ(), measure=m)
+    p2 = GP(2, Exp(), measure=m)
     p_sum = p1 + p2
 
     # Sample some data to condition on.
@@ -188,7 +187,7 @@ def test_conditioning(generate_noise_tuple):
 
 def test_conditioning_consistency():
     m = Measure()
-    p = GP(EQ(), measure=m)
+    p = GP(1, EQ(), measure=m)
     e = GP(0.1 * Delta(), measure=m)
     e2 = GP(e.kernel, measure=m)
 
@@ -205,7 +204,7 @@ def test_conditioning_consistency():
 
 @pytest.mark.parametrize("shape", [(0,), (0, 1), (4, 0, 1)])
 def test_conditioning_empty_observations(shape):
-    p = GP(EQ())
+    p = GP(1, EQ())
 
     x = B.randn(*shape)
     y = p(x).sample()
@@ -217,7 +216,7 @@ def test_conditioning_empty_observations(shape):
 
 
 def test_conditioning_shorthand():
-    p = GP(EQ())
+    p = GP(1, EQ())
 
     # Test conditioning once.
     x = B.linspace(0, 5, 10)
@@ -237,7 +236,7 @@ def test_conditioning_shorthand():
 
 
 def test_conditioning_missing_data():
-    p = GP(EQ())
+    p = GP(1, EQ())
     x = B.linspace(0, 5, 10)
     y = p(x).sample()
     y[:3] = B.nan
@@ -247,7 +246,7 @@ def test_conditioning_missing_data():
 
 
 def test_conditioning_shape_check():
-    f = GP(EQ())
+    f = GP(1, EQ())
     x = B.randn(2)
     f | (f(x), B.randn(2, 1))
     with pytest.raises(ValueError):
@@ -265,8 +264,8 @@ def test_conditioning_shape_check():
 @pytest.mark.parametrize("PseudoObs", [PseudoObs, PseudoObsFITC, PseudoObsDTC])
 def test_pseudoobs_and_elbo(generate_noise_tuple, PseudoObs):
     m = Measure()
-    p1 = GP(EQ(), measure=m)
-    p2 = GP(Exp(), measure=m)
+    p1 = GP(1, EQ(), measure=m)
+    p2 = GP(2, Exp(), measure=m)
     p_sum = p1 + p2
 
     # Sample some data to condition on.
@@ -364,7 +363,7 @@ def test_pseudoobs_kernel_call_count():
     x_new = B.randn(1)
 
     # Perform a pseudo-point approximation
-    p = GP(TrackingEQ())
+    p = GP(1, TrackingEQ())
     p_post = p | PseudoObs(p(x_ind), (p(x_obs, 0.1), y_obs))
     mean, var = p_post(x_new).marginals()
 
@@ -383,8 +382,8 @@ def test_backward_compatibility():
 @pytest.mark.parametrize("PseudoObs", [PseudoObs, PseudoObsFITC, PseudoObsDTC])
 def test_logpdf(PseudoObs):
     m = Measure()
-    p1 = GP(EQ(), measure=m)
-    p2 = GP(Exp(), measure=m)
+    p1 = GP(1, EQ(), measure=m)
+    p2 = GP(2, Exp(), measure=m)
     p3 = p1 + p2
 
     x1 = B.linspace(0, 2, 5)
@@ -414,8 +413,8 @@ def test_logpdf(PseudoObs):
 
 def test_manual_new_gp():
     m = Measure()
-    p1 = GP(EQ(), measure=m)
-    p2 = GP(EQ(), measure=m)
+    p1 = GP(1, EQ(), measure=m)
+    p2 = GP(2, EQ(), measure=m)
     p_sum = p1 + p2
 
     p1_equivalent = m.add_gp(
@@ -436,67 +435,64 @@ def test_manual_new_gp():
 
 def test_stretching():
     # Test construction:
-    p = GP(TensorProductMean(lambda x: x**2), EQ())
-    assert str(p.stretch(1)) == "GP(<lambda> > 1, EQ() > 1)"
+    p = GP(lambda x: x**2, Linear())
+    assert str(p.stretch(1)) == "GP(<lambda> > 1, Linear() > 1)"
 
     # Test case:
-    p = GP(EQ())
     p_stretched = p.stretch(5)
 
     x = B.linspace(0, 5, 10)
     y = p_stretched(x).sample()
 
-    post = p.measure | (p_stretched(x), y)
+    post = p.measure | (p_stretched(x, B.epsilon), y)
     assert_equal_normals(post(p(x / 5)), post(p_stretched(x)))
     assert_equal_normals(post(p(x)), post(p_stretched(x * 5)))
 
 
 def test_shifting():
     # Test construction:
-    p = GP(TensorProductMean(lambda x: x**2), Linear())
+    p = GP(lambda x: x**2, Linear())
     assert str(p.shift(1)) == "GP(<lambda> shift 1, Linear() shift 1)"
 
     # Test case:
-    p = GP(EQ())
     p_shifted = p.shift(5)
 
     x = B.linspace(0, 5, 10)
     y = p_shifted(x).sample()
 
-    post = p.measure | (p_shifted(x), y)
+    post = p.measure | (p_shifted(x, B.epsilon), y)
     assert_equal_normals(post(p(x - 5)), post(p_shifted(x)))
     assert_equal_normals(post(p(x)), post(p_shifted(x + 5)))
 
 
 def test_input_transform():
     # Test construction:
-    p = GP(TensorProductMean(lambda x: x**2), EQ())
+    p = GP(lambda x: x**2, Linear())
     assert (
         str(p.transform(lambda x: x))
-        == "GP(<lambda> transform <lambda>, EQ() transform <lambda>)"
+        == "GP(<lambda> transform <lambda>, Linear() transform <lambda>)"
     )
 
     # Test case:
-    p = GP(EQ())
     p_transformed = p.transform(lambda x: B.sqrt(x))
 
     x = B.linspace(0, 5, 10)
     y = p_transformed(x).sample()
 
-    post = p.measure | (p_transformed(x), y)
+    post = p.measure | (p_transformed(x, B.epsilon), y)
     assert_equal_normals(post(p(B.sqrt(x))), post(p_transformed(x)))
     assert_equal_normals(post(p(x)), post(p_transformed(x * x)))
 
 
 def test_selection():
     # Test construction:
-    p = GP(TensorProductMean(lambda x: x**2), EQ())
+    p = GP(lambda x: x**2, EQ())
     assert str(p.select(1)) == "GP(<lambda> : [1], EQ() : [1])"
     assert str(p.select(1, 2)) == "GP(<lambda> : [1, 2], EQ() : [1, 2])"
 
     # Test case:
-    p = GP(EQ())  # 1D
-    p2 = p.select(0)  # 2D
+    # `p` is 1D.
+    p2 = p.select(0)  # `p2` is 2D.
 
     x = B.linspace(0, 5, 10)
     x21 = B.stack(x, B.randn(10), axis=1)
@@ -520,11 +516,10 @@ def test_selection():
 
 def test_derivative():
     # Test construction:
-    p = GP(TensorProductMean(lambda x: x**2), EQ())
+    p = GP(lambda x: x**2, EQ())
     assert str(p.diff(1)) == "GP(d(1) <lambda>, d(1) EQ())"
 
     # Test case:
-    p = GP(EQ())
     dp = p.diff()
 
     x = B.linspace(tf.float64, 0, 1, 100)
@@ -574,7 +569,7 @@ def test_multi_sample():
 
 def test_sample_correct_measure():
     m = Measure()
-    p1 = GP(EQ(), measure=m)
+    p1 = GP(1, EQ(), measure=m)
 
     post = m | (p1(0), 1)
 

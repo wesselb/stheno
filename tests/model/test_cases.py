@@ -7,12 +7,12 @@ from ..util import approx
 
 
 def test_summation_with_itself():
-    p = GP(EQ())
+    p = GP(1, EQ())
     p_many = p + p + p + p + p
 
     x = B.linspace(0, 10, 5)
     approx(p_many(x).var, 25 * p(x).var)
-    approx(p_many(x).mean, B.zeros(5, 1))
+    approx(p_many(x).mean, 5 * B.ones(5, 1))
 
     y = B.randn(5, 1)
     post = p.measure | (p(x), y)
@@ -21,8 +21,8 @@ def test_summation_with_itself():
 
 def test_additive_model():
     m = Measure()
-    p1 = GP(EQ(), measure=m)
-    p2 = GP(EQ(), measure=m)
+    p1 = GP(1, EQ(), measure=m)
+    p2 = GP(2, EQ(), measure=m)
     p_sum = p1 + p2
 
     x = B.linspace(0, 5, 10)
@@ -65,7 +65,7 @@ def test_fd_derivative():
 
 
 def test_reflection():
-    p = GP(EQ())
+    p = GP(1, EQ())
     p2 = 5 - p
 
     x = B.linspace(0, 5, 10)
@@ -79,7 +79,7 @@ def test_reflection():
 
 
 def test_negation():
-    p = GP(EQ())
+    p = GP(1, EQ())
     p2 = -p
 
     x = B.linspace(0, 5, 10)
@@ -135,7 +135,7 @@ def test_batched():
     x1 = B.randn(16, 10, 1)
     x2 = B.randn(16, 5, 1)
 
-    p = GP(2 * EQ().stretch(0.5))
+    p = GP(1, 2 * EQ().stretch(0.5))
     y1, y2 = p.measure.sample(p(x1), p(x2))
     logpdf = p.measure.logpdf((p(x1, 0.1), y1), (p(x2, 0.1), y2))
 
@@ -159,7 +159,7 @@ def test_mo_batched():
     x = B.randn(16, 10, 1)
 
     with Measure():
-        p = cross(GP(2 * EQ().stretch(0.5)), GP(2 * EQ().stretch(0.5)))
+        p = cross(GP(1, 2 * EQ().stretch(0.5)), GP(2, 2 * EQ().stretch(0.5)))
     y = p(x).sample()
     logpdf = p(x, 0.1).logpdf(y)
 

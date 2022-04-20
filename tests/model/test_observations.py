@@ -10,8 +10,8 @@ def test_combine():
     x2 = B.linspace(2, 4, 10)
 
     m = Measure()
-    p1 = GP(EQ(), measure=m)
-    p2 = GP(Matern12(), measure=m)
+    p1 = GP(1, EQ(), measure=m)
+    p2 = GP(2, Matern12(), measure=m)
     y1 = p1(x1).sample()
     y2 = p2(x2).sample()
 
@@ -25,11 +25,17 @@ def test_combine():
     fdd_combined = combine(p1(x1, 1), p2(x2, 2))
     assert_equal_normals(
         fdd_combined,
-        Normal(B.block_diag(p1(x1, 1).var, p2(x2, 2).var)),
+        Normal(
+            B.concat(p1(x1, 1).mean, p2(x2, 2).mean, axis=0),
+            B.block_diag(p1(x1, 1).var, p2(x2, 2).var),
+        ),
     )
     fdd_combined, y_combined = combine((p1(x1, 1), B.squeeze(y1)), (p2(x2, 2), y2))
     assert_equal_normals(
         fdd_combined,
-        Normal(B.block_diag(p1(x1, 1).var, p2(x2, 2).var)),
+        Normal(
+            B.concat(p1(x1, 1).mean, p2(x2, 2).mean, axis=0),
+            B.block_diag(p1(x1, 1).var, p2(x2, 2).var),
+        ),
     )
     approx(y_combined, B.concat(y1, y2, axis=0))

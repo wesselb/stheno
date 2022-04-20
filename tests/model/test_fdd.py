@@ -31,7 +31,7 @@ def test_noise_as_matrix():
 
 
 def test_fdd():
-    p = GP(EQ())
+    p = GP(1, EQ())
 
     # Test specification without noise.
     for fdd in [p(1), FDD(p, 1)]:
@@ -41,7 +41,7 @@ def test_fdd():
         assert isinstance(fdd.noise, matrix.Zero)
         rep = (
             "<FDD:\n"
-            " process=GP(0, EQ()),\n"
+            " process=GP(1, EQ()),\n"
             " input=1,\n"
             " noise=<zero matrix: batch=(), shape=(1, 1), dtype=int>>"
         )
@@ -60,13 +60,13 @@ def test_fdd():
     assert isinstance(fdd.noise, matrix.Diagonal)
     assert str(fdd) == (
         "<FDD:\n"
-        " process=GP(0, EQ()),\n"
+        " process=GP(1, EQ()),\n"
         " input=1.0,\n"
         " noise=<diagonal matrix: batch=(), shape=(2, 2), dtype=int64>>"
     )
     assert repr(fdd) == (
         "<FDD:\n"
-        " process=GP(0, EQ()),\n"
+        " process=GP(1, EQ()),\n"
         " input=1.0,\n"
         " noise=<diagonal matrix: batch=(), shape=(2, 2), dtype=int64\n"
         "        diag=[1 2]>>"
@@ -83,8 +83,8 @@ def test_fdd():
 
 def test_fdd_take():
     with Measure():
-        f1 = GP(EQ())
-        f2 = GP(Exp())
+        f1 = GP(1, EQ())
+        f2 = GP(2, Exp())
         f = cross(f1, f2)
 
     x = B.linspace(0, 3, 5)
@@ -108,7 +108,7 @@ def test_fdd_take():
 
 
 def test_fdd_properties():
-    p = GP(EQ())
+    p = GP(1, EQ())
 
     # Sample observations.
     x = B.linspace(0, 5, 5)

@@ -1,6 +1,7 @@
+from time import time
+
 import numpy as np
 import pytest
-from time import time
 from lab import B
 from mlkernels import (
     Linear,
@@ -14,10 +15,9 @@ from mlkernels import (
     OneMean,
 )
 from plum import NotFoundLookupError
-
 from stheno.model import Measure, GP
 from stheno.random import Normal
-from .util import assert_equal_gps
+
 from ..util import approx
 
 
@@ -93,7 +93,7 @@ def test_construction():
 
 
 def test_sum_other():
-    p = GP(TensorProductMean(lambda x: x**2), EQ())
+    p = GP(lambda x: x**2, EQ())
 
     def five(y):
         return 5 * B.ones(B.shape(y)[0], 1)
@@ -124,7 +124,7 @@ def test_sum_other():
 
 
 def test_mul_other():
-    p = GP(TensorProductMean(lambda x: x**2), EQ())
+    p = GP(lambda x: x**2, EQ())
 
     def five(y):
         return 5 * B.ones(B.shape(y)[0], 1)
@@ -175,7 +175,7 @@ def test_stationarity():
 
 
 def test_marginals():
-    p = GP(TensorProductMean(lambda x: x**2), EQ())
+    p = GP(lambda x: x**2, EQ())
     x = B.linspace(0, 5, 10)
 
     # Check that `marginals` outputs the right thing.
