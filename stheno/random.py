@@ -298,7 +298,7 @@ class Normal(RandomVector):
             scalar: KL divergence.
         """
         return (
-            B.iqf_diag(other.var, other.mean - self.mean)[0]
+            B.iqf_diag(other.var, other.mean - self.mean)[..., 0]
             + B.ratio(self.var, other.var)
             + B.logdet(other.var)
             - B.logdet(self.var)
