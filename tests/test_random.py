@@ -1,11 +1,12 @@
 import lab as B
 import numpy as np
 import pytest
+from algebra.util import identical
 from matrix import Dense, Zero
 from plum import NotFoundLookupError
 from scipy.stats import multivariate_normal
-
 from stheno.random import Normal, RandomVector
+
 from .util import approx
 
 
@@ -69,7 +70,7 @@ def test_normal_lazy_zero_mean():
 
     # Querying `mean_is_zero` should not construct zeros.
     assert dist.mean_is_zero
-    assert dist._mean is 0
+    assert identical(dist._mean, 0)
     assert dist._var is None
 
     # Querying `mean` should now construct zeros.

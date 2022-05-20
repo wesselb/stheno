@@ -95,8 +95,10 @@ class Normal(RandomVector):
         if self._mean is None:
             self._mean = self._construct_mean()
         if self._mean_is_zero is None:
-            self._mean_is_zero = self._mean is 0 or isinstance(self._mean, Zero)
-        if self._mean is 0 and construct_zeros:
+            identically_zero = identical(self._mean, 0)
+            zero_matrix = isinstance(self._mean, Zero)
+            self._mean_is_zero = identically_zero or zero_matrix
+        if identical(self._mean, 0) and construct_zeros:
             self._mean = B.zeros(self.dtype, self.dim, 1)
 
     def _resolve_var(self):

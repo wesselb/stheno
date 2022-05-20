@@ -4,6 +4,7 @@ import numpy as np
 import pytest
 from lab.shape import Dimension
 from mlkernels import EQ, Exp, num_elements
+from algebra.util import identical
 
 from stheno import Measure, GP, FDD, cross
 from stheno import infer_size
@@ -36,7 +37,7 @@ def test_fdd():
     # Test specification without noise.
     for fdd in [p(1), FDD(p, 1)]:
         assert isinstance(fdd, FDD)
-        assert fdd.x is 1
+        assert identical(fdd.x, 1)
         assert fdd.p is p
         assert isinstance(fdd.noise, matrix.Zero)
         rep = (
@@ -55,7 +56,7 @@ def test_fdd():
     # Test specification with noise.
     fdd = p(1.0, np.array([1, 2]))
     assert isinstance(fdd, FDD)
-    assert fdd.x is 1.0
+    assert identical(fdd.x, 1.0)
     assert fdd.p is p
     assert isinstance(fdd.noise, matrix.Diagonal)
     assert str(fdd) == (
@@ -77,7 +78,7 @@ def test_fdd():
     # Test construction with `id`.
     fdd = FDD(5, 1)
     assert fdd.p is 5
-    assert fdd.x is 1
+    assert identical(fdd.x, 1)
     assert fdd.noise is None
 
 
