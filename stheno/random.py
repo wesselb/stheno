@@ -1,5 +1,6 @@
 from types import FunctionType
 
+from algebra.util import identical
 from lab import B
 from matrix import AbstractMatrix, Zero, Diagonal
 from plum import convert, Union
