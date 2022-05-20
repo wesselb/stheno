@@ -1,0 +1,2 @@
+[run]
+omit = stheno/_version.py
