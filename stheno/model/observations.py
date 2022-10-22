@@ -295,9 +295,9 @@ class AbstractPseudoObservations(AbstractObservations):
                 f'not "{type(K_n).__name__}".'
             )
 
+        # Precompute commonly used quantities.
         L_z = B.cholesky(K_z)
         iLz_Kzx = B.solve(L_z, K_zx)
-        A = B.add(B.eye(K_z), B.iqf(K_n, B.transpose(iLz_Kzx)))
 
         if self.method in {"vfe", "fitc"}:
             K_x_diag = measure.kernels[p_x].elwise(x)[..., 0]
@@ -318,6 +318,7 @@ class AbstractPseudoObservations(AbstractObservations):
             raise ValueError(f'Invalid approximation method "{method}".')
 
         # Subspace variance:
+        A = B.add(B.eye(K_z), B.iqf(K_n, B.transpose(iLz_Kzx)))
         self._A[id(measure)] = B.mm(L_z, A, L_z, tr_c=True)
 
         # Optimal mean:
