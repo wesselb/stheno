@@ -46,7 +46,7 @@ install:
 
 test:
 	python setup.py --version
-	pytest -v --cov=$(PACKAGE) --cov-report html:cover --cov-report term-missing
+	pytest tests -v --cov=$(PACKAGE) --cov-report html:cover --cov-report term-missing
 
 clean:
 	rm -rf docs/_build docs/source docs/readme.rst
