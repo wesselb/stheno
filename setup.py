@@ -8,7 +8,7 @@ requirements = [
     "backends>=1.4.11",
     "backends-matrix>=1.2.11",
     "mlkernels>=0.3.6",
-    "wbml>=0.3.3",
+    "wbml>=0.4.0",
 ]
 
 setup(
