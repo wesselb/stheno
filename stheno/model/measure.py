@@ -1,28 +1,22 @@
 from types import FunctionType
+from typing import Union
 
 from lab import B
 from matrix import Constant
-from mlkernels import (
-    num_elements,
-    ZeroKernel,
-    TensorProductKernel,
-)
-from plum import Union
+from mlkernels import TensorProductKernel, ZeroKernel, num_elements
 
+from .. import PromisedMeasure, _dispatch
+from ..lazy import LazyMatrix, LazyVector
+from ..mo import AmbiguousDimensionalityKernel as ADK
+from ..mo import MultiOutputKernel as MOK
+from ..mo import MultiOutputMean as MOM
 from .fdd import FDD
 from .gp import GP, assert_same_measure
 from .observations import (
     AbstractObservations,
-    Observations,
     AbstractPseudoObservations,
+    Observations,
     combine,
-)
-from .. import _dispatch, PromisedMeasure
-from ..lazy import LazyVector, LazyMatrix
-from ..mo import (
-    MultiOutputKernel as MOK,
-    MultiOutputMean as MOM,
-    AmbiguousDimensionalityKernel as ADK,
 )
 
 __all__ = ["Measure"]

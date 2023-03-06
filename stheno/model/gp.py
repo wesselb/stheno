@@ -1,17 +1,14 @@
 from types import FunctionType
+from typing import Union
 
 from fdm import central_fdm
 from lab import B
-from mlkernels import (
-    OneKernel,
-    ZeroMean,
-    OneMean,
-)
-from plum import Union
+from mlkernels import OneKernel, OneMean, ZeroMean
+from plum import isinstance
 
-from .fdd import FDD
 from .. import PromisedGP, PromisedMeasure, _dispatch
 from ..random import RandomProcess
+from .fdd import FDD
 
 __all__ = ["assert_same_measure", "intersection_measure_group", "cross", "GP"]
 

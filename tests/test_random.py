@@ -3,7 +3,7 @@ import numpy as np
 import pytest
 from algebra.util import identical
 from matrix import Dense, Zero
-from plum import NotFoundLookupError
+from plum import NotFoundLookupError, isinstance
 from scipy.stats import multivariate_normal
 from stheno.random import Normal, RandomVector
 

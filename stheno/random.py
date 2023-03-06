@@ -1,9 +1,10 @@
 from types import FunctionType
+from typing import Union
 
 from algebra.util import identical
 from lab import B
-from matrix import AbstractMatrix, Zero, Diagonal
-from plum import convert, Union
+from matrix import AbstractMatrix, Diagonal, Zero
+from plum import convert
 from wbml.util import indented_kv
 
 from . import _dispatch

@@ -1,10 +1,10 @@
 from time import time
+from typing import Union
 
 import numpy as np
 from lab import B
 from matrix import AbstractMatrix
-from plum import dispatch, Union
-
+from plum import dispatch
 from stheno import Normal
 
 __all__ = ["benchmark", "approx"]

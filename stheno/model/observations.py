@@ -1,7 +1,8 @@
+from typing import Union
+
 from lab import B
 from matrix import AbstractMatrix, Diagonal
 from mlkernels import PosteriorKernel, PosteriorMean, SubspaceKernel, num_elements
-from plum import Union
 
 from .. import _dispatch
 from .fdd import FDD

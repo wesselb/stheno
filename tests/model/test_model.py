@@ -3,28 +3,21 @@ import pytest
 import tensorflow as tf
 from lab import B
 from matrix import Diagonal
-from mlkernels import (
-    Kernel,
-    pairwise,
-    elwise,
-    Linear,
-    EQ,
-    Delta,
-    Exp,
-)
+from mlkernels import EQ, Delta, Exp, Kernel, Linear, elwise, pairwise
+from plum import isinstance
 from stheno.model import (
-    Measure,
+    FDD,
     GP,
+    Measure,
     Obs,
     PseudoObs,
-    PseudoObsFITC,
     PseudoObsDTC,
+    PseudoObsFITC,
     cross,
-    FDD,
 )
 
-from .util import assert_equal_normals, assert_equal_measures
 from ..util import approx
+from .util import assert_equal_measures, assert_equal_normals
 
 
 def test_measure_groups():
