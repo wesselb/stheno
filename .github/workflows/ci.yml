@@ -12,6 +12,8 @@ jobs:
         python-version: [3.7, 3.8, 3.9]
     steps:
       - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
         with:
@@ -20,8 +22,6 @@ jobs:
         run: |
           sudo apt-get install gfortran
           pip install --upgrade pip setuptools 'setuptools_scm[toml]' setuptools_scm_git_archive numpy Cython
-          git fetch --all
-          git tag
           python setup.py --version
           pip install --no-cache-dir -U -r requirements.txt | cat
           pip install --upgrade numpy
