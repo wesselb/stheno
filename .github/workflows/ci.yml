@@ -19,26 +19,15 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get install gfortran
-          pip install --upgrade pip setuptools numpy Cython
+          pip install --upgrade pip setuptools setuptools[scm] setuptools_scm_git_archive numpy Cython
+          python setup.py --version
           pip install --no-cache-dir -U -r requirements.txt | cat
           pip install --upgrade numpy
       - name: Test
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          COVERALLS_FLAG_NAME: ${{ matrix.python-version }}
-          COVERALLS_PARALLEL: true
         run: |
           pytest -v --cov=stheno --cov-report term-missing
           coveralls --service=github
-  coveralls:
-    name: Finish coverage
-    needs: test
-    runs-on: ubuntu-latest
-    container: python:3-slim
-    steps:
-    - name: Finished
-      run: |
-        pip3 install --upgrade coveralls
-        coveralls --finish
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Coveralls
+        uses: coverallsapp/github-action@v1
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
