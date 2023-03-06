@@ -28,7 +28,6 @@ jobs:
       - name: Test
         run: |
           pytest -v --cov=stheno --cov-report term-missing
-          coveralls --service=github
       - name: Coveralls
         uses: coverallsapp/github-action@v1
         with:
