@@ -2,7 +2,7 @@ from setuptools import find_packages, setup
 
 requirements = [
     "numpy>=1.16",
-    "fdm",
+    "fdm>=0.5.0",
     "algebra>=1",
     "plum-dispatch>=2",
     "backends>=1.4.11",
